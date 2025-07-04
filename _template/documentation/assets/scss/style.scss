@@ -1,0 +1,30 @@
+@import "theme/variables";
+
+:root {
+    --theme-deafult: #122635;
+    --theme-secondary: #f73164;
+}
+
+@import "components/buttons.scss";
+@import "components/alert";
+
+@import "components/card.scss";
+@import "components/color.scss";
+@import "components/dropdown.scss";
+@import "components/popover.scss";
+@import "components/tab.scss";
+@import "components/radio";
+@import "components/badge";
+@import "components/switch";
+@import "components/datatable";
+@import "components/form-wizard";
+@import "components/table.scss";
+@import "components/according";
+
+@import "layout/select2";
+
+@import "pages/chart";
+
+@import "theme/document";
+@import "theme/responsive";
+@import "theme/dark";

@@ -1,0 +1,189 @@
+/*=========================
+  3.3  Category Style start
+==========================*/
+.categories-section {
+	position: relative;
+
+	.category-top {
+		background-color: rgba(var(--white), 1);
+		z-index: 1;
+		padding: calc(15px + (20 - 15) * ((100vw - 320px) / (1920 - 320)));
+		border-radius: 13px;
+		box-shadow: 0 15px 60px -20px rgba(0, 0, 0, 0.1);
+		margin-top: calc(-45px + (-70 - -45) * ((100vw - 320px) / (1920 - 320)));
+	}
+
+	.item-2 {
+		position: absolute;
+		top: 30px;
+		right: -40px;
+
+		@media (max-width: 1250px) {
+			display: none;
+		}
+	}
+
+	.categories-style {
+		position: relative;
+		margin-top: -10px;
+
+		.food-categories {
+			position: relative;
+			width: 100%;
+			display: flex;
+			justify-content: center;
+			flex-wrap: wrap;
+			padding: calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320))) calc(8px + (15 - 8) * ((100vw - 320px) / (1920 - 320)));
+			margin-top: 10px;
+			border-radius: 8px;
+			background-color: rgba(var(--box-bg), 1);
+			transition: 0.4s ease;
+			border: 1px solid transparent;
+
+
+			@media (max-width: 420px) {
+				height: 100%;
+				width: 100%;
+			}
+
+			&.food {
+				background: rgba(var(--white), 1);
+				box-shadow: 0px 2px 12px rgba(0, 0, 0, 0.06);
+				border-radius: 8px;
+			}
+
+			.categories-img {
+				width: 100%;
+				object-fit: contain;
+				height: 55px;
+			}
+
+			.title-category {
+				&::after {
+					content: '';
+					display: block;
+					width: 24px;
+					height: 24px;
+					position: absolute;
+					bottom: 45px;
+					left: calc(50% - 12px);
+					z-index: 1;
+					background: linear-gradient(to bottom, rgba(var(--theme-color), 1), rgba(var(--theme-color2), 1));
+					-webkit-mask: svg-url('<svg class="arrow" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10 7 L10 17 L6 17 L12 22 L18 17 L14 17 L14 7 Z"/></svg>') no-repeat center;
+					mask: svg-url('<svg class="arrow" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10 7 L10 17 L6 17 L12 22 L18 17 L14 17 L14 7 Z"/></svg>') no-repeat center;
+					-webkit-mask-size: cover;
+					mask-size: cover;
+					filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+					animation: pushDown 1s ease-in-out infinite;
+
+					@keyframes pushDown {
+						0% {
+							transform: translateY(0) scale(1);
+						}
+
+						50% {
+							transform: translateY(5px) scale(0.95, 1.05);
+						}
+
+						100% {
+							transform: translateY(0) scale(1);
+						}
+					}
+				}
+
+				h4 {
+					display: block;
+					margin-top: 10px;
+					transition: 0.4s ease;
+					display: -webkit-box;
+					-webkit-line-clamp: 2;
+					-webkit-box-orient: vertical;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					line-height: 1.2;
+					height: 62px;
+					position: relative;
+
+				}
+			}
+
+		}
+
+		h6 {
+			color: rgba(var(--dark-text), 1);
+			font-size: 14px;
+			margin-top: 10px;
+			text-align: center;
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+		}
+
+		&.category-inline {
+			.food-categories {
+				align-items: center;
+				gap: calc(8px + (10 - 8) * ((100vw - 320px) / (1920 - 320)));
+
+				.categories-img {
+					object-fit: contain;
+					height: calc(35px + (45 - 35) * ((100vw - 320px) / (1920 - 320)));
+					width: calc(35px + (45 - 35) * ((100vw - 320px) / (1920 - 320)));
+				}
+
+				h4 {
+					display: block;
+					margin-top: 0;
+					font-size: calc(16px + (18 - 16) * ((100vw - 320px) / (1920 - 320)));
+					font-weight: 500;
+				}
+			}
+		}
+	}
+
+	&.category-outer {
+		.categories-style {
+			.food-categories {
+				margin-top: calc(30px + (50 - 30) * ((100vw - 320px) / (1920 - 320)));
+				padding-top: calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320)));
+
+				.categories-img {
+					margin-top: -40px;
+					margin-bottom: 0px;
+				}
+			}
+		}
+	}
+}
+
+.scooter-img {
+	position: absolute;
+	top: calc(-30px + (-193 - -30) * ((100vw - 320px) / (1920 - 320)));
+	z-index: 12;
+	left: 40px;
+	width: 9%;
+	animation: 1s linear infinite alternate bike;
+	z-index: 1;
+
+	[dir="rtl"] & {
+		left: unset;
+		right: 40px;
+		transform: scaleX(-1);
+	}
+}
+
+.popcorn-img {
+	position: absolute;
+	top: -40px;
+	z-index: 1;
+	left: 0;
+
+	[dir="rtl"] & {
+		right: 0;
+		left: unset;
+		transform: scaleX(-1);
+	}
+
+	@media (max-width: 1299px) {
+		display: none;
+	}
+}

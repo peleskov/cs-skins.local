@@ -1,0 +1,40 @@
+@use "sass:string";
+
+// Вспомогательная функция для замены строк
+@function str-replace($str, $search, $replace: '') {
+  $index: null;
+  $result: $str;
+  
+  @while string.index($result, $search) {
+    $index: string.index($result, $search);
+    @if $index {
+      $before: string.slice($result, 1, $index - 1);
+      $after: string.slice($result, $index + string.length($search));
+      $result: $before + $replace + $after;
+    }
+  }
+  
+  @return $result;
+}
+
+// Функция для преобразования SVG в data URI
+@function svg-url($svg) {
+  // Важно: сначала заменяем %, чтобы не испортить другие замены
+  $encoded: $svg;
+  $encoded: str-replace($encoded, '%', '%25');
+  $encoded: str-replace($encoded, '<', '%3C');
+  $encoded: str-replace($encoded, '>', '%3E');
+  $encoded: str-replace($encoded, '"', '%22');
+  $encoded: str-replace($encoded, "'", '%27');
+  $encoded: str-replace($encoded, '#', '%23');
+  $encoded: str-replace($encoded, '{', '%7B');
+  $encoded: str-replace($encoded, '}', '%7D');
+  $encoded: str-replace($encoded, '|', '%7C');
+  $encoded: str-replace($encoded, '^', '%5E');
+  $encoded: str-replace($encoded, '`', '%60');
+  $encoded: str-replace($encoded, '@', '%40');
+  $encoded: str-replace($encoded, '&', '%26');
+  $encoded: str-replace($encoded, '=', '%3D');
+  
+  @return url("data:image/svg+xml,#{$encoded}");
+}

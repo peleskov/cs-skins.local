@@ -169,6 +169,11 @@
 		padding: calc(20px + (40 - 20) * ((100vw - 320px) / (1920 - 320))) calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320)));
 		background-color: rgba(var(--box-bg), 1);
 
+		#telegram-login-widget-inline {
+			width: 184px;
+			height: 28px;
+		}
+
 		.profile-details-list {
 			li {
 				width: 100%;
@@ -196,7 +201,7 @@
 						font-weight: 600;
 						color: rgba(var(--dark-text), 1);
 
-						&.badge{
+						&.badge {
 							font-size: 12px;
 							font-weight: 300;
 						}
@@ -214,7 +219,7 @@
 						}
 					}
 
-					.trade-url-text{
+					.trade-url-text {
 						font-size: 12px;
 						font-weight: 300;
 						color: rgba(var(--content-color), 1);
@@ -224,6 +229,7 @@
 						text-overflow: ellipsis;
 
 					}
+
 				}
 
 				.btn {
@@ -652,5 +658,5 @@
 		}
 	}
 
-	
+
 }

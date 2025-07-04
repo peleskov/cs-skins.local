@@ -157,7 +157,7 @@
                                 </div>
                                 <h6>{{ number_format($client->balance, 2) }} ₽</h6>
                             </div>
-                            <a href="#" class="btn theme-outline mt-0">Пополнить</a>
+                            <a href="#balance-refill" class="btn theme-outline mt-0" data-bs-toggle="modal">Пополнить</a>
                         </li>
                         <li>
                             <div class="profile-content">
@@ -165,10 +165,26 @@
                                     <i class="ri-shield-check-line"></i>
                                     <span>Верификация :</span>
                                 </div>
-                                <h6>{{ $client->is_verified ? 'Пройдена' : 'Не пройдена' }}</h6>
+                                <h6>
+                                    @if($client->is_verified && $client->telegram_id)
+                                        {{ $client->telegram_username ? '@' . $client->telegram_username : 'Telegram User' }} <small>({{ $client->telegram_id }})</small>
+                                        <span class="badge bg-success-subtle ms-2">Верифицирован</span>
+                                    @elseif($client->is_verified)
+                                        Пройдена
+                                        <span class="badge bg-success-subtle ms-2">Верифицирован</span>
+                                    @else
+                                        Не пройдена
+                                    @endif
+                                </h6>
                             </div>
-                            @if(!$client->is_verified)
-                            <a href="#" class="btn theme-outline mt-0">Пройти</a>
+                            @if($client->is_verified && $client->telegram_id)
+                                <a href="#telegram-unlink" class="btn theme-outline mt-0" data-bs-toggle="modal">Отвязать Telegram</a>
+                            @elseif(!$client->is_verified)
+                                @if($client->telegram_id)
+                                    <span class="badge bg-success-subtle">Telegram подключен</span>
+                                @else
+                                    <div id="telegram-login-widget-inline"></div>
+                                @endif
                             @endif
                         </li>
                         <li>
@@ -273,10 +289,116 @@
     </div>
 </div>
 <!-- trade url modal end -->
+
+<!-- telegram unlink modal starts -->
+<div class="modal address-details-modal fade" id="telegram-unlink" tabindex="-1" aria-labelledby="telegramUnlinkLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="telegramUnlinkLabel">Отвязать Telegram</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите отвязать Telegram аккаунт?</p>
+                <div class="alert alert-warning">
+                    <i class="ri-warning-line me-2"></i>
+                    При отвязке Telegram статус верификации будет сброшен.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn gray-btn mt-0" data-bs-dismiss="modal">Отмена</button>
+                <form action="{{ route('profile.telegram.unlink') }}" method="POST" class="d-inline">
+                    @csrf
+                    <button type="submit" class="btn btn-danger mt-0">Отвязать</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- telegram unlink modal end -->
+
+<!-- balance refill modal starts -->
+<div class="modal address-details-modal fade" id="balance-refill" tabindex="-1" aria-labelledby="balanceRefillLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="balanceRefillLabel">Пополнение баланса</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="py-4">
+                    <i class="ri-settings-3-line display-4 text-muted mb-3"></i>
+                    <h4>В разработке</h4>
+                    <p class="text-muted">Функция пополнения баланса находится в разработке и будет доступна в ближайшее время.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn theme-btn mt-0" data-bs-dismiss="modal">Понятно</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- balance refill modal end -->
+
 @endsection
 
 @push('scripts')
 <script>
+// Telegram authentication callback
+function onTelegramAuth(user) {
+    fetch('{{ route('profile.telegram.verify') }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({
+            id: user.id,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            username: user.username,
+            photo_url: user.photo_url,
+            auth_date: user.auth_date,
+            hash: user.hash
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('success', 'Telegram верификация успешно завершена!');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            showNotification('error', data.message || 'Ошибка при верификации');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('error', 'Произошла ошибка при верификации');
+    });
+}
+
+// Load Telegram widget inline
+document.addEventListener('DOMContentLoaded', function() {
+    const widgetContainer = document.getElementById('telegram-login-widget-inline');
+    if (widgetContainer && !widgetContainer.hasChildNodes()) {
+        console.log('Loading Telegram widget...');
+        
+        // Create script element for Telegram widget
+        const script = document.createElement('script');
+        script.async = true;
+        script.src = 'https://telegram.org/js/telegram-widget.js?22';
+        script.setAttribute('data-telegram-login', '{{ $telegramBotName }}');
+        script.setAttribute('data-size', 'medium');
+        script.setAttribute('data-userpic', 'false');
+        script.setAttribute('data-auth-url', '{{ route('profile.telegram.verify') }}');
+        script.setAttribute('data-request-access', 'write');
+        
+        widgetContainer.appendChild(script);
+    }
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     const resendBtn = document.getElementById('resend-email-btn');
     if (!resendBtn) return;

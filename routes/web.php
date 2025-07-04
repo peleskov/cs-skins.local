@@ -42,4 +42,9 @@ Route::middleware(['auth:client'])->group(function () {
     Route::get('/email/verify/{id}/{hash}', [ProfileController::class, 'verifyEmail'])->name('profile.verify.email');
     Route::post('/email/resend', [ProfileController::class, 'resendVerification'])->name('profile.resend.verification');
     Route::post('/profile/update-trade-url', [ProfileController::class, 'updateTradeUrl'])->name('profile.update.trade-url');
+    Route::match(['GET', 'POST'], '/profile/telegram/verify', [ProfileController::class, 'verifyTelegram'])->name('profile.telegram.verify');
+    Route::post('/profile/telegram/unlink', [ProfileController::class, 'unlinkTelegram'])->name('profile.telegram.unlink');
 });
+
+// Telegram webhook (не требует авторизации)
+Route::post('/telegram/webhook', [ProfileController::class, 'telegramWebhook'])->name('telegram.webhook');

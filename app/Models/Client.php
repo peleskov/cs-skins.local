@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -152,5 +153,55 @@ class Client extends Authenticatable
         }
 
         return ['valid' => true, 'steam_id' => $extractedSteamId];
+    }
+
+    public function sellingListings(): HasMany
+    {
+        return $this->hasMany(Listing::class, 'seller_id');
+    }
+
+    public function boughtListings(): HasMany
+    {
+        return $this->hasMany(Listing::class, 'buyer_id');
+    }
+
+    public function buyingTrades(): HasMany
+    {
+        return $this->hasMany(Trade::class, 'buyer_id');
+    }
+
+    public function sellingTrades(): HasMany
+    {
+        return $this->hasMany(Trade::class, 'seller_id');
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
+    public function isBot(): bool
+    {
+        return $this->is_bot;
+    }
+
+    public function getAvailableBalance(): float
+    {
+        return $this->balance;
+    }
+
+    public function hasEnoughBalance(float $amount): bool
+    {
+        return $this->balance >= $amount;
+    }
+
+    public function addBalance(float $amount): void
+    {
+        $this->increment('balance', $amount);
+    }
+
+    public function subtractBalance(float $amount): void
+    {
+        $this->decrement('balance', $amount);
     }
 }

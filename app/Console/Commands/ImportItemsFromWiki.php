@@ -14,7 +14,11 @@ class ImportItemsFromWiki extends Command
      *
      * @var string
      */
-    protected $signature = 'items:import-wiki {--limit=100 : Limit number of items to import}';
+    protected $signature = 'items:import-wiki 
+                            {--limit=1000 : Limit number of items to import (0 = no limit)}
+                            {--weapon=all : Weapon type to import (all, rifle, pistol, knife, sniper, smg, heavy, gloves)}
+                            {--skip-existing : Skip items that already exist in database}
+                            {--per-weapon=0 : Import N items per weapon type (0 = all items)}';
 
     /**
      * The console command description.
@@ -26,6 +30,61 @@ class ImportItemsFromWiki extends Command
     private int $imported = 0;
     private int $updated = 0;
     private int $skipped = 0;
+    
+    /**
+     * Weapon URLs for wiki.cs.money
+     */
+    private array $weaponUrls = [
+        'rifle' => [
+            'https://wiki.cs.money/ru/weapons/ak-47',
+            'https://wiki.cs.money/ru/weapons/m4a4',
+            'https://wiki.cs.money/ru/weapons/m4a1-s',
+            'https://wiki.cs.money/ru/weapons/galil-ar',
+            'https://wiki.cs.money/ru/weapons/famas',
+            'https://wiki.cs.money/ru/weapons/sg-553',
+            'https://wiki.cs.money/ru/weapons/aug',
+        ],
+        'pistol' => [
+            'https://wiki.cs.money/ru/weapons/glock-18',
+            'https://wiki.cs.money/ru/weapons/usp-s',
+            'https://wiki.cs.money/ru/weapons/p2000',
+            'https://wiki.cs.money/ru/weapons/desert-eagle',
+            'https://wiki.cs.money/ru/weapons/p250',
+            'https://wiki.cs.money/ru/weapons/five-seven',
+            'https://wiki.cs.money/ru/weapons/tec-9',
+            'https://wiki.cs.money/ru/weapons/cz75-auto',
+            'https://wiki.cs.money/ru/weapons/r8-revolver',
+        ],
+        'knife' => [
+            'https://wiki.cs.money/ru/knives/all',
+        ],
+        'sniper' => [
+            'https://wiki.cs.money/ru/weapons/awp',
+            'https://wiki.cs.money/ru/weapons/ssg-08',
+            'https://wiki.cs.money/ru/weapons/scar-20',
+            'https://wiki.cs.money/ru/weapons/g3sg1',
+        ],
+        'smg' => [
+            'https://wiki.cs.money/ru/weapons/mac-10',
+            'https://wiki.cs.money/ru/weapons/mp7',
+            'https://wiki.cs.money/ru/weapons/mp9',
+            'https://wiki.cs.money/ru/weapons/mp5-sd',
+            'https://wiki.cs.money/ru/weapons/p90',
+            'https://wiki.cs.money/ru/weapons/pp-bizon',
+            'https://wiki.cs.money/ru/weapons/ump-45',
+        ],
+        'heavy' => [
+            'https://wiki.cs.money/ru/weapons/nova',
+            'https://wiki.cs.money/ru/weapons/xm1014',
+            'https://wiki.cs.money/ru/weapons/mag-7',
+            'https://wiki.cs.money/ru/weapons/sawed-off',
+            'https://wiki.cs.money/ru/weapons/m249',
+            'https://wiki.cs.money/ru/weapons/negev',
+        ],
+        'gloves' => [
+            'https://wiki.cs.money/ru/gloves/all',
+        ],
+    ];
 
     /**
      * Execute the console command.
@@ -35,22 +94,37 @@ class ImportItemsFromWiki extends Command
         $this->info('Starting import from wiki.cs.money...');
         
         $limit = (int) $this->option('limit');
+        $weaponType = $this->option('weapon');
+        $skipExisting = $this->option('skip-existing');
+        $perWeapon = (int) $this->option('per-weapon');
+        
+        $this->info("Import settings:");
+        $this->info("- Weapon type: {$weaponType}");
+        $this->info("- Total limit: " . ($limit === 0 ? 'No limit' : $limit));
+        $this->info("- Per weapon limit: " . ($perWeapon === 0 ? 'All items' : $perWeapon));
+        $this->info("- Skip existing: " . ($skipExisting ? 'Yes' : 'No'));
         
         try {
             // Get items data from wiki.cs.money
-            $items = $this->fetchItemsFromWiki($limit);
+            $items = $this->fetchItemsFromWiki($limit, $weaponType, $perWeapon);
             
             if (empty($items)) {
                 $this->error('No items found or failed to fetch data from wiki.cs.money');
                 return Command::FAILURE;
             }
 
-            $this->info("Found {" . count($items) . "} items. Starting import...");
+            $this->info("Found " . count($items) . " items. Starting import...");
             
             $progressBar = $this->output->createProgressBar(count($items));
             $progressBar->start();
 
             foreach ($items as $itemData) {
+                if ($skipExisting && Item::where('steam_market_hash_name', $itemData['steam_market_hash_name'])->exists()) {
+                    $this->skipped++;
+                    $progressBar->advance();
+                    continue;
+                }
+                
                 $this->processItem($itemData);
                 $progressBar->advance();
             }
@@ -64,6 +138,7 @@ class ImportItemsFromWiki extends Command
             
         } catch (\Exception $e) {
             $this->error("Import failed: " . $e->getMessage());
+            $this->error($e->getTraceAsString());
             return Command::FAILURE;
         }
     }
@@ -71,23 +146,63 @@ class ImportItemsFromWiki extends Command
     /**
      * Fetch items data from wiki.cs.money
      */
-    private function fetchItemsFromWiki(int $limit): array
+    private function fetchItemsFromWiki(int $limit, string $weaponType, int $perWeapon): array
     {
         $this->info('Fetching data from wiki.cs.money...');
         
-        $items = [];
-        $page = 1;
+        $allItems = [];
         
-        // Use curl directly since wiki.cs.money blocks HTTP client
-        $html = $this->fetchWithCurl("https://wiki.cs.money/ru/weapons/ak-47");
-        
-        if ($html) {
-            $items = $this->parseWikiResponse($html);
+        // Determine which URLs to fetch
+        $urlsToFetch = [];
+        if ($weaponType === 'all') {
+            foreach ($this->weaponUrls as $urls) {
+                $urlsToFetch = array_merge($urlsToFetch, $urls);
+            }
+        } elseif (isset($this->weaponUrls[$weaponType])) {
+            $urlsToFetch = $this->weaponUrls[$weaponType];
         } else {
-            $this->error("Failed to fetch data with curl");
+            $this->error("Unknown weapon type: {$weaponType}");
+            return [];
         }
         
-        return array_slice($items, 0, $limit);
+        $this->info("Will fetch from " . count($urlsToFetch) . " URLs");
+        
+        foreach ($urlsToFetch as $url) {
+            $this->info("Fetching: {$url}");
+            
+            $html = $this->fetchWithCurl($url);
+            
+            if ($html) {
+                $items = $this->parseWikiResponse($html);
+                $this->info("  Found " . count($items) . " items");
+                
+                // Apply per-weapon limit if set
+                if ($perWeapon > 0 && count($items) > $perWeapon) {
+                    $items = array_slice($items, 0, $perWeapon);
+                    $this->info("  Limited to {$perWeapon} items per weapon");
+                }
+                
+                $allItems = array_merge($allItems, $items);
+                
+                // Add small delay to avoid rate limiting
+                sleep(1);
+            } else {
+                $this->warn("  Failed to fetch data from {$url}");
+            }
+            
+            // Check if we've reached the total limit
+            if ($limit > 0 && count($allItems) >= $limit) {
+                $this->info("Reached total limit of {$limit} items");
+                break;
+            }
+        }
+        
+        // Apply total limit if set
+        if ($limit > 0 && count($allItems) > $limit) {
+            $allItems = array_slice($allItems, 0, $limit);
+        }
+        
+        return $allItems;
     }
 
     /**

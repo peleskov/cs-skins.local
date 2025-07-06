@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Item extends Model
 {
@@ -182,5 +183,35 @@ class Item extends Model
             $query->where('min_steam_price', '<=', $max);
         }
         return $query;
+    }
+
+    public function listings(): HasMany
+    {
+        return $this->hasMany(Listing::class);
+    }
+
+    public function activeListings(): HasMany
+    {
+        return $this->hasMany(Listing::class)->where('status', Listing::STATUS_ACTIVE);
+    }
+
+    public function priceHistory(): HasMany
+    {
+        return $this->hasMany(PriceHistory::class);
+    }
+
+    public function getLowestActivePrice(): ?float
+    {
+        return $this->activeListings()->min('price');
+    }
+
+    public function getActiveListingsCount(): int
+    {
+        return $this->activeListings()->count();
+    }
+
+    public function getAverageActivePrice(): ?float
+    {
+        return $this->activeListings()->avg('price');
     }
 }

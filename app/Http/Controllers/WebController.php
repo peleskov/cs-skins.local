@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Faq;
 use App\Models\FaqCategory;
 use App\Models\Doc;
+use App\Models\Listing;
 
 class WebController extends Controller
 {
@@ -14,7 +15,18 @@ class WebController extends Controller
      */
     public function home()
     {
-        return view('home');
+        $featuredListings = Listing::with(['item', 'seller'])
+            ->active()
+            ->where('price', '>', 0)
+            ->inRandomOrder()
+            ->limit(12)
+            ->get();
+            
+        $totalListings = Listing::active()
+            ->where('price', '>', 0)
+            ->count();
+            
+        return view('home', compact('featuredListings', 'totalListings'));
     }
 
     /**
@@ -23,7 +35,7 @@ class WebController extends Controller
     public function marketplace(Request $request)
     {
         // TODO: Реализовать фильтрацию и пагинацию
-        return view('marketplace');
+        return view('marketplace.index');
     }
 
     /**

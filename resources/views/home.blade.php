@@ -15,7 +15,83 @@
 </section>
 @include('partials.categories-section')
 @include('partials.case-section')
-@include('partials.market-section')
+<section class="popular-restaurant banner-section section-b-space ratio3_2 overflow-hidden">
+    <div class="container-fluid">
+        <div class="title text-center">
+            <h2>Магазин скинов</h2>
+            <div class="loader-line" style="left: calc(50% - 40px);"></div>
+            <div class="sub-title">
+                <p>Найдите популярные скины рядом.</p>
+            </div>
+        </div>
+        <!-- Сортировка и количество -->
+        <div class="row justify-content-between align-items-center mb-4">
+            <div class="col-md-6">
+                <p class="small text-muted mb-0">Всего предложений <span id="total-count">{{ $totalListings }}</span>, показано {{ $featuredListings->count() }}</p>
+            </div>
+            <div class="col-auto">
+                <a href="{{ route('marketplace.index') }}" class="btn theme-btn mt-0">
+                    Смотреть все
+                </a>
+            </div>
+        </div>
+
+        <!-- Контейнер для товаров -->
+        <div class="row g-4" id="listings-container">
+            @foreach($featuredListings as $listing)
+            <div class="col-lg-2 col-md-4">
+                <div class="vertical-product-box">
+                    @if($listing->is_stattrak)
+                    <div class="seller-badge new-badge"><img class="img-fluid badge" src="https://cs-skins.s1temaker.ru/images/svg/star-white.svg" alt="medal">
+                        <h6>ST</h6>
+                    </div>
+                    @endif
+                    <div class="vertical-product-box-img">
+                        <a href="{{ route('marketplace.show', $listing->id) }}">
+                            <img class="product-img-top w-100 bg-img skin-image" src="{{ $listing->item->image_url }}" alt="{{ $listing->item->name_ru }}" onerror="this.parentElement.parentElement.classList.add('image-error'); this.onerror=null;">
+                        </a>
+                        <div class="offers">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <h4>${{ number_format($listing->price, 2) }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="vertical-product-body">
+                        <div class="d-flex flex-column mt-sm-3 mt-2 mb-2">
+                            <a href="{{ route('marketplace.show', $listing->id) }}">
+                                <h4 class="vertical-product-title">{{ $listing->item->name_ru }}</h4>
+                            </a>
+                            <h5 class="product-items mb-2">{{ $listing->wear_name }} {{ __('items.rarities.' . $listing->item->rarity) }}</h5>
+                            <p class="text-muted small">от {{ $listing->seller->name }}</p>
+                        </div>
+                        <div class="location-distance d-flex align-items-center justify-content-between pt-sm-3 pt-2">
+                            <a href="#" class="btn theme-outline cart-btn rounded-2">В корзину</a>
+                            <a href="#!" class="like-btn">
+                                <i class="ri-heart-3-fill fill-icon"></i>
+                                <i class="ri-heart-3-line outline-icon"></i>
+                                <div class="effect-group">
+                                    <span class="effect"></span>
+                                    <span class="effect"></span>
+                                    <span class="effect"></span>
+                                    <span class="effect"></span>
+                                    <span class="effect"></span>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endforeach
+        </div>
+
+        <!-- Сообщение об отсутствии товаров -->
+        <div class="text-center py-5" id="no-results" style="display: none;">
+            <i class="ri-search-line display-4 text-muted mb-3"></i>
+            <h4 class="text-muted">Предложения не найдены</h4>
+            <p class="text-muted">Попробуйте изменить параметры поиска</p>
+        </div>
+    </div>
+</section>
 @include('partials.app-section')
 
 @endsection

@@ -76,7 +76,7 @@
                 <div class="offcanvas-body">
                     <ul class="navbar-nav justify-content-center flex-grow-1">
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ route('marketplace') }}">Маркетплейс</a>
+                            <a class="nav-link" href="{{ route('marketplace.index') }}">Маркетплейс</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="#">Кейсы</a>

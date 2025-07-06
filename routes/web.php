@@ -4,17 +4,28 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\WebController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\MarketplaceController;
 
 // Публичные маршруты
 Route::controller(WebController::class)->group(function () {
     Route::get('/', 'home')->name('home');
-    Route::get('/marketplace', 'marketplace')->name('marketplace');
     Route::get('/item/{id}', 'item')->name('item');
     Route::get('/cart', 'cart')->name('cart');
     Route::get('/faq', 'faq')->name('faq');
     Route::get('/contact', 'contact')->name('contact');
     Route::get('/doc/{slug}', 'doc')->name('doc');
     Route::get('/locale/{locale}', 'setLocale')->name('locale');
+});
+
+// Маршруты маркетплейса
+Route::prefix('marketplace')->name('marketplace.')->controller(MarketplaceController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/api/listings', 'getListings')->name('api.listings');
+    Route::get('/api/categories', 'getCategories')->name('api.categories');
+    Route::get('/api/tags', 'getTags')->name('api.tags');
+    Route::get('/api/stats', 'getFilterStats')->name('api.stats');
+    Route::get('/api/search', 'search')->name('api.search');
+    Route::get('/listing/{listing}', 'show')->name('show');
 });
 
 // Маршруты авторизации

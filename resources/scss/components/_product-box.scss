@@ -285,7 +285,28 @@
   .vertical-product-box-img {
     position: relative;
     overflow: hidden;
+    padding-bottom: 75%;
     border-radius: 6px;
+
+    &.image-error {
+      background-image: url('/images/skin_no_image.svg');
+      background-size: 30% auto;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-color: #f8f9fa;
+
+      img {
+        opacity: 0 !important;
+      }
+    }
+
+    >a {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
 
     .bg-size {
       transform: scale(1);
@@ -417,9 +438,7 @@
       font-size: calc(14px + (16 - 14) * ((100vw - 320px) / (1920 - 320)));
       font-weight: 400;
       line-height: 1;
-      border-bottom: 1px dashed rgba(var(--dashed-line), 1);
       margin-top: 4px;
-      padding-bottom: calc(8px + (16 - 8) * ((100vw - 320px) / (1920 - 320)));
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
@@ -428,6 +447,9 @@
     .location-distance {
       flex-wrap: wrap;
       gap: calc(8px + (10 - 8) * ((100vw - 320px) / (1920 - 320)));
+      border-top: 1px dashed rgba(var(--dashed-line), 1);
+      padding-top: calc(6px + (12 - 6) * ((100vw - 320px) / (1920 - 320)));
+
 
       .place {
         position: relative;

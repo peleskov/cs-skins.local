@@ -179,7 +179,7 @@
                   <h6>ST</h6>
                 </div>
                 <div class="vertical-product-box-img">
-                  <a :href="`/marketplace/listing/${listing.id}`">
+                  <a :href="`/marketplace/${listing.id}`">
                     <img 
                       class="product-img-top w-100 bg-img skin-image" 
                       :src="listing.item.image_url" 
@@ -195,7 +195,7 @@
                 </div>
                 <div class="vertical-product-body">
                   <div class="d-flex flex-column mt-sm-3 mt-2 mb-2">
-                    <a :href="`/marketplace/listing/${listing.id}`">
+                    <a :href="`/marketplace/${listing.id}`">
                       <h4 class="vertical-product-title">{{ listing.item.name_ru }}</h4>
                     </a>
                     <h5 class="product-items mb-2">{{ listing.wear_name }} {{ listing.item.rarity_translated }}</h5>

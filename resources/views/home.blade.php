@@ -27,16 +27,21 @@
         <!-- Сортировка и количество -->
         <div class="row justify-content-between align-items-center mb-4">
             <div class="col-md-6">
-                <p class="small text-muted mb-0">Всего предложений <span id="total-count">{{ $totalListings }}</span>, показано {{ $featuredListings->count() }}</p>
+                @if($totalListings > 0)
+                    <p class="small text-muted mb-0">Всего предложений <span id="total-count">{{ $totalListings }}</span>, показано {{ $featuredListings->count() }}</p>
+                @endif
             </div>
+            @if($totalListings > 0)
             <div class="col-auto">
                 <a href="{{ route('marketplace.index') }}" class="btn theme-btn mt-0">
                     Смотреть все
                 </a>
             </div>
+            @endif
         </div>
 
         <!-- Контейнер для товаров -->
+        @if($featuredListings->count() > 0)
         <div class="row g-4" id="listings-container">
             @foreach($featuredListings as $listing)
             <div class="col-lg-2 col-md-4">
@@ -83,13 +88,14 @@
             </div>
             @endforeach
         </div>
-
+        @else
         <!-- Сообщение об отсутствии товаров -->
-        <div class="text-center py-5" id="no-results" style="display: none;">
-            <i class="ri-search-line display-4 text-muted mb-3"></i>
-            <h4 class="text-muted">Предложения не найдены</h4>
-            <p class="text-muted">Попробуйте изменить параметры поиска</p>
+        <div class="text-center py-5">
+            <i class="ri-shopping-bag-line display-4 text-muted mb-3"></i>
+            <h4 class="text-muted">Пока нет предложений</h4>
+            <p class="text-muted">Станьте первым, кто выставит свои скины на продажу!</p>
         </div>
+        @endif
     </div>
 </section>
 @include('partials.app-section')

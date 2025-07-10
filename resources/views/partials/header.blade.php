@@ -31,27 +31,32 @@
                         <div class="onhover-box onhover-sm">
                             <ul class="menu-list">
                                 <li>
-                                    <a class="dropdown-item" href="{{ route('profile') }}">
+                                    <a class="dropdown-item" href="{{ route('profile') }}#profile">
                                         <i class="ri-user-3-line me-2"></i>Профиль
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="#">
+                                    <a class="dropdown-item" href="{{ route('profile') }}#trading">
                                         <i class="ri-shopping-bag-3-line me-2"></i>Торговля
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="#">
+                                    <a class="dropdown-item" href="{{ route('profile') }}#inventory">
+                                        <i class="ri-treasure-map-line me-2"></i>Инвентарь
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('profile') }}#auctions">
                                         <i class="ri-store-2-line me-2"></i>Мои аукционы
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="#">
+                                    <a class="dropdown-item" href="{{ route('profile') }}#balance">
                                         <i class="ri-bank-card-line me-2"></i>Баланс
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="#">
+                                    <a class="dropdown-item" href="{{ route('profile') }}#settings">
                                         <i class="ri-settings-3-line me-2"></i>Настройки
                                     </a>
                                 </li>

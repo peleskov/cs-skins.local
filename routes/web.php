@@ -5,6 +5,7 @@ use App\Http\Controllers\WebController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\MarketplaceController;
+use App\Http\Controllers\InventoryController;
 
 // Публичные маршруты
 Route::controller(WebController::class)->group(function () {
@@ -25,7 +26,23 @@ Route::prefix('marketplace')->name('marketplace.')->controller(MarketplaceContro
     Route::get('/api/tags', 'getTags')->name('api.tags');
     Route::get('/api/stats', 'getFilterStats')->name('api.stats');
     Route::get('/api/search', 'search')->name('api.search');
-    Route::get('/listing/{listing}', 'show')->name('show');
+    Route::get('/{listing}', 'show')->name('show');
+    Route::get('/api/listing/{listing}/similar', 'getSimilarListings')->name('api.similar');
+});
+
+// API маршруты
+Route::prefix('api')->name('api.')->group(function () {
+    Route::get('/marketplace/listing/{listing}', [MarketplaceController::class, 'getListingDetails'])->name('marketplace.listing');
+    Route::get('/translations/items', [MarketplaceController::class, 'getTranslations'])->name('translations.items');
+    
+    // Маршруты для корзины (заглушки)
+    Route::post('/cart/add', function () {
+        return response()->json(['message' => 'Функция добавления в корзину будет реализована позже'], 501);
+    })->name('cart.add');
+    
+    Route::post('/marketplace/quick-buy', function () {
+        return response()->json(['message' => 'Функция быстрой покупки будет реализована позже'], 501);
+    })->name('marketplace.quick-buy');
 });
 
 // Маршруты авторизации
@@ -55,6 +72,15 @@ Route::middleware(['auth:client'])->group(function () {
     Route::post('/profile/update-trade-url', [ProfileController::class, 'updateTradeUrl'])->name('profile.update.trade-url');
     Route::match(['GET', 'POST'], '/profile/telegram/verify', [ProfileController::class, 'verifyTelegram'])->name('profile.telegram.verify');
     Route::post('/profile/telegram/unlink', [ProfileController::class, 'unlinkTelegram'])->name('profile.telegram.unlink');
+
+    // Маршруты инвентаря
+    Route::prefix('inventory')->name('inventory.')->controller(InventoryController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/sync', 'sync')->name('sync');
+        Route::get('/{assetId}', 'show')->name('show');
+        Route::get('/{assetId}/sell', 'sell')->name('sell');
+        Route::post('/{assetId}/create-listing', 'createListing')->name('create-listing');
+    });
 });
 
 // Telegram webhook (не требует авторизации)

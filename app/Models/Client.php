@@ -165,16 +165,6 @@ class Client extends Authenticatable
         return $this->hasMany(Listing::class, 'buyer_id');
     }
 
-    public function buyingTrades(): HasMany
-    {
-        return $this->hasMany(Trade::class, 'buyer_id');
-    }
-
-    public function sellingTrades(): HasMany
-    {
-        return $this->hasMany(Trade::class, 'seller_id');
-    }
-
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
@@ -203,5 +193,21 @@ class Client extends Authenticatable
     public function subtractBalance(float $amount): void
     {
         $this->decrement('balance', $amount);
+    }
+
+    public function inventoryItems(): HasMany
+    {
+        return $this->hasMany(ClientInventoryItem::class);
+    }
+
+
+    public function tradableInventoryItems(): HasMany
+    {
+        return $this->inventoryItems()->tradable();
+    }
+
+    public function marketableInventoryItems(): HasMany
+    {
+        return $this->inventoryItems()->marketable();
     }
 }

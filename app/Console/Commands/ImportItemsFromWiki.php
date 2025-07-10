@@ -18,7 +18,8 @@ class ImportItemsFromWiki extends Command
                             {--limit=1000 : Limit number of items to import (0 = no limit)}
                             {--weapon=all : Weapon type to import (all, rifle, pistol, knife, sniper, smg, heavy, gloves)}
                             {--skip-existing : Skip items that already exist in database}
-                            {--per-weapon=0 : Import N items per weapon type (0 = all items)}';
+                            {--per-weapon=0 : Import N items per weapon type (0 = all items)}
+                            {--analyze : Just analyze raw data without importing to database}';
 
     /**
      * The console command description.
@@ -56,7 +57,26 @@ class ImportItemsFromWiki extends Command
             'https://wiki.cs.money/ru/weapons/r8-revolver',
         ],
         'knife' => [
-            'https://wiki.cs.money/ru/knives/all',
+            'https://wiki.cs.money/ru/weapons/kukri-knife',
+            'https://wiki.cs.money/ru/weapons/karambit',
+            'https://wiki.cs.money/ru/weapons/m9-bayonet',
+            'https://wiki.cs.money/ru/weapons/butterfly-knife',
+            'https://wiki.cs.money/ru/weapons/talon-knife',
+            'https://wiki.cs.money/ru/weapons/skeleton-knife',
+            'https://wiki.cs.money/ru/weapons/classic-knife',
+            'https://wiki.cs.money/ru/weapons/bayonet',
+            'https://wiki.cs.money/ru/weapons/stiletto-knife',
+            'https://wiki.cs.money/ru/weapons/flip-knife',
+            'https://wiki.cs.money/ru/weapons/gut-knife',
+            'https://wiki.cs.money/ru/weapons/falchion-knife',
+            'https://wiki.cs.money/ru/weapons/bowie-knife',
+            'https://wiki.cs.money/ru/weapons/shadow-daggers',
+            'https://wiki.cs.money/ru/weapons/huntsman-knife',
+            'https://wiki.cs.money/ru/weapons/survival-knife',
+            'https://wiki.cs.money/ru/weapons/ursus-knife',
+            'https://wiki.cs.money/ru/weapons/navaja-knife',
+            'https://wiki.cs.money/ru/weapons/paracord-knife',
+            'https://wiki.cs.money/ru/weapons/nomad-knife',
         ],
         'sniper' => [
             'https://wiki.cs.money/ru/weapons/awp',
@@ -82,7 +102,7 @@ class ImportItemsFromWiki extends Command
             'https://wiki.cs.money/ru/weapons/negev',
         ],
         'gloves' => [
-            'https://wiki.cs.money/ru/gloves/all',
+            'https://wiki.cs.money/ru/gloves',
         ],
     ];
 
@@ -97,42 +117,67 @@ class ImportItemsFromWiki extends Command
         $weaponType = $this->option('weapon');
         $skipExisting = $this->option('skip-existing');
         $perWeapon = (int) $this->option('per-weapon');
+        $analyzeMode = $this->option('analyze');
         
-        $this->info("Import settings:");
+        if ($analyzeMode) {
+            $this->info("ANALYZE MODE - Raw data output only, no database import");
+        } else {
+            $this->info("Will fetch detailed wear state images for each item");
+        }
+        
+        $this->info("Settings:");
         $this->info("- Weapon type: {$weaponType}");
         $this->info("- Total limit: " . ($limit === 0 ? 'No limit' : $limit));
         $this->info("- Per weapon limit: " . ($perWeapon === 0 ? 'All items' : $perWeapon));
-        $this->info("- Skip existing: " . ($skipExisting ? 'Yes' : 'No'));
+        if (!$analyzeMode) {
+            $this->info("- Skip existing: " . ($skipExisting ? 'Yes' : 'No'));
+        }
         
         try {
             // Get items data from wiki.cs.money
-            $items = $this->fetchItemsFromWiki($limit, $weaponType, $perWeapon);
+            $items = $this->fetchItemsFromWiki($limit, $weaponType, $perWeapon, $analyzeMode);
             
             if (empty($items)) {
                 $this->error('No items found or failed to fetch data from wiki.cs.money');
                 return Command::FAILURE;
             }
 
-            $this->info("Found " . count($items) . " items. Starting import...");
-            
-            $progressBar = $this->output->createProgressBar(count($items));
-            $progressBar->start();
-
-            foreach ($items as $itemData) {
-                if ($skipExisting && Item::where('steam_market_hash_name', $itemData['steam_market_hash_name'])->exists()) {
-                    $this->skipped++;
-                    $progressBar->advance();
-                    continue;
-                }
+            if ($analyzeMode) {
+                $this->info("Found " . count($items) . " items. Analyzing raw data...");
+                $this->analyzeRawData($items);
+            } else {
+                $this->info("Found " . count($items) . " items. Starting import...");
                 
-                $this->processItem($itemData);
-                $progressBar->advance();
+                $progressBar = $this->output->createProgressBar(count($items));
+                $progressBar->start();
+
+                foreach ($items as $itemData) {
+                    if ($skipExisting && Item::where('steam_market_hash_name', $itemData['steam_market_hash_name'])->exists()) {
+                        $this->skipped++;
+                        $progressBar->advance();
+                        continue;
+                    }
+                    
+                    // Fetch detailed images for this item
+                    if (isset($itemData['slug'])) {
+                        $detailedImages = $this->fetchDetailedImages($itemData['slug']);
+                        if ($detailedImages) {
+                            $itemData = array_merge($itemData, $detailedImages);
+                        }
+                        
+                        // Small delay to avoid rate limiting
+                        usleep(500000); // 0.5 seconds
+                    }
+                    
+                    $this->processItem($itemData);
+                    $progressBar->advance();
+                }
+
+                $progressBar->finish();
+                $this->newLine(2);
+
+                $this->displayResults();
             }
-
-            $progressBar->finish();
-            $this->newLine(2);
-
-            $this->displayResults();
             
             return Command::SUCCESS;
             
@@ -146,7 +191,7 @@ class ImportItemsFromWiki extends Command
     /**
      * Fetch items data from wiki.cs.money
      */
-    private function fetchItemsFromWiki(int $limit, string $weaponType, int $perWeapon): array
+    private function fetchItemsFromWiki(int $limit, string $weaponType, int $perWeapon, bool $analyzeMode = false): array
     {
         $this->info('Fetching data from wiki.cs.money...');
         
@@ -173,7 +218,7 @@ class ImportItemsFromWiki extends Command
             $html = $this->fetchWithCurl($url);
             
             if ($html) {
-                $items = $this->parseWikiResponse($html);
+                $items = $this->parseWikiResponse($html, $analyzeMode);
                 $this->info("  Found " . count($items) . " items");
                 
                 // Apply per-weapon limit if set
@@ -238,7 +283,7 @@ class ImportItemsFromWiki extends Command
     /**
      * Parse response from wiki.cs.money
      */
-    private function parseWikiResponse(string $html): array
+    private function parseWikiResponse(string $html, bool $analyzeMode = false): array
     {
         $items = [];
         
@@ -256,14 +301,37 @@ class ImportItemsFromWiki extends Command
                 
                 // Find weapon items in the Apollo state
                 foreach ($rootQuery as $key => $value) {
-                    if (strpos($key, 'weapon(') !== false && is_array($value)) {
+                    // Check for skin_list (used for gloves)
+                    if (strpos($key, 'skin_list(') !== false && is_array($value)) {
+                        foreach ($value as $item) {
+                            if ($analyzeMode) {
+                                // В режиме анализа возвращаем сырые данные
+                                $items[] = $item;
+                            } else {
+                                // В обычном режиме парсим данные
+                                $parsedItem = $this->parseWikiItem($item);
+                                if ($parsedItem) {
+                                    $items[] = $parsedItem;
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    // Check for weapon items (used for weapons)
+                    elseif (strpos($key, 'weapon(') !== false && is_array($value)) {
                         // Check for items inside weapon data
                         foreach ($value as $subKey => $subValue) {
                             if (strpos($subKey, 'items(') !== false && is_array($subValue)) {
                                 foreach ($subValue as $item) {
-                                    $parsedItem = $this->parseWikiItem($item);
-                                    if ($parsedItem) {
-                                        $items[] = $parsedItem;
+                                    if ($analyzeMode) {
+                                        // В режиме анализа возвращаем сырые данные
+                                        $items[] = $item;
+                                    } else {
+                                        // В обычном режиме парсим данные
+                                        $parsedItem = $this->parseWikiItem($item);
+                                        if ($parsedItem) {
+                                            $items[] = $parsedItem;
+                                        }
                                     }
                                 }
                                 break 2;
@@ -298,7 +366,7 @@ class ImportItemsFromWiki extends Command
             $fullNameEn = $hashName;
             
             // Determine weapon type and rarity
-            $type = $this->determineWeaponType($title ?: $name);
+            $type = $this->determineWeaponType($title ?: $name, $hashName);
             $rarity = $this->determineRarity($item['rarity'] ?? '');
             
             // Get price
@@ -321,6 +389,7 @@ class ImportItemsFromWiki extends Command
                 'weapon' => $this->extractWeaponName($title ?: $name),
                 'rarity' => $rarity,
                 'image_url' => $item['image'] ?? '',
+                'slug' => $item['slug'] ?? null,
                 'min_steam_price' => $price,
                 'steam_listings_count' => rand(50, 2000), // Заглушка, нет данных в wiki
                 'description_ru' => $item['texts']['appearance_history'] ?? null,
@@ -349,12 +418,15 @@ class ImportItemsFromWiki extends Command
     /**
      * Determine weapon type from name
      */
-    private function determineWeaponType(string $name): string
+    private function determineWeaponType(string $name, string $hashName = ''): string
     {
         $name = strtolower($name);
+        $hashName = strtolower($hashName);
         
-        if (str_contains($name, '★')) {
-            if (str_contains($name, 'gloves') || str_contains($name, 'перчатки')) {
+        if (str_contains($name, '★') || str_contains($hashName, '★')) {
+            if (str_contains($name, 'gloves') || str_contains($name, 'перчатки') ||
+                str_contains($hashName, 'gloves') || str_contains($hashName, 'перчатки') ||
+                str_contains($name, 'обмотки') || str_contains($hashName, 'hand wraps')) {
                 return Item::TYPE_GLOVES;
             }
             return Item::TYPE_KNIFE;
@@ -473,6 +545,11 @@ class ImportItemsFromWiki extends Command
                     'weapon' => $itemData['weapon'] ?? null,
                     'rarity' => $itemData['rarity'],
                     'image_url' => $itemData['image_url'],
+                    'image_fn' => $itemData['image_fn'] ?? null,
+                    'image_mw' => $itemData['image_mw'] ?? null,
+                    'image_ft' => $itemData['image_ft'] ?? null,
+                    'image_ww' => $itemData['image_ww'] ?? null,
+                    'image_bs' => $itemData['image_bs'] ?? null,
                     'min_steam_price' => $itemData['min_steam_price'] ?? null,
                     'steam_listings_count' => $itemData['steam_listings_count'] ?? 0,
                     'is_valid' => ($itemData['steam_listings_count'] ?? 0) > 200,
@@ -633,5 +710,160 @@ class ImportItemsFromWiki extends Command
         ];
 
         return array_slice($sampleItems, 0, min($limit, count($sampleItems)));
+    }
+
+    /**
+     * Analyze raw data from wiki.cs.money
+     */
+    private function analyzeRawData(array $items): void
+    {
+        $this->info("=== RAW DATA ANALYSIS ===");
+        $this->newLine();
+        
+        if (empty($items)) {
+            $this->warn("No items to analyze");
+            return;
+        }
+        
+        // Показываем структуру первого элемента
+        $firstItem = $items[0];
+        $this->info("Structure of first item:");
+        $this->line(json_encode($firstItem, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        $this->newLine();
+        
+        // Анализируем все возможные поля
+        $allFields = [];
+        foreach ($items as $item) {
+            $this->collectFields($item, $allFields);
+        }
+        
+        $this->info("All available fields found across " . count($items) . " items:");
+        $this->table(['Field Path', 'Type', 'Sample Values'], $this->formatFieldsTable($allFields));
+        
+        $this->newLine();
+        $this->info("=== END ANALYSIS ===");
+    }
+    
+    /**
+     * Recursively collect all fields from items
+     */
+    private function collectFields(array $data, array &$fields, string $prefix = ''): void
+    {
+        foreach ($data as $key => $value) {
+            $fieldPath = $prefix ? $prefix . '.' . $key : $key;
+            
+            if (is_array($value)) {
+                if (empty($value)) {
+                    $fields[$fieldPath] = ['type' => 'array', 'samples' => ['(empty array)']];
+                } elseif (array_keys($value) === range(0, count($value) - 1)) {
+                    // Числовой массив
+                    $fields[$fieldPath] = ['type' => 'array[' . count($value) . ']', 'samples' => ['(indexed array)']];
+                    if (!empty($value)) {
+                        $this->collectFields([$value[0]], $fields, $fieldPath . '[0]');
+                    }
+                } else {
+                    // Ассоциативный массив
+                    $this->collectFields($value, $fields, $fieldPath);
+                }
+            } else {
+                $type = gettype($value);
+                if (!isset($fields[$fieldPath])) {
+                    $fields[$fieldPath] = ['type' => $type, 'samples' => []];
+                }
+                
+                $strValue = is_null($value) ? 'null' : (string) $value;
+                if (count($fields[$fieldPath]['samples']) < 3 && !in_array($strValue, $fields[$fieldPath]['samples'])) {
+                    $fields[$fieldPath]['samples'][] = $strValue;
+                }
+            }
+        }
+    }
+    
+    /**
+     * Format fields for table display
+     */
+    private function formatFieldsTable(array $fields): array
+    {
+        $rows = [];
+        ksort($fields);
+        
+        foreach ($fields as $fieldPath => $info) {
+            $samples = implode(', ', array_slice($info['samples'], 0, 2));
+            if (strlen($samples) > 50) {
+                $samples = substr($samples, 0, 47) . '...';
+            }
+            
+            $rows[] = [
+                $fieldPath,
+                $info['type'],
+                $samples
+            ];
+        }
+        
+        return $rows;
+    }
+
+    /**
+     * Fetch detailed images from item's detail page
+     */
+    private function fetchDetailedImages(string $slug): ?array
+    {
+        try {
+            $detailUrl = "https://wiki.cs.money/ru" . $slug;
+            
+            $html = $this->fetchWithCurl($detailUrl);
+            
+            if (!$html) {
+                return null;
+            }
+            
+            // Extract __NEXT_DATA__ JSON from HTML
+            if (preg_match('/__NEXT_DATA__[^>]*>(.+?)<\/script>/s', $html, $matches)) {
+                $jsonData = json_decode($matches[1], true);
+                
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    return null;
+                }
+                
+                // Navigate to skin data in Apollo state
+                $skinData = $this->extractSkinFromDetailPage($jsonData);
+                
+                if ($skinData && isset($skinData['images'])) {
+                    return [
+                        'image_fn' => $skinData['images']['fn'] ?? null,
+                        'image_mw' => $skinData['images']['mw'] ?? null,
+                        'image_ft' => $skinData['images']['ft'] ?? null,
+                        'image_ww' => $skinData['images']['ww'] ?? null,
+                        'image_bs' => $skinData['images']['bs'] ?? null,
+                    ];
+                }
+            }
+            
+        } catch (\Exception $e) {
+            // Silent fail
+        }
+        
+        return null;
+    }
+
+    /**
+     * Extract skin data from detail page JSON
+     */
+    private function extractSkinFromDetailPage(array $jsonData): ?array
+    {
+        if (!isset($jsonData['props']['pageProps']['apolloState']['ROOT_QUERY'])) {
+            return null;
+        }
+        
+        $rootQuery = $jsonData['props']['pageProps']['apolloState']['ROOT_QUERY'];
+        
+        // Look for skin data (pattern: skin({"input":{"id":"..."}})
+        foreach ($rootQuery as $key => $value) {
+            if (strpos($key, 'skin(') !== false && is_array($value)) {
+                return $value;
+            }
+        }
+        
+        return null;
     }
 }

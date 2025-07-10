@@ -20,6 +20,11 @@ class Item extends Model
         'weapon',
         'rarity',
         'image_url',
+        'image_fn',
+        'image_mw',
+        'image_ft',
+        'image_ww',
+        'image_bs',
         'min_steam_price',
         'steam_listings_count',
         'is_valid',
@@ -112,6 +117,14 @@ class Item extends Model
     {
         $this->is_valid = $this->steam_listings_count > 200;
         $this->save();
+    }
+
+    /**
+     * Get quick sell price (alias for buyout_price)
+     */
+    public function getQuickSellPrice(): ?float
+    {
+        return $this->buyout_price;
     }
 
     /**
@@ -213,5 +226,64 @@ class Item extends Model
     public function getAverageActivePrice(): ?float
     {
         return $this->activeListings()->avg('price');
+    }
+
+    /**
+     * Get image URL for specific wear value
+     */
+    public function getImageForWear(?float $wearValue = null): string
+    {
+        if ($wearValue === null) {
+            return $this->image_url;
+        }
+
+        // Determine wear condition based on wear value
+        if ($wearValue <= 0.07) {
+            return $this->image_fn ?: $this->image_url;
+        } elseif ($wearValue <= 0.15) {
+            return $this->image_mw ?: $this->image_url;
+        } elseif ($wearValue <= 0.38) {
+            return $this->image_ft ?: $this->image_url;
+        } elseif ($wearValue <= 0.45) {
+            return $this->image_ww ?: $this->image_url;
+        } else {
+            return $this->image_bs ?: $this->image_url;
+        }
+    }
+
+    /**
+     * Get all available wear state images
+     */
+    public function getWearStateImages(): array
+    {
+        return [
+            'fn' => $this->image_fn,
+            'mw' => $this->image_mw,
+            'ft' => $this->image_ft,
+            'ww' => $this->image_ww,
+            'bs' => $this->image_bs,
+        ];
+    }
+
+    /**
+     * Get wear state name by wear value
+     */
+    public function getWearStateName(?float $wearValue = null): string
+    {
+        if ($wearValue === null) {
+            return 'Unknown';
+        }
+
+        if ($wearValue <= 0.07) {
+            return 'Factory New';
+        } elseif ($wearValue <= 0.15) {
+            return 'Minimal Wear';
+        } elseif ($wearValue <= 0.38) {
+            return 'Field-Tested';
+        } elseif ($wearValue <= 0.45) {
+            return 'Well-Worn';
+        } else {
+            return 'Battle-Scarred';
+        }
     }
 }

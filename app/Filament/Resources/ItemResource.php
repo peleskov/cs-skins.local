@@ -90,13 +90,49 @@ class ItemResource extends Resource
                             ->required(),
                     ])->columns(2),
                 
-                Forms\Components\Section::make('Изображение и цены')
+                Forms\Components\Section::make('Доступные изображения')
                     ->schema([
-                        Forms\Components\TextInput::make('image_url')
-                            ->label('URL изображения')
-                            ->url()
-                            ->required(),
-                        
+                        Forms\Components\Placeholder::make('all_images')
+                            ->label('')
+                            ->content(function ($record) {
+                                if (!$record) return 'Нет данных';
+                                
+                                $imageTypes = [
+                                    ['field' => 'image_url', 'label' => 'Основное изображение'],
+                                    ['field' => 'image_fn', 'label' => 'Прямо с завода (FN)'],
+                                    ['field' => 'image_mw', 'label' => 'Немного поношенное (MW)'],
+                                    ['field' => 'image_ft', 'label' => 'После полевых испытаний (FT)'],
+                                    ['field' => 'image_ww', 'label' => 'Поношенное в боях (WW)'],
+                                    ['field' => 'image_bs', 'label' => 'Закалённое в боях (BS)'],
+                                ];
+                                
+                                $images = [];
+                                
+                                foreach ($imageTypes as $type) {
+                                    $imageUrl = $record->{$type['field']};
+                                    
+                                    if ($imageUrl) {
+                                        $images[] = '<div class="text-center">
+                                            <div class="font-medium mb-2">' . $type['label'] . '</div>
+                                            <img src="' . $imageUrl . '" style="width: 200px; height: 200px; object-fit: contain;" class="rounded border mx-auto cursor-pointer hover:opacity-75 transition-opacity" onclick="window.open(\'' . $imageUrl . '\', \'_blank\')">
+                                        </div>';
+                                    } else {
+                                        $images[] = '<div class="text-center">
+                                            <div class="font-medium mb-2 text-gray-400">' . $type['label'] . '</div>
+                                            <div style="width: 200px; height: 200px;" class="rounded border mx-auto flex items-center justify-center text-gray-400 text-sm">
+                                                Нет изображения
+                                            </div>
+                                        </div>';
+                                    }
+                                }
+                                
+                                return new \Illuminate\Support\HtmlString('<div class="flex flex-wrap gap-6 justify-start w-full">' . implode('', $images) . '</div>');
+                            })
+                            ->columnSpanFull(),
+                    ]),
+                
+                Forms\Components\Section::make('Цены и выкуп')
+                    ->schema([
                         Forms\Components\TextInput::make('min_steam_price')
                             ->label('Минимальная цена Steam')
                             ->numeric()
@@ -118,6 +154,36 @@ class ItemResource extends Resource
                             ->minValue(0)
                             ->maxValue(1),
                     ])->columns(2),
+                
+                Forms\Components\Section::make('Ссылки на изображения')
+                    ->schema([
+                        Forms\Components\TextInput::make('image_url')
+                            ->label('URL основного изображения')
+                            ->url()
+                            ->required(),
+                        
+                        Forms\Components\TextInput::make('image_fn')
+                            ->label('Прямо с завода (FN)')
+                            ->url(),
+                        
+                        Forms\Components\TextInput::make('image_mw')
+                            ->label('Немного поношенное (MW)')
+                            ->url(),
+                        
+                        Forms\Components\TextInput::make('image_ft')
+                            ->label('После полевых испытаний (FT)')
+                            ->url(),
+                        
+                        Forms\Components\TextInput::make('image_ww')
+                            ->label('Поношенное в боях (WW)')
+                            ->url(),
+                        
+                        Forms\Components\TextInput::make('image_bs')
+                            ->label('Закалённое в боях (BS)')
+                            ->url(),
+                    ])->columns(2)
+                    ->collapsed()
+                    ->hidden(),
                 
                 Forms\Components\Section::make('Дополнительно')
                     ->schema([

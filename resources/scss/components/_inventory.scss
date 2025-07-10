@@ -1,0 +1,23 @@
+.inventory-items{
+    .inventory-item {
+        padding: 8px;
+        margin-bottom: 1.5rem;
+        border-radius: 16px;
+        background-color: white;
+        box-shadow: 1px 1px 2px 1px lightgray;
+
+        .inventory-img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        h6 {
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        small {
+            font-size: 0.65rem;
+        }
+    }
+}

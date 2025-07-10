@@ -373,4 +373,140 @@ class MarketplaceController extends Controller
 
         return response()->json($suggestions);
     }
+
+    /**
+     * Получение похожих предложений для предмета
+     */
+    public function getSimilarListings(Listing $listing): JsonResponse
+    {
+        $similarListings = Listing::with(['item', 'seller'])
+            ->where('item_id', $listing->item_id)
+            ->where('id', '!=', $listing->id)
+            ->active()
+            ->orderBy('price')
+            ->limit(10)
+            ->get()
+            ->map(function ($listing) {
+                return [
+                    'id' => $listing->id,
+                    'price' => $listing->price,
+                    'wear_value' => $listing->wear_value,
+                    'wear_name' => $listing->wear_name,
+                    'is_stattrak' => $listing->is_stattrak,
+                    'is_souvenir' => $listing->is_souvenir,
+                    'seller' => [
+                        'id' => $listing->seller->id,
+                        'name' => $listing->seller->name,
+                    ],
+                    'item' => [
+                        'id' => $listing->item->id,
+                        'name_ru' => $listing->item->name_ru,
+                        'name_en' => $listing->item->name_en,
+                        'image_url' => $listing->item->image_url,
+                    ],
+                ];
+            });
+
+        return response()->json($similarListings);
+    }
+
+    /**
+     * API endpoint для получения детальной информации о листинге
+     */
+    public function getListingDetails(Listing $listing): JsonResponse
+    {
+        $listing->load(['item', 'seller']);
+        
+        // Другие предложения этого же предмета
+        $otherListings = Listing::with(['seller'])
+            ->where('item_id', $listing->item_id)
+            ->where('id', '!=', $listing->id)
+            ->active()
+            ->orderBy('price')
+            ->limit(5)
+            ->get();
+
+        return response()->json([
+            'listing' => [
+                'id' => $listing->id,
+                'price' => (float) $listing->price,
+                'wear_value' => (float) $listing->wear_value,
+                'wear_name' => $listing->wear_name,
+                'is_stattrak' => $listing->is_stattrak,
+                'is_souvenir' => $listing->is_souvenir,
+                'pattern_index' => $listing->pattern_index,
+                'seller' => [
+                    'id' => $listing->seller->id,
+                    'name' => $listing->seller->name,
+                ],
+                'item' => [
+                    'id' => $listing->item->id,
+                    'name_ru' => $listing->item->name_ru,
+                    'name_en' => $listing->item->name_en,
+                    'description_ru' => $listing->item->description_ru,
+                    'description_en' => $listing->item->description_en,
+                    'type' => $listing->item->type,
+                    'rarity' => $listing->item->rarity,
+                    'image_url' => $listing->item->image_url,
+                    'min_steam_price' => (float) $listing->item->min_steam_price,
+                    'buyout_price' => (float) $listing->item->buyout_price,
+                    'steam_listings_count' => $listing->item->steam_listings_count,
+                    'steam_market_hash_name' => $listing->item->steam_market_hash_name,
+                    'is_valid' => $listing->item->is_valid,
+                ],
+            ],
+            'otherListings' => $otherListings->map(function ($other) {
+                return [
+                    'id' => $other->id,
+                    'price' => (float) $other->price,
+                    'wear_value' => (float) $other->wear_value,
+                    'wear_name' => $other->wear_name,
+                    'seller' => [
+                        'id' => $other->seller->id,
+                        'name' => $other->seller->name,
+                    ],
+                ];
+            }),
+        ]);
+    }
+
+    /**
+     * API endpoint для получения переводов
+     */
+    public function getTranslations(): JsonResponse
+    {
+        return response()->json([
+            'types' => [
+                'rifle' => __('items.types.rifle'),
+                'sniper_rifle' => __('items.types.sniper_rifle'),
+                'pistol' => __('items.types.pistol'),
+                'smg' => __('items.types.smg'),
+                'shotgun' => __('items.types.shotgun'),
+                'machinegun' => __('items.types.machinegun'),
+                'knife' => __('items.types.knife'),
+                'gloves' => __('items.types.gloves'),
+                'agent' => __('items.types.agent'),
+                'sticker' => __('items.types.sticker'),
+                'graffiti' => __('items.types.graffiti'),
+                'patch' => __('items.types.patch'),
+                'collectible' => __('items.types.collectible'),
+                'key' => __('items.types.key'),
+                'case' => __('items.types.case'),
+                'music_kit' => __('items.types.music_kit'),
+                'pin' => __('items.types.pin'),
+                'tool' => __('items.types.tool'),
+            ],
+            'rarities' => [
+                'consumer_grade' => __('items.rarities.consumer_grade'),
+                'industrial_grade' => __('items.rarities.industrial_grade'),
+                'mil_spec' => __('items.rarities.mil_spec'),
+                'restricted' => __('items.rarities.restricted'),
+                'classified' => __('items.rarities.classified'),
+                'covert' => __('items.rarities.covert'),
+                'knife' => __('items.rarities.knife'),
+                'gloves' => __('items.rarities.gloves'),
+                'contraband' => __('items.rarities.contraband'),
+            ],
+        ]);
+    }
 }

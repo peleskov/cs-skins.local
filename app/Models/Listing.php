@@ -12,7 +12,15 @@ class Listing extends Model
         'item_id',
         'seller_id',
         'buyer_id',
+        'steam_asset_id',
+        'steam_owner_id',
+        'market_hash_name',
         'price',
+        'currency',
+        'type',
+        'wear_condition',
+        'float_value',
+        'inspect_url',
         'status',
         'wear_value',
         'pattern_index',
@@ -27,6 +35,7 @@ class Listing extends Model
 
     protected $casts = [
         'price' => 'decimal:2',
+        'float_value' => 'decimal:8',
         'wear_value' => 'float',
         'stickers' => 'array',
         'is_stattrak' => 'boolean',

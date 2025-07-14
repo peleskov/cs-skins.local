@@ -44,6 +44,7 @@ class ClientInventoryItem extends Model
         'cached_at' => 'datetime',
     ];
 
+
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);

@@ -111,11 +111,18 @@ class ProfileController extends Controller
         $validation = \App\Models\Client::validateTradeUrl($tradeUrl, $client->steam_id);
         
         if (!$validation['valid']) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $validation['message']], 422);
+            }
             return redirect()->route('profile')->with('error', $validation['message']);
         }
         
         $client->steam_trade_url = $tradeUrl;
         $client->save();
+        
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Trade URL успешно обновлен!']);
+        }
         
         return redirect()->route('profile')->with('success', 'Trade URL успешно обновлен!');
     }

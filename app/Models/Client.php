@@ -24,6 +24,8 @@ class Client extends Authenticatable
         'locale',
         'email_verified_at',
         'email_verification_sent_at',
+        'telegram_id',
+        'telegram_username',
     ];
 
     protected $hidden = [
@@ -154,6 +156,7 @@ class Client extends Authenticatable
 
         return ['valid' => true, 'steam_id' => $extractedSteamId];
     }
+
 
     public function sellingListings(): HasMany
     {

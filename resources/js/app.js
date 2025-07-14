@@ -71,9 +71,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const profileElement = document.getElementById('profile-app');
     if (profileElement) {
         const app = createApp(Profile, {
-            initialClient: JSON.parse(profileElement.dataset.client || '{}')
+            initialClient: JSON.parse(profileElement.dataset.client || '{}'),
+            telegramBotName: profileElement.dataset.telegramBotName || ''
         });
         app.use(Toast, toastOptions);
+        
+        // Устанавливаем глобальную переменную для Telegram виджета
+        window.telegramBotName = profileElement.dataset.telegramBotName || '';
+        
         app.mount('#profile-app');
     }
 });

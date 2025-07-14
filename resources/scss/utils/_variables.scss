@@ -8,6 +8,11 @@ $gradient-fill: linear-gradient(
   rgba(var(--theme-color), 1),
   rgba(var(--theme-color2), 1)
 );
+$gradient-fill-reverse: linear-gradient(
+  to left,
+  rgba(var(--theme-color), 1),
+  rgba(var(--theme-color2), 1)
+);
 $light-gradient: linear-gradient(
     180deg,
     rgba(226, 232, 255, 0) 0%,

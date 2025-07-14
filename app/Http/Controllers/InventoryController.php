@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Client;
 use App\Models\ClientInventoryItem;
+use App\Models\Listing;
 use App\Services\SteamInventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -34,6 +35,17 @@ class InventoryController extends Controller
             ->orderBy('cached_at', 'desc')
             ->get();
 
+        // Получаем список steam_asset_id, которые уже выставлены на продажу
+        $listedAssetIds = Listing::where('seller_id', $client->id)
+            ->where('status', 'active')
+            ->pluck('steam_asset_id')
+            ->toArray();
+
+        // Добавляем флаг is_listed к каждому предмету
+        $inventoryItems->each(function ($item) use ($listedAssetIds) {
+            $item->is_listed = in_array($item->steam_asset_id, $listedAssetIds);
+        });
+
         // Убрали автоматическую синхронизацию - только по кнопке
 
         // Статистика инвентаря
@@ -50,8 +62,9 @@ class InventoryController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'items' => $inventoryItems->toArray(),
-                'stats' => $stats
+                'items' => $inventoryItems,
+                'stats' => $stats,
+                'has_trade_url' => !empty($client->steam_trade_url)
             ]
         ]);
     }
@@ -109,6 +122,101 @@ class InventoryController extends Controller
                 'success' => false,
                 'message' => 'Ошибка синхронизации инвентаря: ' . $e->getMessage()
             ]);
+        }
+    }
+
+    public function createListing(Request $request)
+    {
+        $client = Auth::guard('client')->user();
+        
+        $request->validate([
+            'steam_asset_id' => 'required|string'
+        ]);
+        
+        $steamAssetId = $request->steam_asset_id;
+        
+        // Проверяем, что у пользователя настроен Trade URL
+        if (empty($client->steam_trade_url)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Необходимо настроить Trade URL в профиле'
+            ], 400);
+        }
+        
+        // Ищем предмет в инвентаре пользователя
+        $inventoryItem = ClientInventoryItem::where('client_id', $client->id)
+            ->where('steam_asset_id', $steamAssetId)
+            ->with('item')
+            ->first();
+            
+        if (!$inventoryItem) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Предмет не найден в вашем инвентаре'
+            ], 404);
+        }
+        
+        // Проверяем, что предмет можно продать
+        if (!$inventoryItem->tradable || !$inventoryItem->marketable) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Данный предмет нельзя продать'
+            ], 400);
+        }
+        
+        // Проверяем, что предмет еще не выставлен на продажу
+        $existingListing = Listing::where('steam_asset_id', $steamAssetId)
+            ->where('seller_id', $client->id)
+            ->where('status', 'active')
+            ->first();
+            
+        if ($existingListing) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Предмет уже выставлен на продажу'
+            ], 400);
+        }
+        
+        try {
+            // Создаем листинг со стандартными параметрами
+            $listing = new Listing();
+            $listing->seller_id = $client->id;
+            $listing->item_id = $inventoryItem->item_id; // может быть null
+            $listing->steam_asset_id = $steamAssetId;
+            $listing->steam_owner_id = $client->steam_id;
+            $listing->market_hash_name = $inventoryItem->market_hash_name;
+            $listing->price = $inventoryItem->item ? $inventoryItem->item->min_steam_price ?? 100 : 100; // временная цена
+            $listing->currency = 'RUB';
+            $listing->status = 'active';
+            $listing->type = 'p2p';
+            $listing->wear_condition = $inventoryItem->wear_condition;
+            $listing->float_value = $inventoryItem->float_value;
+            $listing->pattern_index = $inventoryItem->pattern_index;
+            $listing->stickers = $inventoryItem->stickers;
+            $listing->inspect_url = $this->generateInspectUrl($client->steam_id, $steamAssetId);
+            
+            $listing->save();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Предмет успешно добавлен в маркетплейс',
+                'data' => [
+                    'listing_id' => $listing->id,
+                    'redirect_url' => '/profile#trading'
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to create listing', [
+                'client_id' => $client->id,
+                'steam_asset_id' => $steamAssetId,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Произошла ошибка при создании листинга'
+            ], 500);
         }
     }
 
@@ -178,6 +286,14 @@ class InventoryController extends Controller
             'items_count' => $itemsCount,
             'sync_time' => $syncTime
         ];
+    }
+
+    private function generateInspectUrl(string $steamId, string $assetId): string
+    {
+        // Конвертируем Steam ID64 в Steam ID32 для inspect URL
+        $steamId32 = (string)((int)$steamId - 76561197960265728);
+        
+        return "steam://rungame/730/76561202255233023/+csgo_econ_action_preview%20S{$steamId}A{$assetId}D{$steamId32}";
     }
 
     /*

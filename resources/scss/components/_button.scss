@@ -35,11 +35,13 @@
   &:active {
     color: rgba(var(--white), 1) !important;
     background-color: rgba(var(--theme-color), 1) !important;
+    background: $gradient-fill;
   }
 
   &:hover {
     color: #fff;
     background-color: rgba(var(--theme-color), 1);
+    background: $gradient-fill-reverse;
   }
 }
 

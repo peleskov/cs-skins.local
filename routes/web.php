@@ -77,9 +77,9 @@ Route::middleware(['auth:client'])->group(function () {
     Route::prefix('inventory')->name('inventory.')->controller(InventoryController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/sync', 'sync')->name('sync');
-        Route::get('/{assetId}', 'show')->name('show');
+        Route::post('/create-listing', 'createListing')->name('create-listing');
         Route::get('/{assetId}/sell', 'sell')->name('sell');
-        Route::post('/{assetId}/create-listing', 'createListing')->name('create-listing');
+        Route::get('/{assetId}', 'show')->name('show');
     });
 });
 

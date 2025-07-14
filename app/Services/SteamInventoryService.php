@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 
 class SteamInventoryService
 {
-    private const STEAM_INVENTORY_URL = 'https://steamcommunity.com/inventory/%s/730/2';
+    private const STEAM_INVENTORY_URL = 'https://steamcommunity.com/inventory/%s/730/2?l=russian';
     private const CS2_APP_ID = 730;
     private const CACHE_DURATION = 600; // 10 минут
 

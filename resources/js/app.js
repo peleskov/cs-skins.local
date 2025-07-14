@@ -4,7 +4,6 @@ import Toast from "vue-toastification";
 import "vue-toastification/dist/index.css";
 import Marketplace from './components/Marketplace.vue';
 import SkinDetails from './components/SkinDetails.vue';
-import InventoryGrid from './components/InventoryGrid.vue';
 import Profile from './components/Profile.vue';
 
 // Кастомные скрипты шаблона
@@ -54,17 +53,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         app.use(Toast, toastOptions);
         app.mount('#skin-details-app');
-    }
-    
-    // InventoryGrid компонент (standalone)
-    const inventoryElement = document.getElementById('inventory-app');
-    if (inventoryElement) {
-        const app = createApp(InventoryGrid, {
-            initialItems: JSON.parse(inventoryElement.dataset.items || '[]'),
-            initialStats: JSON.parse(inventoryElement.dataset.stats || '{}')
-        });
-        app.use(Toast, toastOptions);
-        app.mount('#inventory-app');
     }
     
     // Profile компонент

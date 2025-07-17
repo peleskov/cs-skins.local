@@ -8,7 +8,7 @@
           <p>Найдите популярные скины рядом.</p>
         </div>
       </div>
-      
+
       <div class="row g-4">
         <!-- Sidebar -->
         <div class="col-md-4 col-lg-3 col-xl-2">
@@ -17,22 +17,18 @@
               <!-- Поиск -->
               <div class="search-box">
                 <div class="form-input position-relative">
-                  <input 
-                    type="search" 
-                    class="form-control search" 
-                    placeholder="Поиск по скинам..."
-                    v-model="filters.search"
-                    @input="debouncedSearch"
-                  >
+                  <input type="search" class="form-control search" placeholder="Поиск по скинам..."
+                    v-model="filters.search" @input="debouncedSearch">
                   <i class="ri-search-line search-icon"></i>
                 </div>
               </div>
-              
+
               <div class="accordion sidebar-accordion" id="accordionPanelsStayOpenExample">
                 <!-- Фильтр цены -->
                 <div class="accordion-item">
                   <h2 class="accordion-header">
-                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePrice">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                      data-bs-target="#collapsePrice">
                       <span class="dark-text">Цена</span>
                     </button>
                   </h2>
@@ -42,26 +38,14 @@
                         <div class="row g-2">
                           <div class="col-6">
                             <div class="form-input">
-                              <input 
-                                type="number" 
-                                class="form-control" 
-                                placeholder="Мин" 
-                                min="0"
-                                v-model="filters.minPrice"
-                                @change="applyFilters"
-                              >
+                              <input type="number" class="form-control" placeholder="Мин" min="0"
+                                v-model="filters.minPrice" @change="applyFilters">
                             </div>
                           </div>
                           <div class="col-6">
                             <div class="form-input">
-                              <input 
-                                type="number" 
-                                class="form-control" 
-                                placeholder="Макс" 
-                                min="0"
-                                v-model="filters.maxPrice"
-                                @change="applyFilters"
-                              >
+                              <input type="number" class="form-control" placeholder="Макс" min="0"
+                                v-model="filters.maxPrice" @change="applyFilters">
                             </div>
                           </div>
                         </div>
@@ -69,11 +53,12 @@
                     </div>
                   </div>
                 </div>
-                
+
                 <!-- Категории -->
                 <div class="accordion-item">
                   <h2 class="accordion-header">
-                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                      data-bs-target="#collapseOne">
                       <span class="dark-text">Категории</span>
                     </button>
                   </h2>
@@ -81,11 +66,8 @@
                     <div class="accordion-body">
                       <ul class="category-list custom-padding custom-height scroll-bar">
                         <li v-for="category in categories" :key="category.type">
-                          <a 
-                            href="#" 
-                            @click.prevent="toggleCategory(category.type)"
-                            :class="{ active: filters.types === category.type }"
-                          >
+                          <a href="#" @click.prevent="toggleCategory(category.type)"
+                            :class="{ active: filters.types === category.type }">
                             <div class="form-check ps-0 m-0 category-list-box">
                               <div class="form-check-label">
                                 <span class="name">{{ category.name }}</span>
@@ -98,11 +80,12 @@
                     </div>
                   </div>
                 </div>
-                
+
                 <!-- Теги -->
                 <div class="accordion-item">
                   <h2 class="accordion-header">
-                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                      data-bs-target="#collapseTwo">
                       <span class="dark-text">Теги</span>
                     </button>
                   </h2>
@@ -110,11 +93,7 @@
                     <div class="accordion-body">
                       <ul class="filter-item-list">
                         <li v-for="tag in tags" :key="tag.type + '-' + tag.value">
-                          <a 
-                            href="#" 
-                            @click.prevent="toggleTag(tag)"
-                            :class="{ active: isTagActive(tag) }"
-                          >
+                          <a href="#" @click.prevent="toggleTag(tag)" :class="{ active: isTagActive(tag) }">
                             {{ tag.name }} ({{ tag.count }})
                           </a>
                         </li>
@@ -126,11 +105,7 @@
 
               <!-- Кнопка очистки фильтров -->
               <div class="mt-4 pt-3 border-top">
-                <button 
-                  class="btn theme-outline cart-btn w-100" 
-                  @click="clearAllFilters"
-                  :disabled="!hasActiveFilters"
-                >
+                <button class="btn theme-outline cart-btn w-100" @click="clearAllFilters" :disabled="!hasActiveFilters">
                   <i class="ri-refresh-line me-2"></i>
                   Очистить все
                 </button>
@@ -138,7 +113,7 @@
             </div>
           </div>
         </div>
-        
+
         <!-- Основной контент -->
         <div class="col-md-8 col-lg-9 col-xl-10 ratio3_2">
           <!-- Сортировка и количество -->
@@ -151,12 +126,8 @@
             <div class="col-md-6">
               <div class="d-flex align-items-center justify-content-end">
                 <label class="me-2">Сортировка:</label>
-                <select 
-                  class="form-select form-select-sm" 
-                  style="width: auto;"
-                  v-model="sortValue"
-                  @change="handleSortChange"
-                >
+                <select class="form-select form-select-sm" style="width: auto;" v-model="sortValue"
+                  @change="handleSortChange">
                   <option value="listed_at-desc">Новые</option>
                   <option value="price-asc">Цена: дешевые</option>
                   <option value="price-desc">Цена: дорогие</option>
@@ -165,31 +136,24 @@
               </div>
             </div>
           </div>
-          
+
           <!-- Контейнер для товаров -->
           <div class="row g-4">
-            <div 
-              v-for="listing in listings" 
-              :key="listing.id"
-              class="col-lg-2 col-md-4"
-            >
+            <div v-for="listing in listings" :key="listing.id" class="col-lg-2 col-md-4">
               <div class="vertical-product-box">
                 <div v-if="listing.is_stattrak" class="seller-badge new-badge">
-                  <img class="img-fluid badge" src="https://cs-skins.s1temaker.ru/images/svg/star-white.svg" alt="medal">
+                  <img class="img-fluid badge" src="https://cs-skins.s1temaker.ru/images/svg/star-white.svg"
+                    alt="medal">
                   <h6>ST</h6>
                 </div>
                 <div class="vertical-product-box-img">
                   <a :href="`/marketplace/${listing.id}`">
-                    <img 
-                      class="product-img-top w-100 bg-img skin-image" 
-                      :src="listing.item.image_url" 
-                      :alt="listing.item.name_ru"
-                      @error="handleImageError"
-                    >
+                    <img class="product-img-top w-100 bg-img skin-image" :src="listing.item.image_url"
+                      :alt="listing.item.name_ru" @error="handleImageError">
                   </a>
                   <div class="offers">
                     <div class="d-flex align-items-center justify-content-between">
-                      <h4>${{ formatPrice(listing.price) }}</h4>
+                      <h4>{{ formatPrice(listing.price) }} ₽</h4>
                     </div>
                   </div>
                 </div>
@@ -202,24 +166,24 @@
                     <p class="text-muted small">от {{ listing.seller.name }}</p>
                   </div>
                   <div class="location-distance d-flex align-items-center justify-content-between pt-sm-3 pt-2">
-                    <a href="#" class="btn theme-outline cart-btn rounded-2">В корзину</a>
-                    <a href="#!" class="like-btn">
-                      <i class="ri-heart-3-fill fill-icon"></i>
-                      <i class="ri-heart-3-line outline-icon"></i>
-                      <div class="effect-group">
-                        <span class="effect"></span>
-                        <span class="effect"></span>
-                        <span class="effect"></span>
-                        <span class="effect"></span>
-                        <span class="effect"></span>
-                      </div>
-                    </a>
+                    <div 
+                      data-cart-button 
+                      :data-listing-id="listing.id" 
+                      data-size="small" 
+                      data-variant="outline"
+                      class="cart-button-placeholder">
+                    </div>
+                    <div 
+                      data-favorite-button 
+                      :data-listing-id="listing.id"
+                      class="favorite-button-placeholder">
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          
+
           <!-- Индикатор загрузки -->
           <div v-if="isLoading" class="text-center py-4">
             <div class="spinner-border text-primary" role="status">
@@ -227,14 +191,14 @@
             </div>
             <p class="mt-2 text-muted">Загрузка предложений...</p>
           </div>
-          
+
           <!-- Кнопка "Загрузить еще" -->
           <div v-if="!isLoading && pagination.hasMorePages" class="text-center mt-4">
             <button class="btn theme-outline cart-btn" @click="loadMore">
               Загрузить еще
             </button>
           </div>
-          
+
           <!-- Сообщение об отсутствии товаров -->
           <div v-if="!isLoading && listings.length === 0" class="text-center py-5">
             <i class="ri-search-line display-4 text-muted mb-3"></i>
@@ -248,7 +212,12 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { ref, reactive, onMounted, computed, watch, nextTick } from 'vue'
+import { createApp } from 'vue'
+import Toast from "vue-toastification"
+import CartButton from './CartButton.vue'
+import FavoriteButton from './FavoriteButton.vue'
+import { formatPrice } from '../utils/helpers'
 
 export default {
   name: 'Marketplace',
@@ -273,12 +242,12 @@ export default {
     const isLoading = ref(false)
     const currentPage = ref(2)
     const searchTimeout = ref(null)
-    
+
     const pagination = reactive({
       total: props.initialTotal,
       hasMorePages: props.initialHasMore
     })
-    
+
     const filters = reactive({
       search: '',
       minPrice: '',
@@ -290,11 +259,11 @@ export default {
       sortBy: 'listed_at',
       sortOrder: 'desc'
     })
-    
+
     const sortValue = ref('listed_at-desc')
-    
+
     const shownCount = computed(() => listings.value.length)
-    
+
     // Проверка наличия активных фильтров
     const hasActiveFilters = computed(() => {
       return !!(
@@ -308,7 +277,7 @@ export default {
         sortValue.value !== 'listed_at-desc'
       )
     })
-    
+
     // Проверка активности состояния износа
     const isWearActive = (value) => {
       if (Array.isArray(filters.wearRange)) {
@@ -316,33 +285,33 @@ export default {
       }
       return filters.wearRange === value
     }
-    
+
     // Загрузка тегов с учетом текущих фильтров
     const loadTags = async () => {
       try {
         // Создаем параметры запроса с текущими фильтрами (кроме самих тегов)
         const params = new URLSearchParams()
-        
+
         if (filters.search) params.append('search', filters.search)
         if (filters.minPrice) params.append('min_price', filters.minPrice)
         if (filters.maxPrice) params.append('max_price', filters.maxPrice)
         if (filters.types) params.append('types', filters.types)
-        
+
         const url = `/marketplace/api/tags?${params}`
         const response = await fetch(url)
         tags.value = await response.json()
-        
+
       } catch (error) {
         console.error('Ошибка загрузки тегов:', error)
       }
     }
-    
+
     // Загрузка категорий с учетом текущих фильтров
     const loadCategories = async () => {
       try {
         // Создаем параметры запроса с текущими фильтрами (кроме типа)
         const params = new URLSearchParams()
-        
+
         if (filters.search) params.append('search', filters.search)
         if (filters.minPrice) params.append('min_price', filters.minPrice)
         if (filters.maxPrice) params.append('max_price', filters.maxPrice)
@@ -355,28 +324,28 @@ export default {
             params.append('wear_range', filters.wearRange)
           }
         }
-        
+
         const url = `/marketplace/api/categories?${params}`
         const response = await fetch(url)
         categories.value = await response.json()
-        
+
       } catch (error) {
         console.error('Ошибка загрузки категорий:', error)
       }
     }
-    
+
     // Загрузка предложений
     const loadListings = async (append = false) => {
       if (isLoading.value) return
-      
+
       isLoading.value = true
-      
+
       try {
         const params = new URLSearchParams({
           page: append ? currentPage.value : 1,
           per_page: 24
         })
-        
+
         // Добавляем фильтры
         Object.entries(filters).forEach(([key, value]) => {
           if (value !== '' && value !== false && value !== null) {
@@ -394,11 +363,11 @@ export default {
             else params.append(key, value)
           }
         })
-        
+
         const url = `/marketplace/api/listings?${params}`
         const response = await fetch(url)
         const data = await response.json()
-        
+
         if (append) {
           listings.value.push(...data.data)
           currentPage.value++
@@ -406,17 +375,22 @@ export default {
           listings.value = data.data
           currentPage.value = 2
         }
-        
+
         pagination.total = data.pagination.total
         pagination.hasMorePages = data.pagination.has_more_pages
-        
+
+        // Инициализируем кнопки корзины после рендеринга
+        nextTick(() => {
+          initializeCartButtons()
+        })
+
       } catch (error) {
         console.error('Ошибка загрузки товаров:', error)
       } finally {
         isLoading.value = false
       }
     }
-    
+
     // Поиск с задержкой
     const debouncedSearch = () => {
       clearTimeout(searchTimeout.value)
@@ -427,7 +401,7 @@ export default {
         loadListings(false)
       }, 300)
     }
-    
+
     // Применение фильтров
     const applyFilters = () => {
       // Сохраняем фильтры в localStorage
@@ -437,7 +411,7 @@ export default {
       loadTags()
       loadListings(false)
     }
-    
+
     // Сохранение фильтров в localStorage
     const saveFiltersToStorage = () => {
       const filtersToSave = {
@@ -451,7 +425,7 @@ export default {
       }
       localStorage.setItem('marketplace_filters', JSON.stringify(filtersToSave))
     }
-    
+
     // Восстановление фильтров из localStorage
     const restoreFiltersFromStorage = () => {
       try {
@@ -464,7 +438,7 @@ export default {
         console.error('Ошибка восстановления фильтров:', error)
       }
     }
-    
+
     // Переключение категорий
     const toggleCategory = (type) => {
       if (filters.types === type) {
@@ -476,7 +450,7 @@ export default {
       saveFiltersToStorage()
       loadListings(false)
     }
-    
+
     // Переключение тегов (универсальная функция)
     const toggleTag = (tag) => {
       if (tag.type === 'stattrak' || tag.type === 'souvenir') {
@@ -486,7 +460,7 @@ export default {
         if (!Array.isArray(filters.wearRange)) {
           filters.wearRange = filters.wearRange ? [filters.wearRange] : []
         }
-        
+
         const index = filters.wearRange.indexOf(tag.value)
         if (index > -1) {
           // Убираем из массива
@@ -495,16 +469,16 @@ export default {
           // Добавляем в массив
           filters.wearRange.push(tag.value)
         }
-        
+
         // Если массив пустой, сбрасываем фильтр
         if (filters.wearRange.length === 0) {
           filters.wearRange = ''
         }
       }
-      
+
       applyFilters()
     }
-    
+
     // Проверка активности тега
     const isTagActive = (tag) => {
       if (tag.type === 'stattrak' || tag.type === 'souvenir') {
@@ -514,32 +488,25 @@ export default {
       }
       return false
     }
-    
+
     // Обработка сортировки
     const handleSortChange = () => {
       const [sortBy, sortOrder] = sortValue.value.split('-')
       filters.sortBy = sortBy
       filters.sortOrder = sortOrder
-      
+
       // Сохраняем в localStorage
       localStorage.setItem('marketplace_sort', sortValue.value)
-      
+
       applyFilters()
     }
-    
+
     // Загрузить еще
     const loadMore = () => {
       loadListings(true)
     }
-    
-    // Форматирование цены
-    const formatPrice = (price) => {
-      return parseFloat(price).toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      })
-    }
-    
+
+
     // Очистка всех фильтров
     const clearAllFilters = () => {
       // Сбрасываем все фильтры
@@ -552,25 +519,108 @@ export default {
       filters.wearRange = ''
       filters.sortBy = 'listed_at'
       filters.sortOrder = 'desc'
-      
+
       // Сбрасываем сортировку
       sortValue.value = 'listed_at-desc'
-      
+
       // Очищаем localStorage
       localStorage.removeItem('marketplace_filters')
       localStorage.removeItem('marketplace_sort')
-      
+
       // Перезагружаем данные
       loadCategories()
       loadTags()
       loadListings(false)
     }
-    
+
     // Обработка ошибок изображений
     const handleImageError = (event) => {
       event.target.closest('.vertical-product-box-img').classList.add('image-error')
     }
-    
+
+    // Инициализация кнопок корзины и избранного
+    const initializeCartButtons = () => {
+      // Найдем все неинициализированные кнопки корзины
+      const cartButtons = document.querySelectorAll('[data-cart-button]:not(.cart-initialized)')
+      
+      cartButtons.forEach(button => {
+        const listingId = parseInt(button.dataset.listingId)
+        const size = button.dataset.size || 'normal'
+        const variant = button.dataset.variant || 'primary'
+        
+        if (listingId) {
+          // Создаем Vue приложение для кнопки
+          const app = createApp(CartButton, {
+            listingId: listingId,
+            size: size,
+            variant: variant
+          })
+          
+          // Используем те же настройки Toast что и в главном приложении
+          const toastOptions = {
+            position: "bottom-right",
+            timeout: 8000,
+            closeOnClick: true,
+            pauseOnFocusLoss: true,
+            pauseOnHover: true,
+            draggable: true,
+            draggablePercent: 0.6,
+            showCloseButtonOnHover: false,
+            hideProgressBar: false,
+            closeButton: "button",
+            icon: true,
+            rtl: false,
+            maxToasts: 5,
+            newestOnTop: true
+          }
+          
+          app.use(Toast, toastOptions)
+          app.mount(button)
+          
+          // Помечаем как инициализированную
+          button.classList.add('cart-initialized')
+        }
+      })
+      
+      // Найдем все неинициализированные кнопки избранного
+      const favoriteButtons = document.querySelectorAll('[data-favorite-button]:not(.favorite-initialized)')
+      
+      favoriteButtons.forEach(button => {
+        const listingId = parseInt(button.dataset.listingId)
+        
+        if (listingId) {
+          // Создаем Vue приложение для кнопки
+          const app = createApp(FavoriteButton, {
+            listingId: listingId
+          })
+          
+          // Используем те же настройки Toast что и в главном приложении
+          const toastOptions = {
+            position: "bottom-right",
+            timeout: 8000,
+            closeOnClick: true,
+            pauseOnFocusLoss: true,
+            pauseOnHover: true,
+            draggable: true,
+            draggablePercent: 0.6,
+            showCloseButtonOnHover: false,
+            hideProgressBar: false,
+            closeButton: "button",
+            icon: true,
+            rtl: false,
+            maxToasts: 5,
+            newestOnTop: true
+          }
+          
+          app.use(Toast, toastOptions)
+          app.mount(button)
+          
+          // Помечаем как инициализированную
+          button.classList.add('favorite-initialized')
+        }
+      })
+    }
+
     // Восстановление сохраненной сортировки
     const restoreSavedSort = () => {
       const savedSort = localStorage.getItem('marketplace_sort')
@@ -580,30 +630,35 @@ export default {
         filters.sortBy = sortBy
         filters.sortOrder = sortOrder
       }
-      
+
       // Проверяем, нужно ли перезагрузить данные
-      const hasFilters = filters.search || filters.minPrice || filters.maxPrice || 
-                        filters.types || filters.stattrak || filters.souvenir || 
-                        filters.wearRange || (savedSort && savedSort !== 'listed_at-desc')
-      
+      const hasFilters = filters.search || filters.minPrice || filters.maxPrice ||
+        filters.types || filters.stattrak || filters.souvenir ||
+        filters.wearRange || (savedSort && savedSort !== 'listed_at-desc')
+
       if (hasFilters) {
         // Обновляем категории если есть фильтры (кроме фильтра по типу)
-        const hasNonTypeFilters = filters.search || filters.minPrice || filters.maxPrice || 
-                                 filters.stattrak || filters.souvenir || filters.wearRange
+        const hasNonTypeFilters = filters.search || filters.minPrice || filters.maxPrice ||
+          filters.stattrak || filters.souvenir || filters.wearRange
         if (hasNonTypeFilters) {
           loadCategories()
         }
         loadListings(false)
       }
     }
-    
+
     onMounted(() => {
       loadCategories()
       loadTags()
       restoreFiltersFromStorage()
       restoreSavedSort()
+      
+      // Инициализируем кнопки корзины для изначально загруженных товаров
+      nextTick(() => {
+        initializeCartButtons()
+      })
     })
-    
+
     return {
       listings,
       categories,
@@ -626,7 +681,8 @@ export default {
       handleImageError,
       saveFiltersToStorage,
       restoreFiltersFromStorage,
-      isWearActive
+      isWearActive,
+      initializeCartButtons
     }
   }
 }

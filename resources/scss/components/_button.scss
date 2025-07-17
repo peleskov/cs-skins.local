@@ -2,94 +2,239 @@
   3.2  Button Style start
 ==========================*/
 .btn {
-  padding: calc(8px + (10 - 8) * ((100vw - 320px) / (1920 - 320)))
-    calc(10px + (25 - 10) * ((100vw - 320px) / (1920 - 320)));
-  font-size: calc(14px + (16 - 14) * ((100vw - 320px) / (1920 - 320)));
-  font-weight: 500;
-  white-space: nowrap;
+	padding: calc(8px + (10 - 8) * ((100vw - 320px) / (1920 - 320))) calc(10px + (25 - 10) * ((100vw - 320px) / (1920 - 320)));
+	font-size: calc(14px + (16 - 14) * ((100vw - 320px) / (1920 - 320)));
+	font-weight: 500;
+	white-space: nowrap;
 
-  &:active,
-  &:focus-visible {
-    border-color: transparent !important;
-    color: #fff !important;
-  }
+	&:active,
+	&:focus-visible {
+		border-color: transparent !important;
+		color: #fff !important;
+	}
 
-  &.btn-sm {
-    padding: calc(4px + (7 - 4) * ((100vw - 320px) / (1920 - 320)))
-      calc(10px + (18 - 10) * ((100vw - 320px) / (1920 - 320)));
-  }
+	&.btn-sm {
+		padding: calc(4px + (7 - 4) * ((100vw - 320px) / (1920 - 320))) calc(10px + (18 - 10) * ((100vw - 320px) / (1920 - 320)));
+	}
 
-  &-inline {
-    padding-inline: 15px;
-  }
+	&-inline {
+		padding-inline: 15px;
+	}
 }
 
 .theme-btn {
-  color: #fff;
-  background-color: rgba(var(--theme-color), 1);
-  border-radius: 4px;
-  background: $gradient-fill;
-  border: none;
-  border-radius: 100px;
+	color: #fff;
+	background-color: rgba(var(--theme-color), 1);
+	border-radius: 4px;
+	background: $gradient-fill;
+	border: none;
+	border-radius: 100px;
 
-  &:active {
-    color: rgba(var(--white), 1) !important;
-    background-color: rgba(var(--theme-color), 1) !important;
-    background: $gradient-fill;
-  }
+	&:active {
+		color: rgba(var(--white), 1) !important;
+		background-color: rgba(var(--theme-color), 1) !important;
+		background: $gradient-fill;
+	}
 
-  &:hover {
-    color: #fff;
-    background-color: rgba(var(--theme-color), 1);
-    background: $gradient-fill-reverse;
-  }
+	&:hover {
+		color: #fff;
+		background-color: rgba(var(--theme-color), 1);
+		background: $gradient-fill-reverse;
+	}
+
+	&-danger {
+		background: rgba(var(--error-color), 1);
+
+		&:hover {
+			background: rgba(var(--theme-color), 1);
+		}
+	}
+
+	&-success {
+		background: rgba(var(--success-color), 1);
+
+		&:hover {
+			background: rgba(var(--theme-color), 1);
+		}
+	}
+
+	&-info {
+		background: rgba(var(--accent-color), 1);
+
+		&:hover {
+			background: rgba(var(--theme-color), 1);
+		}
+	}
 }
 
 .theme-outline {
-  border: 1px solid rgba(var(--theme-color), 1);
-  color: rgba(var(--theme-color), 1);
-  border-radius: 100px;
-  transition: 0.4s ease;
+	border: 1px solid rgba(var(--theme-color), 1);
+	color: rgba(var(--theme-color), 1);
+	border-radius: 100px;
+	transition: 0.4s ease;
 
-  &:hover {
-    background: $gradient-fill;
-    color: #fff;
-  }
+	&:hover {
+		background: $gradient-fill;
+		color: #fff;
+	}
+
+	&-danger {
+		border-color: rgba(var(--error-color), 1);
+		color: rgba(var(--error-color), 1);
+
+		&:hover {
+			border-color: rgba(var(--theme-color), 1);
+			background: $gradient-fill;
+			color: #fff;
+		}
+	}
+
+	&-success {
+		border-color: rgba(var(--success-color), 1);
+		color: rgba(var(--success-color), 1);
+
+		&:hover {
+			border-color: rgba(var(--theme-color), 1);
+			background: $gradient-fill;
+			color: #fff;
+		}
+	}
+
+	&-info {
+		border-color: rgba(var(--accent-color), 1);
+		color: rgba(var(--accent-color), 1);
+
+		&:hover {
+			border-color: rgba(var(--theme-color), 1);
+			background: $gradient-fill;
+			color: #fff;
+		}
+	}
 }
 
 .gray-btn {
-  background-color: rgba(var(--box-bg), 1);
-  color: rgba(var(--content-color), 1);
-  border-radius: 100px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
+	background-color: rgba(var(--box-bg), 1);
+	color: rgba(var(--content-color), 1);
+	border-radius: 100px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
 
-  &:hover {
-    background-color: rgba(var(--box-bg), 1);
-    color: rgba(var(--light-text), 1);
-  }
+	&:hover {
+		background-color: rgba(var(--box-bg), 1);
+		color: rgba(var(--light-text), 1);
+	}
 }
 
 .border-btn {
-  background-color: rgba(var(--white), 1);
-  color: rgba(var(--theme-color), 1);
-  border: 1px solid rgba(var(--theme-color), 1);
-  border-radius: 4px;
+	background-color: rgba(var(--white), 1);
+	color: rgba(var(--theme-color), 1);
+	border: 1px solid rgba(var(--theme-color), 1);
+	border-radius: 4px;
 }
 
 .btn-link {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 16px;
-  line-height: 1;
-  color: rgba(var(--light-text), 1);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	text-decoration: none;
+	font-weight: 500;
+	font-size: 16px;
+	line-height: 1;
+	color: rgba(var(--light-text), 1);
 
-  &:hover {
-    color: rgba(var(--light-text), 1);
-  }
+	&:hover {
+		color: rgba(var(--light-text), 1);
+	}
+}
+
+.like-btn {
+	position: relative;
+
+	.effect-group {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+
+		.effect {
+			display: block;
+			position: absolute;
+			top: 38%;
+			left: 50%;
+			width: 20px;
+			transform-origin: 0px 2px;
+
+			&:nth-child(2) {
+				transform: rotate(72deg);
+			}
+
+			&:nth-child(3) {
+				transform: rotate(144deg);
+			}
+
+			&:nth-child(4) {
+				transform: rotate(216deg);
+			}
+
+			&:nth-child(5) {
+				transform: rotate(288deg);
+			}
+
+			&::before {
+				content: "";
+				display: block;
+				position: absolute;
+				right: 0;
+				border-radius: 2px;
+				height: 3px;
+				background: #777777;
+			}
+
+			&::after {
+				content: "";
+				display: block;
+				position: absolute;
+				top: 10px;
+				right: 10%;
+				border-radius: 50%;
+				width: 3px;
+				height: 3px;
+				background: rgba(var(--theme-color), 1);
+				transform: scale(0, 0);
+			}
+		}
+	}
+
+	&.active {
+		.outline-icon {
+			display: none;
+		}
+
+		.fill-icon {
+			display: flex;
+			color: rgba(var(--error-color), 1);
+			font-size: calc(18px + (25 - 18) * ((100vw - 320px) / (1920 - 320)));
+		}
+
+		.effect:before {
+			animation: fireworkLine 0.5s linear 0.1s;
+		}
+
+		.effect:after {
+			animation: fireworkLine 0.5s linear 0.1s;
+		}
+	}
+
+	.outline-icon {
+		display: flex;
+		font-size: calc(18px + (25 - 18) * ((100vw - 320px) / (1920 - 320)));
+		color: rgba(var(--error-color), 1);
+	}
+
+	.fill-icon {
+		display: none;
+	}
 }

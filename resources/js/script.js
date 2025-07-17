@@ -79,20 +79,22 @@ window.addEventListener("load", () => {
 =======================*/
 const btn = document.querySelector(".scroll");
 
-btn.addEventListener("click", function () {
-  scroll(0, 200);
-});
+if (btn) {
+  btn.addEventListener("click", function () {
+    scroll(0, 200);
+  });
 
-window.onscroll = function showHide() {
-  if (
-    document.body.scrollTop > 500 ||
-    document.documentElement.scrollTop > 500
-  ) {
-    btn.style.transform = "scale(1)";
-  } else {
-    btn.style.transform = "scale(0)";
-  }
-};
+  window.onscroll = function showHide() {
+    if (
+      document.body.scrollTop > 500 ||
+      document.documentElement.scrollTop > 500
+    ) {
+      btn.style.transform = "scale(1)";
+    } else {
+      btn.style.transform = "scale(0)";
+    }
+  };
+}
 
 function scroll(target, duration) {
   if (duration <= 0) {
@@ -120,11 +122,13 @@ function handleInputChange(e) {
   if (e.target.type !== "range") {
     target = document.getElementById("range");
   }
-  const min = target.min;
-  const max = target.max;
-  const val = target.value;
+  if (target) {
+    const min = target.min;
+    const max = target.max;
+    const val = target.value;
 
-  target.style.backgroundSize = ((val - min) * 100) / (max - min) + "%100%";
+    target.style.backgroundSize = ((val - min) * 100) / (max - min) + "%100%";
+  }
 }
 
 rangeInputs.forEach((input) => {
@@ -160,14 +164,16 @@ document.addEventListener("DOMContentLoaded", function () {
   var faqContainers = document.getElementsByClassName("add-btn");
   var faqToggle = document.getElementsByClassName("plus-minus")[0];
 
-  for (var i = 0; i < faqContainers.length; i++) {
-    faqContainers[i].addEventListener("click", function () {
-      if (faqToggle.classList.contains("d-flex")) {
-        faqToggle.classList.remove("d-flex");
-      } else {
-        faqToggle.classList.add("d-flex");
-      }
-    });
+  if (faqToggle) {
+    for (var i = 0; i < faqContainers.length; i++) {
+      faqContainers[i].addEventListener("click", function () {
+        if (faqToggle.classList.contains("d-flex")) {
+          faqToggle.classList.remove("d-flex");
+        } else {
+          faqToggle.classList.add("d-flex");
+        }
+      });
+    }
   }
 });
 
@@ -175,14 +181,16 @@ document.addEventListener("DOMContentLoaded", function () {
   var faqContainers = document.getElementsByClassName("apply-btn");
   var faqToggle = document.getElementsByClassName("cart-popup")[0];
 
-  for (var i = 0; i < faqContainers.length; i++) {
-    faqContainers[i].addEventListener("click", function () {
-      if (faqToggle.classList.contains("d-flex")) {
-        faqToggle.classList.remove("d-flex");
-      } else {
-        faqToggle.classList.add("d-flex");
-      }
-    });
+  if (faqToggle) {
+    for (var i = 0; i < faqContainers.length; i++) {
+      faqContainers[i].addEventListener("click", function () {
+        if (faqToggle.classList.contains("d-flex")) {
+          faqToggle.classList.remove("d-flex");
+        } else {
+          faqToggle.classList.add("d-flex");
+        }
+      });
+    }
   }
 });
 
@@ -190,15 +198,17 @@ document.addEventListener("DOMContentLoaded", function () {
   var faqContainers = document.getElementsByClassName("cart-btn");
   var faqToggle = document.getElementsByClassName("pay-btn")[0];
 
-  for (var i = 0; i < faqContainers.length; i++) {
-    faqContainers[i].addEventListener("click", function () {
-      if (faqToggle.classList.contains("d-flex")) {
-        faqToggle.classList.remove("d-flex");
-        faqToggle.classList.remove("d-block");
-      } else {
-        faqToggle.classList.add("d-flex");
-      }
-    });
+  if (faqToggle) {
+    for (var i = 0; i < faqContainers.length; i++) {
+      faqContainers[i].addEventListener("click", function () {
+        if (faqToggle.classList.contains("d-flex")) {
+          faqToggle.classList.remove("d-flex");
+          faqToggle.classList.remove("d-block");
+        } else {
+          faqToggle.classList.add("d-flex");
+        }
+      });
+    }
   }
 });
 
@@ -207,9 +217,12 @@ document.addEventListener("DOMContentLoaded", function () {
 /*====================
   09. Menu sidebar 
 ======================*/
-document
-  .getElementById("offcanvas-close")
-  .addEventListener("click", function () {
+const offcanvasClose = document.getElementById("offcanvas-close");
+if (offcanvasClose) {
+  offcanvasClose.addEventListener("click", function () {
     var offcanvasSide = document.getElementById("offcanvasNavbar");
-    offcanvasSide.classList.remove("show");
+    if (offcanvasSide) {
+      offcanvasSide.classList.remove("show");
+    }
   });
+}

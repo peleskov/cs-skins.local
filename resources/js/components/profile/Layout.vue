@@ -25,6 +25,10 @@
 							<i class="ri-treasure-map-line"></i>
 							<a href="#" @click.prevent="setActiveTab('inventory')">Инвентарь</a>
 						</li>
+						<li :class="{ active: activeTab === 'favorites' }">
+							<i class="ri-heart-line"></i>
+							<a href="#" @click.prevent="setActiveTab('favorites')">Избранное</a>
+						</li>
 						<li :class="{ active: activeTab === 'auctions' }">
 							<i class="ri-store-2-line"></i>
 							<a href="#" @click.prevent="setActiveTab('auctions')">Мои аукционы</a>
@@ -59,6 +63,11 @@
 
 				<!-- Inventory Tab -->
 				<ProfileInventory v-else-if="activeTab === 'inventory'" 
+					:client="client" 
+					@switch-to-trading="setActiveTab('trading')" />
+
+				<!-- Favorites Tab -->
+				<ProfileFavorites v-else-if="activeTab === 'favorites'" 
 					:client="client" />
 
 				<!-- Auctions Tab -->
@@ -88,6 +97,7 @@ import { useToast } from "vue-toastification";
 import ProfileInventory from './Inventory.vue';
 import ProfileInfo from './Info.vue';
 import ProfileTrading from './Trading.vue';
+import ProfileFavorites from './Favorites.vue';
 import ProfileAuctions from './Auctions.vue';
 import ProfileBalance from './Balance.vue';
 import ProfileSettings from './Settings.vue';
@@ -98,6 +108,7 @@ export default {
 		ProfileInventory,
 		ProfileInfo,
 		ProfileTrading,
+		ProfileFavorites,
 		ProfileAuctions,
 		ProfileBalance,
 		ProfileSettings
@@ -127,14 +138,14 @@ export default {
 
 			// Проверяем hash в URL
 			const hash = window.location.hash.substring(1);
-			if (hash && ['profile', 'trading', 'inventory', 'auctions', 'balance', 'settings'].includes(hash)) {
+			if (hash && ['profile', 'trading', 'inventory', 'favorites', 'auctions', 'balance', 'settings'].includes(hash)) {
 				return hash;
 			}
 
 			// Проверяем localStorage
 			try {
 				const savedTab = localStorage.getItem('profile-active-tab');
-				if (savedTab && ['profile', 'trading', 'inventory', 'auctions', 'balance', 'settings'].includes(savedTab)) {
+				if (savedTab && ['profile', 'trading', 'inventory', 'favorites', 'auctions', 'balance', 'settings'].includes(savedTab)) {
 					return savedTab;
 				}
 			} catch (e) {
@@ -181,6 +192,7 @@ export default {
 		getTabTitle(tab) {
 			const titles = {
 				trading: 'Торговля',
+				favorites: 'Избранное',
 				auctions: 'Мои аукционы',
 				balance: 'Баланс',
 				settings: 'Настройки'
@@ -191,7 +203,7 @@ export default {
 		handleHashChange() {
 			// Обрабатываем изменение хэша в URL
 			const hash = window.location.hash.substring(1);
-			if (hash && ['profile', 'trading', 'inventory', 'auctions', 'balance', 'settings'].includes(hash)) {
+			if (hash && ['profile', 'trading', 'inventory', 'favorites', 'auctions', 'balance', 'settings'].includes(hash)) {
 				this.setActiveTab(hash);
 			}
 		}

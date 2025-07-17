@@ -175,7 +175,7 @@ class MarketplaceController extends Controller
      */
     public function getCategories(Request $request): JsonResponse
     {
-        $query = Item::select('type', \DB::raw('COUNT(DISTINCT listings.id) as items_count'))
+        $query = Item::select('items.type', \DB::raw('COUNT(DISTINCT listings.id) as items_count'))
             ->join('listings', 'items.id', '=', 'listings.item_id')
             ->where('listings.status', 'active')
             ->where('listings.price', '>', 0);
@@ -233,7 +233,7 @@ class MarketplaceController extends Controller
             });
         }
 
-        $categories = $query->groupBy('type')
+        $categories = $query->groupBy('items.type')
             ->having('items_count', '>', 0)
             ->get()
             ->map(function ($item) {
@@ -448,7 +448,13 @@ class MarketplaceController extends Controller
                     'type' => $listing->item->type,
                     'rarity' => $listing->item->rarity,
                     'image_url' => $listing->item->image_url,
+                    'image_fn' => $listing->item->image_fn,
+                    'image_mw' => $listing->item->image_mw,
+                    'image_ft' => $listing->item->image_ft,
+                    'image_ww' => $listing->item->image_ww,
+                    'image_bs' => $listing->item->image_bs,
                     'min_steam_price' => (float) $listing->item->min_steam_price,
+                    'steam_price_rub' => (float) $listing->item->steam_price_rub,
                     'buyout_price' => (float) $listing->item->buyout_price,
                     'steam_listings_count' => $listing->item->steam_listings_count,
                     'steam_market_hash_name' => $listing->item->steam_market_hash_name,

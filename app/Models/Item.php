@@ -107,7 +107,21 @@ class Item extends Model
         }
 
         $coefficient = $this->buyout_coefficient ?? self::BUYOUT_COEFFICIENTS[$this->rarity] ?? 0.20;
-        return round($this->min_steam_price * $coefficient, 2);
+        $courseDollar = config('app.course_dollar', 100);
+        return round($this->min_steam_price * $coefficient * $courseDollar, 2);
+    }
+
+    /**
+     * Get Steam price in rubles
+     */
+    public function getSteamPriceRubAttribute(): ?float
+    {
+        if (!$this->min_steam_price) {
+            return null;
+        }
+
+        $courseDollar = config('app.course_dollar', 100);
+        return round($this->min_steam_price * $courseDollar, 2);
     }
 
     /**

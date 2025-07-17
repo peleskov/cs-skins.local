@@ -13,14 +13,24 @@ class Listing extends Model
         'seller_id',
         'buyer_id',
         'steam_asset_id',
+        'steam_class_id',
+        'steam_instance_id',
         'steam_owner_id',
         'market_hash_name',
+        'inventory_item_name',
+        'inventory_type',
+        'inventory_icon_url',
+        'inventory_tags',
+        'inventory_descriptions',
+        'tradable',
+        'marketable',
         'price',
         'currency',
         'type',
         'wear_condition',
         'float_value',
         'inspect_url',
+        'screenshot_url',
         'status',
         'wear_value',
         'pattern_index',
@@ -38,6 +48,10 @@ class Listing extends Model
         'float_value' => 'decimal:8',
         'wear_value' => 'float',
         'stickers' => 'array',
+        'inventory_tags' => 'array',
+        'inventory_descriptions' => 'array',
+        'tradable' => 'boolean',
+        'marketable' => 'boolean',
         'is_stattrak' => 'boolean',
         'is_souvenir' => 'boolean',
         'listed_at' => 'datetime',
@@ -45,6 +59,7 @@ class Listing extends Model
         'expires_at' => 'datetime',
     ];
 
+    const STATUS_PENDING = 'pending';
     const STATUS_ACTIVE = 'active';
     const STATUS_SOLD = 'sold';
     const STATUS_CANCELLED = 'cancelled';
@@ -63,6 +78,11 @@ class Listing extends Model
     public function buyer(): BelongsTo
     {
         return $this->belongsTo(Client::class, 'buyer_id');
+    }
+
+    public function inventoryItem(): BelongsTo
+    {
+        return $this->belongsTo(ClientInventoryItem::class, 'steam_asset_id', 'steam_asset_id');
     }
 
     public function trades(): HasMany

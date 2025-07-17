@@ -9,6 +9,7 @@ use App\Services\SteamInventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class InventoryController extends Controller
@@ -20,6 +21,7 @@ class InventoryController extends Controller
 
     public function index()
     {
+        /** @var Client $client */
         $client = Auth::guard('client')->user();
         
         if (!$client->steam_id) {
@@ -35,9 +37,9 @@ class InventoryController extends Controller
             ->orderBy('cached_at', 'desc')
             ->get();
 
-        // Получаем список steam_asset_id, которые уже выставлены на продажу
+        // Получаем список steam_asset_id, которые уже выставлены на продажу (pending или active)
         $listedAssetIds = Listing::where('seller_id', $client->id)
-            ->where('status', 'active')
+            ->whereIn('status', ['pending', 'active'])
             ->pluck('steam_asset_id')
             ->toArray();
 
@@ -71,6 +73,7 @@ class InventoryController extends Controller
 
     public function sync(Request $request)
     {
+        /** @var Client $client */
         $client = Auth::guard('client')->user();
         
         if (!$client->steam_id) {
@@ -125,8 +128,10 @@ class InventoryController extends Controller
         }
     }
 
+
     public function createListing(Request $request)
     {
+        /** @var Client $client */
         $client = Auth::guard('client')->user();
         
         $request->validate([
@@ -164,17 +169,51 @@ class InventoryController extends Controller
             ], 400);
         }
         
-        // Проверяем, что предмет еще не выставлен на продажу
+        // Проверяем существующий листинг для этого предмета
         $existingListing = Listing::where('steam_asset_id', $steamAssetId)
             ->where('seller_id', $client->id)
-            ->where('status', 'active')
             ->first();
             
         if ($existingListing) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Предмет уже выставлен на продажу'
-            ], 400);
+            if (in_array($existingListing->status, ['pending', 'active'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Предмет уже выставлен на продажу'
+                ], 400);
+            } elseif ($existingListing->status === 'cancelled') {
+                // Реактивируем отмененный листинг
+                try {
+                    $existingListing->status = 'pending';
+                    $existingListing->price = 0; // сбрасываем цену
+                    $existingListing->listed_at = null;
+                    $existingListing->save();
+                    
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Предмет возвращен в торговлю. Настройте цену в разделе "Торговля"',
+                        'data' => [
+                            'listing_id' => $existingListing->id,
+                            'redirect_url' => '/profile#trading'
+                        ]
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Failed to reactivate listing', [
+                        'client_id' => $client->id,
+                        'listing_id' => $existingListing->id,
+                        'error' => $e->getMessage()
+                    ]);
+                    
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Произошла ошибка при реактивации листинга'
+                    ], 500);
+                }
+            } elseif ($existingListing->status === 'sold') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Этот предмет уже продан'
+                ], 400);
+            }
         }
         
         try {
@@ -183,11 +222,23 @@ class InventoryController extends Controller
             $listing->seller_id = $client->id;
             $listing->item_id = $inventoryItem->item_id; // может быть null
             $listing->steam_asset_id = $steamAssetId;
+            $listing->steam_class_id = $inventoryItem->steam_class_id;
+            $listing->steam_instance_id = $inventoryItem->steam_instance_id;
             $listing->steam_owner_id = $client->steam_id;
             $listing->market_hash_name = $inventoryItem->market_hash_name;
-            $listing->price = $inventoryItem->item ? $inventoryItem->item->min_steam_price ?? 100 : 100; // временная цена
+            
+            // Снимок данных из инвентаря
+            $listing->inventory_item_name = $inventoryItem->item_name;
+            $listing->inventory_type = $inventoryItem->type;
+            $listing->inventory_icon_url = $inventoryItem->icon_url;
+            $listing->inventory_tags = $inventoryItem->tags;
+            $listing->inventory_descriptions = $inventoryItem->descriptions;
+            $listing->tradable = $inventoryItem->tradable;
+            $listing->marketable = $inventoryItem->marketable;
+            
+            $listing->price = 0; // пользователь установит цену сам
             $listing->currency = 'RUB';
-            $listing->status = 'active';
+            $listing->status = 'pending';
             $listing->type = 'p2p';
             $listing->wear_condition = $inventoryItem->wear_condition;
             $listing->float_value = $inventoryItem->float_value;
@@ -195,11 +246,33 @@ class InventoryController extends Controller
             $listing->stickers = $inventoryItem->stickers;
             $listing->inspect_url = $this->generateInspectUrl($client->steam_id, $steamAssetId);
             
+            // Получаем скриншот через Swap.gg API и сохраняем на диск
+            Log::info('Attempting to get screenshot', [
+                'inspect_url' => $listing->inspect_url,
+                'steam_asset_id' => $steamAssetId
+            ]);
+            
+            $floatData = $this->getScreenshotFromSwapGG($listing->inspect_url, $steamAssetId);
+            
+            Log::info('Screenshot result', [
+                'float_data' => $floatData,
+                'steam_asset_id' => $steamAssetId
+            ]);
+            
+            // Обновляем float если получили более точное значение
+            if ($floatData && isset($floatData['float'])) {
+                $listing->float_value = (float)$floatData['float'];
+                Log::info('Updated float value', [
+                    'new_float' => $listing->float_value,
+                    'steam_asset_id' => $steamAssetId
+                ]);
+            }
+            
             $listing->save();
             
             return response()->json([
                 'success' => true,
-                'message' => 'Предмет успешно добавлен в маркетплейс',
+                'message' => 'Предмет добавлен в торговлю. Настройте цену в разделе "Торговля"',
                 'data' => [
                     'listing_id' => $listing->id,
                     'redirect_url' => '/profile#trading'
@@ -293,7 +366,120 @@ class InventoryController extends Controller
         // Конвертируем Steam ID64 в Steam ID32 для inspect URL
         $steamId32 = (string)((int)$steamId - 76561197960265728);
         
-        return "steam://rungame/730/76561202255233023/+csgo_econ_action_preview%20S{$steamId}A{$assetId}D{$steamId32}";
+        return "steam://rungame/730/76561202255233023/+csgo_econ_action_preview S{$steamId}A{$assetId}D{$steamId32}";
+    }
+
+    private function getScreenshotFromSwapGG(string $inspectUrl, string $steamAssetId): ?array
+    {
+        try {
+            // Проверяем, существует ли уже скриншот
+            $screenshotsDir = storage_path('app/public/screenshots');
+            $filename = $steamAssetId . '.jpg';
+            $fullPath = $screenshotsDir . '/' . $filename;
+            
+            Log::info('Checking screenshot file', [
+                'file_path' => $fullPath,
+                'exists' => file_exists($fullPath)
+            ]);
+            
+            if (file_exists($fullPath)) {
+                // Файл уже существует, не скачиваем повторно
+                Log::info('Screenshot file already exists, skipping download');
+                return null;
+            }
+            
+            Log::info('Making API request to Swap.gg');
+            
+            // Сначала получаем сессию
+            $sessionResponse = Http::timeout(30)
+                ->withHeaders([
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                ])
+                ->get('https://swap.gg/cs2-inspects');
+                
+            // Извлекаем куки из ответа
+            $cookies = [];
+            foreach ($sessionResponse->headers()['Set-Cookie'] ?? [] as $cookie) {
+                if (strpos($cookie, 'SwapSession=') === 0) {
+                    $cookies['SwapSession'] = explode(';', explode('=', $cookie, 2)[1])[0];
+                    break;
+                }
+            }
+            
+            if (empty($cookies)) {
+                Log::error('Failed to get SwapSession cookie');
+                return null;
+            }
+            
+            $apiUrl = 'https://api.swap.gg/v2/screenshot?' . http_build_query([
+                'inspectLink' => $inspectUrl
+            ]);
+            
+            $response = Http::timeout(30)
+                ->withHeaders([
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Accept' => 'application/json',
+                    'Referer' => 'https://swap.gg/',
+                    'Cookie' => 'SwapSession=' . $cookies['SwapSession']
+                ])
+                ->get($apiUrl);
+            
+            Log::info('Swap.gg API response', [
+                'status_code' => $response->status(),
+                'successful' => $response->successful(),
+                'body' => $response->body()
+            ]);
+            
+            if ($response->successful()) {
+                $data = $response->json();
+                
+                Log::info('Parsed JSON response', ['data' => $data]);
+                
+                if (isset($data['status']) && $data['status'] === 'OK' && isset($data['result']['imageId'])) {
+                    $imageId = $data['result']['imageId'];
+                    $screenshotUrl = "https://s.swap.gg/{$imageId}.jpg";
+                    
+                    // Ждем пока изображение будет готово (максимум 5 попыток)
+                    $maxAttempts = 5;
+                    $attempt = 0;
+                    
+                    while ($attempt < $maxAttempts) {
+                        $imageResponse = Http::timeout(10)->get($screenshotUrl);
+                        
+                        if ($imageResponse->successful()) {
+                            if (!file_exists($screenshotsDir)) {
+                                mkdir($screenshotsDir, 0755, true);
+                            }
+                            
+                            file_put_contents($fullPath, $imageResponse->body());
+                            break;
+                        }
+                        
+                        $attempt++;
+                        sleep(30); // Ждем 30 секунд перед следующей попыткой
+                    }
+                    
+                    // Возвращаем данные для обновления float
+                    $floatData = ['float' => $data['result']['meta']['16']['o'] ?? null];
+                    return $floatData;
+                } else {
+                    Log::error('Swap.gg API returned error', [
+                        'inspect_url' => $inspectUrl,
+                        'steam_asset_id' => $steamAssetId,
+                        'response' => $data
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Error requesting screenshot from Swap.gg', [
+                'inspect_url' => $inspectUrl,
+                'steam_asset_id' => $steamAssetId,
+                'error' => $e->getMessage()
+            ]);
+        }
+        
+        return null;
     }
 
     /*

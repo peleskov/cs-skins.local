@@ -32,7 +32,7 @@
                         <!-- Дополнительные ссылки -->
                         <div class="additional-links mb-4">
                             <div class="d-flex flex-wrap gap-2">
-                                <a :href="getScreenshotUrl()" target="_blank"
+                                <a v-if="getScreenshotUrl()" :href="getScreenshotUrl()" target="_blank"
                                     class="btn btn-sm theme-outline">
                                     <i class="ri-camera-line me-1"></i>Скриншот
                                 </a>
@@ -68,9 +68,9 @@
                         <div class="price-section mb-4">
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <div>
-                                    <h3 class="price mb-0">${{ listing.price.toFixed(2) }}</h3>
-                                    <p v-if="listing.item.min_steam_price" class="steam-price text-muted mb-0">
-                                        Steam: ${{ listing.item.min_steam_price.toFixed(2) }}
+                                    <h3 class="price mb-0">{{ formatPrice(listing.price) }} ₽</h3>
+                                    <p v-if="listing.item.steam_price_rub" class="steam-price text-muted mb-0">
+                                        Steam: {{ formatPrice(listing.item.steam_price_rub) }} ₽
                                     </p>
                                 </div>
                                 <div>
@@ -81,9 +81,13 @@
                             </div>
 
                             <div class="d-flex gap-3">
-                                <button class="btn theme-btn flex-fill" @click="addToCart">
-                                    <i class="ri-shopping-cart-line me-2"></i>В корзину
-                                </button>
+                                <div 
+                                    data-cart-button 
+                                    :data-listing-id="listing.id" 
+                                    data-size="large" 
+                                    data-variant="primary"
+                                    class="flex-fill cart-button-placeholder">
+                                </div>
                                 <button class="btn theme-outline flex-fill" @click="quickBuy">
                                     <i class="ri-flashlight-line me-2"></i>Быстрая покупка
                                 </button>
@@ -165,8 +169,7 @@
                                 </div>
                                 <div class="validity-content">
                                     <h6 class="validity-title">Доступна быстрая продажа боту</h6>
-                                    <p class="validity-price">Цена выкупа: <span class="price-value">${{
-                                        listing.item.buyout_price?.toFixed(2) || '0.00' }}</span></p>
+                                    <p class="validity-price">Цена выкупа: <span class="price-value">{{ formatPrice(listing.item.buyout_price || 0) }} ₽</span></p>
                                 </div>
                             </div>
                             <div v-else class="validity-item invalid">
@@ -203,7 +206,7 @@
                                 <td>{{ other.seller.name }}</td>
                                 <td>{{ other.wear_name }}</td>
                                 <td>{{ other.wear_value.toFixed(4) }}</td>
-                                <td><strong>${{ other.price.toFixed(2) }}</strong></td>
+                                <td><strong>{{ formatPrice(other.price) }} ₽</strong></td>
                                 <td>
                                     <a :href="`/marketplace/${other.id}`" class="btn btn-sm theme-outline">
                                         Просмотр
@@ -219,6 +222,11 @@
 </template>
 
 <script>
+import { createApp } from 'vue'
+import Toast from "vue-toastification"
+import CartButton from './CartButton.vue'
+import { formatPrice } from '../utils/helpers'
+
 export default {
     name: 'SkinDetails',
     props: {
@@ -226,6 +234,9 @@ export default {
             type: [Number, String],
             required: true
         }
+    },
+    setup() {
+        return { formatPrice };
     },
     data() {
         return {
@@ -255,6 +266,11 @@ export default {
 
                 this.listing = data.listing;
                 this.otherListings = data.otherListings || [];
+                
+                // Инициализируем кнопку корзины после рендеринга
+                this.$nextTick(() => {
+                    this.initializeCartButton();
+                });
             } catch (error) {
                 this.error = error.message;
             } finally {
@@ -280,27 +296,45 @@ export default {
             return this.translations.rarities[rarity] || rarity;
         },
 
-        async addToCart() {
-            try {
-                const response = await fetch('/api/cart/add', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
-                    body: JSON.stringify({ listing_id: this.listing.id })
+        initializeCartButton() {
+            // Найдем кнопку корзины (не инициализированную)
+            const cartButton = document.querySelector('[data-cart-button]:not(.cart-initialized)');
+            
+            if (cartButton && this.listing) {
+                const listingId = parseInt(cartButton.dataset.listingId) || this.listing.id;
+                const size = cartButton.dataset.size || 'large';
+                const variant = cartButton.dataset.variant || 'primary';
+                
+                // Создаем Vue приложение для кнопки
+                const app = createApp(CartButton, {
+                    listingId: listingId,
+                    size: size,
+                    variant: variant
                 });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    // TODO: Показать уведомление об успешном добавлении
-                    alert('Товар добавлен в корзину');
-                } else {
-                    alert(data.message || 'Ошибка добавления в корзину');
-                }
-            } catch (error) {
-                alert('Произошла ошибка при добавлении в корзину');
+                
+                // Используем те же настройки Toast что и в главном приложении
+                const toastOptions = {
+                    position: "bottom-right",
+                    timeout: 8000,
+                    closeOnClick: true,
+                    pauseOnFocusLoss: true,
+                    pauseOnHover: true,
+                    draggable: true,
+                    draggablePercent: 0.6,
+                    showCloseButtonOnHover: false,
+                    hideProgressBar: false,
+                    closeButton: "button",
+                    icon: true,
+                    rtl: false,
+                    maxToasts: 5,
+                    newestOnTop: true
+                };
+                
+                app.use(Toast, toastOptions);
+                app.mount(cartButton);
+                
+                // Помечаем как инициализированную
+                cartButton.classList.add('cart-initialized');
             }
         },
 
@@ -391,14 +425,18 @@ export default {
         },
 
         getScreenshotUrl() {
-            // Для скриншота используем ту же логику
-            return this.getWearImageUrl();
+            // Проверяем, есть ли скриншот от CS.Trade
+            if (this.listing && this.listing.steam_asset_id) {
+                const screenshotPath = `/storage/screenshots/${this.listing.steam_asset_id}.jpg`;
+                return screenshotPath;
+            }
+            return null;
         },
 
         handleImageError(event) {
             // Добавляем класс для обработки ошибки изображения (как в маркетплейсе)
             event.target.closest('.product-main-image').classList.add('image-error');
-        }
+        },
     }
 };
 </script>

@@ -13,9 +13,12 @@ class SteamInventoryService
     private const STEAM_INVENTORY_URL = 'https://steamcommunity.com/inventory/%s/730/2?l=russian';
     private const CS2_APP_ID = 730;
     private const CACHE_DURATION = 600; // 10 минут
+    
+    private string $currentSteamId = '';
 
     public function getInventory(string $steamId): array
     {
+        $this->currentSteamId = $steamId;
         $cacheKey = "steam_inventory_{$steamId}";
         
         return Cache::remember($cacheKey, self::CACHE_DURATION, function () use ($steamId) {
@@ -163,7 +166,7 @@ class SteamInventoryService
             'float_value' => $this->extractFloatValue($description),
             'pattern_index' => $this->extractPatternIndex($description),
             'stickers' => $this->extractStickers($description),
-            'inspect_url' => $this->generateInspectUrl($asset, $description),
+            'inspect_url' => $this->generateInspectUrl($asset, $description, $this->currentSteamId),
         ];
     }
 
@@ -219,16 +222,19 @@ class SteamInventoryService
         return $stickers;
     }
 
-    private function generateInspectUrl(array $asset, array $description): ?string
+    private function generateInspectUrl(array $asset, array $description, string $steamId = ''): ?string
     {
         $actions = $description['actions'] ?? [];
         
         foreach ($actions as $action) {
-            if (isset($action['name']) && $action['name'] === 'Inspect in Game...') {
+            $actionName = $action['name'] ?? '';
+            
+            // Проверяем разные языки для действия "Inspect in Game"
+            if ($actionName === 'Inspect in Game...' || $actionName === 'Осмотреть в игре…') {
                 $link = $action['link'] ?? '';
                 
                 // Заменяем плейсхолдеры на реальные значения
-                $link = str_replace('%owner_steamid%', $asset['owner'] ?? '', $link);
+                $link = str_replace('%owner_steamid%', $asset['owner'] ?? $steamId, $link);
                 $link = str_replace('%assetid%', $asset['assetid'], $link);
                 
                 return $link;

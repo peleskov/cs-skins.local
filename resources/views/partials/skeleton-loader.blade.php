@@ -1,7 +1,5 @@
 <!-- skeleton loader start -->
 <div class="skeleton-loader">
-    <!-- Header -->
-    @include('partials.header')
     <section class="home-wrapper section-b-space">
         <div class="container text-center">
             <div class="loader-gif">

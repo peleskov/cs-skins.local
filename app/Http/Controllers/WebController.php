@@ -26,7 +26,9 @@ class WebController extends Controller
             ->where('price', '>', 0)
             ->count();
             
-        return view('home', compact('featuredListings', 'totalListings'));
+        $hasMorePages = $totalListings > 12;
+            
+        return view('home', compact('featuredListings', 'totalListings', 'hasMorePages'));
     }
 
     /**

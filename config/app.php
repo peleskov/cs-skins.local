@@ -86,6 +86,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Dollar Exchange Rate
+    |--------------------------------------------------------------------------
+    |
+    | USD to RUB exchange rate for converting Steam prices to rubles.
+    | This value is used to calculate item prices and buyout prices.
+    |
+    */
+
+    'course_dollar' => (float) env('COURSE_DOLLAR', 100.0),
+
+    /*
+    |--------------------------------------------------------------------------
     | Encryption Key
     |--------------------------------------------------------------------------
     |

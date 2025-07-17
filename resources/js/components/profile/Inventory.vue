@@ -25,155 +25,208 @@
 		<!-- Inventory Items -->
 		<div v-else-if="inventoryData" class="inventory-items">
 			<!-- Tabs Navigation -->
-			<ul class="nav nav-tabs mb-3">
-				<li class="nav-item">
-					<a class="nav-link" :class="{ active: activeInventoryTab === 'available' }" 
-					   href="#" @click.prevent="setActiveInventoryTab('available')">
-						<i class="ri-treasure-map-line me-2"></i>
+			<ul class="nav nav-tabs tab-style1 mb-4" id="inventoryTab" role="tablist">
+				<li class="nav-item" role="presentation">
+					<button class="nav-link" :class="{ active: activeInventoryTab === 'available' }" 
+					        id="available-tab" data-bs-toggle="tab" data-bs-target="#available"
+					        type="button" role="tab" @click="setActiveInventoryTab('available')">
 						Доступные для торговли 
-					</a>
+					</button>
 				</li>
-				<li class="nav-item">
-					<a class="nav-link" :class="{ active: activeInventoryTab === 'listed' }" 
-					   href="#" @click.prevent="setActiveInventoryTab('listed')">
-						<i class="ri-store-2-line me-2"></i>
+				<li class="nav-item" role="presentation">
+					<button class="nav-link" :class="{ active: activeInventoryTab === 'listed' }" 
+					        id="listed-tab" data-bs-toggle="tab" data-bs-target="#listed"
+					        type="button" role="tab" @click="setActiveInventoryTab('listed')">
 						В продаже 
-					</a>
+					</button>
 				</li>
 			</ul>
-
-			<div class="row g-4">
-				<div class="col-7">
-					<!-- Available Items Tab -->
-					<div v-if="activeInventoryTab === 'available'">
-						<div v-if="availableItems.length > 0" class="mb-4">
-							<div class="row g-3">
-								<div v-for="item in availableItems" :key="item.steam_asset_id" class="col-lg-4 col-md-6">
-									<div @click="selectItem(item)" 
-										 :class="['h-100 inventory-item text-center position-relative', { 'active': selectedItem && selectedItem.steam_asset_id === item.steam_asset_id }]">
-										<img class="img-fluid inventory-img h-auto" :src="getIconUrl(item)"
-											:alt="item.market_hash_name" @error="handleImageError">
-										<h6 class="mt-2">{{ getItemName(item) }}</h6>
-										<small class="text-muted">{{ item.type || 'Unknown' }}</small>
+			<div class="tab-content product-details-content" id="inventoryTabContent">
+				<div class="tab-pane fade" :class="{ 'show active': activeInventoryTab === 'available' }" 
+				     id="available" role="tabpanel" aria-labelledby="available-tab" tabindex="0">
+					<div class="row g-4 d-flex flex-lg-row flex-column-reverse">
+						<div class="col-lg-7 col-12">
+							<div v-if="availableItems.length > 0" class="mb-4">
+								<div class="row g-3">
+									<div v-for="item in availableItems" :key="item.steam_asset_id" class="col-lg-4 col-md-6">
+										<div @click="selectItem(item)" 
+											 :class="['h-100 inventory-item text-center position-relative', { 'active': selectedItem && selectedItem.steam_asset_id === item.steam_asset_id }]">
+											<img class="img-fluid inventory-img h-auto" :src="getIconUrl(item)"
+												:alt="item.market_hash_name" @error="handleImageError">
+											<h6 class="mt-2">{{ getItemName(item) }}</h6>
+											<small class="text-muted">{{ item.type || 'Unknown' }}</small>
+										</div>
+									</div>
+								</div>
+							</div>
+							
+						</div>
+						<div class="col-lg-5 col-12" id="item-details-section">
+							<div class="item-details sticky-top" v-if="selectedItem">
+								<h5 class="item-name">{{ getItemName(selectedItem) }}</h5>
+								<div class="item-type text-muted mb-3">{{ selectedItem.type || 'Unknown' }}</div>
+								
+								<!-- Изображение предмета -->
+								<div class="item-preview mb-3">
+									<img :src="getIconUrl(selectedItem)" :alt="selectedItem.market_hash_name" 
+										 class="img-fluid" @error="handleImageError">
+								</div>
+								
+								<!-- Описание предмета -->
+								<div v-if="getItemDescription(selectedItem)" class="item-description mb-3">
+									<div class="description-text text-muted" v-html="getItemDescription(selectedItem)"></div>
+								</div>
+								
+								<!-- Износ и паттерн -->
+								<div v-if="selectedItem.float_value" class="item-wear mb-3">
+									<div class="wear-info">
+										<strong>Износ:</strong> {{ selectedItem.wear_condition || getWearCondition(selectedItem.float_value) }}
+										<div class="float-value">Float: {{ selectedItem.float_value.toFixed(6) }}</div>
+									</div>
+									<div v-if="selectedItem.pattern_index" class="pattern-info mt-2">
+										<strong>Паттерн:</strong> #{{ selectedItem.pattern_index }}
+									</div>
+								</div>
+								
+								<!-- Стикеры -->
+								<div v-if="selectedItem.parsed_stickers && selectedItem.parsed_stickers.length > 0" class="item-stickers mb-3">
+									<strong>Стикеры:</strong>
+									<div class="sticker-list mt-2">
+										<div v-for="(sticker, index) in selectedItem.parsed_stickers" :key="index" class="sticker-item">
+											<img v-if="sticker.img" :src="sticker.img" :alt="sticker.name" class="sticker-img">
+											<span>{{ sticker.name }}</span>
+										</div>
+									</div>
+								</div>
+								
+								<!-- Теги -->
+								<div v-if="getParsedTags(selectedItem).length > 0" class="item-tags mb-3">
+									<strong>Информация о предмете:</strong>
+									<div class="tags-list mt-2">
+										<div v-for="tag in getParsedTags(selectedItem)" :key="tag.internal_name" class="tag-item d-flex justify-content-between mb-1">
+											<span class="tag-category text-muted">{{ tag.localized_category_name }}:</span>
+											<span class="tag-name fw-medium">
+												{{ tag.localized_tag_name }}
+											</span>
+										</div>
+									</div>
+								</div>
+								
+								<!-- Кнопки действий -->
+								<div class="item-actions mt-4">
+									<!-- Доступные для торговли предметы -->
+									<div v-if="activeInventoryTab === 'available'">
+										<button v-if="selectedItem.tradable && selectedItem.marketable && hasTradeUrl && !selectedItem.is_listed" 
+											class="btn theme-btn w-100 mb-2"
+											:disabled="isCreatingListing"
+											@click="openSellModal(selectedItem)">
+											<i v-if="isCreatingListing" class="ri-loader-4-line me-2 ri-spin"></i>
+											<i v-else class="ri-price-tag-3-line me-2"></i>
+											{{ isCreatingListing ? 'Создаем листинг...' : 'Продать' }}
+										</button>
+										<div v-else-if="!hasTradeUrl" 
+											 class="alert alert-light mb-0 small">
+											<i class="ri-information-line me-2"></i>Для того чтобы выставить на продажу нужно добавить Trade URL в настройках <a href="/profile#profile">профиля</a>
+										</div>
+										<div v-else-if="!selectedItem.tradable || !selectedItem.marketable" 
+											 class="alert alert-secondary mb-0">
+											<i class="ri-lock-line me-2"></i>Данный предмет нельзя продать
+										</div>
 									</div>
 								</div>
 							</div>
 						</div>
-						
-						<!-- Empty State for Available -->
-						<div v-else class="text-center py-5">
-							<i class="ri-treasure-map-line display-4 text-muted mb-3"></i>
-							<h6>Нет доступных для торговли предметов</h6>
-							<p class="text-muted mb-0">Все ваши предметы либо уже выставлены на продажу, либо не могут быть проданы</p>
-						</div>
-					</div>
-
-					<!-- Listed Items Tab -->
-					<div v-else-if="activeInventoryTab === 'listed'">
-						<div v-if="listedItems.length > 0" class="mb-4">
-							<div class="row g-3">
-								<div v-for="item in listedItems" :key="item.steam_asset_id" class="col-lg-4 col-md-6">
-									<div @click="selectItem(item)" 
-										 :class="['h-100 inventory-item text-center position-relative item-listed', { 'active': selectedItem && selectedItem.steam_asset_id === item.steam_asset_id }]">
-										<img class="img-fluid inventory-img h-auto" :src="getIconUrl(item)"
-											:alt="item.market_hash_name" @error="handleImageError">
-										<h6 class="mt-2">{{ getItemName(item) }}</h6>
-										<small class="text-muted">{{ item.type || 'Unknown' }}</small>
-									</div>
-								</div>
-							</div>
-						</div>
-						
-						<!-- Empty State for Listed -->
-						<div v-else class="text-center py-5">
-							<i class="ri-store-2-line display-4 text-muted mb-3"></i>
-							<h6>Нет предметов в продаже</h6>
-							<p class="text-muted mb-0">Выставьте предметы на продажу во вкладке "Доступные для торговли"</p>
-						</div>
-					</div>
-
-					<!-- Global Empty State -->
-					<div v-if="items.length === 0" class="text-center py-5">
-						<i class="ri-box-3-line display-4 text-muted mb-3"></i>
-						<h6>Инвентарь пуст</h6>
-						<p class="text-muted mb-0">Убедитесь, что ваш Steam инвентарь публичный</p>
 					</div>
 				</div>
-				<div class="col-5">
-					<div class="item-details sticky-top" v-if="selectedItem">
-						<h5 class="item-name">{{ getItemName(selectedItem) }}</h5>
-						<div class="item-type text-muted mb-3">{{ selectedItem.type || 'Unknown' }}</div>
-						
-						<!-- Изображение предмета -->
-						<div class="item-preview mb-3">
-							<img :src="getIconUrl(selectedItem)" :alt="selectedItem.market_hash_name" 
-								 class="img-fluid" @error="handleImageError">
-						</div>
-						
-						<!-- Описание предмета -->
-						<div v-if="getItemDescription(selectedItem)" class="item-description mb-3">
-							<div class="description-text text-muted" v-html="getItemDescription(selectedItem)"></div>
-						</div>
-						
-						<!-- Износ и паттерн -->
-						<div v-if="selectedItem.float_value" class="item-wear mb-3">
-							<div class="wear-info">
-								<strong>Износ:</strong> {{ selectedItem.wear_condition || getWearCondition(selectedItem.float_value) }}
-								<div class="float-value">Float: {{ selectedItem.float_value.toFixed(6) }}</div>
-							</div>
-							<div v-if="selectedItem.pattern_index" class="pattern-info mt-2">
-								<strong>Паттерн:</strong> #{{ selectedItem.pattern_index }}
-							</div>
-						</div>
-						
-						<!-- Стикеры -->
-						<div v-if="selectedItem.parsed_stickers && selectedItem.parsed_stickers.length > 0" class="item-stickers mb-3">
-							<strong>Стикеры:</strong>
-							<div class="sticker-list mt-2">
-								<div v-for="(sticker, index) in selectedItem.parsed_stickers" :key="index" class="sticker-item">
-									<img v-if="sticker.img" :src="sticker.img" :alt="sticker.name" class="sticker-img">
-									<span>{{ sticker.name }}</span>
+				<div class="tab-pane fade" :class="{ 'show active': activeInventoryTab === 'listed' }" 
+				     id="listed" role="tabpanel" aria-labelledby="listed-tab" tabindex="0">
+					<div class="row g-4 d-flex flex-lg-row flex-column-reverse">
+						<div class="col-lg-7 col-12">
+							<div v-if="listedItems.length > 0" class="mb-4">
+								<div class="row g-3">
+									<div v-for="item in listedItems" :key="item.steam_asset_id" class="col-lg-4 col-md-6">
+										<div @click="selectItem(item)" 
+											 :class="['h-100 inventory-item text-center position-relative item-listed', { 'active': selectedItem && selectedItem.steam_asset_id === item.steam_asset_id }]">
+											<img class="img-fluid inventory-img h-auto" :src="getIconUrl(item)"
+												:alt="item.market_hash_name" @error="handleImageError">
+											<h6 class="mt-2">{{ getItemName(item) }}</h6>
+											<small class="text-muted">{{ item.type || 'Unknown' }}</small>
+										</div>
+									</div>
 								</div>
 							</div>
+							
 						</div>
-						
-						<!-- Теги -->
-						<div v-if="getParsedTags(selectedItem).length > 0" class="item-tags mb-3">
-							<strong>Информация о предмете:</strong>
-							<div class="tags-list mt-2">
-								<div v-for="tag in getParsedTags(selectedItem)" :key="tag.internal_name" class="tag-item d-flex justify-content-between mb-1">
-									<span class="tag-category text-muted">{{ tag.localized_category_name }}:</span>
-									<span class="tag-name fw-medium">
-										{{ tag.localized_tag_name }}
-									</span>
+						<div class="col-lg-5 col-12" id="listed-item-details-section">
+							<div class="item-details sticky-top" v-if="selectedItem">
+								<h5 class="item-name">{{ getItemName(selectedItem) }}</h5>
+								<div class="item-type text-muted mb-3">{{ selectedItem.type || 'Unknown' }}</div>
+								
+								<!-- Изображение предмета -->
+								<div class="item-preview mb-3">
+									<img :src="getIconUrl(selectedItem)" :alt="selectedItem.market_hash_name" 
+										 class="img-fluid" @error="handleImageError">
 								</div>
-							</div>
-						</div>
-						
-						<!-- Кнопки действий -->
-						<div class="item-actions mt-4">
-							<!-- Доступные для торговли предметы -->
-							<div v-if="activeInventoryTab === 'available'">
-								<button v-if="selectedItem.tradable && selectedItem.marketable && hasTradeUrl && !selectedItem.is_listed" 
-									class="btn theme-btn w-100 mb-2"
-									@click="openSellModal(selectedItem)">
-									<i class="ri-price-tag-3-line me-2"></i>Продать
-								</button>
-								<div v-else-if="!hasTradeUrl" 
-									 class="alert alert-light mb-0 small">
-									<i class="ri-information-line me-2"></i>Для того чтобы выставить на продажу нужно добавить Trade URL в настройках <a href="/profile#profile">профиля</a>
+								
+								<!-- Описание предмета -->
+								<div v-if="getItemDescription(selectedItem)" class="item-description mb-3">
+									<div class="description-text text-muted" v-html="getItemDescription(selectedItem)"></div>
 								</div>
-								<div v-else-if="!selectedItem.tradable || !selectedItem.marketable" 
-									 class="alert alert-secondary mb-0">
-									<i class="ri-lock-line me-2"></i>Данный предмет нельзя продать
+								
+								<!-- Износ и паттерн -->
+								<div v-if="selectedItem.float_value" class="item-wear mb-3">
+									<div class="wear-info">
+										<strong>Износ:</strong> {{ selectedItem.wear_condition || getWearCondition(selectedItem.float_value) }}
+										<div class="float-value">Float: {{ selectedItem.float_value.toFixed(6) }}</div>
+									</div>
+									<div v-if="selectedItem.pattern_index" class="pattern-info mt-2">
+										<strong>Паттерн:</strong> #{{ selectedItem.pattern_index }}
+									</div>
+								</div>
+								
+								<!-- Стикеры -->
+								<div v-if="selectedItem.parsed_stickers && selectedItem.parsed_stickers.length > 0" class="item-stickers mb-3">
+									<strong>Стикеры:</strong>
+									<div class="sticker-list mt-2">
+										<div v-for="(sticker, index) in selectedItem.parsed_stickers" :key="index" class="sticker-item">
+											<img v-if="sticker.img" :src="sticker.img" :alt="sticker.name" class="sticker-img">
+											<span>{{ sticker.name }}</span>
+										</div>
+									</div>
+								</div>
+								
+								<!-- Теги -->
+								<div v-if="getParsedTags(selectedItem).length > 0" class="item-tags mb-3">
+									<strong>Информация о предмете:</strong>
+									<div class="tags-list mt-2">
+										<div v-for="tag in getParsedTags(selectedItem)" :key="tag.internal_name" class="tag-item d-flex justify-content-between mb-1">
+											<span class="tag-category text-muted">{{ tag.localized_category_name }}:</span>
+											<span class="tag-name fw-medium">
+												{{ tag.localized_tag_name }}
+											</span>
+										</div>
+									</div>
+								</div>
+								
+								<!-- Кнопки действий -->
+								<div class="item-actions mt-4">
+									<!-- Предметы в продаже -->
+									<div v-if="activeInventoryTab === 'listed'">
+										<div class="alert alert-info mb-0">
+											<i class="ri-information-line me-2"></i>Этот предмет выставлен на продажу
+										</div>
+									</div>
 								</div>
 							</div>
 						</div>
 					</div>
-					<div v-else class="item-details-placeholder text-center text-muted">
-						<i class="ri-arrow-left-line"></i>
-						<p>Выберите предмет для просмотра деталей</p>
-					</div>
+				</div>
+				
+				<!-- Global Empty State -->
+				<div v-if="items.length === 0" class="text-center py-5">
+					<i class="ri-box-3-line display-4 text-muted mb-3"></i>
+					<h6>Инвентарь пуст</h6>
+					<p class="text-muted mb-0">Убедитесь, что ваш Steam инвентарь публичный</p>
 				</div>
 			</div>
 		</div>
@@ -225,15 +278,21 @@
 							
 							<!-- Добавить в маркетплейс -->
 							<div class="col-12">
-								<div class="card h-100 sell-option" @click="addToMarketplace" style="cursor: pointer;">
+								<div class="card h-100 sell-option" 
+									 @click="!isCreatingListing ? addToMarketplace() : null" 
+									 :class="{ 'opacity-50': isCreatingListing }"
+									 style="cursor: pointer;">
 									<div class="card-body d-flex align-items-center">
 										<div class="sell-icon me-3">
-											<i class="ri-store-2-line text-success" style="font-size: 2rem;"></i>
+											<i v-if="isCreatingListing" class="ri-loader-4-line text-success ri-spin" style="font-size: 2rem;"></i>
+											<i v-else class="ri-store-2-line text-success" style="font-size: 2rem;"></i>
 										</div>
 										<div class="flex-grow-1">
-											<h6 class="card-title mb-1">Добавить в маркетплейс</h6>
+											<h6 class="card-title mb-1">
+												{{ isCreatingListing ? 'Создаем листинг...' : 'Добавить в маркетплейс' }}
+											</h6>
 											<p class="card-text text-muted mb-0">
-												Установите свою цену, комиссия 5%
+												{{ isCreatingListing ? 'Получаем скриншот предмета' : 'Установите свою цену, комиссия 5%' }}
 											</p>
 										</div>
 										<div class="sell-arrow">
@@ -248,84 +307,18 @@
 			</div>
 		</div>
 
-		<!-- Sell Type Modal -->
-		<div class="modal fade" id="sellTypeModal" tabindex="-1" aria-labelledby="sellTypeModalLabel" aria-hidden="true">
-			<div class="modal-dialog modal-dialog-centered">
-				<div class="modal-content">
-					<div class="modal-header">
-						<h5 class="modal-title" id="sellTypeModalLabel">
-							<i class="ri-price-tag-3-line me-2"></i>Выберите способ продажи
-						</h5>
-						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-					</div>
-					<div class="modal-body">
-						<div v-if="itemToSell" class="mb-4">
-							<div class="d-flex align-items-center">
-								<img :src="getIconUrl(itemToSell)" :alt="itemToSell.market_hash_name" 
-									 class="me-3" style="width: 64px; height: 64px;" @error="handleImageError">
-								<div>
-									<h6 class="mb-1">{{ getItemName(itemToSell) }}</h6>
-									<small class="text-muted">{{ itemToSell.type || 'Unknown' }}</small>
-								</div>
-							</div>
-						</div>
-						
-						<div class="row g-3">
-							<!-- Продать боту -->
-							<div class="col-12">
-								<div class="card h-100 sell-option" @click="sellToBot" style="cursor: pointer;">
-									<div class="card-body d-flex align-items-center">
-										<div class="sell-icon me-3">
-											<i class="ri-robot-line text-primary" style="font-size: 2rem;"></i>
-										</div>
-										<div class="flex-grow-1">
-											<h6 class="card-title mb-1">Продать боту</h6>
-											<p class="card-text text-muted mb-0">
-												Мгновенный выкуп за 20-50% от рыночной стоимости
-											</p>
-										</div>
-										<div class="sell-arrow">
-											<i class="ri-arrow-right-line text-muted"></i>
-										</div>
-									</div>
-								</div>
-							</div>
-							
-							<!-- Добавить в маркетплейс -->
-							<div class="col-12">
-								<div class="card h-100 sell-option" @click="addToMarketplace" style="cursor: pointer;">
-									<div class="card-body d-flex align-items-center">
-										<div class="sell-icon me-3">
-											<i class="ri-store-2-line text-success" style="font-size: 2rem;"></i>
-										</div>
-										<div class="flex-grow-1">
-											<h6 class="card-title mb-1">Добавить в маркетплейс</h6>
-											<p class="card-text text-muted mb-0">
-												Установите свою цену, комиссия 5%
-											</p>
-										</div>
-										<div class="sell-arrow">
-											<i class="ri-arrow-right-line text-muted"></i>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
 	</div>
 </template>
 
 <script>
 import { useToast } from "vue-toastification";
+import { formatPrice } from '../../utils/helpers';
 
 export default {
 	name: 'ProfileInventory',
 	setup() {
 		const toast = useToast();
-		return { toast };
+		return { toast, formatPrice };
 	},
 	props: {
 		client: {
@@ -345,7 +338,8 @@ export default {
 			isSyncing: false,
 			syncCooldownRemaining: 0,
 			cooldownTimer: null,
-			activeInventoryTab: 'available'
+			activeInventoryTab: 'available',
+			isCreatingListing: false
 		}
 	},
 	computed: {
@@ -506,9 +500,6 @@ export default {
 		getItemPrice(item) {
 			return item.item?.min_steam_price;
 		},
-		formatPrice(price) {
-			return Number(price).toFixed(2);
-		},
 		formatDate(dateString) {
 			return new Date(dateString).toLocaleString('ru-RU');
 		},
@@ -528,6 +519,25 @@ export default {
 		},
 		selectItem(item) {
 			this.selectedItem = item;
+			
+			// Скролл к деталям на мобильных устройствах
+			this.$nextTick(() => {
+				// Проверяем, что это мобильное устройство (экран меньше lg)
+				if (window.innerWidth < 992) {
+					// Выбираем правильный элемент в зависимости от активной вкладки
+					const targetId = this.activeInventoryTab === 'available' 
+						? 'item-details-section' 
+						: 'listed-item-details-section';
+					const targetElement = document.getElementById(targetId);
+					
+					if (targetElement) {
+						targetElement.scrollIntoView({
+							behavior: 'smooth',
+							block: 'start'
+						});
+					}
+				}
+			});
 		},
 		getParsedTags(item) {
 			if (!item.tags) return [];
@@ -589,7 +599,14 @@ export default {
 				modal.hide();
 			}
 			
+			this.isCreatingListing = true;
+			
 			try {
+				// Показываем уведомление о начале процесса
+				this.toast.info('Создаем листинг и получаем скриншот предмета...', {
+					timeout: 3000
+				});
+				
 				// Отправляем запрос на создание листинга
 				const response = await fetch('/inventory/create-listing', {
 					method: 'POST',
@@ -614,23 +631,21 @@ export default {
 						this.selectedItem.is_listed = true;
 					}
 					
-					this.toast.success('Предмет добавлен в маркетплейс! Переключаемся на вкладку "В продаже"...');
+					// Обновляем предмет в массиве items
+					const itemIndex = this.items.findIndex(item => item.steam_asset_id === this.itemToSell.steam_asset_id);
+					if (itemIndex !== -1) {
+						this.items[itemIndex].is_listed = true;
+					}
 					
-					// Переключаемся на таб "В продаже" и выбираем этот предмет
-					setTimeout(() => {
-						this.setActiveInventoryTab('listed');
-						// Находим и выбираем добавленный предмет
-						const listedItem = this.items.find(item => item.steam_asset_id === this.itemToSell.steam_asset_id);
-						if (listedItem) {
-							this.selectedItem = listedItem;
-						}
-					}, 1000);
+					this.toast.success('Предмет добавлен в торговлю!');
 				} else {
 					this.toast.error(data.message || 'Не удалось создать листинг');
 				}
 			} catch (error) {
 				console.error('Create listing error:', error);
 				this.toast.error('Произошла ошибка при создании листинга');
+			} finally {
+				this.isCreatingListing = false;
 			}
 		}
 	},

@@ -31,6 +31,7 @@
 					        id="available-tab" data-bs-toggle="tab" data-bs-target="#available"
 					        type="button" role="tab" @click="setActiveInventoryTab('available')">
 						Доступные для торговли 
+						<span class="badge bg-body-secondary ms-2">{{ availableItems.length }}</span>
 					</button>
 				</li>
 				<li class="nav-item" role="presentation">
@@ -38,19 +39,20 @@
 					        id="listed-tab" data-bs-toggle="tab" data-bs-target="#listed"
 					        type="button" role="tab" @click="setActiveInventoryTab('listed')">
 						В продаже 
+						<span class="badge bg-body-secondary ms-2">{{ listedItems.length }}</span>
 					</button>
 				</li>
 			</ul>
 			<div class="tab-content product-details-content" id="inventoryTabContent">
+				<!-- Объединенный компонент для обеих вкладок -->
 				<div class="tab-pane fade" :class="{ 'show active': activeInventoryTab === 'available' }" 
 				     id="available" role="tabpanel" aria-labelledby="available-tab" tabindex="0">
 					<div class="row g-4 d-flex flex-lg-row flex-column-reverse">
 						<div class="col-lg-7 col-12">
-							<div v-if="availableItems.length > 0" class="mb-4">
+							<div v-if="currentItems.length > 0" class="mb-4">
 								<div class="row g-3">
-									<div v-for="item in availableItems" :key="item.steam_asset_id" class="col-lg-4 col-md-6">
-										<div @click="selectItem(item)" 
-											 :class="['h-100 inventory-item text-center position-relative', { 'active': selectedItem && selectedItem.steam_asset_id === item.steam_asset_id }]">
+									<div v-for="item in currentItems" :key="item.steam_asset_id" class="col-lg-4 col-md-6">
+										<div @click="selectItem(item)" :class="getItemClasses(item)">
 											<img class="img-fluid inventory-img h-auto" :src="getIconUrl(item)"
 												:alt="item.market_hash_name" @error="handleImageError">
 											<h6 class="mt-2">{{ getItemName(item) }}</h6>
@@ -59,9 +61,13 @@
 									</div>
 								</div>
 							</div>
-							
+							<div v-else class="text-center py-5">
+								<i class="ri-box-3-line display-4 text-muted mb-3"></i>
+								<h6>{{ getEmptyStateMessage() }}</h6>
+								<p class="text-muted mb-0">{{ getEmptyStateDescription() }}</p>
+							</div>
 						</div>
-						<div class="col-lg-5 col-12" id="item-details-section">
+						<div class="col-lg-5 col-12" :id="getDetailsSectionId()">
 							<div class="item-details sticky-top" v-if="selectedItem">
 								<h5 class="item-name">{{ getItemName(selectedItem) }}</h5>
 								<div class="item-type text-muted mb-3">{{ selectedItem.type || 'Unknown' }}</div>
@@ -77,11 +83,10 @@
 									<div class="description-text text-muted" v-html="getItemDescription(selectedItem)"></div>
 								</div>
 								
-								<!-- Износ и паттерн -->
+								<!-- Float значение и паттерн -->
 								<div v-if="selectedItem.float_value" class="item-wear mb-3">
 									<div class="wear-info">
-										<strong>Износ:</strong> {{ selectedItem.wear_condition || getWearCondition(selectedItem.float_value) }}
-										<div class="float-value">Float: {{ selectedItem.float_value.toFixed(6) }}</div>
+										<strong>Float:</strong> {{ selectedItem.float_value.toFixed(6) }}
 									</div>
 									<div v-if="selectedItem.pattern_index" class="pattern-info mt-2">
 										<strong>Паттерн:</strong> #{{ selectedItem.pattern_index }}
@@ -100,13 +105,13 @@
 								</div>
 								
 								<!-- Теги -->
-								<div v-if="getParsedTags(selectedItem).length > 0" class="item-tags mb-3">
+								<div v-if="selectedItem.structured_tags && selectedItem.structured_tags.length > 0" class="item-tags mb-3">
 									<strong>Информация о предмете:</strong>
 									<div class="tags-list mt-2">
-										<div v-for="tag in getParsedTags(selectedItem)" :key="tag.internal_name" class="tag-item d-flex justify-content-between mb-1">
-											<span class="tag-category text-muted">{{ tag.localized_category_name }}:</span>
-											<span class="tag-name fw-medium">
-												{{ tag.localized_tag_name }}
+										<div v-for="tag in selectedItem.structured_tags" :key="tag.id" class="tag-item d-flex justify-content-between mb-1">
+											<span class="tag-category text-muted">{{ tag.category_name }}:</span>
+											<span class="tag-name fw-medium" :style="{ color: tag.color ? '#' + tag.color : '' }">
+												{{ tag.display_name }}
 											</span>
 										</div>
 									</div>
@@ -114,7 +119,6 @@
 								
 								<!-- Кнопки действий -->
 								<div class="item-actions mt-4">
-									<!-- Доступные для торговли предметы -->
 									<div v-if="activeInventoryTab === 'available'">
 										<button v-if="selectedItem.tradable && selectedItem.marketable && hasTradeUrl && !selectedItem.is_listed" 
 											class="btn theme-btn w-100 mb-2"
@@ -124,13 +128,16 @@
 											<i v-else class="ri-price-tag-3-line me-2"></i>
 											{{ isCreatingListing ? 'Создаем листинг...' : 'Продать' }}
 										</button>
-										<div v-else-if="!hasTradeUrl" 
-											 class="alert alert-light mb-0 small">
+										<div v-else-if="!hasTradeUrl" class="alert alert-light mb-0 small">
 											<i class="ri-information-line me-2"></i>Для того чтобы выставить на продажу нужно добавить Trade URL в настройках <a href="/profile#profile">профиля</a>
 										</div>
-										<div v-else-if="!selectedItem.tradable || !selectedItem.marketable" 
-											 class="alert alert-secondary mb-0">
+										<div v-else-if="!selectedItem.tradable || !selectedItem.marketable" class="alert alert-secondary mb-0">
 											<i class="ri-lock-line me-2"></i>Данный предмет нельзя продать
+										</div>
+									</div>
+									<div v-if="activeInventoryTab === 'listed'">
+										<div class="alert alert-info mb-0">
+											<i class="ri-information-line me-2"></i>Этот предмет выставлен на продажу
 										</div>
 									</div>
 								</div>
@@ -140,13 +147,13 @@
 				</div>
 				<div class="tab-pane fade" :class="{ 'show active': activeInventoryTab === 'listed' }" 
 				     id="listed" role="tabpanel" aria-labelledby="listed-tab" tabindex="0">
+					<!-- Тот же контент, что и в available -->
 					<div class="row g-4 d-flex flex-lg-row flex-column-reverse">
 						<div class="col-lg-7 col-12">
-							<div v-if="listedItems.length > 0" class="mb-4">
+							<div v-if="currentItems.length > 0" class="mb-4">
 								<div class="row g-3">
-									<div v-for="item in listedItems" :key="item.steam_asset_id" class="col-lg-4 col-md-6">
-										<div @click="selectItem(item)" 
-											 :class="['h-100 inventory-item text-center position-relative item-listed', { 'active': selectedItem && selectedItem.steam_asset_id === item.steam_asset_id }]">
+									<div v-for="item in currentItems" :key="item.steam_asset_id" class="col-lg-4 col-md-6">
+										<div @click="selectItem(item)" :class="getItemClasses(item)">
 											<img class="img-fluid inventory-img h-auto" :src="getIconUrl(item)"
 												:alt="item.market_hash_name" @error="handleImageError">
 											<h6 class="mt-2">{{ getItemName(item) }}</h6>
@@ -155,9 +162,13 @@
 									</div>
 								</div>
 							</div>
-							
+							<div v-else class="text-center py-5">
+								<i class="ri-box-3-line display-4 text-muted mb-3"></i>
+								<h6>{{ getEmptyStateMessage() }}</h6>
+								<p class="text-muted mb-0">{{ getEmptyStateDescription() }}</p>
+							</div>
 						</div>
-						<div class="col-lg-5 col-12" id="listed-item-details-section">
+						<div class="col-lg-5 col-12" :id="getDetailsSectionId()">
 							<div class="item-details sticky-top" v-if="selectedItem">
 								<h5 class="item-name">{{ getItemName(selectedItem) }}</h5>
 								<div class="item-type text-muted mb-3">{{ selectedItem.type || 'Unknown' }}</div>
@@ -173,11 +184,10 @@
 									<div class="description-text text-muted" v-html="getItemDescription(selectedItem)"></div>
 								</div>
 								
-								<!-- Износ и паттерн -->
+								<!-- Float значение и паттерн -->
 								<div v-if="selectedItem.float_value" class="item-wear mb-3">
 									<div class="wear-info">
-										<strong>Износ:</strong> {{ selectedItem.wear_condition || getWearCondition(selectedItem.float_value) }}
-										<div class="float-value">Float: {{ selectedItem.float_value.toFixed(6) }}</div>
+										<strong>Float:</strong> {{ selectedItem.float_value.toFixed(6) }}
 									</div>
 									<div v-if="selectedItem.pattern_index" class="pattern-info mt-2">
 										<strong>Паттерн:</strong> #{{ selectedItem.pattern_index }}
@@ -196,13 +206,13 @@
 								</div>
 								
 								<!-- Теги -->
-								<div v-if="getParsedTags(selectedItem).length > 0" class="item-tags mb-3">
+								<div v-if="selectedItem.structured_tags && selectedItem.structured_tags.length > 0" class="item-tags mb-3">
 									<strong>Информация о предмете:</strong>
 									<div class="tags-list mt-2">
-										<div v-for="tag in getParsedTags(selectedItem)" :key="tag.internal_name" class="tag-item d-flex justify-content-between mb-1">
-											<span class="tag-category text-muted">{{ tag.localized_category_name }}:</span>
-											<span class="tag-name fw-medium">
-												{{ tag.localized_tag_name }}
+										<div v-for="tag in selectedItem.structured_tags" :key="tag.id" class="tag-item d-flex justify-content-between mb-1">
+											<span class="tag-category text-muted">{{ tag.category_name }}:</span>
+											<span class="tag-name fw-medium" :style="{ color: tag.color ? '#' + tag.color : '' }">
+												{{ tag.display_name }}
 											</span>
 										</div>
 									</div>
@@ -210,7 +220,22 @@
 								
 								<!-- Кнопки действий -->
 								<div class="item-actions mt-4">
-									<!-- Предметы в продаже -->
+									<div v-if="activeInventoryTab === 'available'">
+										<button v-if="selectedItem.tradable && selectedItem.marketable && hasTradeUrl && !selectedItem.is_listed" 
+											class="btn theme-btn w-100 mb-2"
+											:disabled="isCreatingListing"
+											@click="openSellModal(selectedItem)">
+											<i v-if="isCreatingListing" class="ri-loader-4-line me-2 ri-spin"></i>
+											<i v-else class="ri-price-tag-3-line me-2"></i>
+											{{ isCreatingListing ? 'Создаем листинг...' : 'Продать' }}
+										</button>
+										<div v-else-if="!hasTradeUrl" class="alert alert-light mb-0 small">
+											<i class="ri-information-line me-2"></i>Для того чтобы выставить на продажу нужно добавить Trade URL в настройках <a href="/profile#profile">профиля</a>
+										</div>
+										<div v-else-if="!selectedItem.tradable || !selectedItem.marketable" class="alert alert-secondary mb-0">
+											<i class="ri-lock-line me-2"></i>Данный предмет нельзя продать
+										</div>
+									</div>
 									<div v-if="activeInventoryTab === 'listed'">
 										<div class="alert alert-info mb-0">
 											<i class="ri-information-line me-2"></i>Этот предмет выставлен на продажу
@@ -311,14 +336,13 @@
 </template>
 
 <script>
-import { useToast } from "vue-toastification";
 import { formatPrice } from '../../utils/helpers';
+import { getApiHeaders, handleApiError } from '../../utils/helpers';
 
 export default {
 	name: 'ProfileInventory',
 	setup() {
-		const toast = useToast();
-		return { toast, formatPrice };
+		return { formatPrice };
 	},
 	props: {
 		client: {
@@ -343,25 +367,14 @@ export default {
 		}
 	},
 	computed: {
-		filteredItems() {
-			// Поскольку фильтров нет, просто возвращаем все предметы
-			return this.items;
-		},
-		tradableItems() {
-			// Предметы которые можно обменять и продать
-			return this.items.filter(item => item.tradable && item.marketable);
-		},
 		availableItems() {
-			// Предметы доступные для торговли (не выставлены на продажу)
 			return this.items.filter(item => item.tradable && item.marketable && !item.is_listed);
 		},
 		listedItems() {
-			// Предметы выставленные на продажу
 			return this.items.filter(item => item.is_listed);
 		},
-		nonTradableItems() {
-			// Предметы которые нельзя обменять или продать
-			return this.items.filter(item => !item.tradable || !item.marketable);
+		currentItems() {
+			return this.activeInventoryTab === 'available' ? this.availableItems : this.listedItems;
 		}
 	},
 	methods: {
@@ -369,11 +382,13 @@ export default {
 			this.isLoading = true;
 			try {
 				const response = await fetch('/inventory', {
-					headers: {
-						'Accept': 'application/json',
-						'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-					}
+					headers: getApiHeaders()
 				});
+				
+				if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
 
 				const data = await response.json();
 
@@ -398,7 +413,7 @@ export default {
 
 					// Если инвентарь пустой, показываем сообщение
 					if (data.data.items.length === 0) {
-						this.toast.info('Ваш Steam инвентарь пуст или приватный. Убедитесь, что инвентарь публичный в настройках Steam. После изменения настроек инвентаря в Steam попробуйте еще раз через 10-15 минут.', {
+						window.toast.info('Ваш Steam инвентарь пуст или приватный. Убедитесь, что инвентарь публичный в настройках Steam. После изменения настроек инвентаря в Steam попробуйте еще раз через 10-15 минут.', {
 							timeout: 10000
 						});
 					}
@@ -407,7 +422,7 @@ export default {
 					this.inventoryData = { items: [], stats: {} };
 					this.items = [];
 					this.stats = {};
-					this.toast.error(data.message || 'Не удалось загрузить инвентарь');
+					window.toast.error(data.message || 'Не удалось загрузить инвентарь');
 				}
 			} catch (error) {
 				console.error('Error loading inventory:', error);
@@ -415,9 +430,7 @@ export default {
 				this.inventoryData = { items: [], stats: {} };
 				this.items = [];
 				this.stats = {};
-				this.toast.error('Не удалось загрузить инвентарь. Убедитесь, что ваш Steam инвентарь публичный и попробуйте ещё раз. После изменения настроек инвентаря в Steam попробуйте еще раз через 10-15 минут.', {
-					timeout: 10000
-				});
+				window.toast.error(handleApiError(error));
 			} finally {
 				this.isLoading = false;
 			}
@@ -429,16 +442,18 @@ export default {
 			try {
 				const response = await fetch('/inventory/sync', {
 					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-					}
+					headers: getApiHeaders()
 				});
+				
+				if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
 
 				const data = await response.json();
 
 				if (data.success) {
-					this.toast.success(`Инвентарь обновлен! Загружено предметов: ${data.data.items_count}`);
+					window.toast.success(`Инвентарь обновлен! Загружено предметов: ${data.data.items_count}`);
 
 					// Обновляем данные без перезагрузки страницы
 					await this.loadInventoryData();
@@ -446,7 +461,7 @@ export default {
 					// Запускаем кулдаун на 2 минуты
 					this.startSyncCooldown(120); // 2 минуты = 120 секунд
 				} else {
-					this.toast.error(data.message);
+					window.toast.error(data.message);
 
 					// Если есть информация о кулдауне, запускаем его
 					if (data.data && data.data.cooldown_remaining) {
@@ -455,7 +470,7 @@ export default {
 				}
 			} catch (error) {
 				console.error('Sync error:', error);
-				this.toast.error('Произошла ошибка при обновлении инвентаря');
+				window.toast.error(handleApiError(error));
 			} finally {
 				this.isSyncing = false;
 			}
@@ -491,45 +506,60 @@ export default {
 
 		setActiveInventoryTab(tab) {
 			this.activeInventoryTab = tab;
-			// Сбрасываем выбранный предмет при смене таба
 			this.selectedItem = null;
 		},
+		
+		getItemClasses(item) {
+			const baseClasses = 'h-100 inventory-item text-center position-relative';
+			const activeClass = this.selectedItem && this.selectedItem.steam_asset_id === item.steam_asset_id ? 'active' : '';
+			const listedClass = this.activeInventoryTab === 'listed' ? 'item-listed' : '';
+			
+			return [baseClasses, activeClass, listedClass].filter(Boolean).join(' ');
+		},
+		
+		getDetailsSectionId() {
+			return this.activeInventoryTab === 'available' ? 'item-details-section' : 'listed-item-details-section';
+		},
+		
+		getEmptyStateMessage() {
+			return this.activeInventoryTab === 'available' 
+				? 'Нет доступных предметов для торговли' 
+				: 'Нет предметов в продаже';
+		},
+		
+		getEmptyStateDescription() {
+			return this.activeInventoryTab === 'available' 
+				? 'Убедитесь, что ваш Steam инвентарь публичный и содержит торгуемые предметы' 
+				: 'Выставьте предметы на продажу в разделе "Доступные для торговли"';
+		},
+		
 		getItemName(item) {
 			return item.item?.name_ru || item.market_hash_name;
 		},
-		getItemPrice(item) {
-			return item.item?.min_steam_price;
-		},
-		formatDate(dateString) {
-			return new Date(dateString).toLocaleString('ru-RU');
-		},
+		
 		getIconUrl(item) {
 			if (item.icon_url) {
-				// Проверяем, уже ли это полный URL
 				if (item.icon_url.startsWith('http')) {
 					return item.icon_url;
 				}
-				// Если нет, добавляем префикс Steam
 				return 'https://community.steamstatic.com/economy/image/' + item.icon_url;
 			}
-			return '/images/no-image.png';
+			return '/images/skin_no_image.svg';
 		},
+		
 		handleImageError(event) {
-			event.target.src = '/images/no-image.png';
+			event.target.src = '/images/skin_no_image.svg';
 		},
+		
 		selectItem(item) {
 			this.selectedItem = item;
-			
-			// Скролл к деталям на мобильных устройствах
+			this.scrollToDetailsOnMobile();
+		},
+		
+		scrollToDetailsOnMobile() {
 			this.$nextTick(() => {
-				// Проверяем, что это мобильное устройство (экран меньше lg)
 				if (window.innerWidth < 992) {
-					// Выбираем правильный элемент в зависимости от активной вкладки
-					const targetId = this.activeInventoryTab === 'available' 
-						? 'item-details-section' 
-						: 'listed-item-details-section';
-					const targetElement = document.getElementById(targetId);
-					
+					const targetElement = document.getElementById(this.getDetailsSectionId());
 					if (targetElement) {
 						targetElement.scrollIntoView({
 							behavior: 'smooth',
@@ -539,17 +569,7 @@ export default {
 				}
 			});
 		},
-		getParsedTags(item) {
-			if (!item.tags) return [];
-			if (typeof item.tags === 'string') {
-				try {
-					return JSON.parse(item.tags);
-				} catch (e) {
-					return [];
-				}
-			}
-			return item.tags;
-		},
+		
 		getParsedDescriptions(item) {
 			if (!item.descriptions) return [];
 			if (typeof item.descriptions === 'string') {
@@ -561,18 +581,13 @@ export default {
 			}
 			return item.descriptions;
 		},
+		
 		getItemDescription(item) {
 			const descriptions = this.getParsedDescriptions(item);
 			const descriptionItem = descriptions.find(desc => desc.name === 'description');
 			return descriptionItem ? descriptionItem.value : null;
 		},
-		getWearCondition(floatValue) {
-			if (floatValue <= 0.07) return 'Прямо с завода';
-			if (floatValue <= 0.15) return 'Немного поношенное';
-			if (floatValue <= 0.38) return 'После полевых испытаний';
-			if (floatValue <= 0.45) return 'Поношенное';
-			return 'Закалённое в боях';
-		},
+		
 		openSellModal(item) {
 			this.itemToSell = item;
 			const modal = new bootstrap.Modal(document.getElementById('sellTypeModal'));
@@ -587,7 +602,7 @@ export default {
 			}
 			
 			// Показываем уведомление о разработке
-			this.toast.info('Функция "Продать боту" находится в разработке и будет доступна в ближайшее время.');
+			window.toast.info('Функция "Продать боту" находится в разработке и будет доступна в ближайшее время.');
 		},
 		
 		async addToMarketplace() {
@@ -603,33 +618,28 @@ export default {
 			
 			try {
 				// Показываем уведомление о начале процесса
-				this.toast.info('Создаем листинг и получаем скриншот предмета...', {
+				window.toast.info('Создаем листинг и получаем скриншот предмета...', {
 					timeout: 3000
 				});
 				
 				// Отправляем запрос на создание листинга
 				const response = await fetch('/inventory/create-listing', {
 					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						'Accept': 'application/json',
-						'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-					},
+					headers: getApiHeaders(),
 					body: JSON.stringify({
 						steam_asset_id: this.itemToSell.steam_asset_id
 					})
 				});
 				
+				if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
 				const data = await response.json();
 				
 				if (data.success) {
 					// Помечаем предмет как выставленный на продажу
 					this.itemToSell.is_listed = true;
-					
-					// Если это выбранный предмет, обновляем его состояние
-					if (this.selectedItem && this.selectedItem.steam_asset_id === this.itemToSell.steam_asset_id) {
-						this.selectedItem.is_listed = true;
-					}
 					
 					// Обновляем предмет в массиве items
 					const itemIndex = this.items.findIndex(item => item.steam_asset_id === this.itemToSell.steam_asset_id);
@@ -637,13 +647,22 @@ export default {
 						this.items[itemIndex].is_listed = true;
 					}
 					
-					this.toast.success('Предмет добавлен в торговлю!');
+					// Если это был выбранный предмет, выбираем первый доступный или убираем выбор
+					if (this.selectedItem && this.selectedItem.steam_asset_id === this.itemToSell.steam_asset_id) {
+						if (this.availableItems.length > 0) {
+							this.selectedItem = this.availableItems[0];
+						} else {
+							this.selectedItem = null;
+						}
+					}
+					
+					window.toast.success('Предмет добавлен в торговлю!');
 				} else {
-					this.toast.error(data.message || 'Не удалось создать листинг');
+					window.toast.error(data.message || 'Не удалось создать листинг');
 				}
 			} catch (error) {
 				console.error('Create listing error:', error);
-				this.toast.error('Произошла ошибка при создании листинга');
+				window.toast.error(handleApiError(error));
 			} finally {
 				this.isCreatingListing = false;
 			}
@@ -672,19 +691,10 @@ export default {
 				}
 			}
 		},
-		availableItems: {
+		currentItems: {
 			handler(newItems) {
-				// Автоматически выбираем первый доступный предмет при загрузке если активен таб "available"
-				if (this.activeInventoryTab === 'available' && newItems.length > 0 && !this.selectedItem) {
-					this.selectedItem = newItems[0];
-				}
-			},
-			immediate: true
-		},
-		listedItems: {
-			handler(newItems) {
-				// Автоматически выбираем первый предмет в продаже если активен таб "listed"
-				if (this.activeInventoryTab === 'listed' && newItems.length > 0 && !this.selectedItem) {
+				// Автоматически выбираем первый предмет при загрузке
+				if (newItems.length > 0 && !this.selectedItem) {
 					this.selectedItem = newItems[0];
 				}
 			},

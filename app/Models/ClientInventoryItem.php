@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class ClientInventoryItem extends Model
 {
@@ -26,10 +27,13 @@ class ClientInventoryItem extends Model
         'pattern_index',
         'stickers',
         'inspect_url',
-        'tags',
         'descriptions',
         'item_id',
         'cached_at',
+        'type_id',
+        'quality_id',
+        'rarity_id',
+        'exterior_id',
     ];
 
     protected $casts = [
@@ -39,10 +43,11 @@ class ClientInventoryItem extends Model
         'float_value' => 'float',
         'pattern_index' => 'integer',
         'stickers' => 'array',
-        'tags' => 'array',
         'descriptions' => 'array',
         'cached_at' => 'datetime',
     ];
+
+    protected $appends = ['structured_tags'];
 
 
     public function client(): BelongsTo
@@ -107,5 +112,38 @@ class ClientInventoryItem extends Model
     public function isFromDatabase(): bool
     {
         return $this->item_id !== null;
+    }
+
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'item_tags', 'item_id', 'tag_id')
+            ->where('item_type', 'inventory')
+            ->join('tag_categories', 'tags.category_id', '=', 'tag_categories.id')
+            ->select('tags.*', 'tag_categories.code as category_code', 'tag_categories.steam_category as category_name')
+            ->orderBy('tag_categories.sort_order')
+            ->orderBy('tags.sort_order');
+    }
+
+    public function getStructuredTagsAttribute()
+    {
+        if ($this->relationLoaded('tags') && $this->tags) {
+            return $this->tags->map(function ($tag) {
+                $translatedValue = __('tags.values.' . $tag->normalized_value, [], 'ru');
+                
+                // Если перевод не найден (возвращается ключ), используем Steam название
+                if ($translatedValue === 'tags.values.' . $tag->normalized_value) {
+                    $translatedValue = $tag->steam_localized_name ?? $tag->normalized_value;
+                }
+                
+                return [
+                    'id' => $tag->id,
+                    'category_name' => __('tags.categories.' . $tag->category_code, [], 'ru'),
+                    'display_name' => $translatedValue,
+                    'color' => $tag->color,
+                ];
+            });
+        }
+        
+        return collect();
     }
 }

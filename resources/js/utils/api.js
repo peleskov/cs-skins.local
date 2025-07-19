@@ -17,9 +17,14 @@ class CartAPI {
             const response = await fetch(this.baseUrl, {
                 headers: getApiHeaders()
             });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             return await response.json();
         } catch (error) {
-            throw new Error(handleApiError(error));
+            throw error;
         }
     }
 
@@ -33,9 +38,24 @@ class CartAPI {
                 headers: getApiHeaders(),
                 body: JSON.stringify({ listing_id: listingId })
             });
+            
+            if (!response.ok) {
+                // Пытаемся получить сообщение об ошибке от сервера
+                let errorMessage = `HTTP error! status: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    if (errorData.message) {
+                        errorMessage = errorData.message;
+                    }
+                } catch (e) {
+                    // Если не удалось распарсить JSON, используем дефолтное сообщение
+                }
+                throw new Error(errorMessage);
+            }
+            
             return await response.json();
         } catch (error) {
-            throw new Error(handleApiError(error));
+            throw error;
         }
     }
 
@@ -48,9 +68,14 @@ class CartAPI {
                 method: 'DELETE',
                 headers: getApiHeaders()
             });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             return await response.json();
         } catch (error) {
-            throw new Error(handleApiError(error));
+            throw error;
         }
     }
 
@@ -63,9 +88,14 @@ class CartAPI {
                 method: 'DELETE',
                 headers: getApiHeaders()
             });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             return await response.json();
         } catch (error) {
-            throw new Error(handleApiError(error));
+            throw error;
         }
     }
 
@@ -77,25 +107,17 @@ class CartAPI {
             const response = await fetch(`${this.baseUrl}/count`, {
                 headers: getApiHeaders()
             });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             return await response.json();
         } catch (error) {
-            throw new Error(handleApiError(error));
+            throw error;
         }
     }
 
-    /**
-     * Проверить наличие товара в корзине
-     */
-    async checkItem(listingId) {
-        try {
-            const response = await fetch(`${this.baseUrl}/check/${listingId}`, {
-                headers: getApiHeaders()
-            });
-            return await response.json();
-        } catch (error) {
-            throw new Error(handleApiError(error));
-        }
-    }
 }
 
 // Экспортируем singleton instance

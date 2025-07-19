@@ -14,70 +14,132 @@
 			<p class="mt-3">Загружаем ваши листинги...</p>
 		</div>
 
-		<!-- Listings blocks -->
-		<div v-else-if="listings.length > 0" class="product-box-section section-b-space">
-			<div class="product-details-box-list">
-				<div v-for="listing in listings" :key="listing.id" class="product-details-box gap-2">
-					<div class="product-img" :style="{ backgroundImage: 'url(' + getItemImage(listing) + ')' }">
-					</div>
-					<div class="description d-flex align-items-center justify-content-between flex-grow-1 gap-3">
-						<div>
-							<div class="d-flex align-items-center gap-2">
-								<span :class="getStatusClass(listing.status)">
-									{{ getStatusText(listing.status) }}
-								</span>
-								<h6 class="product-name">{{ getItemName(listing) }}</h6>
-							</div>
-							<div class="rating-section">
-								<div class="d-flex align-items-center gap-2">
-									<span v-if="listing.wear_value" class="badge bg-secondary">
-										{{ getWearName(listing.wear_value) }}
-									</span>
-									<small class="text-muted">{{ formatDate(listing.created_at) }}</small>
+		<!-- Trading listings with tabs -->
+		<div v-else-if="listings.length > 0" class="trading-listings">
+			<!-- Tabs Navigation -->
+			<ul class="nav nav-tabs tab-style1 mb-4" id="tradingTab" role="tablist">
+				<li class="nav-item" role="presentation">
+					<button class="nav-link" :class="{ active: activeTradingTab === 'pending' }" id="pending-tab"
+						data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab"
+						@click="setActiveTradingTab('pending')">
+						Черновики
+						<span v-if="pendingListings.length > 0" class="badge bg-body-secondary ms-1">{{
+							pendingListings.length }}</span>
+					</button>
+				</li>
+				<li class="nav-item" role="presentation">
+					<button class="nav-link" :class="{ active: activeTradingTab === 'active' }" id="active-tab"
+						data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab"
+						@click="setActiveTradingTab('active')">
+						Активные
+						<span v-if="activeListings.length > 0" class="badge bg-body-secondary ms-1">{{
+							activeListings.length }}</span>
+					</button>
+				</li>
+				<li class="nav-item" role="presentation">
+					<button class="nav-link" :class="{ active: activeTradingTab === 'cancelled' }" id="cancelled-tab"
+						data-bs-toggle="tab" data-bs-target="#cancelled" type="button" role="tab"
+						@click="setActiveTradingTab('cancelled')">
+						Отмененные
+						<span v-if="cancelledListings.length > 0" class="badge bg-body-secondary ms-1">{{
+							cancelledListings.length }}</span>
+					</button>
+				</li>
+			</ul>
+
+			<div class="tab-content" id="tradingTabContent">
+				<!-- Единый компонент для всех табов -->
+				<div v-for="tabId in ['pending', 'active', 'cancelled']" :key="tabId" class="tab-pane fade"
+					:class="{ 'show active': activeTradingTab === tabId }" :id="tabId" role="tabpanel"
+					:aria-labelledby="`${tabId}-tab`" tabindex="0">
+					<div v-if="currentTabListings.length > 0 && activeTradingTab === tabId"
+						class="product-box-section section-b-space">
+						<div class="product-details-box-list">
+							<div v-for="listing in currentTabListings" :key="listing.id"
+								class="product-details-box gap-2">
+								<div class="product-img"
+									:style="{ backgroundImage: 'url(' + getItemImage(listing) + ')' }">
+								</div>
+								<div
+									class="description d-flex align-items-center justify-content-between flex-grow-1 gap-3">
+									<div>
+										<div class="d-flex align-items-center gap-2">
+											<h6 class="product-name">{{ getItemName(listing) }}</h6>
+										</div>
+										<div class="rating-section">
+											<div class="d-flex align-items-center gap-2">
+												<span v-if="getExteriorTag(listing)" class="badge bg-secondary">
+													{{ getExteriorTag(listing) }}
+												</span>
+												<small class="text-muted">{{ formatDate(listing.created_at) }}</small>
+											</div>
+										</div>
+										<p class="text-muted mb-0">{{ listing.market_hash_name }}</p>
+									</div>
+									<div class="h-100 d-flex flex-column justify-content-between">
+										<div class="product-box-price d-grid gap-2 mb-4 text-center">
+											<span class="text-muted small">Цена:</span>
+											<span class="text-muted small">ТОП-1</span>
+											<span class="text-muted small">Выкуп</span>
+
+											<span class="small">{{ formatPrice(listing.price) }} ₽</span>
+											<span class="small">{{ listing.min_market_price ?
+												formatPrice(listing.min_market_price)
+												+ ' ₽' : '-' }}</span>
+											<span class="small">{{ listing.buyout_price ?
+												formatPrice(listing.buyout_price) + ' ₽' : 'Не востребован' }}</span>
+										</div>
+										<div class="btn-group">
+											<!-- Кнопки для черновиков -->
+											<template v-if="activeTradingTab === 'pending'">
+												<button class="btn theme-outline" @click="activateListing(listing)"
+													:disabled="listing.price == 0"
+													:title="listing.price == 0 ? 'Сначала установите цену' : 'Активировать'">
+													<i class="ri-play-line me-1"></i>Активировать
+												</button>
+												<button class="btn theme-outline" @click="editPrice(listing)"
+													title="Изменить цену">
+													<i class="ri-edit-line me-1"></i>Редактировать
+												</button>
+												<button class="btn theme-outline" @click="removeListing(listing)"
+													title="Снять с продажи">
+													<i class="ri-delete-bin-line me-1"></i>Удалить
+												</button>
+											</template>
+
+											<!-- Кнопки для активных -->
+											<template v-if="activeTradingTab === 'active'">
+												<a :href="`/marketplace/${listing.id}`" target="_blank"
+													class="btn theme-outline" title="Просмотреть на маркетплейсе">
+													<i class="ri-external-link-line me-1"></i>Смотреть
+												</a>
+												<button class="btn theme-outline" @click="deactivateListing(listing)"
+													title="Деактивировать">
+													<i class="ri-pause-line me-1"></i>Пауза
+												</button>
+											</template>
+
+											<!-- Кнопки для отмененных -->
+											<template v-if="activeTradingTab === 'cancelled'">
+												<button class="btn theme-outline" @click="reactivateListing(listing)"
+													title="Вернуть в торговлю">
+													<i class="ri-restart-line me-1"></i>Возобновить
+												</button>
+												<button class="btn theme-outline" @click="removeListing(listing)"
+													title="Удалить окончательно">
+													<i class="ri-delete-bin-line me-1"></i>Удалить
+												</button>
+											</template>
+										</div>
+									</div>
 								</div>
 							</div>
-							<p class="text-muted mb-0">{{ listing.market_hash_name }}</p>
 						</div>
-						<div class="h-100 d-flex flex-column justify-content-between">
-							<div class="product-box-price d-grid gap-2 mb-4 text-center">
-								<span class="text-muted small">Цена:</span>
-								<span class="text-muted small">ТОП-1</span>
-								<span class="text-muted small">Выкуп</span>
-
-								<span class="small">{{ formatPrice(listing.price) }} ₽</span>
-								<span class="small">{{ listing.min_market_price ? formatPrice(listing.min_market_price)
-									+ ' ₽' : '-' }}</span>
-								<span class="small">{{ listing.buyout_price ? formatPrice(listing.buyout_price) + ' ₽' : 'Не востребован' }}</span>
-							</div>
-							<div class="btn-group">
-								<!-- Кнопки для pending статуса -->
-								<template v-if="listing.status === 'pending'">
-									<button class="btn theme-outline" @click="activateListing(listing)"
-										:disabled="listing.price == 0"
-										:title="listing.price == 0 ? 'Сначала установите цену' : 'Активировать'">
-										<i class="ri-play-line me-1"></i>Активировать
-									</button>
-									<button class="btn theme-outline" @click="editPrice(listing)" title="Изменить цену">
-										<i class="ri-edit-line me-1"></i>Редактировать
-									</button>
-									<button class="btn theme-outline" @click="removeListing(listing)"
-										title="Снять с продажи">
-										<i class="ri-delete-bin-line me-1"></i>Удалить
-									</button>
-								</template>
-
-								<!-- Кнопки для active статуса -->
-								<template v-if="listing.status === 'active'">
-									<a :href="`/marketplace/${listing.id}`" target="_blank" class="btn theme-outline" title="Просмотреть на маркетплейсе">
-										<i class="ri-external-link-line me-1"></i>Смотреть
-									</a>
-									<button class="btn theme-outline" @click="deactivateListing(listing)"
-										title="Деактивировать">
-										<i class="ri-pause-line me-1"></i>Пауза
-									</button>
-								</template>
-							</div>
-						</div>
+					</div>
+					<div v-else-if="activeTradingTab === tabId" class="text-center py-5">
+						<i :class="[tabConfig[tabId].emptyIcon, 'display-4 text-muted mb-3']"></i>
+						<h4>{{ tabConfig[tabId].emptyTitle }}</h4>
+						<p class="text-muted">{{ tabConfig[tabId].emptyText }}</p>
 					</div>
 				</div>
 			</div>
@@ -287,18 +349,17 @@
 						<i class="ri-alert-line me-2"></i>
 						<strong>Для активации листинга необходимо настроить Steam Trade URL</strong>
 					</div>
-					
+
 					<form @submit.prevent="saveTradeUrl">
 						<div class="mb-3">
 							<label for="tradeUrlInput" class="form-label">Steam Trade URL</label>
 							<input type="url" class="form-control" id="tradeUrlInput" v-model="tradeUrlValue"
-								placeholder="https://steamcommunity.com/tradeoffer/new/?partner=..."
-								required>
+								placeholder="https://steamcommunity.com/tradeoffer/new/?partner=..." required>
 							<div class="form-text">
 								Получите Trade URL в Steam: Инвентарь → Настройки торговли
 							</div>
 						</div>
-						
+
 						<div class="alert alert-info">
 							<h6><i class="ri-information-line me-2"></i>Как получить Trade URL:</h6>
 							<ol class="mb-0">
@@ -321,14 +382,13 @@
 </template>
 
 <script>
-import { useToast } from "vue-toastification";
 import { formatPrice } from '../../utils/helpers';
+import { getApiHeaders, handleApiError } from '../../utils/helpers';
 
 export default {
 	name: 'ProfileTrading',
 	setup() {
-		const toast = useToast();
-		return { toast, formatPrice };
+		return { formatPrice };
 	},
 	props: {
 		client: {
@@ -345,13 +405,50 @@ export default {
 			editPriceValue: null,
 			itemToActivate: null,
 			itemToDeactivate: null,
-			tradeUrlValue: ''
+			tradeUrlValue: '',
+			activeTradingTab: 'pending'
 		}
 	},
 	computed: {
 		isValidPrice() {
 			const price = parseFloat(this.editPriceValue);
 			return !isNaN(price) && price >= 0.01 && price <= 100000;
+		},
+		pendingListings() {
+			return this.listings.filter(listing => listing.status === 'pending');
+		},
+		activeListings() {
+			return this.listings.filter(listing => listing.status === 'active');
+		},
+		cancelledListings() {
+			return this.listings.filter(listing => listing.status === 'cancelled');
+		},
+		currentTabListings() {
+			switch (this.activeTradingTab) {
+				case 'pending': return this.pendingListings;
+				case 'active': return this.activeListings;
+				case 'cancelled': return this.cancelledListings;
+				default: return [];
+			}
+		},
+		tabConfig() {
+			return {
+				pending: {
+					emptyIcon: 'ri-draft-line',
+					emptyTitle: 'Нет черновиков',
+					emptyText: 'Черновики появляются когда вы добавляете предметы из инвентаря для продажи'
+				},
+				active: {
+					emptyIcon: 'ri-store-line',
+					emptyTitle: 'Нет активных лотов',
+					emptyText: 'Активируйте черновики чтобы они появились на маркетплейсе'
+				},
+				cancelled: {
+					emptyIcon: 'ri-close-circle-line',
+					emptyTitle: 'Нет отмененных лотов',
+					emptyText: 'Здесь будут отображаться лоты которые вы сняли с продажи'
+				}
+			};
 		}
 	},
 	methods: {
@@ -359,44 +456,68 @@ export default {
 			this.isLoading = true;
 			try {
 				const response = await fetch('/api/listings/my', {
-					headers: {
-						'Accept': 'application/json',
-						'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-					}
+					headers: getApiHeaders()
 				});
+
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
+
 
 				const data = await response.json();
 
 				if (data.success) {
 					this.listings = data.data;
 				} else {
-					this.toast.error(data.message || 'Не удалось загрузить листинги');
+					window.toast.error(data.message || 'Не удалось загрузить листинги');
 				}
 			} catch (error) {
 				console.error('Error loading listings:', error);
-				this.toast.error('Произошла ошибка при загрузке листингов');
+				window.toast.error(handleApiError(error));
 			} finally {
 				this.isLoading = false;
 			}
 		},
 
 		getItemImage(listing) {
-			// Пытаемся получить изображение из связанного item
+			// Проверяем что listing существует
+			if (!listing) {
+				return '/images/skin_no_image.svg';
+			}
+
+			// Сначала используем inventory_icon_url из снимка инвентаря
+			if (listing.inventory_icon_url) {
+				// Добавляем Steam CDN URL если это не полный URL
+				if (!listing.inventory_icon_url.startsWith('http')) {
+					return `https://community.steamstatic.com/economy/image/${listing.inventory_icon_url}`;
+				}
+				return listing.inventory_icon_url;
+			}
+
+			// Fallback: пытаемся получить изображение из связанного item
 			if (listing.item && listing.item.image_url) {
 				return listing.item.image_url;
 			}
-			// Если есть market_hash_name, пытаемся построить URL
-			if (listing.market_hash_name) {
-				return `https://steamcommunity-a.akamaihd.net/economy/image/${listing.market_hash_name}`;
-			}
+
 			return '/images/skin_no_image.svg';
 		},
 
 		getItemName(listing) {
-			// Пытаемся получить русское название из связанного item
+			// Проверяем что listing существует
+			if (!listing) {
+				return 'Неизвестный предмет';
+			}
+
+			// Сначала используем inventory_item_name из снимка инвентаря
+			if (listing.inventory_item_name) {
+				return listing.inventory_item_name;
+			}
+
+			// Fallback: пытаемся получить русское название из связанного item
 			if (listing.item && listing.item.name_ru) {
 				return listing.item.name_ru;
 			}
+
 			// Иначе используем market_hash_name
 			return listing.market_hash_name || 'Неизвестный предмет';
 		},
@@ -412,35 +533,29 @@ export default {
 			});
 		},
 
-		getWearName(wearValue) {
-			if (wearValue <= 0.07) return 'Прямо с завода';
-			if (wearValue <= 0.15) return 'Немного поношенное';
-			if (wearValue <= 0.38) return 'После полевых испытаний';
-			if (wearValue <= 0.45) return 'Поношенное';
-			return 'Закалённое в боях';
+		getExteriorTag(listing) {
+			// Используем wear_value если есть
+			if (listing.wear_value !== null && listing.wear_value !== undefined) {
+				if (listing.wear_value <= 0.07) return 'Прямо с завода';
+				if (listing.wear_value <= 0.15) return 'Немного поношенное';
+				if (listing.wear_value <= 0.38) return 'После полевых испытаний';
+				if (listing.wear_value <= 0.45) return 'Поношенное';
+				return 'Закалённое в боях';
+			}
+
+			// Если есть structured_tags, ищем в них
+			if (listing.structured_tags && listing.structured_tags.length > 0) {
+				// В structured_tags у нас есть category_name, а не category_code
+				const exteriorTag = listing.structured_tags.find(tag =>
+					tag.category_name && tag.category_name.toLowerCase().includes('внешний')
+				);
+				return exteriorTag ? exteriorTag.display_name : null;
+			}
+
+			return null;
 		},
 
-		getStatusText(status) {
-			const statusMap = {
-				'pending': 'Черновик',
-				'active': 'Активен',
-				'sold': 'Продан',
-				'cancelled': 'Отменён',
-				'expired': 'Истёк'
-			};
-			return statusMap[status] || status;
-		},
 
-		getStatusClass(status) {
-			const classMap = {
-				'pending': 'badge bg-warning',
-				'active': 'badge bg-success',
-				'sold': 'badge bg-primary',
-				'cancelled': 'badge bg-secondary',
-				'expired': 'badge bg-warning'
-			};
-			return classMap[status] || 'badge bg-secondary';
-		},
 
 		handleImageError(event) {
 			event.target.src = '/images/skin_no_image.svg';
@@ -448,7 +563,7 @@ export default {
 
 		activateListing(listing) {
 			if (listing.price <= 0) {
-				this.toast.error('Сначала установите цену для листинга');
+				window.toast.error('Сначала установите цену для листинга');
 				return;
 			}
 
@@ -463,15 +578,16 @@ export default {
 			try {
 				const response = await fetch('/api/listings/activate', {
 					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						'Accept': 'application/json',
-						'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-					},
+					headers: getApiHeaders(),
 					body: JSON.stringify({
 						listing_id: this.itemToActivate.id
 					})
 				});
+
+				if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
 
 				const data = await response.json();
 
@@ -479,7 +595,7 @@ export default {
 					// Обновляем статус в локальных данных
 					this.itemToActivate.status = 'active';
 					this.itemToActivate.listed_at = new Date().toISOString();
-					this.toast.success('Листинг активирован');
+					window.toast.success('Листинг активирован');
 
 					// Обновляем минимальную цену для этого предмета
 					await this.updateMinMarketPrice(this.itemToActivate.market_hash_name);
@@ -492,26 +608,26 @@ export default {
 				} else {
 					// Проверяем, нужен ли Trade URL
 					if (data.require_trade_url) {
-						this.toast.error(data.message || 'Необходимо настроить Trade URL');
-						
+						window.toast.error(data.message || 'Необходимо настроить Trade URL');
+
 						// Закрываем модальное окно активации
 						const modal = bootstrap.Modal.getInstance(document.getElementById('confirmActivateModal'));
 						if (modal) {
 							modal.hide();
 						}
-						
+
 						// Показываем модальное окно для ввода Trade URL
 						setTimeout(() => {
 							const tradeUrlModal = new bootstrap.Modal(document.getElementById('tradeUrlRequiredModal'));
 							tradeUrlModal.show();
 						}, 300);
 					} else {
-						this.toast.error(data.message || 'Не удалось активировать листинг');
+						window.toast.error(data.message || 'Не удалось активировать листинг');
 					}
 				}
 			} catch (error) {
 				console.error('Activate listing error:', error);
-				this.toast.error('Произошла ошибка при активации листинга');
+				window.toast.error(handleApiError(error));
 			} finally {
 				this.itemToActivate = null;
 			}
@@ -529,15 +645,15 @@ export default {
 			try {
 				const response = await fetch('/api/listings/delete', {
 					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						'Accept': 'application/json',
-						'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-					},
+					headers: getApiHeaders(),
 					body: JSON.stringify({
 						listing_id: this.itemToDelete.id
 					})
 				});
+
+				if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+  }
 
 				const data = await response.json();
 
@@ -546,16 +662,16 @@ export default {
 
 					// Удаляем листинг из локального массива
 					this.listings = this.listings.filter(listing => listing.id !== this.itemToDelete.id);
-					this.toast.success(data.message || 'Предмет удален из торговли');
+					window.toast.success(data.message || 'Предмет удален из торговли');
 
 					// Обновляем минимальную цену для этого предмета
 					await this.updateMinMarketPrice(deletedMarketHashName);
 				} else {
-					this.toast.error(data.message || 'Не удалось удалить предмет');
+					window.toast.error(data.message || 'Не удалось удалить предмет');
 				}
 			} catch (error) {
 				console.error('Delete listing error:', error);
-				this.toast.error('Произошла ошибка при удалении предмета');
+				window.toast.error(handleApiError(error));
 			} finally {
 				// Закрываем модальное окно
 				const modal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal'));
@@ -577,7 +693,7 @@ export default {
 
 		async confirmEditPrice() {
 			if (!this.isValidPrice) {
-				this.toast.error('Введите корректную цену');
+				window.toast.error('Введите корректную цену');
 				return;
 			}
 
@@ -586,23 +702,23 @@ export default {
 			try {
 				const response = await fetch('/api/listings/update-price', {
 					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						'Accept': 'application/json',
-						'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-					},
+					headers: getApiHeaders(),
 					body: JSON.stringify({
 						listing_id: this.itemToEdit.id,
 						price: numPrice
 					})
 				});
 
+				if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
 				const data = await response.json();
 
 				if (data.success) {
 					// Обновляем цену в локальных данных
 					this.itemToEdit.price = numPrice;
-					this.toast.success('Цена обновлена');
+					window.toast.success('Цена обновлена');
 
 					// Обновляем минимальную цену для этого предмета
 					await this.updateMinMarketPrice(this.itemToEdit.market_hash_name);
@@ -613,11 +729,11 @@ export default {
 						modal.hide();
 					}
 				} else {
-					this.toast.error(data.message || 'Не удалось обновить цену');
+					window.toast.error(data.message || 'Не удалось обновить цену');
 				}
 			} catch (error) {
 				console.error('Update price error:', error);
-				this.toast.error('Произошла ошибка при обновлении цены');
+				window.toast.error(handleApiError(error));
 			} finally {
 				this.itemToEdit = null;
 				this.editPriceValue = null;
@@ -636,15 +752,15 @@ export default {
 			try {
 				const response = await fetch('/api/listings/deactivate', {
 					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						'Accept': 'application/json',
-						'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-					},
+					headers: getApiHeaders(),
 					body: JSON.stringify({
 						listing_id: this.itemToDeactivate.id
 					})
 				});
+
+				if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+  }
 
 				const data = await response.json();
 
@@ -652,7 +768,7 @@ export default {
 					// Обновляем статус в локальных данных
 					this.itemToDeactivate.status = 'pending';
 					this.itemToDeactivate.listed_at = null;
-					this.toast.success('Листинг деактивирован');
+					window.toast.success('Листинг деактивирован');
 
 					// Обновляем минимальную цену для этого предмета
 					await this.updateMinMarketPrice(this.itemToDeactivate.market_hash_name);
@@ -663,11 +779,11 @@ export default {
 						modal.hide();
 					}
 				} else {
-					this.toast.error(data.message || 'Не удалось деактивировать листинг');
+					window.toast.error(data.message || 'Не удалось деактивировать листинг');
 				}
 			} catch (error) {
 				console.error('Deactivate listing error:', error);
-				this.toast.error('Произошла ошибка при деактивации листинга');
+				window.toast.error(handleApiError(error));
 			} finally {
 				this.itemToDeactivate = null;
 			}
@@ -677,15 +793,15 @@ export default {
 			try {
 				const response = await fetch('/api/listings/min-price', {
 					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						'Accept': 'application/json',
-						'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-					},
+					headers: getApiHeaders(),
 					body: JSON.stringify({
 						market_hash_name: marketHashName
 					})
 				});
+
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
 
 				const data = await response.json();
 
@@ -706,30 +822,30 @@ export default {
 			const tradeUrl = this.tradeUrlValue.trim();
 
 			if (!tradeUrl) {
-				this.toast.error('Введите Trade URL');
+				window.toast.error('Введите Trade URL');
 				return;
 			}
 
 			try {
 				const response = await fetch('/profile/update-trade-url', {
 					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						'Accept': 'application/json',
-						'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-					},
+					headers: getApiHeaders(),
 					body: JSON.stringify({
 						trade_url: tradeUrl
 					})
 				});
+
+				if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+  }
 
 				const data = await response.json();
 
 				if (data.success) {
 					// Обновляем Trade URL в клиенте
 					this.$emit('update-client', { steam_trade_url: tradeUrl });
-					this.toast.success('Trade URL сохранен');
-					
+					window.toast.success('Trade URL сохранен');
+
 					// Закрываем модальное окно
 					const modal = bootstrap.Modal.getInstance(document.getElementById('tradeUrlRequiredModal'));
 					if (modal) {
@@ -746,11 +862,44 @@ export default {
 						}, 500);
 					}
 				} else {
-					this.toast.error(data.message || 'Ошибка при сохранении Trade URL');
+					window.toast.error(data.message || 'Ошибка при сохранении Trade URL');
 				}
 			} catch (error) {
 				console.error('Trade URL save error:', error);
-				this.toast.error('Произошла ошибка при сохранении Trade URL');
+				window.toast.error(handleApiError(error));
+			}
+		},
+
+		setActiveTradingTab(tab) {
+			this.activeTradingTab = tab;
+		},
+
+		async reactivateListing(listing) {
+			try {
+				const response = await fetch('/api/listings/reactivate', {
+					method: 'POST',
+					headers: getApiHeaders(),
+					body: JSON.stringify({
+						listing_id: listing.id
+					})
+				});
+
+				if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+				const data = await response.json();
+
+				if (data.success) {
+					// Обновляем статус в локальных данных
+					listing.status = 'pending';
+					window.toast.success('Листинг возвращен в черновики');
+				} else {
+					window.toast.error(data.message || 'Не удалось возобновить листинг');
+				}
+			} catch (error) {
+				console.error('Reactivate listing error:', error);
+				window.toast.error(handleApiError(error));
 			}
 		}
 	},

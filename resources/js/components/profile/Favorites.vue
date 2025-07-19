@@ -38,6 +38,7 @@
 									<div 
 										data-favorite-button 
 										:data-listing-id="favorite.listing.id"
+										:data-is-favorite="favorite.listing.is_favorite"
 										class="favorite-button-placeholder position-absolute"
 										style="top: 8px; right: 8px; z-index: 10;"
 										title="Удалить из избранного"
@@ -91,13 +92,13 @@
 						</div>
 						
 						<!-- Теги -->
-						<div v-if="getParsedTags(selectedFavorite.listing).length > 0" class="item-tags mb-3">
+						<div v-if="selectedFavorite.listing.structured_tags && selectedFavorite.listing.structured_tags.length > 0" class="item-tags mb-3">
 							<strong>Информация о предмете:</strong>
 							<div class="tags-list mt-2">
-								<div v-for="tag in getParsedTags(selectedFavorite.listing)" :key="tag.internal_name" class="tag-item d-flex justify-content-between mb-1">
-									<span class="tag-category text-muted">{{ tag.localized_category_name }}:</span>
-									<span class="tag-name fw-medium">
-										{{ tag.localized_tag_name }}
+								<div v-for="tag in selectedFavorite.listing.structured_tags" :key="tag.id" class="tag-item d-flex justify-content-between mb-1">
+									<span class="tag-category text-muted">{{ tag.category_name }}:</span>
+									<span class="tag-name fw-medium" :style="{ color: tag.color ? '#' + tag.color : '' }">
+										{{ tag.display_name }}
 									</span>
 								</div>
 							</div>
@@ -176,12 +177,11 @@
 </template>
 
 <script>
-import { useToast } from "vue-toastification";
 import { formatPrice } from '../../utils/helpers';
 import { createApp } from 'vue';
-import Toast from "vue-toastification";
 import FavoriteButton from '../FavoriteButton.vue';
 import CartButton from '../CartButton.vue';
+import { getApiHeaders, handleApiError } from '../../utils/helpers';
 
 export default {
 	name: 'ProfileFavorites',
@@ -189,8 +189,7 @@ export default {
 		CartButton
 	},
 	setup() {
-		const toast = useToast();
-		return { toast, formatPrice };
+		return { formatPrice };
 	},
 	props: {
 		client: {
@@ -210,22 +209,24 @@ export default {
 			this.isLoading = true;
 			try {
 				const response = await fetch('/api/favorites', {
-					headers: {
-						'Accept': 'application/json',
-						'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-					}
+					headers: getApiHeaders()
 				});
+				
+				if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
 
 				const data = await response.json();
 
 				if (data.success) {
 					this.favorites = data.favorites;
 				} else {
-					this.toast.error(data.message || 'Ошибка загрузки избранного');
+					window.toast.error(data.message || 'Ошибка загрузки избранного');
 				}
 			} catch (error) {
 				console.error('Load favorites error:', error);
-				this.toast.error('Ошибка загрузки избранного');
+				window.toast.error(handleApiError(error));
 			} finally {
 				this.isLoading = false;
 			}
@@ -271,32 +272,14 @@ export default {
 			
 			favoriteButtons.forEach(button => {
 				const listingId = parseInt(button.dataset.listingId);
+				const initialIsFavorite = button.dataset.isFavorite === 'true';
 				
 				if (listingId) {
 					// Создаем Vue приложение для кнопки
 					const app = createApp(FavoriteButton, {
-						listingId: listingId
+						listingId: listingId,
+						initialIsFavorite: initialIsFavorite
 					});
-					
-					// Настройки для vue-toastification
-					const toastOptions = {
-						position: "bottom-right",
-						timeout: 8000,
-						closeOnClick: true,
-						pauseOnFocusLoss: true,
-						pauseOnHover: true,
-						draggable: true,
-						draggablePercent: 0.6,
-						showCloseButtonOnHover: false,
-						hideProgressBar: false,
-						closeButton: "button",
-						icon: true,
-						rtl: false,
-						maxToasts: 5,
-						newestOnTop: true
-					};
-					
-					app.use(Toast, toastOptions);
 					
 					// Добавляем слушатель события удаления из избранного
 					app.config.globalProperties.$onFavoriteRemoved = (removedListingId) => {
@@ -338,17 +321,6 @@ export default {
 			return '/images/no-image.png';
 		},
 		
-		getParsedTags(listing) {
-			if (!listing.inventory_tags) return [];
-			if (typeof listing.inventory_tags === 'string') {
-				try {
-					return JSON.parse(listing.inventory_tags);
-				} catch (e) {
-					return [];
-				}
-			}
-			return listing.inventory_tags;
-		},
 		
 		getParsedDescriptions(listing) {
 			if (!listing.inventory_descriptions) return [];

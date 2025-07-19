@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Listing extends Model
@@ -20,7 +21,6 @@ class Listing extends Model
         'inventory_item_name',
         'inventory_type',
         'inventory_icon_url',
-        'inventory_tags',
         'inventory_descriptions',
         'tradable',
         'marketable',
@@ -41,6 +41,10 @@ class Listing extends Model
         'listed_at',
         'sold_at',
         'expires_at',
+        'type_id',
+        'quality_id',
+        'rarity_id',
+        'exterior_id',
     ];
 
     protected $casts = [
@@ -48,7 +52,6 @@ class Listing extends Model
         'float_value' => 'decimal:8',
         'wear_value' => 'float',
         'stickers' => 'array',
-        'inventory_tags' => 'array',
         'inventory_descriptions' => 'array',
         'tradable' => 'boolean',
         'marketable' => 'boolean',
@@ -58,6 +61,8 @@ class Listing extends Model
         'sold_at' => 'datetime',
         'expires_at' => 'datetime',
     ];
+    
+    protected $appends = ['structured_tags'];
 
     const STATUS_PENDING = 'pending';
     const STATUS_ACTIVE = 'active';
@@ -138,5 +143,38 @@ class Listing extends Model
         } else {
             return 'Закалённое в боях';
         }
+    }
+    
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'item_tags', 'item_id', 'tag_id')
+            ->where('item_type', 'listing')
+            ->join('tag_categories', 'tags.category_id', '=', 'tag_categories.id')
+            ->select('tags.*', 'tag_categories.code as category_code', 'tag_categories.steam_category as category_name')
+            ->orderBy('tag_categories.sort_order')
+            ->orderBy('tags.sort_order');
+    }
+
+    public function getStructuredTagsAttribute()
+    {
+        if ($this->relationLoaded('tags') && $this->tags) {
+            return $this->tags->map(function ($tag) {
+                $translatedValue = __('tags.values.' . $tag->normalized_value, [], 'ru');
+                
+                // Если перевод не найден (возвращается ключ), используем Steam название
+                if ($translatedValue === 'tags.values.' . $tag->normalized_value) {
+                    $translatedValue = $tag->steam_localized_name ?? $tag->normalized_value;
+                }
+                
+                return [
+                    'id' => $tag->id,
+                    'category_name' => __('tags.categories.' . $tag->category_code, [], 'ru'),
+                    'display_name' => $translatedValue,
+                    'color' => $tag->color,
+                ];
+            });
+        }
+        
+        return collect();
     }
 }

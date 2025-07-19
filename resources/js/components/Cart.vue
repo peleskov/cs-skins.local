@@ -42,7 +42,7 @@
 					<!-- Cart items list -->
 					<div class="product-details-box-list">
 						<div v-for="item in cartItems" :key="item.listing_id" class="product-details-box gap-2">
-							<div class="product-img" :style="{ backgroundImage: 'url(' + item.item.image_url + ')' }">
+							<div class="product-img" :style="{ backgroundImage: 'url(' + (item.item?.image_url || '/images/skin_no_image.svg') + ')' }">
 							</div>
 							<div
 								class="description d-flex align-items-center justify-content-between flex-grow-1 gap-3">
@@ -130,7 +130,7 @@
 					<div v-if="itemToRemove" class="mb-3">
 						<div class="d-flex align-items-center">
 							<div class="product-img me-3"
-								:style="{ backgroundImage: 'url(' + itemToRemove.item.image_url + ')', width: '64px', height: '64px', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }">
+								:style="{ backgroundImage: 'url(' + (itemToRemove.item?.image_url || '/images/skin_no_image.svg') + ')', width: '64px', height: '64px', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }">
 							</div>
 							<div>
 								<h6 class="mb-1">{{ itemToRemove.item.name }}</h6>
@@ -152,15 +152,13 @@
 </template>
 
 <script>
-import { useToast } from "vue-toastification";
-import { formatPrice } from '../utils/helpers';
+import { formatPrice, getApiHeaders, handleApiError } from '../utils/helpers';
 import { cartAPI } from '../utils/api';
 
 export default {
 	name: 'Cart',
 	setup() {
-		const toast = useToast();
-		return { toast, formatPrice };
+		return { formatPrice };
 	},
 	data() {
 		return {
@@ -176,11 +174,12 @@ export default {
 			this.isLoading = true;
 			try {
 				const response = await fetch('/api/cart', {
-					headers: {
-						'Accept': 'application/json',
-						'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-					}
+					headers: getApiHeaders()
 				});
+
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
 
 				const data = await response.json();
 
@@ -191,14 +190,14 @@ export default {
 
 					// Показываем предупреждения если были удалены недоступные товары
 					if (data.warnings && data.warnings.removed_items.length > 0) {
-						this.toast.warning(data.warnings.message);
+						window.toast.warning(data.warnings.message);
 					}
 				} else {
-					this.toast.error(data.message || 'Не удалось загрузить корзину');
+					window.toast.error(data.message || 'Не удалось загрузить корзину');
 				}
 			} catch (error) {
 				console.error('Error loading cart:', error);
-				this.toast.error('Произошла ошибка при загрузке корзины');
+				window.toast.error(handleApiError(error));
 			} finally {
 				this.isLoading = false;
 			}
@@ -219,11 +218,12 @@ export default {
 			try {
 				const response = await fetch(`/api/cart/${this.itemToRemove.listing_id}`, {
 					method: 'DELETE',
-					headers: {
-						'Accept': 'application/json',
-						'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-					}
+					headers: getApiHeaders()
 				});
+
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
 
 				const data = await response.json();
 
@@ -232,16 +232,16 @@ export default {
 					this.cartItems = this.cartItems.filter(item => item.listing_id !== this.itemToRemove.listing_id);
 					this.cartCount = data.cart_count;
 					this.cartTotal = data.cart_total;
-					this.toast.success(data.message || 'Товар удален из корзины');
+					window.toast.success(data.message || 'Товар удален из корзины');
 
 					// Обновляем счетчик в header
 					this.updateCartCount();
 				} else {
-					this.toast.error(data.message || 'Не удалось удалить товар');
+					window.toast.error(data.message || 'Не удалось удалить товар');
 				}
 			} catch (error) {
 				console.error('Remove from cart error:', error);
-				this.toast.error('Произошла ошибка при удалении товара');
+				window.toast.error(handleApiError(error));
 			} finally {
 				// Закрываем модальное окно
 				const modal = bootstrap.Modal.getInstance(document.getElementById('confirmRemoveModal'));
@@ -265,16 +265,16 @@ export default {
 					this.cartItems = [];
 					this.cartTotal = 0;
 					this.cartCount = 0;
-					this.toast.success(data.message || 'Корзина очищена');
+					window.toast.success(data.message || 'Корзина очищена');
 
 					// Обновляем счетчик в header
 					this.updateCartCount();
 				} else {
-					this.toast.error(data.message || 'Не удалось очистить корзину');
+					window.toast.error(data.message || 'Не удалось очистить корзину');
 				}
 			} catch (error) {
 				console.error('Clear cart error:', error);
-				this.toast.error('Произошла ошибка при очистке корзины');
+				window.toast.error(handleApiError(error))
 			} finally {
 				// Закрываем модальное окно
 				const modal = bootstrap.Modal.getInstance(document.getElementById('confirmClearModal'));
@@ -286,7 +286,7 @@ export default {
 
 		proceedToCheckout() {
 			// TODO: Реализуем систему заказов
-			this.toast.info('Функция оформления заказа будет доступна в ближайшее время');
+			window.toast.info('Функция оформления заказа будет доступна в ближайшее время');
 		},
 
 		updateCartCount() {

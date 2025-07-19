@@ -17,24 +17,24 @@
 </template>
 
 <script>
-import { useToast } from "vue-toastification";
 import { cartAPI } from '../utils/api';
+import { getApiHeaders, handleApiError } from '../utils/helpers';
 
 export default {
 	name: 'FavoriteButton',
-	setup() {
-		const toast = useToast();
-		return { toast };
-	},
 	props: {
 		listingId: {
 			type: Number,
 			required: true
+		},
+		initialIsFavorite: {
+			type: Boolean,
+			default: false
 		}
 	},
 	data() {
 		return {
-			isFavorite: false,
+			isFavorite: this.initialIsFavorite,
 			isLoading: false,
 			isAnimating: false
 		}
@@ -58,21 +58,21 @@ export default {
 			try {
 				const response = await fetch('/api/favorites/toggle', {
 					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						'Accept': 'application/json',
-						'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-					},
+					headers: getApiHeaders(),
 					body: JSON.stringify({
 						listing_id: this.listingId
 					})
 				});
 
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
+
 				const data = await response.json();
 
 				if (data.success) {
 					this.isFavorite = data.is_favorite;
-					this.toast.success(data.message);
+					window.toast.success(data.message);
 					
 					// Эмитим событие для родительского компонента
 					this.$emit('favorite-updated', {
@@ -87,17 +87,11 @@ export default {
 						}));
 					}
 				} else {
-					this.toast.error(data.message || 'Не удалось обновить избранное');
+					window.toast.error(data.message || 'Не удалось обновить избранное');
 				}
 			} catch (error) {
 				console.error('Favorite toggle error:', error);
-				
-				// Проверяем, авторизован ли пользователь
-				if (error.response && error.response.status === 401) {
-					this.toast.error('Войдите в аккаунт для добавления в избранное');
-				} else {
-					this.toast.error('Произошла ошибка при обновлении избранного');
-				}
+				window.toast.error(handleApiError(error));
 			} finally {
 				this.isLoading = false;
 				// Убираем анимацию через небольшую задержку
@@ -110,11 +104,12 @@ export default {
 		async checkFavoriteStatus() {
 			try {
 				const response = await fetch(`/api/favorites/check/${this.listingId}`, {
-					headers: {
-						'Accept': 'application/json',
-						'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-					}
+					headers: getApiHeaders()
 				});
+
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
 
 				const data = await response.json();
 
@@ -128,8 +123,8 @@ export default {
 	},
 
 	mounted() {
-		// Проверяем статус избранного при загрузке компонента
-		this.checkFavoriteStatus();
+		// Статус избранного теперь передается через initialIsFavorite prop
+		// Проверка через API не нужна
 	}
 }
 </script>

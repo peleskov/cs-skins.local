@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Item;
 use App\Models\Listing;
+use App\Models\Tag;
+use App\Models\TagCategory;
+use App\Models\Favorite;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
@@ -21,6 +24,22 @@ class MarketplaceController extends Controller
             ->orderBy('listed_at', 'desc')
             ->limit(24)
             ->get();
+            
+        // Добавляем статус корзины для каждого товара (читаем из сессии)
+        $cartItemIds = collect(session()->get('shopping_cart', []))->keys();
+        
+        // Добавляем статус избранного для каждого товара (читаем из БД)
+        $favoriteItemIds = collect();
+        if (auth('client')->check()) {
+            $favoriteItemIds = Favorite::where('client_id', auth('client')->id())
+                ->whereIn('listing_id', $featuredListings->pluck('id'))
+                ->pluck('listing_id');
+        }
+        
+        $featuredListings->each(function ($listing) use ($cartItemIds, $favoriteItemIds) {
+            $listing->is_in_cart = $cartItemIds->contains($listing->id);
+            $listing->is_favorite = $favoriteItemIds->contains($listing->id);
+        });
             
         $totalListings = Listing::active()
             ->where('price', '>', 0)
@@ -42,9 +61,15 @@ class MarketplaceController extends Controller
 
         // Поиск по названию
         if ($search = $request->get('search')) {
-            $query->whereHas('item', function ($q) use ($search) {
-                $q->where('name_ru', 'LIKE', "%{$search}%")
-                  ->orWhere('name_en', 'LIKE', "%{$search}%");
+            $query->where(function ($q) use ($search) {
+                $q->where('inventory_item_name', 'LIKE', "%{$search}%")
+                  ->orWhere('market_hash_name', 'LIKE', "%{$search}%");
+                  
+                // Fallback на item если есть связь
+                $q->orWhereHas('item', function ($q2) use ($search) {
+                    $q2->where('name_ru', 'LIKE', "%{$search}%")
+                       ->orWhere('name_en', 'LIKE', "%{$search}%");
+                });
             });
         }
 
@@ -53,8 +78,37 @@ class MarketplaceController extends Controller
             if (is_string($types)) {
                 $types = explode(',', $types);
             }
-            $query->whereHas('item', function ($q) use ($types) {
-                $q->whereIn('type', $types);
+            
+            // Преобразуем английские ключи обратно в русские названия
+            $typeMapping = [
+                'rifle' => 'Винтовка',
+                'pistol' => 'Пистолет',
+                'smg' => 'Пистолет-пулемёт',
+                'sniper_rifle' => 'Снайперская винтовка',
+                'shotgun' => 'Дробовик',
+                'machinegun' => 'Пулемёт',
+                'knife' => 'Нож',
+                'gloves' => 'Перчатки',
+                'sticker' => 'Наклейка'
+            ];
+            
+            $russianTypes = array_map(function($type) use ($typeMapping) {
+                return $typeMapping[$type] ?? $type;
+            }, $types);
+            
+            $query->where(function ($q) use ($russianTypes, $types) {
+                // Ищем в inventory_type по началу строки (до запятой)
+                foreach ($russianTypes as $type) {
+                    $q->orWhere('inventory_type', 'LIKE', $type . '%');
+                }
+                
+                // Fallback на item.type если inventory_type пустой
+                $q->orWhere(function ($q2) use ($types) {
+                    $q2->whereNull('inventory_type')
+                       ->whereHas('item', function ($q3) use ($types) {
+                            $q3->whereIn('type', $types);
+                       });
+                });
             });
         }
 
@@ -63,8 +117,31 @@ class MarketplaceController extends Controller
             if (is_string($rarities)) {
                 $rarities = explode(',', $rarities);
             }
-            $query->whereHas('item', function ($q) use ($rarities) {
-                $q->whereIn('rarity', $rarities);
+            
+            $query->where(function ($q) use ($rarities) {
+                // Используем JSON_EXTRACT для поиска в inventory_tags
+                foreach ($rarities as $rarity) {
+                    $rarityMapping = [
+                        'common' => 'Rarity_Common_Weapon',
+                        'uncommon' => 'Rarity_Uncommon_Weapon', 
+                        'rare' => 'Rarity_Rare_Weapon',
+                        'mythical' => 'Rarity_Mythical_Weapon',
+                        'legendary' => 'Rarity_Legendary_Weapon',
+                        'ancient' => 'Rarity_Ancient_Weapon',
+                        'contraband' => 'Rarity_Contraband'
+                    ];
+                    
+                    $internalName = $rarityMapping[$rarity] ?? $rarity;
+                    $q->orWhereRaw("JSON_SEARCH(inventory_tags, 'one', ?) IS NOT NULL", [$internalName]);
+                }
+                
+                // Fallback на item.rarity если inventory_tags пустой
+                $q->orWhere(function ($q2) use ($rarities) {
+                    $q2->whereNull('inventory_tags')
+                       ->whereHas('item', function ($q3) use ($rarities) {
+                            $q3->whereIn('rarity', $rarities);
+                       });
+                });
             });
         }
 
@@ -111,6 +188,47 @@ class MarketplaceController extends Controller
             });
         }
 
+        // Фильтр по тегам новой системы
+        if ($tags = $request->get('tags')) {
+            if (is_string($tags)) {
+                $tags = explode(',', $tags);
+            }
+            
+            // Группируем теги по типам для эффективной фильтрации
+            $tagsByType = [];
+            foreach ($tags as $tag) {
+                if (strpos($tag, ':') !== false) {
+                    [$type, $value] = explode(':', $tag, 2);
+                    $tagsByType[$type][] = $value;
+                }
+            }
+            
+            foreach ($tagsByType as $type => $values) {
+                if (in_array($type, ['type', 'quality', 'rarity', 'exterior'])) {
+                    // Фильтрация через прямые связи (эффективно)
+                    $fieldName = $type . '_id';
+                    $tagIds = Tag::whereHas('category', function($q) use ($type) {
+                        $q->where('code', $type);
+                    })->whereIn('normalized_value', $values)->pluck('id');
+                    
+                    if ($tagIds->isNotEmpty()) {
+                        $query->whereIn($fieldName, $tagIds);
+                    }
+                } else {
+                    // Фильтрация через item_tags для дополнительных тегов
+                    $tagIds = Tag::whereHas('category', function($q) use ($type) {
+                        $q->where('code', $type);
+                    })->whereIn('normalized_value', $values)->pluck('id');
+                    
+                    if ($tagIds->isNotEmpty()) {
+                        $query->whereHas('tags', function($q) use ($tagIds) {
+                            $q->whereIn('tag_id', $tagIds);
+                        });
+                    }
+                }
+            }
+        }
+
         // Сортировка
         $sortBy = $request->get('sort_by', 'listed_at');
         $sortOrder = $request->get('sort_order', 'desc');
@@ -132,10 +250,30 @@ class MarketplaceController extends Controller
         $perPage = min($request->get('per_page', 24), 50); // Максимум 50 за раз
         $listings = $query->paginate($perPage);
 
-        // Добавляем переведённые значения редкости и wear_name
-        $items = collect($listings->items())->map(function ($listing) {
-            $listing->item->rarity_translated = __('items.rarities.' . $listing->item->rarity);
+        // Добавляем переведённые значения редкости, wear_name и статусы корзины/избранного
+        $cartItemIds = collect(session()->get('shopping_cart', []))->keys();
+        
+        // Добавляем статус избранного для каждого товара (читаем из БД)
+        $favoriteItemIds = collect();
+        if (auth('client')->check()) {
+            $favoriteItemIds = Favorite::where('client_id', auth('client')->id())
+                ->whereIn('listing_id', collect($listings->items())->pluck('id'))
+                ->pluck('listing_id');
+        }
+        
+        $items = collect($listings->items())->map(function ($listing) use ($cartItemIds, $favoriteItemIds) {
+            // Добавляем переведённую редкость только если есть связанный item
+            if ($listing->item && $listing->item->rarity) {
+                $listing->item->rarity_translated = __('items.rarities.' . $listing->item->rarity);
+            }
             $listing->wear_name = $listing->wear_name; // Это вызовет геттер из модели
+            
+            // Добавляем статус корзины (читаем из сессии)
+            $listing->is_in_cart = $cartItemIds->contains($listing->id);
+            
+            // Добавляем статус избранного (читаем из БД)
+            $listing->is_favorite = $favoriteItemIds->contains($listing->id);
+            
             return $listing;
         });
 
@@ -167,6 +305,25 @@ class MarketplaceController extends Controller
             ->limit(5)
             ->get();
 
+        // Добавляем статус корзины для основного товара и похожих
+        $cartItemIds = collect(session()->get('shopping_cart', []))->keys();
+        $listing->is_in_cart = $cartItemIds->contains($listing->id);
+        
+        // Добавляем статус избранного для основного товара и похожих
+        $favoriteItemIds = collect();
+        if (auth('client')->check()) {
+            $allListingIds = collect([$listing->id])->merge($otherListings->pluck('id'));
+            $favoriteItemIds = Favorite::where('client_id', auth('client')->id())
+                ->whereIn('listing_id', $allListingIds)
+                ->pluck('listing_id');
+        }
+        $listing->is_favorite = $favoriteItemIds->contains($listing->id);
+        
+        $otherListings->each(function ($otherListing) use ($cartItemIds, $favoriteItemIds) {
+            $otherListing->is_in_cart = $cartItemIds->contains($otherListing->id);
+            $otherListing->is_favorite = $favoriteItemIds->contains($otherListing->id);
+        });
+
         return view('marketplace.show', compact('listing', 'otherListings'));
     }
 
@@ -175,37 +332,38 @@ class MarketplaceController extends Controller
      */
     public function getCategories(Request $request): JsonResponse
     {
-        $query = Item::select('items.type', \DB::raw('COUNT(DISTINCT listings.id) as items_count'))
-            ->join('listings', 'items.id', '=', 'listings.item_id')
-            ->where('listings.status', 'active')
-            ->where('listings.price', '>', 0);
+        // Используем inventory_type из листингов вместо items.type
+        $query = Listing::select('inventory_type as type', \DB::raw('COUNT(*) as items_count'))
+            ->where('status', 'active')
+            ->where('price', '>', 0)
+            ->whereNotNull('inventory_type');
 
         // Применяем те же фильтры что и в getListings, кроме фильтра по типу
         
         // Поиск по названию
         if ($search = $request->get('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('items.name_ru', 'LIKE', "%{$search}%")
-                  ->orWhere('items.name_en', 'LIKE', "%{$search}%");
+                $q->where('inventory_item_name', 'LIKE', "%{$search}%")
+                  ->orWhere('market_hash_name', 'LIKE', "%{$search}%");
             });
         }
 
         // Фильтр по цене
         if ($minPrice = $request->get('min_price')) {
-            $query->where('listings.price', '>=', $minPrice);
+            $query->where('price', '>=', $minPrice);
         }
         if ($maxPrice = $request->get('max_price')) {
-            $query->where('listings.price', '<=', $maxPrice);
+            $query->where('price', '<=', $maxPrice);
         }
 
         // Фильтр StatTrak
         if ($request->has('stattrak')) {
-            $query->where('listings.is_stattrak', $request->boolean('stattrak'));
+            $query->where('is_stattrak', $request->boolean('stattrak'));
         }
 
         // Фильтр Souvenir
         if ($request->has('souvenir')) {
-            $query->where('listings.is_souvenir', $request->boolean('souvenir'));
+            $query->where('is_souvenir', $request->boolean('souvenir'));
         }
 
         // Фильтр по диапазону износа (поддержка множественного выбора)
@@ -219,30 +377,101 @@ class MarketplaceController extends Controller
                 foreach ($wearRanges as $wearRange) {
                     $wearValue = (float) $wearRange;
                     if ($wearValue <= 0.07) {
-                        $q->orWhere('listings.wear_value', '<=', 0.07);
+                        $q->orWhere('wear_value', '<=', 0.07);
                     } elseif ($wearValue <= 0.15) {
-                        $q->orWhereBetween('listings.wear_value', [0.07, 0.15]);
+                        $q->orWhereBetween('wear_value', [0.07, 0.15]);
                     } elseif ($wearValue <= 0.38) {
-                        $q->orWhereBetween('listings.wear_value', [0.15, 0.38]);
+                        $q->orWhereBetween('wear_value', [0.15, 0.38]);
                     } elseif ($wearValue <= 0.45) {
-                        $q->orWhereBetween('listings.wear_value', [0.38, 0.45]);
+                        $q->orWhereBetween('wear_value', [0.38, 0.45]);
                     } else {
-                        $q->orWhere('listings.wear_value', '>', 0.45);
+                        $q->orWhere('wear_value', '>', 0.45);
                     }
                 }
             });
         }
 
-        $categories = $query->groupBy('items.type')
+        // Фильтр по тегам новой системы
+        if ($tags = $request->get('tags')) {
+            if (is_string($tags)) {
+                $tags = explode(',', $tags);
+            }
+            
+            $tagsByType = [];
+            foreach ($tags as $tag) {
+                if (strpos($tag, ':') !== false) {
+                    [$type, $value] = explode(':', $tag, 2);
+                    $tagsByType[$type][] = $value;
+                }
+            }
+            
+            foreach ($tagsByType as $type => $values) {
+                if (in_array($type, ['type', 'quality', 'rarity', 'exterior'])) {
+                    $fieldName = $type . '_id';
+                    $tagIds = Tag::whereHas('category', function($q) use ($type) {
+                        $q->where('code', $type);
+                    })->whereIn('normalized_value', $values)->pluck('id');
+                    
+                    if ($tagIds->isNotEmpty()) {
+                        $query->whereIn($fieldName, $tagIds);
+                    }
+                } else {
+                    $tagIds = Tag::whereHas('category', function($q) use ($type) {
+                        $q->where('code', $type);
+                    })->whereIn('normalized_value', $values)->pluck('id');
+                    
+                    if ($tagIds->isNotEmpty()) {
+                        $listingIds = \DB::table('item_tags')
+                            ->whereIn('tag_id', $tagIds)
+                            ->where('item_type', 'listing')
+                            ->pluck('item_id');
+                        if ($listingIds->isNotEmpty()) {
+                            $query->whereIn('id', $listingIds);
+                        }
+                    }
+                }
+            }
+        }
+
+        $categories = $query->groupBy('inventory_type')
             ->having('items_count', '>', 0)
             ->get()
             ->map(function ($item) {
+                // Извлекаем только тип оружия (первая часть до запятой)
+                $fullType = $item->type;
+                $weaponType = explode(',', $fullType)[0];
+                $weaponType = trim($weaponType);
+                
+                // Преобразуем русские названия типов в английские ключи для переводов
+                $typeMapping = [
+                    'Винтовка' => 'rifle',
+                    'Пистолет' => 'pistol', 
+                    'Пистолет-пулемёт' => 'smg',
+                    'Снайперская винтовка' => 'sniper_rifle',
+                    'Дробовик' => 'shotgun',
+                    'Пулемёт' => 'machinegun',
+                    'Нож' => 'knife',
+                    'Перчатки' => 'gloves',
+                    'Наклейка' => 'sticker'
+                ];
+                
+                $typeKey = $typeMapping[$weaponType] ?? strtolower(str_replace(' ', '_', $weaponType));
+                
                 return [
-                    'type' => $item->type,
-                    'name' => __("items.types.{$item->type}"),
+                    'type' => $typeKey,
+                    'name' => __("items.types.{$typeKey}"),
                     'count' => $item->items_count,
                 ];
-            });
+            })
+            ->groupBy('type')
+            ->map(function ($group) {
+                return [
+                    'type' => $group->first()['type'],
+                    'name' => $group->first()['name'],
+                    'count' => $group->sum('count'),
+                ];
+            })
+            ->values();
 
         return response()->json($categories);
     }
@@ -277,9 +506,15 @@ class MarketplaceController extends Controller
         
         // Применяем фильтры (кроме самих тегов)
         if ($search = $request->get('search')) {
-            $activeListings->whereHas('item', function ($q) use ($search) {
-                $q->where('name_ru', 'LIKE', "%{$search}%")
-                  ->orWhere('name_en', 'LIKE', "%{$search}%");
+            $activeListings->where(function ($q) use ($search) {
+                $q->where('inventory_item_name', 'LIKE', "%{$search}%")
+                  ->orWhere('market_hash_name', 'LIKE', "%{$search}%");
+                  
+                // Fallback на item если есть связь
+                $q->orWhereHas('item', function ($q2) use ($search) {
+                    $q2->where('name_ru', 'LIKE', "%{$search}%")
+                       ->orWhere('name_en', 'LIKE', "%{$search}%");
+                });
             });
         }
 
@@ -291,11 +526,213 @@ class MarketplaceController extends Controller
         }
 
         if ($types = $request->get('types')) {
-            $activeListings->whereHas('item', function ($q) use ($types) {
-                $q->where('type', $types);
+            if (is_string($types)) {
+                $types = explode(',', $types);
+            }
+            
+            // Преобразуем английские ключи обратно в русские названия
+            $typeMapping = [
+                'rifle' => 'Винтовка',
+                'pistol' => 'Пистолет',
+                'smg' => 'Пистолет-пулемёт',
+                'sniper_rifle' => 'Снайперская винтовка',
+                'shotgun' => 'Дробовик',
+                'machinegun' => 'Пулемёт',
+                'knife' => 'Нож',
+                'gloves' => 'Перчатки',
+                'sticker' => 'Наклейка'
+            ];
+            
+            $russianTypes = array_map(function($type) use ($typeMapping) {
+                return $typeMapping[$type] ?? $type;
+            }, $types);
+            
+            $activeListings->where(function ($q) use ($russianTypes, $types) {
+                // Ищем в inventory_type по началу строки (до запятой)
+                foreach ($russianTypes as $type) {
+                    $q->orWhere('inventory_type', 'LIKE', $type . '%');
+                }
+                
+                // Fallback на item.type если inventory_type пустой
+                $q->orWhere(function ($q2) use ($types) {
+                    $q2->whereNull('inventory_type')
+                       ->whereHas('item', function ($q3) use ($types) {
+                            $q3->whereIn('type', $types);
+                       });
+                });
             });
         }
 
+        // Фильтр StatTrak
+        if ($request->has('stattrak')) {
+            $activeListings->where('is_stattrak', $request->boolean('stattrak'));
+        }
+
+        // Фильтр Souvenir
+        if ($request->has('souvenir')) {
+            $activeListings->where('is_souvenir', $request->boolean('souvenir'));
+        }
+
+        // Фильтр по диапазону износа
+        if ($wearRanges = $request->get('wear_range')) {
+            if (!is_array($wearRanges)) {
+                $wearRanges = [$wearRanges];
+            }
+            
+            $activeListings->where(function ($q) use ($wearRanges) {
+                foreach ($wearRanges as $wearRange) {
+                    $wearValue = (float) $wearRange;
+                    if ($wearValue <= 0.07) {
+                        $q->orWhere('wear_value', '<=', 0.07);
+                    } elseif ($wearValue <= 0.15) {
+                        $q->orWhereBetween('wear_value', [0.07, 0.15]);
+                    } elseif ($wearValue <= 0.38) {
+                        $q->orWhereBetween('wear_value', [0.15, 0.38]);
+                    } elseif ($wearValue <= 0.45) {
+                        $q->orWhereBetween('wear_value', [0.38, 0.45]);
+                    } else {
+                        $q->orWhere('wear_value', '>', 0.45);
+                    }
+                }
+            });
+        }
+
+        // Фильтр по тегам новой системы
+        if ($tags = $request->get('tags')) {
+            if (is_string($tags)) {
+                $tags = explode(',', $tags);
+            }
+            
+            $tagsByType = [];
+            foreach ($tags as $tag) {
+                if (strpos($tag, ':') !== false) {
+                    [$type, $value] = explode(':', $tag, 2);
+                    $tagsByType[$type][] = $value;
+                }
+            }
+            
+            foreach ($tagsByType as $type => $values) {
+                if (in_array($type, ['type', 'quality', 'rarity', 'exterior'])) {
+                    $fieldName = $type . '_id';
+                    $tagIds = Tag::whereHas('category', function($q) use ($type) {
+                        $q->where('code', $type);
+                    })->whereIn('normalized_value', $values)->pluck('id');
+                    
+                    if ($tagIds->isNotEmpty()) {
+                        $activeListings->whereIn($fieldName, $tagIds);
+                    }
+                } else {
+                    $tagIds = Tag::whereHas('category', function($q) use ($type) {
+                        $q->where('code', $type);
+                    })->whereIn('normalized_value', $values)->pluck('id');
+                    
+                    if ($tagIds->isNotEmpty()) {
+                        $activeListings->whereHas('tags', function($q) use ($tagIds) {
+                            $q->whereIn('tag_id', $tagIds);
+                        });
+                    }
+                }
+            }
+        }
+
+        $tags = [];
+        
+        // Получаем основные теги через прямые связи (эффективно)
+        $primaryTags = $this->getPrimaryTags($activeListings);
+        $tags = array_merge($tags, $primaryTags);
+        
+        // Получаем дополнительные теги через item_tags (для коллекций, турниров и т.д.)
+        $additionalTags = $this->getAdditionalTags($activeListings);
+        $tags = array_merge($tags, $additionalTags);
+        
+        // Добавляем статические теги (StatTrak, Souvenir, износ)
+        $staticTags = $this->getStaticTags($activeListings);
+        $tags = array_merge($tags, $staticTags);
+
+        return response()->json($tags);
+    }
+    
+    /**
+     * Получение основных тегов через прямые связи
+     */
+    private function getPrimaryTags($activeListings): array
+    {
+        $tags = [];
+        $listingIds = $activeListings->pluck('id');
+        
+        // Получаем основные категории тегов (type, quality, rarity, exterior)
+        $primaryCategories = ['type', 'quality', 'rarity', 'exterior'];
+        
+        foreach ($primaryCategories as $category) {
+            $fieldName = $category . '_id';
+            
+            // Подсчитываем теги для данной категории
+            $tagCounts = \DB::table('listings')
+                ->join('tags', 'listings.' . $fieldName, '=', 'tags.id')
+                ->join('tag_categories', 'tags.category_id', '=', 'tag_categories.id')
+                ->whereIn('listings.id', $listingIds)
+                ->whereNotNull('listings.' . $fieldName)
+                ->where('tag_categories.code', $category)
+                ->select('tags.id', 'tags.normalized_value', 'tags.color', \DB::raw('COUNT(*) as count'))
+                ->groupBy('tags.id', 'tags.normalized_value', 'tags.color')
+                ->get();
+                
+            foreach ($tagCounts as $tagCount) {
+                $tags[] = [
+                    'type' => $category,
+                    'name' => __("tags.values.{$tagCount->normalized_value}"),
+                    'count' => $tagCount->count,
+                    'value' => $tagCount->normalized_value,
+                    'color' => $tagCount->color
+                ];
+            }
+        }
+        
+        return $tags;
+    }
+    
+    /**
+     * Получение дополнительных тегов через item_tags
+     */
+    private function getAdditionalTags($activeListings): array
+    {
+        $tags = [];
+        $listingIds = $activeListings->pluck('id');
+        
+        // Получаем дополнительные категории (не основные)
+        $additionalTags = \DB::table('item_tags')
+            ->join('tags', 'item_tags.tag_id', '=', 'tags.id')
+            ->join('tag_categories', 'tags.category_id', '=', 'tag_categories.id')
+            ->whereIn('item_tags.item_id', $listingIds)
+            ->where('item_tags.item_type', 'listing')
+            ->where('tag_categories.is_primary', false)
+            ->select(
+                'tag_categories.code as category_code',
+                'tags.normalized_value',
+                'tags.color',
+                \DB::raw('COUNT(*) as count')
+            )
+            ->groupBy('tag_categories.code', 'tags.normalized_value', 'tags.color')
+            ->get();
+            
+        foreach ($additionalTags as $tag) {
+            $tags[] = [
+                'type' => $tag->category_code,
+                'name' => __("tags.values.{$tag->normalized_value}"),
+                'count' => $tag->count,
+                'value' => $tag->normalized_value,
+                'color' => $tag->color
+            ];
+        }
+        
+        return $tags;
+    }
+    
+    /**
+     * Получение статических тегов (StatTrak, Souvenir, износ)
+     */
+    private function getStaticTags($activeListings): array
+    {
         $tags = [];
         
         // StatTrak
@@ -341,7 +778,7 @@ class MarketplaceController extends Controller
             }
         }
 
-        return response()->json($tags);
+        return $tags;
     }
 
     /**
@@ -355,19 +792,26 @@ class MarketplaceController extends Controller
             return response()->json([]);
         }
 
-        $suggestions = Item::select('name_ru', 'name_en', 'image_url')
-            ->whereHas('activeListings')
+        $suggestions = Listing::select('inventory_item_name', 'market_hash_name', 'inventory_icon_url')
+            ->active()
+            ->where('price', '>', 0)
             ->where(function ($q) use ($query) {
-                $q->where('name_ru', 'LIKE', "%{$query}%")
-                  ->orWhere('name_en', 'LIKE', "%{$query}%");
+                $q->where('inventory_item_name', 'LIKE', "%{$query}%")
+                  ->orWhere('market_hash_name', 'LIKE', "%{$query}%");
             })
+            ->distinct()
             ->limit(10)
             ->get()
-            ->map(function ($item) {
+            ->map(function ($listing) {
+                $iconUrl = $listing->inventory_icon_url;
+                if ($iconUrl && !str_starts_with($iconUrl, 'http')) {
+                    $iconUrl = 'https://community.steamstatic.com/economy/image/' . $iconUrl;
+                }
+                
                 return [
-                    'name_ru' => $item->name_ru,
-                    'name_en' => $item->name_en,
-                    'image_url' => $item->image_url,
+                    'name_ru' => $listing->inventory_item_name,
+                    'name_en' => $listing->market_hash_name,
+                    'image_url' => $iconUrl,
                 ];
             });
 
@@ -415,7 +859,7 @@ class MarketplaceController extends Controller
      */
     public function getListingDetails(Listing $listing): JsonResponse
     {
-        $listing->load(['item', 'seller']);
+        $listing->load(['item', 'seller', 'tags']);
         
         // Другие предложения этого же предмета
         $otherListings = Listing::with(['seller'])
@@ -426,6 +870,25 @@ class MarketplaceController extends Controller
             ->limit(5)
             ->get();
 
+        // Добавляем статус корзины
+        $cartItemIds = collect(session()->get('shopping_cart', []))->keys();
+        $listing->is_in_cart = $cartItemIds->contains($listing->id);
+        
+        // Добавляем статус избранного
+        $favoriteItemIds = collect();
+        if (auth('client')->check()) {
+            $allListingIds = collect([$listing->id])->merge($otherListings->pluck('id'));
+            $favoriteItemIds = Favorite::where('client_id', auth('client')->id())
+                ->whereIn('listing_id', $allListingIds)
+                ->pluck('listing_id');
+        }
+        $listing->is_favorite = $favoriteItemIds->contains($listing->id);
+        
+        $otherListings->each(function ($otherListing) use ($cartItemIds, $favoriteItemIds) {
+            $otherListing->is_in_cart = $cartItemIds->contains($otherListing->id);
+            $otherListing->is_favorite = $favoriteItemIds->contains($otherListing->id);
+        });
+
         return response()->json([
             'listing' => [
                 'id' => $listing->id,
@@ -435,6 +898,16 @@ class MarketplaceController extends Controller
                 'is_stattrak' => $listing->is_stattrak,
                 'is_souvenir' => $listing->is_souvenir,
                 'pattern_index' => $listing->pattern_index,
+                'inventory_item_name' => $listing->inventory_item_name,
+                'market_hash_name' => $listing->market_hash_name,
+                'inventory_icon_url' => $listing->inventory_icon_url,
+                'inventory_type' => $listing->inventory_type,
+                'inventory_descriptions' => $listing->inventory_descriptions,
+                'inspect_url' => $listing->inspect_url,
+                'steam_asset_id' => $listing->steam_asset_id,
+                'tags' => $listing->structured_tags,
+                'is_in_cart' => $listing->is_in_cart,
+                'is_favorite' => $listing->is_favorite,
                 'seller' => [
                     'id' => $listing->seller->id,
                     'name' => $listing->seller->name,
@@ -467,6 +940,8 @@ class MarketplaceController extends Controller
                     'price' => (float) $other->price,
                     'wear_value' => (float) $other->wear_value,
                     'wear_name' => $other->wear_name,
+                    'is_in_cart' => $other->is_in_cart,
+                    'is_favorite' => $other->is_favorite,
                     'seller' => [
                         'id' => $other->seller->id,
                         'name' => $other->seller->name,

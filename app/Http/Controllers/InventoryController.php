@@ -33,7 +33,7 @@ class InventoryController extends Controller
 
         // Получаем кешированный инвентарь
         $inventoryItems = $client->inventoryItems()
-            ->with('item')
+            ->with(['item', 'tags'])
             ->orderBy('cached_at', 'desc')
             ->get();
 
@@ -231,7 +231,6 @@ class InventoryController extends Controller
             $listing->inventory_item_name = $inventoryItem->item_name;
             $listing->inventory_type = $inventoryItem->type;
             $listing->inventory_icon_url = $inventoryItem->icon_url;
-            $listing->inventory_tags = $inventoryItem->tags;
             $listing->inventory_descriptions = $inventoryItem->descriptions;
             $listing->tradable = $inventoryItem->tradable;
             $listing->marketable = $inventoryItem->marketable;
@@ -245,6 +244,22 @@ class InventoryController extends Controller
             $listing->pattern_index = $inventoryItem->pattern_index;
             $listing->stickers = $inventoryItem->stickers;
             $listing->inspect_url = $this->generateInspectUrl($client->steam_id, $steamAssetId);
+            
+            // Копируем теги из новой системы
+            $listing->type_id = $inventoryItem->type_id;
+            $listing->quality_id = $inventoryItem->quality_id;
+            $listing->rarity_id = $inventoryItem->rarity_id;
+            $listing->exterior_id = $inventoryItem->exterior_id;
+            
+            // Обновляем флаги на основе тегов
+            $listing->wear_value = $inventoryItem->float_value;
+            if ($inventoryItem->quality_id) {
+                $quality = \DB::table('tags')->where('id', $inventoryItem->quality_id)->first();
+                if ($quality) {
+                    $listing->is_stattrak = $quality->normalized_value === 'stattrak';
+                    $listing->is_souvenir = $quality->normalized_value === 'souvenir';
+                }
+            }
             
             // Получаем скриншот через Swap.gg API и сохраняем на диск
             Log::info('Attempting to get screenshot', [
@@ -269,6 +284,24 @@ class InventoryController extends Controller
             }
             
             $listing->save();
+            
+            // Копируем все теги из инвентаря в листинг
+            $inventoryTags = \DB::table('item_tags')
+                ->where('item_id', $inventoryItem->id)
+                ->where('item_type', 'inventory')
+                ->get();
+                
+            if ($inventoryTags->count() > 0) {
+                $listingTags = [];
+                foreach ($inventoryTags as $tag) {
+                    $listingTags[] = [
+                        'item_id' => $listing->id,
+                        'item_type' => 'listing',
+                        'tag_id' => $tag->tag_id,
+                    ];
+                }
+                \DB::table('item_tags')->insert($listingTags);
+            }
             
             return response()->json([
                 'success' => true,
@@ -481,6 +514,7 @@ class InventoryController extends Controller
         
         return null;
     }
+
 
     /*
     private function calculateRecommendedPrice(ClientInventoryItem $inventoryItem): float

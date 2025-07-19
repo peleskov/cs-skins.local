@@ -15,10 +15,23 @@ class FavoritesController extends Controller
      */
     public function index(): View
     {
-        $favorites = Favorite::with(['listing.item', 'listing.seller'])
+        $favorites = Favorite::with(['listing.item', 'listing.seller', 'listing.tags'])
             ->where('client_id', auth('client')->id())
             ->orderBy('created_at', 'desc')
             ->get();
+
+        // Добавляем статус корзины для каждого товара (читаем из сессии)
+        $cartItemIds = collect(session()->get('shopping_cart', []))->keys();
+        
+        $favorites->each(function ($favorite) use ($cartItemIds) {
+            if ($favorite->listing) {
+                $favorite->listing->is_in_cart = $cartItemIds->contains($favorite->listing->id);
+                // Все товары в избранном по умолчанию имеют is_favorite = true
+                $favorite->listing->is_favorite = true;
+                // Добавляем структурированные теги
+                $favorite->listing->structured_tags = $favorite->listing->structured_tags;
+            }
+        });
 
         return view('profile.favorites', compact('favorites'));
     }
@@ -67,10 +80,23 @@ class FavoritesController extends Controller
      */
     public function getFavorites(): JsonResponse
     {
-        $favorites = Favorite::with(['listing.item', 'listing.seller'])
+        $favorites = Favorite::with(['listing.item', 'listing.seller', 'listing.tags'])
             ->where('client_id', auth('client')->id())
             ->orderBy('created_at', 'desc')
             ->get();
+
+        // Добавляем статус корзины для каждого товара (читаем из сессии)
+        $cartItemIds = collect(session()->get('shopping_cart', []))->keys();
+        
+        $favorites->each(function ($favorite) use ($cartItemIds) {
+            if ($favorite->listing) {
+                $favorite->listing->is_in_cart = $cartItemIds->contains($favorite->listing->id);
+                // Все товары в избранном по умолчанию имеют is_favorite = true
+                $favorite->listing->is_favorite = true;
+                // Добавляем структурированные теги
+                $favorite->listing->structured_tags = $favorite->listing->structured_tags;
+            }
+        });
 
         return response()->json([
             'success' => true,

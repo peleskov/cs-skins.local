@@ -163,64 +163,13 @@ class SteamInventoryService
             'descriptions' => $description['descriptions'] ?? [],
             'actions' => $description['actions'] ?? [],
             'tags' => $description['tags'] ?? [],
-            'float_value' => $this->extractFloatValue($description),
-            'pattern_index' => $this->extractPatternIndex($description),
-            'stickers' => $this->extractStickers($description),
+            'float_value' => null,
+            'pattern_index' => null,
+            'stickers' => null,
             'inspect_url' => $this->generateInspectUrl($asset, $description, $this->currentSteamId),
         ];
     }
 
-    private function extractFloatValue(array $description): ?float
-    {
-        // Извлекаем float из описаний предмета
-        $descriptions = $description['descriptions'] ?? [];
-        
-        foreach ($descriptions as $desc) {
-            $value = $desc['value'] ?? '';
-            
-            // Ищем паттерн float значения
-            if (preg_match('/Float Value: ([0-9.]+)/', $value, $matches)) {
-                return (float) $matches[1];
-            }
-        }
-
-        return null;
-    }
-
-    private function extractPatternIndex(array $description): ?int
-    {
-        // Извлекаем pattern index из описаний предмета
-        $descriptions = $description['descriptions'] ?? [];
-        
-        foreach ($descriptions as $desc) {
-            $value = $desc['value'] ?? '';
-            
-            // Ищем паттерн pattern index
-            if (preg_match('/Pattern: ([0-9]+)/', $value, $matches)) {
-                return (int) $matches[1];
-            }
-        }
-
-        return null;
-    }
-
-    private function extractStickers(array $description): array
-    {
-        $stickers = [];
-        $descriptions = $description['descriptions'] ?? [];
-        
-        foreach ($descriptions as $desc) {
-            $value = $desc['value'] ?? '';
-            
-            // Ищем стикеры
-            if (strpos($value, 'Sticker:') !== false) {
-                // Простая обработка стикеров
-                $stickers[] = strip_tags($value);
-            }
-        }
-
-        return $stickers;
-    }
 
     private function generateInspectUrl(array $asset, array $description, string $steamId = ''): ?string
     {

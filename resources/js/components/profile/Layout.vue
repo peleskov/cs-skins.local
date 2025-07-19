@@ -93,7 +93,6 @@
 </template>
 
 <script>
-import { useToast } from "vue-toastification";
 import ProfileInventory from './Inventory.vue';
 import ProfileInfo from './Info.vue';
 import ProfileTrading from './Trading.vue';
@@ -122,10 +121,6 @@ export default {
 			type: String,
 			default: ''
 		}
-	},
-	setup() {
-		const toast = useToast();
-		return { toast };
 	},
 
 	data() {

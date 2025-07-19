@@ -253,7 +253,7 @@
 </template>
 
 <script>
-import { useToast } from "vue-toastification";
+import { getApiHeaders, handleApiError } from '../../utils/helpers';
 
 export default {
 	name: 'ProfileInfo',
@@ -266,10 +266,6 @@ export default {
 			type: String,
 			default: ''
 		}
-	},
-	setup() {
-		const toast = useToast();
-		return { toast };
 	},
 	data() {
 		return {
@@ -288,7 +284,7 @@ export default {
 			const tradeUrl = tradeUrlInput.value;
 
 			if (!tradeUrl) {
-				this.toast.error('Введите Trade URL');
+				window.toast.error('Введите Trade URL');
 				return;
 			}
 
@@ -297,20 +293,24 @@ export default {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json',
-						'Accept': 'application/json',
-						'X-CSRF-TOKEN': this.csrfToken
+						'Accept': 'application/json'
 					},
 					body: JSON.stringify({
 						trade_url: tradeUrl
 					})
 				});
+				
+				if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
 
 				const data = await response.json();
 
 				if (data.success) {
 					// Эмитим событие для обновления client в родительском компоненте
 					this.$emit('update-client', { steam_trade_url: tradeUrl });
-					this.toast.success(data.message);
+					window.toast.success(data.message);
 					
 					// Закрываем модальное окно
 					const modal = bootstrap.Modal.getInstance(document.getElementById('trade-url'));
@@ -318,11 +318,11 @@ export default {
 						modal.hide();
 					}
 				} else {
-					this.toast.error(data.message || 'Ошибка при сохранении Trade URL');
+					window.toast.error(data.message || 'Ошибка при сохранении Trade URL');
 				}
 			} catch (error) {
 				console.error('Trade URL update error:', error);
-				this.toast.error('Произошла ошибка при сохранении Trade URL');
+				window.toast.error(handleApiError(error));
 			}
 		},
 
@@ -338,25 +338,27 @@ export default {
 			try {
 				const response = await fetch('/email/resend', {
 					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						'X-CSRF-TOKEN': this.csrfToken
-					}
+					headers: getApiHeaders()
 				});
+				
+				if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
 
 				const data = await response.json();
 
 				if (response.ok) {
-					this.toast.success(data.message || 'Письмо отправлено');
+					window.toast.success(data.message || 'Письмо отправлено');
 					this.startResendTimer(60); // 1 минута
 				} else {
-					this.toast.error(data.message || 'Не удалось отправить письмо');
+					window.toast.error(data.message || 'Не удалось отправить письмо');
 					this.canResendVerification = true;
 					if (btnText) btnText.textContent = originalText;
 				}
 			} catch (error) {
 				console.error('Resend verification error:', error);
-				this.toast.error('Произошла ошибка при отправке письма');
+				window.toast.error(handleApiError(error));
 				this.canResendVerification = true;
 				if (btnText) btnText.textContent = originalText;
 			}
@@ -402,7 +404,7 @@ export default {
 
 			try {
 				await navigator.clipboard.writeText(url);
-				this.toast.success('Trade URL скопирован в буфер обмена');
+				window.toast.success('Trade URL скопирован в буфер обмена');
 
 				// Временно меняем иконку
 				const icon = event.currentTarget.querySelector('i');
@@ -414,7 +416,7 @@ export default {
 				}, 2000);
 
 			} catch (err) {
-				this.toast.error('Не удалось скопировать ссылку');
+				window.toast.error(handleApiError(error));
 				console.error('Failed to copy: ', err);
 			}
 		},
@@ -450,10 +452,7 @@ export default {
 			try {
 				const response = await fetch('/profile/telegram/verify', {
 					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						'X-CSRF-TOKEN': this.csrfToken
-					},
+					headers: getApiHeaders(),
 					body: JSON.stringify({
 						id: user.id,
 						first_name: user.first_name,
@@ -465,10 +464,14 @@ export default {
 					})
 				});
 
+				if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
 				const data = await response.json();
 
 				if (data.success) {
-					this.toast.success('Telegram верификация успешно завершена!');
+					window.toast.success('Telegram верификация успешно завершена!');
 
 					// Эмитим событие для обновления client в родительском компоненте
 					this.$emit('update-client', {
@@ -482,11 +485,11 @@ export default {
 						window.location.reload();
 					}, 1500);
 				} else {
-					this.toast.error(data.message || 'Ошибка при верификации');
+					window.toast.error(data.message || 'Ошибка при верификации');
 				}
 			} catch (error) {
 				console.error('Error:', error);
-				this.toast.error('Произошла ошибка при верификации');
+				window.toast.error(handleApiError(error));
 			}
 		}
 	},

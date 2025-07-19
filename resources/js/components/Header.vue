@@ -34,7 +34,7 @@
 									<div class="cart-items">
 										<div v-for="item in displayItems" :key="item.listing_id" 
 											class="cart-item-preview d-flex align-items-center mb-2">
-											<img :src="item.item.image_url" :alt="item.item.name" 
+											<img :src="item.item?.image_url || '/images/skin_no_image.svg'" :alt="item.item?.name || 'Неизвестный предмет'" 
 												style="width: 40px; height: 30px; object-fit: contain;" class="me-2">
 											<div class="flex-grow-1">
 												<div class="cart-item-name text-truncate" style="font-size: 12px;">
@@ -148,15 +148,13 @@
 </template>
 
 <script>
-import { useToast } from "vue-toastification";
 import { formatPrice } from '../utils/helpers';
 import { cartAPI } from '../utils/api';
 
 export default {
 	name: 'Header',
 	setup() {
-		const toast = useToast();
-		return { toast, formatPrice };
+		return { formatPrice };
 	},
 	props: {
 		user: {

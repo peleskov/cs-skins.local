@@ -92,7 +92,7 @@
                   <div id="collapseTwo" class="accordion-collapse collapse show">
                     <div class="accordion-body">
                       <ul class="filter-item-list">
-                        <li v-for="tag in tags" :key="tag.type + '-' + tag.value">
+                        <li v-for="tag in tags" :key="`${tag.type}-${tag.value}`">
                           <a href="#" @click.prevent="toggleTag(tag)" :class="{ active: isTagActive(tag) }">
                             {{ tag.name }} ({{ tag.count }})
                           </a>
@@ -148,8 +148,9 @@
                 </div>
                 <div class="vertical-product-box-img">
                   <a :href="`/marketplace/${listing.id}`">
-                    <img class="product-img-top w-100 bg-img skin-image" :src="listing.item.image_url"
-                      :alt="listing.item.name_ru" @error="handleImageError">
+                    <img class="product-img-top w-100 bg-img skin-image" 
+                      :src="getListingImageUrl(listing)"
+                      :alt="listing.item?.name_ru || listing.inventory_item_name || 'Неизвестный предмет'" @error="handleImageError">
                   </a>
                   <div class="offers">
                     <div class="d-flex align-items-center justify-content-between">
@@ -160,22 +161,24 @@
                 <div class="vertical-product-body">
                   <div class="d-flex flex-column mt-sm-3 mt-2 mb-2">
                     <a :href="`/marketplace/${listing.id}`">
-                      <h4 class="vertical-product-title">{{ listing.item.name_ru }}</h4>
+                      <h4 class="vertical-product-title">{{ listing.item?.name_ru || listing.inventory_item_name || 'Неизвестный предмет' }}</h4>
                     </a>
-                    <h5 class="product-items mb-2">{{ listing.wear_name }} {{ listing.item.rarity_translated }}</h5>
-                    <p class="text-muted small">от {{ listing.seller.name }}</p>
+                    <h5 class="product-items mb-2">{{ listing.wear_name }} {{ listing.item?.rarity_translated || '' }}</h5>
+                    <p class="text-muted small">от {{ listing.seller?.name || 'Неизвестный продавец' }}</p>
                   </div>
-                  <div class="location-distance d-flex align-items-center justify-content-between pt-sm-3 pt-2">
+                  <div class="location-distance d-flex align-items-center justify-content-between gap-2 pt-sm-3 pt-2">
                     <div 
                       data-cart-button 
                       :data-listing-id="listing.id" 
+                      :data-is-in-cart="listing.is_in_cart"
                       data-size="small" 
                       data-variant="outline"
-                      class="cart-button-placeholder">
+                      class="cart-button-placeholder flex-fill">
                     </div>
                     <div 
                       data-favorite-button 
                       :data-listing-id="listing.id"
+                      :data-is-favorite="listing.is_favorite"
                       class="favorite-button-placeholder">
                     </div>
                   </div>
@@ -212,9 +215,8 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, computed, watch, nextTick } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { createApp } from 'vue'
-import Toast from "vue-toastification"
 import CartButton from './CartButton.vue'
 import FavoriteButton from './FavoriteButton.vue'
 import { formatPrice } from '../utils/helpers'
@@ -236,6 +238,7 @@ export default {
     }
   },
   setup(props) {
+    // Состояние данных
     const listings = ref([...props.initialListings])
     const categories = ref([])
     const tags = ref([])
@@ -256,15 +259,16 @@ export default {
       stattrak: false,
       souvenir: false,
       wearRange: '',
+      tags: [],
       sortBy: 'listed_at',
       sortOrder: 'desc'
     })
 
     const sortValue = ref('listed_at-desc')
 
+    // Вычисляемые свойства
     const shownCount = computed(() => listings.value.length)
 
-    // Проверка наличия активных фильтров
     const hasActiveFilters = computed(() => {
       return !!(
         filters.search ||
@@ -274,98 +278,72 @@ export default {
         filters.stattrak ||
         filters.souvenir ||
         filters.wearRange ||
+        (filters.tags && filters.tags.length > 0) ||
         sortValue.value !== 'listed_at-desc'
       )
     })
 
-    // Проверка активности состояния износа
-    const isWearActive = (value) => {
-      if (Array.isArray(filters.wearRange)) {
-        return filters.wearRange.includes(value)
+
+    // Утилиты для создания параметров запроса
+    const createBaseParams = (excludeTypes = false, excludeTags = false) => {
+      const params = new URLSearchParams()
+
+      if (filters.search) params.append('search', filters.search)
+      if (filters.minPrice) params.append('min_price', filters.minPrice)
+      if (filters.maxPrice) params.append('max_price', filters.maxPrice)
+      if (!excludeTypes && filters.types) params.append('types', filters.types)
+      if (filters.stattrak) params.append('stattrak', filters.stattrak)
+      if (filters.souvenir) params.append('souvenir', filters.souvenir)
+      
+      if (filters.wearRange) {
+        if (Array.isArray(filters.wearRange)) {
+          filters.wearRange.forEach(wear => params.append('wear_range[]', wear))
+        } else {
+          params.append('wear_range', filters.wearRange)
+        }
       }
-      return filters.wearRange === value
+
+      if (!excludeTags && filters.tags && filters.tags.length > 0) {
+        params.append('tags', filters.tags.join(','))
+      }
+
+      return params
     }
 
-    // Загрузка тегов с учетом текущих фильтров
+    // API функции
     const loadTags = async () => {
       try {
-        // Создаем параметры запроса с текущими фильтрами (кроме самих тегов)
-        const params = new URLSearchParams()
-
-        if (filters.search) params.append('search', filters.search)
-        if (filters.minPrice) params.append('min_price', filters.minPrice)
-        if (filters.maxPrice) params.append('max_price', filters.maxPrice)
-        if (filters.types) params.append('types', filters.types)
-
-        const url = `/marketplace/api/tags?${params}`
-        const response = await fetch(url)
+        const params = createBaseParams(false, false) // Включаем все фильтры включая categories для тегов
+        const response = await fetch(`/marketplace/api/tags?${params}`)
         tags.value = await response.json()
-
       } catch (error) {
         console.error('Ошибка загрузки тегов:', error)
       }
     }
 
-    // Загрузка категорий с учетом текущих фильтров
     const loadCategories = async () => {
       try {
-        // Создаем параметры запроса с текущими фильтрами (кроме типа)
-        const params = new URLSearchParams()
-
-        if (filters.search) params.append('search', filters.search)
-        if (filters.minPrice) params.append('min_price', filters.minPrice)
-        if (filters.maxPrice) params.append('max_price', filters.maxPrice)
-        if (filters.stattrak) params.append('stattrak', filters.stattrak)
-        if (filters.souvenir) params.append('souvenir', filters.souvenir)
-        if (filters.wearRange) {
-          if (Array.isArray(filters.wearRange)) {
-            filters.wearRange.forEach(wear => params.append('wear_range[]', wear))
-          } else {
-            params.append('wear_range', filters.wearRange)
-          }
-        }
-
-        const url = `/marketplace/api/categories?${params}`
-        const response = await fetch(url)
+        const params = createBaseParams(false, false) // Включаем все фильтры включая tags для категорий
+        const response = await fetch(`/marketplace/api/categories?${params}`)
         categories.value = await response.json()
-
       } catch (error) {
         console.error('Ошибка загрузки категорий:', error)
       }
     }
 
-    // Загрузка предложений
     const loadListings = async (append = false) => {
       if (isLoading.value) return
 
       isLoading.value = true
 
       try {
-        const params = new URLSearchParams({
-          page: append ? currentPage.value : 1,
-          per_page: 24
-        })
+        const params = createBaseParams()
+        params.append('page', append ? currentPage.value : 1)
+        params.append('per_page', 24)
+        params.append('sort_by', filters.sortBy)
+        params.append('sort_order', filters.sortOrder)
 
-        // Добавляем фильтры
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value !== '' && value !== false && value !== null) {
-            if (key === 'minPrice') params.append('min_price', value)
-            else if (key === 'maxPrice') params.append('max_price', value)
-            else if (key === 'wearRange') {
-              if (Array.isArray(value)) {
-                value.forEach(wear => params.append('wear_range[]', wear))
-              } else {
-                params.append('wear_range', value)
-              }
-            }
-            else if (key === 'sortBy') params.append('sort_by', value)
-            else if (key === 'sortOrder') params.append('sort_order', value)
-            else params.append(key, value)
-          }
-        })
-
-        const url = `/marketplace/api/listings?${params}`
-        const response = await fetch(url)
+        const response = await fetch(`/marketplace/api/listings?${params}`)
         const data = await response.json()
 
         if (append) {
@@ -379,9 +357,8 @@ export default {
         pagination.total = data.pagination.total
         pagination.hasMorePages = data.pagination.has_more_pages
 
-        // Инициализируем кнопки корзины после рендеринга
         nextTick(() => {
-          initializeCartButtons()
+          initializeButtons()
         })
 
       } catch (error) {
@@ -391,28 +368,112 @@ export default {
       }
     }
 
-    // Поиск с задержкой
+    // Функции фильтрации
     const debouncedSearch = () => {
       clearTimeout(searchTimeout.value)
       searchTimeout.value = setTimeout(() => {
-        saveFiltersToStorage()
-        loadCategories()
-        loadTags()
-        loadListings(false)
+        applyFilters()
       }, 300)
     }
 
-    // Применение фильтров
     const applyFilters = () => {
-      // Сохраняем фильтры в localStorage
       saveFiltersToStorage()
-      // Обновляем категории, теги и товары
       loadCategories()
       loadTags()
       loadListings(false)
     }
 
-    // Сохранение фильтров в localStorage
+    const toggleCategory = (type) => {
+      filters.types = filters.types === type ? '' : type
+      saveFiltersToStorage()
+      loadCategories()
+      loadTags()
+      loadListings(false)
+    }
+
+    const toggleTag = (tag) => {
+      if (tag.type === 'stattrak' || tag.type === 'souvenir') {
+        filters[tag.type] = !filters[tag.type]
+      } else if (tag.type === 'wear') {
+        if (!Array.isArray(filters.wearRange)) {
+          filters.wearRange = filters.wearRange ? [filters.wearRange] : []
+        }
+
+        const index = filters.wearRange.indexOf(tag.value)
+        if (index > -1) {
+          filters.wearRange.splice(index, 1)
+        } else {
+          filters.wearRange.push(tag.value)
+        }
+
+        if (filters.wearRange.length === 0) {
+          filters.wearRange = ''
+        }
+      } else {
+        const tagKey = `${tag.type}:${tag.value}`
+        const index = filters.tags.indexOf(tagKey)
+        
+        if (index > -1) {
+          filters.tags.splice(index, 1)
+        } else {
+          filters.tags.push(tagKey)
+        }
+      }
+
+      applyFilters()
+    }
+
+    const isTagActive = (tag) => {
+      if (tag.type === 'stattrak' || tag.type === 'souvenir') {
+        return filters[tag.type]
+      } else if (tag.type === 'wear') {
+        if (Array.isArray(filters.wearRange)) {
+          return filters.wearRange.includes(tag.value)
+        }
+        return filters.wearRange === tag.value
+      } else {
+        const tagKey = `${tag.type}:${tag.value}`
+        return filters.tags.includes(tagKey)
+      }
+    }
+
+    // Функции сортировки
+    const handleSortChange = () => {
+      const [sortBy, sortOrder] = sortValue.value.split('-')
+      filters.sortBy = sortBy
+      filters.sortOrder = sortOrder
+      localStorage.setItem('marketplace_sort', sortValue.value)
+      applyFilters()
+    }
+
+    // Функции управления состоянием
+    const clearAllFilters = () => {
+      filters.search = ''
+      filters.minPrice = ''
+      filters.maxPrice = ''
+      filters.types = ''
+      filters.stattrak = false
+      filters.souvenir = false
+      filters.wearRange = ''
+      filters.tags = []
+      filters.sortBy = 'listed_at'
+      filters.sortOrder = 'desc'
+
+      sortValue.value = 'listed_at-desc'
+
+      localStorage.removeItem('marketplace_filters')
+      localStorage.removeItem('marketplace_sort')
+
+      loadCategories()
+      loadTags()
+      loadListings(false)
+    }
+
+    const loadMore = () => {
+      loadListings(true)
+    }
+
+    // Функции хранения
     const saveFiltersToStorage = () => {
       const filtersToSave = {
         search: filters.search,
@@ -421,241 +482,109 @@ export default {
         types: filters.types,
         stattrak: filters.stattrak,
         souvenir: filters.souvenir,
-        wearRange: filters.wearRange
+        wearRange: filters.wearRange,
+        tags: filters.tags
       }
       localStorage.setItem('marketplace_filters', JSON.stringify(filtersToSave))
     }
 
-    // Восстановление фильтров из localStorage
     const restoreFiltersFromStorage = () => {
       try {
+        // Восстанавливаем фильтры
         const savedFilters = localStorage.getItem('marketplace_filters')
         if (savedFilters) {
           const parsedFilters = JSON.parse(savedFilters)
           Object.assign(filters, parsedFilters)
+        }
+
+        // Восстанавливаем сортировку
+        const savedSort = localStorage.getItem('marketplace_sort')
+        if (savedSort) {
+          sortValue.value = savedSort
+          const [sortBy, sortOrder] = savedSort.split('-')
+          filters.sortBy = sortBy
+          filters.sortOrder = sortOrder
+        }
+
+        // Перезагружаем данные если есть активные фильтры
+        if (hasActiveFilters.value || filters.types) {
+          loadCategories()
+          loadTags()
+          loadListings(false)
         }
       } catch (error) {
         console.error('Ошибка восстановления фильтров:', error)
       }
     }
 
-    // Переключение категорий
-    const toggleCategory = (type) => {
-      if (filters.types === type) {
-        filters.types = ''
-      } else {
-        filters.types = type
-      }
-      // Сохраняем фильтры и обновляем только товары (категории не нужно обновлять при смене категории)
-      saveFiltersToStorage()
-      loadListings(false)
-    }
-
-    // Переключение тегов (универсальная функция)
-    const toggleTag = (tag) => {
-      if (tag.type === 'stattrak' || tag.type === 'souvenir') {
-        filters[tag.type] = !filters[tag.type]
-      } else if (tag.type === 'wear') {
-        // Преобразуем wearRange в массив если это еще не массив
-        if (!Array.isArray(filters.wearRange)) {
-          filters.wearRange = filters.wearRange ? [filters.wearRange] : []
-        }
-
-        const index = filters.wearRange.indexOf(tag.value)
-        if (index > -1) {
-          // Убираем из массива
-          filters.wearRange.splice(index, 1)
-        } else {
-          // Добавляем в массив
-          filters.wearRange.push(tag.value)
-        }
-
-        // Если массив пустой, сбрасываем фильтр
-        if (filters.wearRange.length === 0) {
-          filters.wearRange = ''
-        }
-      }
-
-      applyFilters()
-    }
-
-    // Проверка активности тега
-    const isTagActive = (tag) => {
-      if (tag.type === 'stattrak' || tag.type === 'souvenir') {
-        return filters[tag.type]
-      } else if (tag.type === 'wear') {
-        return isWearActive(tag.value)
-      }
-      return false
-    }
-
-    // Обработка сортировки
-    const handleSortChange = () => {
-      const [sortBy, sortOrder] = sortValue.value.split('-')
-      filters.sortBy = sortBy
-      filters.sortOrder = sortOrder
-
-      // Сохраняем в localStorage
-      localStorage.setItem('marketplace_sort', sortValue.value)
-
-      applyFilters()
-    }
-
-    // Загрузить еще
-    const loadMore = () => {
-      loadListings(true)
-    }
-
-
-    // Очистка всех фильтров
-    const clearAllFilters = () => {
-      // Сбрасываем все фильтры
-      filters.search = ''
-      filters.minPrice = ''
-      filters.maxPrice = ''
-      filters.types = ''
-      filters.stattrak = false
-      filters.souvenir = false
-      filters.wearRange = ''
-      filters.sortBy = 'listed_at'
-      filters.sortOrder = 'desc'
-
-      // Сбрасываем сортировку
-      sortValue.value = 'listed_at-desc'
-
-      // Очищаем localStorage
-      localStorage.removeItem('marketplace_filters')
-      localStorage.removeItem('marketplace_sort')
-
-      // Перезагружаем данные
-      loadCategories()
-      loadTags()
-      loadListings(false)
-    }
-
-    // Обработка ошибок изображений
+    // Утилиты UI
     const handleImageError = (event) => {
       event.target.closest('.vertical-product-box-img').classList.add('image-error')
     }
 
-    // Инициализация кнопок корзины и избранного
-    const initializeCartButtons = () => {
-      // Найдем все неинициализированные кнопки корзины
+    const createVueApp = (component, props) => {
+      const app = createApp(component, props)
+      return app
+    }
+
+    const initializeButtons = () => {
+      // Инициализация кнопок корзины
       const cartButtons = document.querySelectorAll('[data-cart-button]:not(.cart-initialized)')
-      
       cartButtons.forEach(button => {
         const listingId = parseInt(button.dataset.listingId)
         const size = button.dataset.size || 'normal'
         const variant = button.dataset.variant || 'primary'
+        const initialIsInCart = button.dataset.isInCart === 'true'
         
         if (listingId) {
-          // Создаем Vue приложение для кнопки
-          const app = createApp(CartButton, {
-            listingId: listingId,
-            size: size,
-            variant: variant
-          })
-          
-          // Используем те же настройки Toast что и в главном приложении
-          const toastOptions = {
-            position: "bottom-right",
-            timeout: 8000,
-            closeOnClick: true,
-            pauseOnFocusLoss: true,
-            pauseOnHover: true,
-            draggable: true,
-            draggablePercent: 0.6,
-            showCloseButtonOnHover: false,
-            hideProgressBar: false,
-            closeButton: "button",
-            icon: true,
-            rtl: false,
-            maxToasts: 5,
-            newestOnTop: true
-          }
-          
-          app.use(Toast, toastOptions)
+          const app = createVueApp(CartButton, { listingId, size, variant, initialIsInCart })
           app.mount(button)
-          
-          // Помечаем как инициализированную
           button.classList.add('cart-initialized')
         }
       })
       
-      // Найдем все неинициализированные кнопки избранного
+      // Инициализация кнопок избранного
       const favoriteButtons = document.querySelectorAll('[data-favorite-button]:not(.favorite-initialized)')
-      
       favoriteButtons.forEach(button => {
         const listingId = parseInt(button.dataset.listingId)
+        const initialIsFavorite = button.dataset.isFavorite === 'true'
         
+       
         if (listingId) {
-          // Создаем Vue приложение для кнопки
-          const app = createApp(FavoriteButton, {
-            listingId: listingId
-          })
-          
-          // Используем те же настройки Toast что и в главном приложении
-          const toastOptions = {
-            position: "bottom-right",
-            timeout: 8000,
-            closeOnClick: true,
-            pauseOnFocusLoss: true,
-            pauseOnHover: true,
-            draggable: true,
-            draggablePercent: 0.6,
-            showCloseButtonOnHover: false,
-            hideProgressBar: false,
-            closeButton: "button",
-            icon: true,
-            rtl: false,
-            maxToasts: 5,
-            newestOnTop: true
-          }
-          
-          app.use(Toast, toastOptions)
+          const app = createVueApp(FavoriteButton, { listingId, initialIsFavorite })
           app.mount(button)
-          
-          // Помечаем как инициализированную
           button.classList.add('favorite-initialized')
         }
       })
     }
 
-    // Восстановление сохраненной сортировки
-    const restoreSavedSort = () => {
-      const savedSort = localStorage.getItem('marketplace_sort')
-      if (savedSort) {
-        sortValue.value = savedSort
-        const [sortBy, sortOrder] = savedSort.split('-')
-        filters.sortBy = sortBy
-        filters.sortOrder = sortOrder
+    const getListingImageUrl = (listing) => {
+      if (!listing) {
+        return '/images/skin_no_image.svg'
       }
-
-      // Проверяем, нужно ли перезагрузить данные
-      const hasFilters = filters.search || filters.minPrice || filters.maxPrice ||
-        filters.types || filters.stattrak || filters.souvenir ||
-        filters.wearRange || (savedSort && savedSort !== 'listed_at-desc')
-
-      if (hasFilters) {
-        // Обновляем категории если есть фильтры (кроме фильтра по типу)
-        const hasNonTypeFilters = filters.search || filters.minPrice || filters.maxPrice ||
-          filters.stattrak || filters.souvenir || filters.wearRange
-        if (hasNonTypeFilters) {
-          loadCategories()
+      
+      if (listing.inventory_icon_url) {
+        if (!listing.inventory_icon_url.startsWith('http')) {
+          return `https://community.steamstatic.com/economy/image/${listing.inventory_icon_url}`
         }
-        loadListings(false)
+        return listing.inventory_icon_url
       }
+      
+      if (listing.item && listing.item.image_url) {
+        return listing.item.image_url
+      }
+      
+      return '/images/skin_no_image.svg'
     }
 
+    // Инициализация
     onMounted(() => {
       loadCategories()
       loadTags()
       restoreFiltersFromStorage()
-      restoreSavedSort()
       
-      // Инициализируем кнопки корзины для изначально загруженных товаров
       nextTick(() => {
-        initializeCartButtons()
+        initializeButtons()
       })
     })
 
@@ -679,10 +608,7 @@ export default {
       formatPrice,
       clearAllFilters,
       handleImageError,
-      saveFiltersToStorage,
-      restoreFiltersFromStorage,
-      isWearActive,
-      initializeCartButtons
+      getListingImageUrl
     }
   }
 }

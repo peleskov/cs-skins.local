@@ -40,6 +40,11 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::get('/marketplace/listing/{listing}', [MarketplaceController::class, 'getListingDetails'])->name('marketplace.listing');
     Route::get('/translations/items', [MarketplaceController::class, 'getTranslations'])->name('translations.items');
     
+    // CSRF токен
+    Route::get('/csrf-token', function () {
+        return response()->json(['csrf_token' => csrf_token()]);
+    })->name('csrf-token');
+    
     // Маршруты для корзины с rate limiting
     Route::prefix('cart')->name('cart.')->controller(CartController::class)->group(function () {
         Route::get('/', 'getItems')->name('items')->middleware('throttle:60,1');

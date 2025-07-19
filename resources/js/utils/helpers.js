@@ -38,6 +38,11 @@ export function getApiHeaders() {
  * @returns {string} Сообщение об ошибке для пользователя
  */
 export function handleApiError(error) {
+    // Если это уже обработанная ошибка с сообщением от сервера
+    if (error.message && !error.message.includes('HTTP error!')) {
+        return error.message;
+    }
+    
     if (error.response?.data?.message) {
         return error.response.data.message;
     }
@@ -46,5 +51,9 @@ export function handleApiError(error) {
         return 'Ошибка сети. Проверьте подключение к интернету.';
     }
     
-    return 'Произошла неизвестная ошибка. Попробуйте позже.';
+    if (error.message?.includes('HTTP error!')) {
+        return 'Ошибка сервера. Попробуйте позже.';
+    }
+    
+    return error.message || 'Произошла неизвестная ошибка. Попробуйте позже.';
 }

@@ -10,15 +10,11 @@
 </template>
 
 <script>
-import { useToast } from "vue-toastification";
 import { cartAPI } from '../utils/api';
+import { handleApiError } from '../utils/helpers';
 
 export default {
 	name: 'CartButton',
-	setup() {
-		const toast = useToast();
-		return { toast };
-	},
 	props: {
 		listingId: {
 			type: Number,
@@ -33,11 +29,15 @@ export default {
 			type: String,
 			default: 'primary', // primary, outline
 			validator: value => ['primary', 'outline'].includes(value)
+		},
+		initialIsInCart: {
+			type: Boolean,
+			default: false
 		}
 	},
 	data() {
 		return {
-			isInCart: false,
+			isInCart: this.initialIsInCart,
 			isLoading: false
 		}
 	},
@@ -99,7 +99,7 @@ export default {
 
 				if (data.success) {
 					this.isInCart = true;
-					this.toast.success(data.message || 'Товар добавлен в корзину');
+					window.toast.success(data.message || 'Товар добавлен в корзину');
 					
 					// Обновляем счетчик в header
 					this.updateCartCount(data.cart_count);
@@ -110,11 +110,11 @@ export default {
 						cartCount: data.cart_count
 					});
 				} else {
-					this.toast.error(data.message || 'Не удалось добавить товар в корзину');
+					window.toast.error(data.message || 'Не удалось добавить товар в корзину');
 				}
 			} catch (error) {
 				console.error('Add to cart error:', error);
-				this.toast.error('Произошла ошибка при добавлении товара в корзину');
+				window.toast.error(handleApiError(error));
 			} finally {
 				this.isLoading = false;
 			}
@@ -127,7 +127,7 @@ export default {
 
 				if (data.success) {
 					this.isInCart = false;
-					this.toast.success(data.message || 'Товар удален из корзины');
+					window.toast.success(data.message || 'Товар удален из корзины');
 					
 					// Обновляем счетчик в header
 					this.updateCartCount(data.cart_count);
@@ -138,25 +138,13 @@ export default {
 						cartCount: data.cart_count
 					});
 				} else {
-					this.toast.error(data.message || 'Не удалось удалить товар из корзины');
+					window.toast.error(data.message || 'Не удалось удалить товар из корзины');
 				}
 			} catch (error) {
 				console.error('Remove from cart error:', error);
-				this.toast.error('Произошла ошибка при удалении товара из корзины');
+				window.toast.error(handleApiError(error));
 			} finally {
 				this.isLoading = false;
-			}
-		},
-
-		async checkCartStatus() {
-			try {
-				const data = await cartAPI.checkItem(this.listingId);
-
-				if (data.success) {
-					this.isInCart = data.in_cart;
-				}
-			} catch (error) {
-				console.error('Check cart status error:', error);
 			}
 		},
 
@@ -166,13 +154,7 @@ export default {
 				detail: { count, timestamp: Date.now() }
 			}));
 			
-			console.log('Cart count updated:', count);
 		}
-	},
-
-	mounted() {
-		// Проверяем статус товара в корзине при загрузке компонента
-		this.checkCartStatus();
 	}
 }
 </script>

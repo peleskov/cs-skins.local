@@ -2,6 +2,7 @@ import './bootstrap';
 import { createApp } from 'vue';
 import Toast from "vue-toastification";
 import "vue-toastification/dist/index.css";
+import { useToast } from "vue-toastification";
 import Marketplace from './components/Marketplace.vue';
 import SkinDetails from './components/SkinDetails.vue';
 import Profile from './components/Profile.vue';
@@ -9,6 +10,8 @@ import Cart from './components/Cart.vue';
 import CartButton from './components/CartButton.vue';
 import Header from './components/Header.vue';
 import FavoriteButton from './components/FavoriteButton.vue';
+
+// Утилиты CSRF уже импортируются в компонентах где нужно
 
 // Кастомные скрипты шаблона
 import './footer-accordion.js';
@@ -34,8 +37,32 @@ const toastOptions = {
     newestOnTop: true
 };
 
+// Создаем глобальный экземпляр toast
+const initializeGlobalToast = () => {
+    const app = createApp({
+        name: 'ToastApp',
+        setup() {
+            const toast = useToast();
+            // Делаем toast доступным глобально
+            window.toast = toast;
+            return {};
+        },
+        template: '<div></div>'
+    });
+    
+    app.use(Toast, toastOptions);
+    
+    // Создаем скрытый элемент для монтирования
+    const container = document.createElement('div');
+    container.style.display = 'none';
+    document.body.appendChild(container);
+    app.mount(container);
+};
+
 // Инициализация Vue компонентов
 document.addEventListener('DOMContentLoaded', () => {
+    // Инициализируем глобальный toast первым
+    initializeGlobalToast();
     // Marketplace компонент
     const marketplaceElement = document.getElementById('marketplace-app');
     if (marketplaceElement) {
@@ -44,7 +71,6 @@ document.addEventListener('DOMContentLoaded', () => {
             initialTotal: parseInt(marketplaceElement.dataset.total || '0'),
             initialHasMore: marketplaceElement.dataset.hasMore === 'true'
         });
-        app.use(Toast, toastOptions);
         app.mount('#marketplace-app');
     }
     
@@ -55,7 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const app = createApp(SkinDetails, {
             listingId: listingId
         });
-        app.use(Toast, toastOptions);
         app.mount('#skin-details-app');
     }
     
@@ -66,7 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
             initialClient: JSON.parse(profileElement.dataset.client || '{}'),
             telegramBotName: profileElement.dataset.telegramBotName || ''
         });
-        app.use(Toast, toastOptions);
         
         // Устанавливаем глобальную переменную для Telegram виджета
         window.telegramBotName = profileElement.dataset.telegramBotName || '';
@@ -78,7 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const cartElement = document.getElementById('cart-app');
     if (cartElement) {
         const app = createApp(Cart);
-        app.use(Toast, toastOptions);
         app.mount('#cart-app');
     }
     
@@ -98,7 +121,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     routes: routes,
                     logoUrl: logoUrl
                 });
-                app.use(Toast, toastOptions);
                 app.mount('#header-app');
                 
             } catch (error) {
@@ -118,14 +140,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const listingId = parseInt(button.dataset.listingId);
         const size = button.dataset.size || 'normal';
         const variant = button.dataset.variant || 'primary';
+        const initialIsInCart = button.dataset.isInCart === 'true';
         
         if (listingId) {
             const app = createApp(CartButton, {
                 listingId: listingId,
                 size: size,
-                variant: variant
+                variant: variant,
+                initialIsInCart: initialIsInCart
             });
-            app.use(Toast, toastOptions);
             app.mount(button);
         }
     });
@@ -139,7 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const app = createApp(FavoriteButton, {
                 listingId: listingId
             });
-            app.use(Toast, toastOptions);
             app.mount(button);
         }
     });

@@ -29,6 +29,11 @@
       border-bottom: 1px solid rgba(var(--box-bg), 0.1);
       padding: calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320))) calc(20px + (35 - 20) * ((100vw - 320px) / (1920 - 320)));
 
+      .badge {
+        font-weight: 400;
+        color: rgba(var(--content-color),1);
+      }
+
       &.active {
         font-weight: 500;
         @include gradient-text;
@@ -37,6 +42,13 @@
         border-top: none;
         border-bottom: 2px solid rgba(var(--theme-color), 1);
         border-radius: 0;
+
+        .badge {
+          font-weight: 400;
+          background: rgba(var(--theme-color), 1) !important;
+          color: rgba(var(--white), 1) !important;
+          -webkit-text-fill-color: rgba(var(--white), 1) !important;
+        }
       }
 
       &:hover {

@@ -24,6 +24,11 @@ class CartService
             throw new \Exception('Товар недоступен для покупки');
         }
 
+        // Проверяем, что пользователь не пытается добавить свой собственный товар
+        if (auth('client')->check() && $listing->seller_id === auth('client')->id()) {
+            throw new \Exception('Нельзя добавить собственный товар в корзину');
+        }
+
         $cart = $this->getCart();
         
         // Проверяем, нет ли уже этого товара в корзине

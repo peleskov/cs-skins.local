@@ -13,33 +13,9 @@
 						<h6>{{ client.email || 'Email не указан' }}</h6>
 					</div>
 					<ul class="profile-list">
-						<li :class="{ active: activeTab === 'profile' }">
-							<i class="ri-user-3-line"></i>
-							<a href="#" @click.prevent="setActiveTab('profile')">Профиль</a>
-						</li>
-						<li :class="{ active: activeTab === 'trading' }">
-							<i class="ri-shopping-bag-3-line"></i>
-							<a href="#" @click.prevent="setActiveTab('trading')">Торговля</a>
-						</li>
-						<li :class="{ active: activeTab === 'inventory' }">
-							<i class="ri-treasure-map-line"></i>
-							<a href="#" @click.prevent="setActiveTab('inventory')">Инвентарь</a>
-						</li>
-						<li :class="{ active: activeTab === 'favorites' }">
-							<i class="ri-heart-line"></i>
-							<a href="#" @click.prevent="setActiveTab('favorites')">Избранное</a>
-						</li>
-						<li :class="{ active: activeTab === 'auctions' }">
-							<i class="ri-store-2-line"></i>
-							<a href="#" @click.prevent="setActiveTab('auctions')">Мои аукционы</a>
-						</li>
-						<li :class="{ active: activeTab === 'balance' }">
-							<i class="ri-bank-card-line"></i>
-							<a href="#" @click.prevent="setActiveTab('balance')">Баланс</a>
-						</li>
-						<li :class="{ active: activeTab === 'settings' }">
-							<i class="ri-settings-3-line"></i>
-							<a href="#" @click.prevent="setActiveTab('settings')">Настройки</a>
+						<li v-for="(tab, key) in profileTabs" :key="key" :class="{ active: activeTab === key }">
+							<i :class="tab.icon"></i>
+							<a href="#" @click.prevent="setActiveTab(key)">{{ tab.title }}</a>
 						</li>
 						<li>
 							<i class="ri-logout-box-r-line"></i>
@@ -70,6 +46,10 @@
 				<ProfileFavorites v-else-if="activeTab === 'favorites'" 
 					:client="client" />
 
+				<!-- Orders Tab -->
+				<ProfileOrders v-else-if="activeTab === 'orders'" 
+					:client="client" />
+
 				<!-- Auctions Tab -->
 				<ProfileAuctions v-else-if="activeTab === 'auctions'" 
 					:client="client" />
@@ -97,6 +77,7 @@ import ProfileInventory from './Inventory.vue';
 import ProfileInfo from './Info.vue';
 import ProfileTrading from './Trading.vue';
 import ProfileFavorites from './Favorites.vue';
+import ProfileOrders from './Orders.vue';
 import ProfileAuctions from './Auctions.vue';
 import ProfileBalance from './Balance.vue';
 import ProfileSettings from './Settings.vue';
@@ -108,6 +89,7 @@ export default {
 		ProfileInfo,
 		ProfileTrading,
 		ProfileFavorites,
+		ProfileOrders,
 		ProfileAuctions,
 		ProfileBalance,
 		ProfileSettings
@@ -124,6 +106,9 @@ export default {
 	},
 
 	data() {
+		const profileTabs = window.profileTabs || {};
+		const validTabs = Object.keys(profileTabs);
+		
 		// Получаем начальную вкладку
 		const getInitialTab = () => {
 			// Проверяем, что мы в браузере
@@ -133,14 +118,14 @@ export default {
 
 			// Проверяем hash в URL
 			const hash = window.location.hash.substring(1);
-			if (hash && ['profile', 'trading', 'inventory', 'favorites', 'auctions', 'balance', 'settings'].includes(hash)) {
+			if (hash && validTabs.includes(hash)) {
 				return hash;
 			}
 
 			// Проверяем localStorage
 			try {
 				const savedTab = localStorage.getItem('profile-active-tab');
-				if (savedTab && ['profile', 'trading', 'inventory', 'favorites', 'auctions', 'balance', 'settings'].includes(savedTab)) {
+				if (savedTab && validTabs.includes(savedTab)) {
 					return savedTab;
 				}
 			} catch (e) {
@@ -152,7 +137,9 @@ export default {
 
 		return {
 			client: { ...this.initialClient },
-			activeTab: getInitialTab()
+			activeTab: getInitialTab(),
+			profileTabs: profileTabs,
+			validTabs: validTabs
 		}
 	},
 
@@ -185,20 +172,13 @@ export default {
 		},
 
 		getTabTitle(tab) {
-			const titles = {
-				trading: 'Торговля',
-				favorites: 'Избранное',
-				auctions: 'Мои аукционы',
-				balance: 'Баланс',
-				settings: 'Настройки'
-			};
-			return titles[tab] || 'Раздел';
+			return this.profileTabs[tab]?.title || 'Раздел';
 		},
 
 		handleHashChange() {
 			// Обрабатываем изменение хэша в URL
 			const hash = window.location.hash.substring(1);
-			if (hash && ['profile', 'trading', 'inventory', 'favorites', 'auctions', 'balance', 'settings'].includes(hash)) {
+			if (hash && this.validTabs.includes(hash)) {
 				this.setActiveTab(hash);
 			}
 		}

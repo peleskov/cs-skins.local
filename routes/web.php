@@ -8,6 +8,7 @@ use App\Http\Controllers\MarketplaceController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\TradeController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\FavoritesController;
 
 // Публичные маршруты
@@ -22,6 +23,7 @@ Route::controller(WebController::class)->group(function () {
 
 // Страница корзины
 Route::get('/cart', [CartController::class, 'index'])->name('cart');
+Route::get('/checkout', [OrderController::class, 'index'])->name('checkout');
 
 // Маршруты маркетплейса
 Route::prefix('marketplace')->name('marketplace.')->controller(MarketplaceController::class)->group(function () {
@@ -53,6 +55,13 @@ Route::prefix('api')->name('api.')->group(function () {
         Route::delete('/', 'clear')->name('clear')->middleware('throttle:10,1');
         Route::get('/check/{listingId}', 'check')->name('check')->middleware('throttle:60,1');
         Route::get('/count', 'count')->name('count')->middleware('throttle:60,1');
+    });
+    
+    // Маршруты для заказов
+    Route::prefix('orders')->name('orders.')->controller(OrderController::class)->group(function () {
+        Route::post('/create', 'createOrder')->name('create')->middleware(['auth:client', 'throttle:10,1']);
+        Route::post('/{order}/pay', 'payOrder')->name('pay')->middleware(['auth:client', 'throttle:5,1']);
+        Route::get('/my', 'getMyOrders')->name('my')->middleware(['auth:client', 'throttle:60,1']);
     });
     
     Route::post('/marketplace/quick-buy', function () {

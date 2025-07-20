@@ -70,39 +70,9 @@
 						</div>
 						<div class="onhover-box onhover-sm">
 							<ul class="menu-list">
-								<li>
-									<a class="dropdown-item" :href="routes.profile + '#profile'">
-										<i class="ri-user-3-line me-2"></i>Профиль
-									</a>
-								</li>
-								<li>
-									<a class="dropdown-item" :href="routes.profile + '#trading'">
-										<i class="ri-shopping-bag-3-line me-2"></i>Торговля
-									</a>
-								</li>
-								<li>
-									<a class="dropdown-item" :href="routes.profile + '#inventory'">
-										<i class="ri-treasure-map-line me-2"></i>Инвентарь
-									</a>
-								</li>
-								<li>
-									<a class="dropdown-item" :href="routes.profile + '#favorites'">
-										<i class="ri-heart-line me-2"></i>Избранное
-									</a>
-								</li>
-								<li>
-									<a class="dropdown-item" :href="routes.profile + '#auctions'">
-										<i class="ri-store-2-line me-2"></i>Мои аукционы
-									</a>
-								</li>
-								<li>
-									<a class="dropdown-item" :href="routes.profile + '#balance'">
-										<i class="ri-bank-card-line me-2"></i>Баланс
-									</a>
-								</li>
-								<li>
-									<a class="dropdown-item" :href="routes.profile + '#settings'">
-										<i class="ri-settings-3-line me-2"></i>Настройки
+								<li v-for="(tab, key) in profileTabs" :key="key">
+									<a class="dropdown-item" :href="routes.profile + '#' + key">
+										<i :class="tab.icon + ' me-2'"></i>{{ tab.title }}
 									</a>
 								</li>
 							</ul>
@@ -124,20 +94,8 @@
 					</div>
 					<div class="offcanvas-body">
 						<ul class="navbar-nav justify-content-center flex-grow-1">
-							<li class="nav-item">
-								<a class="nav-link" :href="routes.marketplace">Маркетплейс</a>
-							</li>
-							<li class="nav-item">
-								<a class="nav-link" href="#">Кейсы</a>
-							</li>
-							<li class="nav-item">
-								<a class="nav-link" href="#">Аукцион</a>
-							</li>
-							<li class="nav-item">
-								<a class="nav-link" :href="routes.faq">FAQ</a>
-							</li>
-							<li class="nav-item">
-								<a class="nav-link" :href="routes.contact">Контакты</a>
+							<li v-for="(item, key) in mainNavigation" :key="key" class="nav-item">
+								<a class="nav-link" :href="getNavigationUrl(item.route)">{{ item.title }}</a>
 							</li>
 						</ul>
 					</div>
@@ -176,7 +134,9 @@ export default {
 			cartItems: [],
 			cartTotal: 0,
 			isLoading: false,
-			cartLoaded: false // Флаг, что корзина была загружена
+			cartLoaded: false, // Флаг, что корзина была загружена
+			profileTabs: window.profileTabs || {},
+			mainNavigation: window.mainNavigation || {}
 		}
 	},
 	computed: {
@@ -224,6 +184,15 @@ export default {
 			// Если корзина обновилась, перезагружаем превью
 			this.loadCartPreview();
 		},
+
+		getNavigationUrl(route) {
+			// Если маршрут начинается с #, возвращаем как есть
+			if (route.startsWith('#')) {
+				return route;
+			}
+			// Иначе используем маршрут из routes prop
+			return this.routes[route] || '#';
+		}
 
 	},
 

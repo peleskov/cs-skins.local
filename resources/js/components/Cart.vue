@@ -28,10 +28,10 @@
 								</p>
 							</div>
 							<div class="col-md-6 text-end">
-								<button class="btn theme-btn me-2" @click="proceedToCheckout"
-									:disabled="cartItems.length === 0">
+								<a href="/checkout" class="btn theme-btn me-2"
+								   :class="{ disabled: cartItems.length === 0 }">
 									<i class="ri-shopping-cart-line me-1"></i>Оформить заказ
-								</button>
+								</a>
 								<button class="btn theme-outline theme-outline-danger" @click="clearCart">
 									<i class="ri-delete-bin-line me-1"></i>Очистить
 								</button>
@@ -282,11 +282,6 @@ export default {
 					modal.hide();
 				}
 			}
-		},
-
-		proceedToCheckout() {
-			// TODO: Реализуем систему заказов
-			window.toast.info('Функция оформления заказа будет доступна в ближайшее время');
 		},
 
 		updateCartCount() {

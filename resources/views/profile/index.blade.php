@@ -25,7 +25,8 @@
         <!-- Vue Profile Component -->
         <div id="profile-app" 
              data-client="{{ $client->toJson() }}"
-             data-telegram-bot-name="{{ $telegramBotName }}">
+             data-telegram-bot-name="{{ $telegramBotName }}"
+             data-profile-tabs="{{ json_encode($profileTabs) }}">
         </div>
     </div>
 </section>

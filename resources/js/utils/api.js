@@ -125,3 +125,92 @@ export const cartAPI = new CartAPI();
 
 // Экспортируем также класс для тестирования
 export default CartAPI;
+
+/**
+ * API клиент для работы с заказами
+ */
+class OrderAPI {
+    constructor() {
+        this.baseUrl = '/api/orders';
+    }
+
+    /**
+     * Создать заказ из корзины
+     */
+    async createOrder() {
+        try {
+            const response = await fetch(`${this.baseUrl}/create`, {
+                method: 'POST',
+                headers: getApiHeaders()
+            });
+            
+            if (!response.ok) {
+                let errorMessage = `HTTP error! status: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    if (errorData.message) {
+                        errorMessage = errorData.message;
+                    }
+                } catch (e) {
+                    // Если не удалось распарсить JSON, используем дефолтное сообщение
+                }
+                throw new Error(errorMessage);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Оплатить заказ
+     */
+    async payOrder(orderId) {
+        try {
+            const response = await fetch(`${this.baseUrl}/${orderId}/pay`, {
+                method: 'POST',
+                headers: getApiHeaders()
+            });
+            
+            if (!response.ok) {
+                let errorMessage = `HTTP error! status: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    if (errorData.message) {
+                        errorMessage = errorData.message;
+                    }
+                } catch (e) {
+                    // Если не удалось распарсить JSON, используем дефолтное сообщение
+                }
+                throw new Error(errorMessage);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Получить мои заказы
+     */
+    async getMyOrders(page = 1) {
+        try {
+            const response = await fetch(`${this.baseUrl}/my?page=${page}`, {
+                headers: getApiHeaders()
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            throw error;
+        }
+    }
+}
+
+// Экспортируем singleton instance
+export const orderAPI = new OrderAPI();

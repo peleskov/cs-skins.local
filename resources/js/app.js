@@ -7,6 +7,7 @@ import Marketplace from './components/Marketplace.vue';
 import SkinDetails from './components/SkinDetails.vue';
 import Profile from './components/Profile.vue';
 import Cart from './components/Cart.vue';
+import Checkout from './components/Checkout.vue';
 import CartButton from './components/CartButton.vue';
 import Header from './components/Header.vue';
 import FavoriteButton from './components/FavoriteButton.vue';
@@ -103,6 +104,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cartElement) {
         const app = createApp(Cart);
         app.mount('#cart-app');
+    }
+    
+    // Checkout компонент
+    const checkoutElement = document.getElementById('checkout-app');
+    if (checkoutElement) {
+        const app = createApp(Checkout);
+        app.mount('#checkout-app');
     }
     
     // Header компонент - с ожиданием появления элемента

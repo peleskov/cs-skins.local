@@ -20,7 +20,10 @@ class ProfileController extends Controller
             $this->checkTelegramAuthorization($client);
         }
         
-        return view('profile.index', compact('client', 'telegramBotName'));
+        // Переводы для табов профиля
+        $profileTabs = __('profile.tabs');
+        
+        return view('profile.index', compact('client', 'telegramBotName', 'profileTabs'));
     }
 
     /**

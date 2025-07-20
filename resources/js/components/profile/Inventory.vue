@@ -247,8 +247,8 @@
 					</div>
 				</div>
 				
-				<!-- Global Empty State -->
-				<div v-if="items.length === 0" class="text-center py-5">
+				<!-- Global Empty State - показывается только когда инвентарь вообще не загружен -->
+				<div v-if="!inventoryData && !isLoading" class="text-center py-5">
 					<i class="ri-box-3-line display-4 text-muted mb-3"></i>
 					<h6>Инвентарь пуст</h6>
 					<p class="text-muted mb-0">Убедитесь, что ваш Steam инвентарь публичный</p>

@@ -12,6 +12,42 @@ export function formatPrice(price) {
 }
 
 /**
+ * Форматирование даты
+ * @param {string|Date} date - Дата для форматирования
+ * @returns {string} Отформатированная дата
+ */
+export function formatDate(date) {
+    if (!date) return '';
+    
+    const dateObj = new Date(date);
+    const now = new Date();
+    const diffInMs = now - dateObj;
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+    
+    if (diffInDays === 0) {
+        return 'Сегодня, ' + dateObj.toLocaleTimeString('ru-RU', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+    } else if (diffInDays === 1) {
+        return 'Вчера, ' + dateObj.toLocaleTimeString('ru-RU', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+    } else if (diffInDays < 7) {
+        return diffInDays + ' дн. назад';
+    } else {
+        return dateObj.toLocaleDateString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit', 
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+}
+
+/**
  * Получение CSRF токена из мета-тега
  * @returns {string|null} CSRF токен
  */

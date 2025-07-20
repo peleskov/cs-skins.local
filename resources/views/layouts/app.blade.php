@@ -58,6 +58,13 @@
         <i class="ri-arrow-up-s-line arrow"></i>
     </button>
 
+    <!-- Navigation data for JavaScript -->
+    <script>
+        window.profileTabs = @json($profileTabs);
+        window.mainNavigation = @json($mainNavigation);
+        window.footerData = @json($footerData);
+    </script>
+
     <!-- Scripts -->
     <!-- Библиотеки -->
     <script src="{{ asset('js/vendors/bootstrap.bundle.min.js') }}"></script>

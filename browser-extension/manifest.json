@@ -1,0 +1,72 @@
+{
+  "manifest_version": 3,
+  "name": "CS-SKINS.pro Trading Assistant",
+  "version": "1.0.0",
+  "description": "Автоматизация Steam трейдов для CS-SKINS.pro",
+  
+  "permissions": [
+    "storage",
+    "background",
+    "notifications",
+    "activeTab",
+    "windows",
+    "alarms"
+  ],
+  
+  "host_permissions": [
+    "https://steamcommunity.com/*",
+    "https://cs-skins.s1temaker.ru/*",
+    "https://cs-skins.local/*"
+  ],
+  
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": [
+        "https://steamcommunity.com/tradeoffer/*",
+        "https://steamcommunity.com/profiles/*/inventory/*",
+        "https://steamcommunity.com/id/*/inventory/*"
+      ],
+      "js": ["content/steam-injector.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "CS-SKINS.pro Trading Assistant",
+    "default_icon": {
+      "16": "assets/icons/icon-16.png",
+      "32": "assets/icons/icon-32.png",
+      "48": "assets/icons/icon-48.png",
+      "128": "assets/icons/icon-128.png"
+    }
+  },
+  
+  "icons": {
+    "16": "assets/icons/icon-16.png",
+    "32": "assets/icons/icon-32.png",
+    "48": "assets/icons/icon-48.png",
+    "128": "assets/icons/icon-128.png"
+  },
+  
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/icons/*", 
+        "popup/detached.html",
+        "popup/detached.js",
+        "popup/popup.css",
+        "popup/popup.js"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  }
+}

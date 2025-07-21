@@ -11,7 +11,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Регистрируем команды консоли
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \App\Console\Commands\PackExtensionCommand::class,
+            ]);
+        }
     }
 
     /**

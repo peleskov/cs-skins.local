@@ -122,12 +122,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const user = headerElement.dataset.user !== 'null' ? JSON.parse(headerElement.dataset.user) : null;
                 const routes = JSON.parse(headerElement.dataset.routes);
                 const logoUrl = headerElement.dataset.logoUrl;
-                
+                const cartCount = parseInt(headerElement.dataset.cartCount || '0');
                 
                 const app = createApp(Header, {
                     user: user,
                     routes: routes,
-                    logoUrl: logoUrl
+                    logoUrl: logoUrl,
+                    initialCartCount: cartCount
                 });
                 app.mount('#header-app');
                 

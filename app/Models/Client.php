@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 
 class Client extends Authenticatable
 {
@@ -26,11 +27,14 @@ class Client extends Authenticatable
         'email_verification_sent_at',
         'telegram_id',
         'telegram_username',
+        'extension_token',
+        'extension_token_generated_at',
     ];
 
     protected $hidden = [
         'payment_password',
         'remember_token',
+        'extension_token',
     ];
 
     protected $casts = [
@@ -39,6 +43,7 @@ class Client extends Authenticatable
         'is_bot' => 'boolean',
         'email_verified_at' => 'datetime',
         'email_verification_sent_at' => 'datetime',
+        'extension_token_generated_at' => 'datetime',
     ];
 
     /**
@@ -212,5 +217,48 @@ class Client extends Authenticatable
     public function marketableInventoryItems(): HasMany
     {
         return $this->inventoryItems()->marketable();
+    }
+
+    /**
+     * Генерирует новый токен для расширения
+     */
+    public function generateExtensionToken(): string
+    {
+        $token = 'ext_' . Str::random(60);
+        
+        $this->update([
+            'extension_token' => $token,
+            'extension_token_generated_at' => now(),
+        ]);
+        
+        return $token;
+    }
+
+    /**
+     * Проверяет наличие токена расширения
+     */
+    public function hasExtensionToken(): bool
+    {
+        return !empty($this->extension_token);
+    }
+
+    /**
+     * Получает токен расширения (генерирует если нет)
+     */
+    public function getExtensionToken(): string
+    {
+        if (!$this->hasExtensionToken()) {
+            return $this->generateExtensionToken();
+        }
+        
+        return $this->extension_token;
+    }
+
+    /**
+     * Регенерирует токен расширения
+     */
+    public function regenerateExtensionToken(): string
+    {
+        return $this->generateExtensionToken();
     }
 }

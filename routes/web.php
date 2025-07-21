@@ -10,6 +10,7 @@ use App\Http\Controllers\TradeController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\FavoritesController;
+use App\Http\Controllers\ExtensionController;
 
 // Публичные маршруты
 Route::controller(WebController::class)->group(function () {
@@ -39,6 +40,10 @@ Route::prefix('marketplace')->name('marketplace.')->controller(MarketplaceContro
 
 // API маршруты
 Route::prefix('api')->name('api.')->group(function () {
+    // Тестовый маршрут для проверки
+    Route::get('/test', function() {
+        return response()->json(['status' => 'ok', 'path' => request()->path()]);
+    });
     Route::get('/marketplace/listing/{listing}', [MarketplaceController::class, 'getListingDetails'])->name('marketplace.listing');
     Route::get('/translations/items', [MarketplaceController::class, 'getTranslations'])->name('translations.items');
     
@@ -67,6 +72,7 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::post('/marketplace/quick-buy', function () {
         return response()->json(['message' => 'Функция быстрой покупки будет реализована позже'], 501);
     })->name('marketplace.quick-buy');
+    
     
     // API маршруты для торговли (требуют авторизации)
     Route::middleware(['auth:client'])->group(function () {
@@ -114,6 +120,8 @@ Route::middleware(['auth:client'])->group(function () {
     Route::post('/profile/update-trade-url', [ProfileController::class, 'updateTradeUrl'])->name('profile.update.trade-url');
     Route::match(['GET', 'POST'], '/profile/telegram/verify', [ProfileController::class, 'verifyTelegram'])->name('profile.telegram.verify');
     Route::post('/profile/telegram/unlink', [ProfileController::class, 'unlinkTelegram'])->name('profile.telegram.unlink');
+    Route::post('/profile/extension-token/generate', [ProfileController::class, 'generateExtensionToken'])->name('profile.extension-token.generate');
+    Route::post('/profile/extension-token/regenerate', [ProfileController::class, 'regenerateExtensionToken'])->name('profile.extension-token.regenerate');
 
     // Маршруты инвентаря
     Route::prefix('inventory')->name('inventory.')->controller(InventoryController::class)->group(function () {

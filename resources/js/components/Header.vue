@@ -126,11 +126,15 @@ export default {
 		logoUrl: {
 			type: String,
 			required: true
+		},
+		initialCartCount: {
+			type: Number,
+			default: 0
 		}
 	},
 	data() {
 		return {
-			cartCount: 0,
+			cartCount: this.initialCartCount,
 			cartItems: [],
 			cartTotal: 0,
 			isLoading: false,
@@ -145,17 +149,6 @@ export default {
 		}
 	},
 	methods: {
-		async loadCartCount() {
-			try {
-				const data = await cartAPI.getCount();
-
-				if (data.success) {
-					this.cartCount = data.count;
-				}
-			} catch (error) {
-				console.error('Error loading cart count:', error);
-			}
-		},
 
 		async loadCartPreview() {
 			if (this.isLoading || this.cartLoaded) return; // Не загружаем повторно, если уже загружено
@@ -197,9 +190,7 @@ export default {
 	},
 
 	async mounted() {
-		// Загружаем начальный счетчик корзины
-		await this.loadCartCount();
-		
+		// Счетчик корзины уже передан через props (initialCartCount)
 		// Если есть товары в корзине, загружаем превью
 		if (this.cartCount > 0) {
 			await this.loadCartPreview();

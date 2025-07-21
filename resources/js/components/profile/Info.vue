@@ -131,6 +131,33 @@
 					<h6>{{ formatDate(client.created_at) }}</h6>
 				</div>
 			</li>
+			<li>
+				<div class="profile-content">
+					<div class="d-flex align-items-center gap-sm-2 gap-1">
+						<i class="ri-computer-line"></i>
+						<span>Токен расширения :</span>
+					</div>
+					<h6>
+						<span v-if="extensionToken" class="token-text" 
+							:data-token="extensionToken"
+							style="cursor: pointer; font-family: monospace; font-size: 0.9em;"
+							title="Нажмите для копирования"
+							@click="copyExtensionToken">
+							{{ limitString(extensionToken, 20) }}
+							<i class="ri-file-copy-line ms-1"></i>
+						</span>
+						<span v-else class="badge bg-warning ms-2">Не сгенерирован</span>
+					</h6>
+				</div>
+				<div class="d-flex gap-2">
+					<button v-if="!extensionToken" class="btn theme-outline mt-0" @click="generateExtensionToken">
+						Сгенерировать
+					</button>
+					<button v-else class="btn theme-outline mt-0" data-bs-toggle="modal" data-bs-target="#regenerate-token">
+						Перегенерировать
+					</button>
+				</div>
+			</li>
 		</ul>
 
 		<!-- Email Modal -->
@@ -249,6 +276,29 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- Regenerate Extension Token Modal -->
+		<div class="modal address-details-modal fade" id="regenerate-token" tabindex="-1"
+			aria-labelledby="regenerateTokenLabel" aria-hidden="true">
+			<div class="modal-dialog modal-dialog-centered">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h1 class="modal-title fs-5" id="regenerateTokenLabel">Перегенерировать токен</h1>
+						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+					</div>
+					<div class="modal-body">
+						<p>Вы уверены, что хотите перегенерировать токен расширения?</p>
+						<small class="text-warning d-block mt-2">
+							<i class="ri-alert-line"></i> <strong>Внимание!</strong> Старый токен перестанет работать, и расширение нужно будет переподключить с новым токеном.
+						</small>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn gray-btn mt-0" data-bs-dismiss="modal">Отмена</button>
+						<button type="button" class="btn btn-danger mt-0" @click="confirmRegenerateToken">Перегенерировать</button>
+					</div>
+				</div>
+			</div>
+		</div>
 	</div>
 </template>
 
@@ -271,6 +321,7 @@ export default {
 		return {
 			timeUntilCanResend: '',
 			canResendVerification: true,
+			extensionToken: this.client.extension_token || null,
 		}
 	},
 	computed: {
@@ -502,6 +553,302 @@ export default {
 
 		// Устанавливаем глобальную функцию для Telegram callback
 		window.onTelegramAuth = this.onTelegramAuth;
+	},
+
+	methods: {
+		async updateTradeUrl() {
+			const tradeUrlInput = document.getElementById('trade-url-input');
+			const tradeUrl = tradeUrlInput.value;
+
+			if (!tradeUrl) {
+				window.toast.error('Введите Trade URL');
+				return;
+			}
+
+			try {
+				const response = await fetch('/profile/update-trade-url', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'Accept': 'application/json'
+					},
+					body: JSON.stringify({
+						trade_url: tradeUrl
+					})
+				});
+				
+				if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+
+				const data = await response.json();
+
+				if (data.success) {
+					// Эмитим событие для обновления client в родительском компоненте
+					this.$emit('update-client', { steam_trade_url: tradeUrl });
+					window.toast.success(data.message);
+					
+					// Закрываем модальное окно
+					const modal = bootstrap.Modal.getInstance(document.getElementById('trade-url'));
+					if (modal) {
+						modal.hide();
+					}
+				} else {
+					window.toast.error(data.message || 'Ошибка при сохранении Trade URL');
+				}
+			} catch (error) {
+				console.error('Trade URL update error:', error);
+				window.toast.error(handleApiError(error));
+			}
+		},
+
+		async resendVerification() {
+			if (!this.canResendVerification) return;
+
+			// Блокируем кнопку
+			this.canResendVerification = false;
+			const btnText = this.$refs.resendEmailBtn?.querySelector('.btn-text');
+			const originalText = btnText?.textContent;
+			if (btnText) btnText.textContent = 'Отправка...';
+
+			try {
+				const response = await fetch('/email/resend', {
+					method: 'POST',
+					headers: getApiHeaders()
+				});
+				
+				if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+
+				const data = await response.json();
+
+				if (response.ok) {
+					window.toast.success(data.message || 'Письмо отправлено');
+					this.startResendTimer(60); // 1 минута
+				} else {
+					window.toast.error(data.message || 'Не удалось отправить письмо');
+					this.canResendVerification = true;
+					if (btnText) btnText.textContent = originalText;
+				}
+			} catch (error) {
+				console.error('Resend verification error:', error);
+				window.toast.error(handleApiError(error));
+				this.canResendVerification = true;
+				if (btnText) btnText.textContent = originalText;
+			}
+		},
+
+		startResendTimer(seconds) {
+			this.canResendVerification = false;
+			let remainingSeconds = seconds;
+
+			const formatTime = (sec) => {
+				if (sec <= 0) return '';
+				const minutes = Math.floor(sec / 60);
+				const secs = sec % 60;
+				if (minutes > 0) {
+					return `${minutes} мин ${secs} сек`;
+				}
+				return `${secs} сек`;
+			};
+
+			const timer = setInterval(() => {
+				if (remainingSeconds <= 0) {
+					this.canResendVerification = true;
+					this.timeUntilCanResend = '';
+					clearInterval(timer);
+				} else {
+					this.timeUntilCanResend = formatTime(remainingSeconds);
+					remainingSeconds--;
+				}
+			}, 1000);
+		},
+
+		formatNumber(number, decimals = 2) {
+			return Number(number).toFixed(decimals);
+		},
+
+		limitString(str, limit) {
+			if (!str) return '';
+			return str.length > limit ? str.substring(0, limit) + '...' : str;
+		},
+
+		async copyTradeUrl(event) {
+			const url = event.currentTarget.dataset.url;
+
+			try {
+				await navigator.clipboard.writeText(url);
+				window.toast.success('Trade URL скопирован в буфер обмена');
+
+				// Временно меняем иконку
+				const icon = event.currentTarget.querySelector('i');
+				const originalClass = icon.className;
+				icon.className = 'ri-check-line ms-1 text-success';
+
+				setTimeout(() => {
+					icon.className = originalClass;
+				}, 2000);
+
+			} catch (err) {
+				window.toast.error(handleApiError(error));
+				console.error('Failed to copy: ', err);
+			}
+		},
+
+		formatDate(dateString) {
+			if (!dateString) return '';
+			const date = new Date(dateString);
+			return date.toLocaleDateString('ru-RU');
+		},
+
+		loadTelegramWidget() {
+			this.$nextTick(() => {
+				const widgetContainer = document.getElementById('telegram-login-widget-inline');
+				if (widgetContainer && !widgetContainer.hasChildNodes()) {
+					console.log('Loading Telegram widget...');
+
+					// Создаем скрипт для Telegram виджета
+					const script = document.createElement('script');
+					script.async = true;
+					script.src = 'https://telegram.org/js/telegram-widget.js?22';
+					script.setAttribute('data-telegram-login', this.telegramBotName || window.telegramBotName || 'cs_skins_bot');
+					script.setAttribute('data-size', 'medium');
+					script.setAttribute('data-userpic', 'false');
+					script.setAttribute('data-auth-url', window.location.origin + '/profile/telegram/verify');
+					script.setAttribute('data-request-access', 'write');
+
+					widgetContainer.appendChild(script);
+				}
+			});
+		},
+
+		async onTelegramAuth(user) {
+			try {
+				const response = await fetch('/profile/telegram/verify', {
+					method: 'POST',
+					headers: getApiHeaders(),
+					body: JSON.stringify({
+						id: user.id,
+						first_name: user.first_name,
+						last_name: user.last_name,
+						username: user.username,
+						photo_url: user.photo_url,
+						auth_date: user.auth_date,
+						hash: user.hash
+					})
+				});
+
+				if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+				const data = await response.json();
+
+				if (data.success) {
+					window.toast.success('Telegram верификация успешно завершена!');
+
+					// Эмитим событие для обновления client в родительском компоненте
+					this.$emit('update-client', {
+						telegram_id: user.id,
+						telegram_username: user.username,
+						is_verified: true
+					});
+
+					// Перезагружаем страницу через 1.5 секунды
+					setTimeout(() => {
+						window.location.reload();
+					}, 1500);
+				} else {
+					window.toast.error(data.message || 'Ошибка при верификации');
+				}
+			} catch (error) {
+				console.error('Error:', error);
+				window.toast.error(handleApiError(error));
+			}
+		},
+
+		async generateExtensionToken() {
+			try {
+				const response = await fetch('/profile/extension-token/generate', {
+					method: 'POST',
+					headers: getApiHeaders()
+				});
+
+				const data = await response.json();
+
+				if (data.success) {
+					this.extensionToken = data.token;
+					this.$emit('update-client', { extension_token: data.token });
+					window.toast.success('Токен расширения сгенерирован');
+				} else {
+					window.toast.error(data.message || 'Ошибка генерации токена');
+				}
+			} catch (error) {
+				console.error('Generate extension token error:', error);
+				window.toast.error(handleApiError(error));
+			}
+		},
+
+		async confirmRegenerateToken() {
+			try {
+				const response = await fetch('/profile/extension-token/regenerate', {
+					method: 'POST',
+					headers: getApiHeaders()
+				});
+
+				const data = await response.json();
+
+				if (data.success) {
+					this.extensionToken = data.token;
+					this.$emit('update-client', { extension_token: data.token });
+					window.toast.success('Токен расширения перегенерирован');
+					
+					// Закрываем модальное окно
+					const modal = bootstrap.Modal.getInstance(document.getElementById('regenerate-token'));
+					if (modal) {
+						modal.hide();
+					}
+				} else {
+					window.toast.error(data.message || 'Ошибка регенерации токена');
+				}
+			} catch (error) {
+				console.error('Regenerate extension token error:', error);
+				window.toast.error(handleApiError(error));
+			}
+		},
+
+		async copyExtensionToken(event) {
+			try {
+				const token = this.extensionToken;
+				if (!token) {
+					window.toast.error('Токен не найден');
+					return;
+				}
+
+				await navigator.clipboard.writeText(token);
+				window.toast.success('Токен расширения скопирован в буфер обмена');
+
+				// Временно меняем иконку
+				if (event && event.currentTarget) {
+					const icon = event.currentTarget.querySelector('i');
+					if (icon) {
+						const originalClass = icon.className;
+						icon.className = 'ri-check-line ms-1 text-success';
+
+						setTimeout(() => {
+							icon.className = originalClass;
+						}, 2000);
+					}
+				}
+
+			} catch (err) {
+				window.toast.error('Не удалось скопировать токен');
+				console.error('Failed to copy: ', err);
+			}
+		}
 	}
 }
 </script>

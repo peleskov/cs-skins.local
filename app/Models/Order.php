@@ -48,6 +48,14 @@ class Order extends Model
     }
 
     /**
+     * Альтернативное имя для связи buyer (для совместимости)
+     */
+    public function client(): BelongsTo
+    {
+        return $this->buyer();
+    }
+
+    /**
      * Генерация номера заказа
      */
     public static function generateOrderNumber(): string

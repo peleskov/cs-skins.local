@@ -20,6 +20,9 @@ class ProfileController extends Controller
             $this->checkTelegramAuthorization($client);
         }
         
+        // Делаем extension_token видимым для владельца профиля
+        $client->makeVisible(['extension_token']);
+        
         // Переводы для табов профиля
         $profileTabs = __('profile.tabs');
         
@@ -433,10 +436,6 @@ class ProfileController extends Controller
 
             $data = $response->json();
             
-            \Log::info('Telegram auth check for user ' . $client->id, [
-                'telegram_id' => $client->telegram_id,
-                'response' => $data
-            ]);
 
             // Если получили ошибку "Forbidden: bot was blocked by the user" или подобную
             if (!$data['ok']) {
@@ -469,6 +468,56 @@ class ProfileController extends Controller
         } catch (\Exception $e) {
             \Log::error('Error checking Telegram authorization: ' . $e->getMessage());
             // Не отвязываем при сетевых ошибках - может быть временная проблема
+        }
+    }
+
+    /**
+     * Генерация токена для расширения
+     */
+    public function generateExtensionToken(Request $request)
+    {
+        try {
+            $client = auth('client')->user();
+            $token = $client->generateExtensionToken();
+
+            return response()->json([
+                'success' => true,
+                'token' => $token,
+                'message' => 'Токен расширения сгенерирован успешно'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error generating extension token: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Ошибка генерации токена'
+            ], 500);
+        }
+    }
+
+    /**
+     * Регенерация токена для расширения
+     */
+    public function regenerateExtensionToken(Request $request)
+    {
+        try {
+            $client = auth('client')->user();
+            $token = $client->regenerateExtensionToken();
+
+            return response()->json([
+                'success' => true,
+                'token' => $token,
+                'message' => 'Токен расширения перегенерирован успешно'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error regenerating extension token: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Ошибка регенерации токена'
+            ], 500);
         }
     }
 }

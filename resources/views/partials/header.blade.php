@@ -14,6 +14,7 @@
          'login' => route('auth.steam'),
          'logout' => route('auth.logout')
      ]) }}"
-     data-logo-url="{{ asset('images/logo_white.svg') }}">
+     data-logo-url="{{ asset('images/logo_white.svg') }}"
+     data-cart-count="{{ app('App\Services\CartService')->getCount() }}">
 </div>
 <!-- Header Section end -->

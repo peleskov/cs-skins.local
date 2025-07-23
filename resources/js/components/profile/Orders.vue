@@ -2,7 +2,7 @@
 	<div class="change-profile-content">
 		<div class="title">
 			<div class="loader-line"></div>
-			<h3>Мои заказы</h3>
+			<h3>Мои покупки</h3>
 		</div>
 
 		<!-- Loading state -->
@@ -15,69 +15,75 @@
 		</div>
 
 		<!-- Orders list -->
-		<div v-else-if="orders.length > 0" class="orders-list">
-			<div v-for="order in orders" :key="order.id" class="order-item mb-4 p-3 border rounded">
-				<div class="row align-items-center">
-					<div class="col-md-8">
-						<div class="order-header d-flex align-items-center gap-3 mb-2">
-							<h5 class="mb-0">{{ order.order_number }}</h5>
+		<div v-if="!isLoading && orders.length > 0" class="orders-list">
+			<div v-for="order in orders" :key="order.id" class="order-item mb-4 card">
+				<div class="card-header">
+					<!-- Order Header -->
+					<div class="d-flex align-items-center justify-content-between">
+						<div class="d-flex align-items-center gap-3">
+							<button 
+								class="btn btn-link p-0 text-decoration-none fw-bold"
+								data-bs-toggle="collapse" 
+								:data-bs-target="`#order-${order.id}`" 
+								:aria-expanded="false" 
+								:aria-controls="`order-${order.id}`">
+								<i class="ri-arrow-right-s-line me-1"></i>
+								Заказ {{ order.order_number }}
+							</button>
 							<span class="badge" :class="getStatusBadgeClass(order.status)">
 								{{ getStatusText(order.status) }}
 							</span>
-							<span class="badge" :class="getPaymentStatusBadgeClass(order.payment_status)">
-								{{ getPaymentStatusText(order.payment_status) }}
-							</span>
+							<small class="text-muted">({{ order.items?.length || 0 }} товаров)</small>
 						</div>
-						
-						<div class="order-details">
-							<p class="text-muted mb-1">
-								<i class="ri-calendar-line me-1"></i>
-								{{ formatDate(order.created_at) }}
-							</p>
-							<p class="text-muted mb-1" v-if="order.paid_at">
-								<i class="ri-money-dollar-circle-line me-1"></i>
-								Оплачен: {{ formatDate(order.paid_at) }}
-							</p>
-							<p class="mb-0" v-if="order.notes">
-								<i class="ri-message-3-line me-1"></i>
-								{{ order.notes }}
-							</p>
-						</div>
-					</div>
-					
-					<div class="col-md-4 text-end">
-						<div class="order-amount mb-2">
-							<strong class="fs-5 text-primary">{{ formatPrice(order.total_amount) }} ₽</strong>
-						</div>
-						<div class="order-actions">
-							<button class="btn btn-sm theme-outline" @click="viewOrderDetails(order)">
-								<i class="ri-eye-line me-1"></i>Подробности
-							</button>
+						<div class="order-meta text-end">
+							<div class="order-amount mb-1">
+								<strong class="fs-5 text-primary">{{ formatPrice(order.total_amount) }} ₽</strong>
+							</div>
+							<small class="text-muted">{{ formatDate(order.created_at) }}</small>
 						</div>
 					</div>
 				</div>
 
-				<!-- Order items preview -->
-				<div v-if="order.cart_snapshot && order.cart_snapshot.length > 0" class="order-items mt-3 pt-3 border-top">
-					<h6 class="mb-2">Товары ({{ order.cart_snapshot.length }})</h6>
-					<div class="row g-2">
-						<div v-for="(item, index) in order.cart_snapshot.slice(0, 4)" :key="index" class="col-md-3">
-							<div class="item-preview d-flex align-items-center gap-2 p-2 bg-light rounded">
-								<img :src="item.item?.image_url || '/images/skin_no_image.svg'" 
-								     :alt="item.item?.name" 
-								     class="img-fluid rounded" 
-								     style="width: 40px; height: 30px; object-fit: cover;">
-								<div class="item-info">
-									<small class="d-block fw-medium">{{ item.item?.name || 'Unknown' }}</small>
-									<small class="text-muted">{{ formatPrice(item.price) }} ₽</small>
+				<!-- Collapsible Order Items -->
+				<div :id="`order-${order.id}`" class="collapse">
+					<div class="card-body">
+						<div v-if="order.items && order.items.length > 0" class="order-items">
+							<div v-for="item in order.items" :key="item.id" class="item-card d-flex align-items-center p-3 border rounded mb-2">
+								<!-- Item Image -->
+								<div class="item-image me-3">
+									<img :src="item.item_image_url" 
+										 :alt="item.item_name" 
+										 class="img-fluid rounded"
+										 style="width: 60px; height: 60px; object-fit: cover;">
+								</div>
+
+								<!-- Item Details -->
+								<div class="item-details flex-grow-1">
+									<h6 class="mb-1">{{ item.item_name }}</h6>
+									<div class="item-meta text-muted small">
+										<span>Продавец: {{ item.seller_name }}</span>
+										<span v-if="item.reserved_until && item.status === 'reserved'" class="ms-2">
+											⏰ Резерв: <span class="fw-bold text-warning">{{ getTimeRemaining(item.reserved_until) }}</span>
+										</span>
+									</div>
+								</div>
+
+								<!-- Item Price & Status -->
+								<div class="item-price text-end">
+									<strong class="fs-6 text-success">{{ formatPrice(item.price) }} ₽</strong>
+									<div class="mt-1">
+										<span class="badge" :class="getItemStatusBadgeClass(item.status)">
+											{{ getItemStatusText(item.status) }}
+										</span>
+										<!-- Причина отмены для отменённых товаров -->
+										<div v-if="item.status === 'cancelled' && item.cancellation_reason" class="mt-1 text-muted small">
+											{{ item.cancellation_reason }}
+										</div>
+									</div>
 								</div>
 							</div>
 						</div>
-						<div v-if="order.cart_snapshot.length > 4" class="col-md-3">
-							<div class="more-items d-flex align-items-center justify-content-center p-2 bg-light rounded text-center">
-								<small class="text-muted">+{{ order.cart_snapshot.length - 4 }} еще</small>
-							</div>
-						</div>
+
 					</div>
 				</div>
 			</div>
@@ -121,8 +127,10 @@
 		</div>
 
 		<!-- Empty state -->
-		<div v-else class="text-center py-5">
-			<i class="ri-shopping-cart-line display-4 text-muted mb-3"></i>
+		<div v-else-if="!isLoading" class="text-center py-5">
+			<div class="empty-state-icon mb-3">
+				<i class="ri-shopping-cart-line" style="font-size: 4rem; color: #ccc;"></i>
+			</div>
 			<h4>У вас пока нет заказов</h4>
 			<p class="text-muted mb-4">Начните делать покупки в нашем маркетплейсе</p>
 			<a href="/marketplace" class="btn theme-btn">
@@ -130,115 +138,11 @@
 			</a>
 		</div>
 
-		<!-- Order Details Modal -->
-		<div v-if="selectedOrder" class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-			<div class="modal-dialog modal-lg modal-dialog-centered">
-				<div class="modal-content">
-					<div class="modal-header">
-						<h5 class="modal-title">
-							<i class="ri-file-list-3-line me-2"></i>
-							Заказ {{ selectedOrder.order_number }}
-						</h5>
-						<button type="button" class="btn-close" @click="selectedOrder = null"></button>
-					</div>
-					<div class="modal-body">
-						<div class="row">
-							<div class="col-md-6">
-								<h6>Информация о заказе</h6>
-								<table class="table table-sm">
-									<tr>
-										<td><strong>Номер заказа:</strong></td>
-										<td>{{ selectedOrder.order_number }}</td>
-									</tr>
-									<tr>
-										<td><strong>Статус:</strong></td>
-										<td>
-											<span class="badge" :class="getStatusBadgeClass(selectedOrder.status)">
-												{{ getStatusText(selectedOrder.status) }}
-											</span>
-										</td>
-									</tr>
-									<tr>
-										<td><strong>Оплата:</strong></td>
-										<td>
-											<span class="badge" :class="getPaymentStatusBadgeClass(selectedOrder.payment_status)">
-												{{ getPaymentStatusText(selectedOrder.payment_status) }}
-											</span>
-										</td>
-									</tr>
-									<tr>
-										<td><strong>Создан:</strong></td>
-										<td>{{ formatDate(selectedOrder.created_at) }}</td>
-									</tr>
-									<tr v-if="selectedOrder.paid_at">
-										<td><strong>Оплачен:</strong></td>
-										<td>{{ formatDate(selectedOrder.paid_at) }}</td>
-									</tr>
-									<tr>
-										<td><strong>Сумма:</strong></td>
-										<td><strong class="text-primary">{{ formatPrice(selectedOrder.total_amount) }} ₽</strong></td>
-									</tr>
-								</table>
-							</div>
-							<div class="col-md-6">
-								<h6>Способ оплаты</h6>
-								<p class="text-muted">{{ selectedOrder.payment_method || 'Не указан' }}</p>
-								
-								<h6 v-if="selectedOrder.notes">Комментарий</h6>
-								<p v-if="selectedOrder.notes" class="text-muted">{{ selectedOrder.notes }}</p>
-							</div>
-						</div>
-						
-						<div class="mt-4" v-if="selectedOrder.cart_snapshot && selectedOrder.cart_snapshot.length > 0">
-							<h6>Товары в заказе</h6>
-							<div class="table-responsive">
-								<table class="table table-sm">
-									<thead>
-										<tr>
-											<th>Товар</th>
-											<th>Продавец</th>
-											<th class="text-end">Цена</th>
-										</tr>
-									</thead>
-									<tbody>
-										<tr v-for="(item, index) in selectedOrder.cart_snapshot" :key="index">
-											<td>
-												<div class="d-flex align-items-center gap-2">
-													<img :src="item.item?.image_url || '/images/skin_no_image.svg'" 
-													     :alt="item.item?.name" 
-													     class="img-fluid rounded" 
-													     style="width: 30px; height: 22px; object-fit: cover;">
-													<div>
-														<div class="fw-medium">{{ item.item?.name || 'Unknown' }}</div>
-														<div class="small text-muted">
-															<span v-if="item.wear_name" class="me-1">{{ item.wear_name }}</span>
-															<span v-if="item.is_stattrak" class="badge bg-warning me-1">ST</span>
-															<span v-if="item.is_souvenir" class="badge bg-info">SV</span>
-														</div>
-													</div>
-												</div>
-											</td>
-											<td>{{ item.seller?.name || 'Unknown' }}</td>
-											<td class="text-end">{{ formatPrice(item.price) }} ₽</td>
-										</tr>
-									</tbody>
-								</table>
-							</div>
-						</div>
-					</div>
-					<div class="modal-footer">
-						<button type="button" class="btn theme-outline" @click="selectedOrder = null">
-							Закрыть
-						</button>
-					</div>
-				</div>
-			</div>
-		</div>
 	</div>
 </template>
 
 <script>
-import { formatPrice, formatDate, handleApiError } from '../../utils/helpers';
+import { formatPrice, formatDate, handleApiError, getTimeRemaining } from '../../utils/helpers';
 import { orderAPI } from '../../utils/api';
 
 export default {
@@ -254,15 +158,23 @@ export default {
 			orders: [],
 			pagination: null,
 			isLoading: false,
-			selectedOrder: null
+			timerInterval: null,
+			statusUpdateInterval: null
 		}
 	},
 	async mounted() {
 		await this.loadOrders();
+		this.startTimer();
+		this.startStatusUpdates();
+	},
+	beforeUnmount() {
+		this.stopTimer();
+		this.stopStatusUpdates();
 	},
 	methods: {
 		formatPrice,
 		formatDate,
+		getTimeRemaining,
 
 		async loadOrders(page = 1) {
 			this.isLoading = true;
@@ -286,51 +198,48 @@ export default {
 
 		getStatusBadgeClass(status) {
 			const classes = {
-				'pending': 'bg-warning',
-				'paid': 'bg-info',
-				'processing': 'bg-primary',
+				'paid': 'bg-warning',
+				'processing': 'bg-info',
 				'completed': 'bg-success',
-				'cancelled': 'bg-secondary',
-				'refunded': 'bg-danger'
+				'cancelled': 'bg-danger',
+				'failed': 'bg-danger',
+				'refunded': 'bg-secondary'
 			};
 			return classes[status] || 'bg-secondary';
 		},
 
 		getStatusText(status) {
 			const texts = {
-				'pending': 'Ожидает оплаты',
 				'paid': 'Оплачен',
-				'processing': 'В обработке',
+				'processing': 'В обработке', 
 				'completed': 'Завершен',
 				'cancelled': 'Отменен',
+				'failed': 'Ошибка',
 				'refunded': 'Возврат'
 			};
 			return texts[status] || status;
 		},
 
-		getPaymentStatusBadgeClass(paymentStatus) {
+		getItemStatusBadgeClass(status) {
 			const classes = {
-				'pending': 'bg-warning',
-				'paid': 'bg-success',
-				'failed': 'bg-danger',
-				'refunded': 'bg-info'
+				'reserved': 'bg-warning',
+				'trade_sent': 'bg-info',
+				'completed': 'bg-success',
+				'cancelled': 'bg-danger'
 			};
-			return classes[paymentStatus] || 'bg-secondary';
+			return classes[status] || 'bg-secondary';
 		},
 
-		getPaymentStatusText(paymentStatus) {
+		getItemStatusText(status) {
 			const texts = {
-				'pending': 'Ожидает оплаты',
-				'paid': 'Оплачено',
-				'failed': 'Ошибка оплаты',
-				'refunded': 'Возврат'
+				'reserved': 'Резерв',
+				'trade_sent': 'Трейд отправлен',
+				'completed': 'Получен',
+				'cancelled': 'Отменен'
 			};
-			return texts[paymentStatus] || paymentStatus;
+			return texts[status] || status;
 		},
 
-		viewOrderDetails(order) {
-			this.selectedOrder = order;
-		},
 
 		getVisiblePages() {
 			if (!this.pagination) return [];
@@ -357,6 +266,53 @@ export default {
 			}
 			
 			return pages;
+		},
+
+		startTimer() {
+			this.timerInterval = setInterval(() => {
+				this.$forceUpdate(); // Принудительно обновляем компонент для обновления таймеров
+			}, 1000);
+		},
+
+		stopTimer() {
+			if (this.timerInterval) {
+				clearInterval(this.timerInterval);
+				this.timerInterval = null;
+			}
+		},
+
+		startStatusUpdates() {
+			// Обновляем статусы каждые 10 секунд
+			this.statusUpdateInterval = setInterval(async () => {
+				// Проверяем, есть ли заказы с резервированными товарами
+				const hasReservedItems = this.orders.some(order => 
+					order.items && order.items.some(item => item.status === 'reserved')
+				);
+				
+				if (hasReservedItems) {
+					try {
+						// Тихо обновляем данные без показа лоадера
+						const response = await orderAPI.getMyOrders(this.pagination?.current_page || 1);
+						if (response.success) {
+							this.orders = response.data.data;
+							this.pagination = {
+								current_page: response.data.current_page,
+								last_page: response.data.last_page,
+								total: response.data.total
+							};
+						}
+					} catch (error) {
+						console.error('Background status update failed:', error);
+					}
+				}
+			}, 10000); // 10 секунд
+		},
+
+		stopStatusUpdates() {
+			if (this.statusUpdateInterval) {
+				clearInterval(this.statusUpdateInterval);
+				this.statusUpdateInterval = null;
+			}
 		}
 	}
 }

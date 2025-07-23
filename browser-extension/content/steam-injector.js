@@ -8,8 +8,6 @@ class SteamTradeInjector {
     }
     
     init() {
-        console.log('🎮 Steam Content Script загружен');
-        
         // Ждем полной загрузки страницы
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.setup());
@@ -23,8 +21,6 @@ class SteamTradeInjector {
         if (!this.isSteamSite()) {
             return;
         }
-        
-        console.log('✅ Подключение к Steam страницам');
         
         // Слушаем сообщения от background script
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -42,7 +38,6 @@ class SteamTradeInjector {
     }
     
     handleMessage(message, sender, sendResponse) {
-        console.log('📨 Получено сообщение от background:', message.type);
         
         switch (message.type) {
             case 'CREATE_TRADE_OFFER':
@@ -65,7 +60,6 @@ class SteamTradeInjector {
     
     async createTradeOffer(order) {
         try {
-            console.log(`🔄 Создаем трейд-оффер для заказа #${order.id}`);
             
             // Получаем Steam session данные
             const sessionData = this.getSteamSessionData();
@@ -86,8 +80,6 @@ class SteamTradeInjector {
                 tradeOfferId: tradeOfferId
             });
             
-            console.log(`✅ Трейд-оффер #${tradeOfferId} создан для заказа #${order.id}`);
-            
             return {
                 success: true,
                 tradeOfferId: tradeOfferId,
@@ -95,7 +87,6 @@ class SteamTradeInjector {
             };
             
         } catch (error) {
-            console.error(`❌ Ошибка создания трейда для заказа #${order.id}:`, error);
             
             // Уведомляем background script об ошибке
             chrome.runtime.sendMessage({

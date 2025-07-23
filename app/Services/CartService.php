@@ -14,7 +14,7 @@ class CartService
      */
     public function add(int $listingId): array
     {
-        $listing = Listing::with('item')->find($listingId);
+        $listing = Listing::find($listingId);
         
         if (!$listing) {
             throw new \Exception('Товар не найден');
@@ -38,8 +38,8 @@ class CartService
 
         $cartItem = [
             'listing_id' => $listing->id,
-            'item_name' => $listing->item->name,
-            'item_image' => $listing->item->image_url,
+            'item_name' => $listing->inventory_item_name,
+            'item_image' => $listing->inventory_icon_url ? 'https://steamcommunity-a.akamaihd.net/economy/image/' . $listing->inventory_icon_url : null,
             'price' => (float) $listing->price,
             'wear_name' => $listing->wear_name,
             'is_stattrak' => $listing->is_stattrak,
@@ -154,7 +154,7 @@ class CartService
         }
 
         $listingIds = $cart->keys();
-        $listings = Listing::with(['item', 'seller'])
+        $listings = Listing::with('seller')
             ->whereIn('id', $listingIds)
             ->where('status', Listing::STATUS_ACTIVE)
             ->get()
@@ -170,17 +170,16 @@ class CartService
             return [
                 'listing_id' => $listing->id,
                 'item' => [
-                    'id' => $listing->item->id,
-                    'name' => $listing->item->name,
-                    'image_url' => $listing->item->image_url,
-                    'type' => $listing->item->type,
-                    'rarity' => $listing->item->rarity,
+                    'name' => $listing->inventory_item_name,
+                    'image_url' => $listing->inventory_icon_url ? 'https://steamcommunity-a.akamaihd.net/economy/image/' . $listing->inventory_icon_url : null,
+                    'type' => $listing->inventory_type,
                 ],
                 'price' => (float) $listing->price,
                 'wear_name' => $listing->wear_name,
                 'wear_value' => (float) $listing->wear_value,
                 'is_stattrak' => $listing->is_stattrak,
                 'is_souvenir' => $listing->is_souvenir,
+                'seller_id' => $listing->seller->id,
                 'seller' => [
                     'id' => $listing->seller->id,
                     'name' => $listing->seller->name,

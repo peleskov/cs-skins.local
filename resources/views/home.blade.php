@@ -14,7 +14,9 @@
     </div>
 </section>
 @include('partials.categories-section')
+@auth('client')
 @include('partials.case-section')
+@endauth
 @include('partials.marketplace-section')
 @include('partials.app-section')
 

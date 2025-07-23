@@ -66,6 +66,7 @@ class Listing extends Model
 
     const STATUS_PENDING = 'pending';
     const STATUS_ACTIVE = 'active';
+    const STATUS_RESERVED = 'reserved';
     const STATUS_SOLD = 'sold';
     const STATUS_CANCELLED = 'cancelled';
     const STATUS_EXPIRED = 'expired';
@@ -110,7 +111,7 @@ class Listing extends Model
         return $this->status === self::STATUS_ACTIVE;
     }
 
-    public function markAsSold(Client $buyer): void
+    public function sell(Client $buyer): void
     {
         $this->update([
             'status' => self::STATUS_SOLD,
@@ -123,6 +124,27 @@ class Listing extends Model
     {
         $this->update([
             'status' => self::STATUS_CANCELLED,
+        ]);
+    }
+
+    public function activate(): void
+    {
+        $this->update([
+            'status' => self::STATUS_ACTIVE,
+        ]);
+    }
+
+    public function reserve(): void
+    {
+        $this->update([
+            'status' => self::STATUS_RESERVED,
+        ]);
+    }
+
+    public function expire(): void
+    {
+        $this->update([
+            'status' => self::STATUS_EXPIRED,
         ]);
     }
 

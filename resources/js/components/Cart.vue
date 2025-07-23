@@ -48,7 +48,7 @@
 								class="description d-flex align-items-center justify-content-between flex-grow-1 gap-3">
 								<div>
 									<div class="d-flex align-items-center gap-2">
-										<h6 class="product-name">{{ item.item.name }}</h6>
+										<h6 class="product-name">{{ item.item?.name }}</h6>
 										<span v-if="item.is_stattrak" class="badge bg-warning">StatTrak™</span>
 										<span v-if="item.is_souvenir" class="badge bg-info">Souvenir</span>
 									</div>
@@ -133,7 +133,7 @@
 								:style="{ backgroundImage: 'url(' + (itemToRemove.item?.image_url || '/images/skin_no_image.svg') + ')', width: '64px', height: '64px', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }">
 							</div>
 							<div>
-								<h6 class="mb-1">{{ itemToRemove.item.name }}</h6>
+								<h6 class="mb-1">{{ itemToRemove.item?.name }}</h6>
 								<small class="text-muted">{{ formatPrice(itemToRemove.price) }} ₽</small>
 							</div>
 						</div>
@@ -152,7 +152,8 @@
 </template>
 
 <script>
-import { formatPrice, getApiHeaders, handleApiError } from '../utils/helpers';
+import axios from 'axios';
+import { formatPrice, handleApiError } from '../utils/helpers';
 import { cartAPI } from '../utils/api';
 
 export default {
@@ -173,15 +174,8 @@ export default {
 		async loadCart() {
 			this.isLoading = true;
 			try {
-				const response = await fetch('/api/cart', {
-					headers: getApiHeaders()
-				});
-
-				if (!response.ok) {
-					throw new Error(`HTTP error! status: ${response.status}`);
-				}
-
-				const data = await response.json();
+				const response = await axios.get('/api/cart');
+				const data = response.data;
 
 				if (data.success) {
 					this.cartItems = data.data.items;
@@ -216,16 +210,8 @@ export default {
 			if (!this.itemToRemove) return;
 
 			try {
-				const response = await fetch(`/api/cart/${this.itemToRemove.listing_id}`, {
-					method: 'DELETE',
-					headers: getApiHeaders()
-				});
-
-				if (!response.ok) {
-					throw new Error(`HTTP error! status: ${response.status}`);
-				}
-
-				const data = await response.json();
+				const response = await axios.delete(`/api/cart/${this.itemToRemove.listing_id}`);
+				const data = response.data;
 
 				if (data.success) {
 					// Удаляем товар из локального массива

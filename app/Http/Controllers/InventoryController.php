@@ -37,9 +37,9 @@ class InventoryController extends Controller
             ->orderBy('cached_at', 'desc')
             ->get();
 
-        // Получаем список steam_asset_id, которые уже выставлены на продажу (pending или active)
+        // Получаем список steam_asset_id, которые уже выставлены на продажу (pending, active или reserved)
         $listedAssetIds = Listing::where('seller_id', $client->id)
-            ->whereIn('status', ['pending', 'active'])
+            ->whereIn('status', ['pending', 'active', 'reserved'])
             ->pluck('steam_asset_id')
             ->toArray();
 
@@ -175,7 +175,7 @@ class InventoryController extends Controller
             ->first();
             
         if ($existingListing) {
-            if (in_array($existingListing->status, ['pending', 'active'])) {
+            if (in_array($existingListing->status, ['pending', 'active', 'reserved'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Предмет уже выставлен на продажу'

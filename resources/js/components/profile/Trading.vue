@@ -37,6 +37,15 @@
 					</button>
 				</li>
 				<li class="nav-item" role="presentation">
+					<button class="nav-link" :class="{ active: activeTradingTab === 'reserved' }" id="reserved-tab"
+						data-bs-toggle="tab" data-bs-target="#reserved" type="button" role="tab"
+						@click="setActiveTradingTab('reserved')">
+						Резервированные
+						<span v-if="reservedListings.length > 0" class="badge bg-body-secondary ms-1">{{
+							reservedListings.length }}</span>
+					</button>
+				</li>
+				<li class="nav-item" role="presentation">
 					<button class="nav-link" :class="{ active: activeTradingTab === 'cancelled' }" id="cancelled-tab"
 						data-bs-toggle="tab" data-bs-target="#cancelled" type="button" role="tab"
 						@click="setActiveTradingTab('cancelled')">
@@ -49,7 +58,7 @@
 
 			<div class="tab-content" id="tradingTabContent">
 				<!-- Единый компонент для всех табов -->
-				<div v-for="tabId in ['pending', 'active', 'cancelled']" :key="tabId" class="tab-pane fade"
+				<div v-for="tabId in ['pending', 'active', 'reserved', 'cancelled']" :key="tabId" class="tab-pane fade"
 					:class="{ 'show active': activeTradingTab === tabId }" :id="tabId" role="tabpanel"
 					:aria-labelledby="`${tabId}-tab`" tabindex="0">
 					<div v-if="currentTabListings.length > 0 && activeTradingTab === tabId"
@@ -382,8 +391,8 @@
 </template>
 
 <script>
-import { formatPrice } from '../../utils/helpers';
-import { getApiHeaders, handleApiError } from '../../utils/helpers';
+import axios from 'axios';
+import { formatPrice, handleApiError } from '../../utils/helpers';
 
 export default {
 	name: 'ProfileTrading',
@@ -420,6 +429,9 @@ export default {
 		activeListings() {
 			return this.listings.filter(listing => listing.status === 'active');
 		},
+		reservedListings() {
+			return this.listings.filter(listing => listing.status === 'reserved');
+		},
 		cancelledListings() {
 			return this.listings.filter(listing => listing.status === 'cancelled');
 		},
@@ -427,6 +439,7 @@ export default {
 			switch (this.activeTradingTab) {
 				case 'pending': return this.pendingListings;
 				case 'active': return this.activeListings;
+				case 'reserved': return this.reservedListings;
 				case 'cancelled': return this.cancelledListings;
 				default: return [];
 			}
@@ -443,6 +456,11 @@ export default {
 					emptyTitle: 'Нет активных лотов',
 					emptyText: 'Активируйте черновики чтобы они появились на маркетплейсе'
 				},
+				reserved: {
+					emptyIcon: 'ri-bookmark-line',
+					emptyTitle: 'Нет резервированных лотов', 
+					emptyText: 'Здесь отображаются предметы которые находятся в процессе продажи'
+				},
 				cancelled: {
 					emptyIcon: 'ri-close-circle-line',
 					emptyTitle: 'Нет отмененных лотов',
@@ -455,16 +473,8 @@ export default {
 		async loadListings() {
 			this.isLoading = true;
 			try {
-				const response = await fetch('/api/listings/my', {
-					headers: getApiHeaders()
-				});
-
-				if (!response.ok) {
-					throw new Error(`HTTP error! status: ${response.status}`);
-				}
-
-
-				const data = await response.json();
+				const response = await axios.get('/api/listings/my');
+				const data = response.data;
 
 				if (data.success) {
 					this.listings = data.data;
@@ -576,20 +586,10 @@ export default {
 			if (!this.itemToActivate) return;
 
 			try {
-				const response = await fetch('/api/listings/activate', {
-					method: 'POST',
-					headers: getApiHeaders(),
-					body: JSON.stringify({
-						listing_id: this.itemToActivate.id
-					})
+				const response = await axios.post('/api/listings/activate', {
+					listing_id: this.itemToActivate.id
 				});
-
-				if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-
-				const data = await response.json();
+				const data = response.data;
 
 				if (data.success) {
 					// Обновляем статус в локальных данных
@@ -643,19 +643,10 @@ export default {
 			if (!this.itemToDelete) return;
 
 			try {
-				const response = await fetch('/api/listings/delete', {
-					method: 'POST',
-					headers: getApiHeaders(),
-					body: JSON.stringify({
-						listing_id: this.itemToDelete.id
-					})
+				const response = await axios.post('/api/listings/delete', {
+					listing_id: this.itemToDelete.id
 				});
-
-				if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-				const data = await response.json();
+				const data = response.data;
 
 				if (data.success) {
 					const deletedMarketHashName = this.itemToDelete.market_hash_name;
@@ -700,20 +691,11 @@ export default {
 			const numPrice = parseFloat(this.editPriceValue);
 
 			try {
-				const response = await fetch('/api/listings/update-price', {
-					method: 'POST',
-					headers: getApiHeaders(),
-					body: JSON.stringify({
-						listing_id: this.itemToEdit.id,
-						price: numPrice
-					})
+				const response = await axios.post('/api/listings/update-price', {
+					listing_id: this.itemToEdit.id,
+					price: numPrice
 				});
-
-				if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-				const data = await response.json();
+				const data = response.data;
 
 				if (data.success) {
 					// Обновляем цену в локальных данных
@@ -750,19 +732,10 @@ export default {
 			if (!this.itemToDeactivate) return;
 
 			try {
-				const response = await fetch('/api/listings/deactivate', {
-					method: 'POST',
-					headers: getApiHeaders(),
-					body: JSON.stringify({
-						listing_id: this.itemToDeactivate.id
-					})
+				const response = await axios.post('/api/listings/deactivate', {
+					listing_id: this.itemToDeactivate.id
 				});
-
-				if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-				const data = await response.json();
+				const data = response.data;
 
 				if (data.success) {
 					// Обновляем статус в локальных данных
@@ -791,19 +764,10 @@ export default {
 
 		async updateMinMarketPrice(marketHashName) {
 			try {
-				const response = await fetch('/api/listings/min-price', {
-					method: 'POST',
-					headers: getApiHeaders(),
-					body: JSON.stringify({
-						market_hash_name: marketHashName
-					})
+				const response = await axios.post('/api/listings/min-price', {
+					market_hash_name: marketHashName
 				});
-
-				if (!response.ok) {
-					throw new Error(`HTTP error! status: ${response.status}`);
-				}
-
-				const data = await response.json();
+				const data = response.data;
 
 				if (data.success) {
 					// Обновляем минимальную цену для всех листингов с таким же market_hash_name
@@ -818,6 +782,7 @@ export default {
 			}
 		},
 
+
 		async saveTradeUrl() {
 			const tradeUrl = this.tradeUrlValue.trim();
 
@@ -827,19 +792,10 @@ export default {
 			}
 
 			try {
-				const response = await fetch('/profile/update-trade-url', {
-					method: 'POST',
-					headers: getApiHeaders(),
-					body: JSON.stringify({
-						trade_url: tradeUrl
-					})
+				const response = await axios.post('/profile/update-trade-url', {
+					trade_url: tradeUrl
 				});
-
-				if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-				const data = await response.json();
+				const data = response.data;
 
 				if (data.success) {
 					// Обновляем Trade URL в клиенте
@@ -876,19 +832,10 @@ export default {
 
 		async reactivateListing(listing) {
 			try {
-				const response = await fetch('/api/listings/reactivate', {
-					method: 'POST',
-					headers: getApiHeaders(),
-					body: JSON.stringify({
-						listing_id: listing.id
-					})
+				const response = await axios.post('/api/listings/reactivate', {
+					listing_id: listing.id
 				});
-
-				if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-				const data = await response.json();
+				const data = response.data;
 
 				if (data.success) {
 					// Обновляем статус в локальных данных

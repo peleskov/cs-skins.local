@@ -217,6 +217,7 @@
 <script>
 import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { createApp } from 'vue'
+import axios from 'axios'
 import CartButton from './CartButton.vue'
 import FavoriteButton from './FavoriteButton.vue'
 import { formatPrice } from '../utils/helpers'
@@ -314,8 +315,8 @@ export default {
     const loadTags = async () => {
       try {
         const params = createBaseParams(false, false) // Включаем все фильтры включая categories для тегов
-        const response = await fetch(`/marketplace/api/tags?${params}`)
-        tags.value = await response.json()
+        const response = await axios.get(`/marketplace/api/tags?${params}`)
+        tags.value = response.data
       } catch (error) {
         console.error('Ошибка загрузки тегов:', error)
       }
@@ -324,8 +325,8 @@ export default {
     const loadCategories = async () => {
       try {
         const params = createBaseParams(false, false) // Включаем все фильтры включая tags для категорий
-        const response = await fetch(`/marketplace/api/categories?${params}`)
-        categories.value = await response.json()
+        const response = await axios.get(`/marketplace/api/categories?${params}`)
+        categories.value = response.data
       } catch (error) {
         console.error('Ошибка загрузки категорий:', error)
       }
@@ -343,8 +344,8 @@ export default {
         params.append('sort_by', filters.sortBy)
         params.append('sort_order', filters.sortOrder)
 
-        const response = await fetch(`/marketplace/api/listings?${params}`)
-        const data = await response.json()
+        const response = await axios.get(`/marketplace/api/listings?${params}`)
+        const data = response.data
 
         if (append) {
           listings.value.push(...data.data)

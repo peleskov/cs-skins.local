@@ -177,11 +177,11 @@
 </template>
 
 <script>
-import { formatPrice } from '../../utils/helpers';
+import axios from 'axios';
+import { formatPrice, handleApiError } from '../../utils/helpers';
 import { createApp } from 'vue';
 import FavoriteButton from '../FavoriteButton.vue';
 import CartButton from '../CartButton.vue';
-import { getApiHeaders, handleApiError } from '../../utils/helpers';
 
 export default {
 	name: 'ProfileFavorites',
@@ -208,16 +208,8 @@ export default {
 		async loadFavorites() {
 			this.isLoading = true;
 			try {
-				const response = await fetch('/api/favorites', {
-					headers: getApiHeaders()
-				});
-				
-				if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-
-				const data = await response.json();
+				const response = await axios.get('/api/favorites');
+				const data = response.data;
 
 				if (data.success) {
 					this.favorites = data.favorites;

@@ -222,9 +222,10 @@
 
 <script>
 import { createApp } from 'vue'
+import axios from 'axios'
 import CartButton from './CartButton.vue'
 import FavoriteButton from './FavoriteButton.vue'
-import { formatPrice, getApiHeaders, handleApiError } from '../utils/helpers'
+import { formatPrice, handleApiError } from '../utils/helpers'
 
 export default {
     name: 'SkinDetails',
@@ -251,12 +252,8 @@ export default {
     methods: {
         async loadListing() {
             try {
-                const response = await fetch(`/api/marketplace/listing/${this.listingId}`);
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.message || 'Ошибка загрузки данных');
-                }
+                const response = await axios.get(`/api/marketplace/listing/${this.listingId}`);
+                const data = response.data;
 
                 this.listing = data.listing;
                 this.otherListings = data.otherListings || [];
@@ -265,7 +262,7 @@ export default {
                     this.initializeCartButton();
                 });
             } catch (error) {
-                this.error = error.message;
+                this.error = error.response?.data?.message || error.message || 'Ошибка загрузки данных';
             } finally {
                 this.loading = false;
             }
@@ -380,25 +377,15 @@ export default {
             }
 
             try {
-                const response = await fetch('/api/marketplace/quick-buy', {
-                    method: 'POST',
-                    headers: getApiHeaders(),
-                    body: JSON.stringify({ listing_id: this.listing.id })
+                const response = await axios.post('/api/marketplace/quick-buy', {
+                    listing_id: this.listing.id
                 });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    alert('Покупка оформлена');
-                } else {
-                    alert(data.message || 'Ошибка оформления покупки');
-                }
+                const data = response.data;
+                alert('Покупка оформлена');
             } catch (error) {
-                alert(handleApiError(error));
+                const message = error.response?.data?.message || handleApiError(error);
+                alert(message);
             }
         },
 

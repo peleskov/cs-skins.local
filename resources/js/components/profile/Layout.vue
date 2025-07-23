@@ -50,6 +50,10 @@
 				<ProfileOrders v-else-if="activeTab === 'orders'" 
 					:client="client" />
 
+				<!-- Sales Tab -->
+				<ProfileSales v-else-if="activeTab === 'sales'" 
+					:client="client" />
+
 				<!-- Auctions Tab -->
 				<ProfileAuctions v-else-if="activeTab === 'auctions'" 
 					:client="client" />
@@ -78,6 +82,7 @@ import ProfileInfo from './Info.vue';
 import ProfileTrading from './Trading.vue';
 import ProfileFavorites from './Favorites.vue';
 import ProfileOrders from './Orders.vue';
+import ProfileSales from './Sales.vue';
 import ProfileAuctions from './Auctions.vue';
 import ProfileBalance from './Balance.vue';
 import ProfileSettings from './Settings.vue';
@@ -90,6 +95,7 @@ export default {
 		ProfileTrading,
 		ProfileFavorites,
 		ProfileOrders,
+		ProfileSales,
 		ProfileAuctions,
 		ProfileBalance,
 		ProfileSettings

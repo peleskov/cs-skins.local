@@ -57,7 +57,7 @@ Route::prefix('api')->name('api.')->group(function () {
         Route::get('/', 'getItems')->name('items')->middleware('throttle:60,1');
         Route::post('/add', 'add')->name('add')->middleware('throttle:30,1'); // 30 добавлений в минуту
         Route::delete('/{listingId}', 'destroy')->name('remove')->middleware('throttle:30,1');
-        Route::delete('/', 'clear')->name('clear')->middleware('throttle:10,1');
+        Route::delete('/', 'clear')->name('clear')->middleware('throttle:30,1');
         Route::get('/check/{listingId}', 'check')->name('check')->middleware('throttle:60,1');
         Route::get('/count', 'count')->name('count')->middleware('throttle:60,1');
     });
@@ -122,6 +122,7 @@ Route::middleware(['auth:client'])->group(function () {
     Route::post('/profile/telegram/unlink', [ProfileController::class, 'unlinkTelegram'])->name('profile.telegram.unlink');
     Route::post('/profile/extension-token/generate', [ProfileController::class, 'generateExtensionToken'])->name('profile.extension-token.generate');
     Route::post('/profile/extension-token/regenerate', [ProfileController::class, 'regenerateExtensionToken'])->name('profile.extension-token.regenerate');
+    Route::get('/profile/sales', [ProfileController::class, 'sales'])->name('profile.sales');
 
     // Маршруты инвентаря
     Route::prefix('inventory')->name('inventory.')->controller(InventoryController::class)->group(function () {

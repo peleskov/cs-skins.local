@@ -17,8 +17,8 @@
 </template>
 
 <script>
-import { cartAPI } from '../utils/api';
-import { getApiHeaders, handleApiError } from '../utils/helpers';
+import axios from 'axios';
+import { handleApiError } from '../utils/helpers';
 
 export default {
 	name: 'FavoriteButton',
@@ -56,19 +56,11 @@ export default {
 			
 			this.isLoading = true;
 			try {
-				const response = await fetch('/api/favorites/toggle', {
-					method: 'POST',
-					headers: getApiHeaders(),
-					body: JSON.stringify({
-						listing_id: this.listingId
-					})
+				const response = await axios.post('/api/favorites/toggle', {
+					listing_id: this.listingId
 				});
 
-				if (!response.ok) {
-					throw new Error(`HTTP error! status: ${response.status}`);
-				}
-
-				const data = await response.json();
+				const data = response.data;
 
 				if (data.success) {
 					this.isFavorite = data.is_favorite;
@@ -103,15 +95,8 @@ export default {
 
 		async checkFavoriteStatus() {
 			try {
-				const response = await fetch(`/api/favorites/check/${this.listingId}`, {
-					headers: getApiHeaders()
-				});
-
-				if (!response.ok) {
-					throw new Error(`HTTP error! status: ${response.status}`);
-				}
-
-				const data = await response.json();
+				const response = await axios.get(`/api/favorites/check/${this.listingId}`);
+				const data = response.data;
 
 				if (data.success) {
 					this.isFavorite = data.is_favorite;

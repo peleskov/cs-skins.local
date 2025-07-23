@@ -74,6 +74,14 @@ class TradeController extends Controller
             ], 400);
         }
         
+        // Блокируем редактирование зарезервированных листингов
+        if ($listing->status === Listing::STATUS_RESERVED) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Нельзя изменить цену зарезервированного листинга'
+            ], 400);
+        }
+        
         try {
             // Обновляем цену
             $listing->price = $price;
@@ -133,6 +141,14 @@ class TradeController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Листинг уже активирован или не может быть активирован'
+            ], 400);
+        }
+        
+        // Блокируем активацию зарезервированных листингов
+        if ($listing->status === Listing::STATUS_RESERVED) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Нельзя активировать зарезервированный листинг'
             ], 400);
         }
         
@@ -215,6 +231,14 @@ class TradeController extends Controller
             ], 400);
         }
         
+        // Блокируем деактивацию зарезервированных листингов
+        if ($listing->status === Listing::STATUS_RESERVED) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Нельзя деактивировать зарезервированный листинг'
+            ], 400);
+        }
+        
         try {
             // Деактивируем листинг
             $listing->status = 'pending';
@@ -281,6 +305,14 @@ class TradeController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Листинг уже отменен'
+            ], 400);
+        }
+        
+        // Блокируем удаление зарезервированных листингов
+        if ($listing->status === Listing::STATUS_RESERVED) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Нельзя удалить зарезервированный листинг'
             ], 400);
         }
         

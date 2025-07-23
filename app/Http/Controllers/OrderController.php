@@ -65,12 +65,21 @@ class OrderController extends Controller
                 ], 400);
             }
 
+            // Получаем детальную информацию о товарах в корзине
+            $cartItems = $this->cartService->getDetailedItems();
+            $total = $this->cartService->getTotal();
+            
+            // Проверяем, что в корзине остались товары после валидации
+            if ($cartItems->isEmpty() || $total <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'В корзине нет доступных товаров для заказа'
+                ], 400);
+            }
+
             DB::beginTransaction();
 
             try {
-                // Получаем детальную информацию о товарах в корзине
-                $cartItems = $this->cartService->getDetailedItems();
-                $total = $this->cartService->getTotal();
 
                 // Создаем заказ
                 $order = Order::create([
@@ -81,6 +90,7 @@ class OrderController extends Controller
                     'status' => Order::STATUS_PENDING,
                     'payment_status' => Order::PAYMENT_STATUS_PENDING
                 ]);
+
 
                 DB::commit();
 
@@ -137,11 +147,29 @@ class OrderController extends Controller
         }
 
         try {
+            // Повторно валидируем корзину перед оплатой
+            $removedItems = $this->cartService->validate();
+            if (!empty($removedItems)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Некоторые товары в заказе больше не доступны. Обновите корзину.',
+                    'removed_items' => $removedItems
+                ], 400);
+            }
+            
+            // Проверяем, что в корзине остались товары
+            if ($this->cartService->getCount() === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Корзина пуста. Невозможно завершить оплату.'
+                ], 400);
+            }
+
             // Тестовая оплата - просто отмечаем как оплаченный
             $transactionId = 'TEST_' . uniqid();
-            $order->markAsPaid($transactionId, 'test');
+            $order->pay($transactionId, 'test');
 
-            // Очищаем корзину после успешной оплаты
+            // Очищаем корзину только после успешной оплаты и создания order_items
             $this->cartService->clear();
 
             return response()->json([
@@ -158,6 +186,7 @@ class OrderController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            // При ошибке оплаты НЕ очищаем корзину - пользователь может попробовать снова
             return response()->json([
                 'success' => false,
                 'message' => 'Ошибка при оплате: ' . $e->getMessage()
@@ -178,7 +207,11 @@ class OrderController extends Controller
         }
 
         try {
-            $orders = Order::where('buyer_id', auth('client')->id())
+            $orders = Order::with(['items' => function($query) {
+                    // Загружаем order_items с их статусами
+                    $query->select('id', 'order_id', 'listing_id', 'item_name', 'item_image_url', 'price', 'status', 'seller_name', 'reserved_until', 'cancellation_reason');
+                }])
+                ->where('buyer_id', auth('client')->id())
                 ->orderBy('created_at', 'desc')
                 ->paginate(10);
 

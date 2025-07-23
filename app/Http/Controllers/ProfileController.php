@@ -3,16 +3,39 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 use App\Notifications\VerifyEmailNotification;
+use App\Models\Client;
+use App\Models\Order;
 
 class ProfileController extends Controller
 {
+    // Константы для статусов заказов
+    private const ORDER_STATUS_NEW = 'paid';
+    private const ORDER_STATUS_PENDING = 'processing';
+    private const ORDER_STATUS_COMPLETED = 'completed';
+    private const ORDER_STATUSES_CANCELLED = ['cancelled', 'failed', 'refunded'];
+
+    // Константы для Telegram
+    private const TELEGRAM_DATA_EXPIRY = 86400; // 24 часа
+    private const TELEGRAM_BLOCKED_ERRORS = [
+        'bot was blocked by the user',
+        'user is deactivated',
+        'chat not found',
+        'bot can\'t initiate conversation'
+    ];
+    // ================== ОСНОВНЫЕ МЕТОДЫ ПРОФИЛЯ ==================
+
     /**
      * Страница профиля пользователя
      */
-    public function index()
+    public function index(): View
     {
-        $client = auth('client')->user();
+        $client = $this->getAuthenticatedClient();
         $telegramBotName = env('TELEGRAM_BOT_NAME');
         
         // Проверяем статус Telegram авторизации если пользователь верифицирован
@@ -30,11 +53,49 @@ class ProfileController extends Controller
     }
 
     /**
+     * Страница продаж пользователя
+     */
+    public function sales(Request $request): View|JsonResponse
+    {
+        $client = $this->getAuthenticatedClient();
+        $activeTab = $request->get('tab', 'new');
+        
+        $salesData = $this->getSalesData($client, $activeTab);
+
+        // Если AJAX запрос - возвращаем JSON
+        if ($request->wantsJson()) {
+            return response()->json($salesData);
+        }
+
+        return view('profile.sales', array_merge($salesData, ['client' => $client]));
+    }
+
+    /**
+     * Страница покупок пользователя
+     */
+    public function purchases(Request $request): View|JsonResponse
+    {
+        $client = $this->getAuthenticatedClient();
+        $activeTab = $request->get('tab', 'new');
+        
+        $purchasesData = $this->getPurchasesData($client, $activeTab);
+
+        // Если AJAX запрос - возвращаем JSON
+        if ($request->wantsJson()) {
+            return response()->json($purchasesData);
+        }
+
+        return view('profile.purchases', array_merge($purchasesData, ['client' => $client]));
+    }
+
+    // ================== EMAIL МЕТОДЫ ==================
+
+    /**
      * Обновление email адреса
      */
     public function updateEmail(Request $request)
     {
-        $client = auth('client')->user();
+        $client = $this->getAuthenticatedClient();
         
         $request->validate([
             'email' => 'required|email|unique:clients,email,' . $client->id
@@ -56,11 +117,32 @@ class ProfileController extends Controller
             // Отправляем письмо с верификацией
             $client->notify(new VerifyEmailNotification());
             
+            if ($request->wantsJson()) {
+                if ($isNewEmail) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Email адрес добавлен. Проверьте почту для подтверждения.'
+                    ]);
+                } else {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Email адрес изменен. Проверьте почту для подтверждения.'
+                    ]);
+                }
+            }
+            
             if ($isNewEmail) {
                 return redirect()->route('profile')->with('success', 'Email адрес добавлен. Проверьте почту для подтверждения.');
             } else {
                 return redirect()->route('profile')->with('success', 'Email адрес изменен. Проверьте почту для подтверждения.');
             }
+        }
+        
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Email адрес не изменился.'
+            ]);
         }
         
         return redirect()->route('profile');
@@ -69,22 +151,24 @@ class ProfileController extends Controller
     /**
      * Подтверждение email адреса
      */
-    public function verifyEmail(Request $request, $id, $hash)
+    public function verifyEmail(Request $request, int $id, string $hash): RedirectResponse
     {
-        $client = auth('client')->user();
+        $client = $this->getAuthenticatedClient();
         
-        \Log::info('Email verification attempt', [
+        Log::info('Email verification attempt', [
             'user_id' => $client->id,
             'url_id' => $id,
             'url_hash' => $hash,
             'user_email_hash' => sha1($client->email),
-            'has_valid_signature' => $request->hasValidSignature()
+            'user_email' => $client->email,
+            'has_valid_signature' => $request->hasValidSignature(),
+            'request_url' => $request->fullUrl(),
+            'app_url' => config('app.url')
         ]);
         
-        // Временно отключаем проверку подписи для отладки
-        // if (!$request->hasValidSignature()) {
-        //     return redirect()->route('profile')->with('error', 'Ссылка для подтверждения недействительна или устарела.');
-        // }
+        if (!$request->hasValidSignature()) {
+            return redirect()->route('profile')->with('error', 'Ссылка для подтверждения недействительна или устарела.');
+        }
         
         if ($client->id != $id || sha1($client->email) !== $hash) {
             return redirect()->route('profile')->with('error', 'Неверная ссылка для подтверждения.');
@@ -100,12 +184,14 @@ class ProfileController extends Controller
         return redirect()->route('profile')->with('success', 'Email адрес успешно подтвержден!');
     }
 
+    // ================== TRADE URL МЕТОДЫ ==================
+
     /**
      * Обновление Trade URL
      */
-    public function updateTradeUrl(Request $request)
+    public function updateTradeUrl(Request $request): JsonResponse|RedirectResponse
     {
-        $client = auth('client')->user();
+        $client = $this->getAuthenticatedClient();
         
         $request->validate([
             'trade_url' => 'required|url',
@@ -136,9 +222,9 @@ class ProfileController extends Controller
     /**
      * Повторная отправка письма с подтверждением
      */
-    public function resendVerification(Request $request)
+    public function resendVerification(Request $request): JsonResponse|RedirectResponse
     {
-        $client = auth('client')->user();
+        $client = $this->getAuthenticatedClient();
         
         if (!$client->email) {
             return response()->json([
@@ -178,17 +264,19 @@ class ProfileController extends Controller
         return redirect()->route('profile')->with('success', 'Письмо с подтверждением отправлено повторно.');
     }
 
+    // ================== TELEGRAM МЕТОДЫ ==================
+
     /**
      * Верификация через Telegram
      */
-    public function verifyTelegram(Request $request)
+    public function verifyTelegram(Request $request): JsonResponse|RedirectResponse
     {
-        $client = auth('client')->user();
+        $client = $this->getAuthenticatedClient();
         
         // Получаем данные от Telegram
         $telegramData = $request->all();
         
-        \Log::info('Telegram verification attempt:', $telegramData);
+        Log::info('Telegram verification attempt:', $telegramData);
         
         // Проверка подлинности данных от Telegram
         $telegramBotToken = env('TELEGRAM_BOT_TOKEN');
@@ -213,28 +301,10 @@ class ProfileController extends Controller
             return redirect()->route('profile')->with('error', 'Отсутствуют обязательные данные от Telegram.');
         }
         
-        // Создаем строку для проверки hash (по образцу официального примера)
-        $checkHash = $telegramData['hash'];
-        unset($telegramData['hash']);
+        // Валидация данных Telegram
+        $validation = $this->validateTelegramData($telegramData, $telegramBotToken);
         
-        $dataCheckArr = [];
-        foreach ($telegramData as $key => $value) {
-            $dataCheckArr[] = $key . '=' . $value;
-        }
-        sort($dataCheckArr);
-        $dataCheckString = implode("\n", $dataCheckArr);
-        
-        $secretKey = hash('sha256', $telegramBotToken, true);
-        $hash = hash_hmac('sha256', $dataCheckString, $secretKey);
-        
-        \Log::info('Hash verification:', [
-            'data_check_string' => $dataCheckString,
-            'calculated_hash' => $hash,
-            'received_hash' => $checkHash,
-            'match' => strcmp($hash, $checkHash) === 0
-        ]);
-        
-        if (strcmp($hash, $checkHash) !== 0) {
+        if (!$validation['valid']) {
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => false,
@@ -244,19 +314,7 @@ class ProfileController extends Controller
             return redirect()->route('profile')->with('error', 'Неверные данные от Telegram.');
         }
         
-        // Проверка что данные не устарели (не старше 24 часов)
-        $currentTime = time();
-        $authTime = (int)$telegramData['auth_date'];
-        $timeDiff = $currentTime - $authTime;
-        
-        \Log::info('Time verification:', [
-            'current_time' => $currentTime,
-            'auth_time' => $authTime,
-            'time_diff' => $timeDiff,
-            'is_expired' => $timeDiff > 86400
-        ]);
-        
-        if ($timeDiff > 86400) {
+        if ($validation['expired']) {
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => false,
@@ -302,7 +360,7 @@ class ProfileController extends Controller
      */
     public function unlinkTelegram(Request $request)
     {
-        $client = auth('client')->user();
+        $client = $this->getAuthenticatedClient();
         
         // Проверяем что Telegram привязан
         if (!$client->telegram_id) {
@@ -335,7 +393,7 @@ class ProfileController extends Controller
         }
 
         $update = $request->all();
-        \Log::info('Telegram webhook received:', $update);
+        Log::info('Telegram webhook received:', $update);
 
         // Проверяем отзыв авторизации (when user revokes login widget access)
         if (isset($update['revoked_auth'])) {
@@ -343,7 +401,7 @@ class ProfileController extends Controller
             $userId = $revokedAuth['user_id'] ?? null;
             
             if ($userId) {
-                \Log::info("Login widget authorization revoked for user: {$userId}");
+                Log::info("Login widget authorization revoked for user: {$userId}");
                 $this->handleTelegramRevocation($userId);
             }
         }
@@ -386,7 +444,7 @@ class ProfileController extends Controller
         $client = \App\Models\Client::where('telegram_id', $telegramUserId)->first();
         
         if ($client) {
-            \Log::info("Revoking Telegram authorization for user {$client->id}, telegram_id: {$telegramUserId}");
+            Log::info("Revoking Telegram authorization for user {$client->id}, telegram_id: {$telegramUserId}");
             
             $client->telegram_id = null;
             $client->telegram_username = null;
@@ -408,12 +466,12 @@ class ProfileController extends Controller
         $url = "https://api.telegram.org/bot{$telegramBotToken}/sendMessage";
         
         try {
-            \Http::post($url, [
+            Http::post($url, [
                 'chat_id' => $userId,
                 'text' => $message
             ]);
         } catch (\Exception $e) {
-            \Log::error('Failed to send Telegram message: ' . $e->getMessage());
+            Log::error('Failed to send Telegram message: ' . $e->getMessage());
         }
     }
 
@@ -430,7 +488,7 @@ class ProfileController extends Controller
         try {
             // Пытаемся получить информацию о чате с пользователем
             $url = "https://api.telegram.org/bot{$telegramBotToken}/getChat";
-            $response = \Http::timeout(5)->get($url, [
+            $response = Http::timeout(30)->get($url, [
                 'chat_id' => $client->telegram_id
             ]);
 
@@ -442,16 +500,9 @@ class ProfileController extends Controller
                 $errorDescription = $data['description'] ?? '';
                 
                 // Проверяем на типичные ошибки блокировки/отзыва
-                $blockedErrors = [
-                    'bot was blocked by the user',
-                    'user is deactivated',
-                    'chat not found',
-                    'bot can\'t initiate conversation'
-                ];
-                
-                foreach ($blockedErrors as $error) {
+                foreach (self::TELEGRAM_BLOCKED_ERRORS as $error) {
                     if (stripos($errorDescription, $error) !== false) {
-                        \Log::info("Telegram authorization revoked for user {$client->id}: {$errorDescription}");
+                        Log::info("Telegram authorization revoked for user {$client->id}: {$errorDescription}");
                         
                         // Отвязываем пользователя
                         $client->telegram_id = null;
@@ -466,18 +517,20 @@ class ProfileController extends Controller
             }
             
         } catch (\Exception $e) {
-            \Log::error('Error checking Telegram authorization: ' . $e->getMessage());
+            Log::error('Error checking Telegram authorization: ' . $e->getMessage());
             // Не отвязываем при сетевых ошибках - может быть временная проблема
         }
     }
 
+    // ================== EXTENSION TOKEN МЕТОДЫ ==================
+
     /**
      * Генерация токена для расширения
      */
-    public function generateExtensionToken(Request $request)
+    public function generateExtensionToken(Request $request): JsonResponse
     {
         try {
-            $client = auth('client')->user();
+            $client = $this->getAuthenticatedClient();
             $token = $client->generateExtensionToken();
 
             return response()->json([
@@ -487,7 +540,7 @@ class ProfileController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error generating extension token: ' . $e->getMessage());
+            Log::error('Error generating extension token: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
@@ -499,10 +552,10 @@ class ProfileController extends Controller
     /**
      * Регенерация токена для расширения
      */
-    public function regenerateExtensionToken(Request $request)
+    public function regenerateExtensionToken(Request $request): JsonResponse
     {
         try {
-            $client = auth('client')->user();
+            $client = $this->getAuthenticatedClient();
             $token = $client->regenerateExtensionToken();
 
             return response()->json([
@@ -512,12 +565,136 @@ class ProfileController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error regenerating extension token: ' . $e->getMessage());
+            Log::error('Error regenerating extension token: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
                 'message' => 'Ошибка регенерации токена'
             ], 500);
         }
+    }
+
+
+    // ================== ПРИВАТНЫЕ МЕТОДЫ-ХЕЛПЕРЫ ==================
+
+    /**
+     * Получить авторизованного клиента
+     */
+    private function getAuthenticatedClient(): Client
+    {
+        /** @var Client|null $client */
+        $client = auth('client')->user();
+        
+        if (!$client instanceof Client) {
+            abort(401, 'Unauthorized');
+        }
+        
+        return $client;
+    }
+
+    /**
+     * Получить данные продаж для пользователя (продажи отображаются по скинам)
+     */
+    private function getSalesData(Client $client, string $activeTab): array
+    {
+        // Получаем order_items где пользователь является продавцом
+        $allOrderItems = \App\Models\OrderItem::with(['order.buyer:id,name,steam_id', 'listing:id,price'])
+            ->where('seller_id', $client->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Группируем order_items по статусам (соответствие статусов order_items и заказов)
+        $orderItemsByStatus = [
+            'new' => $allOrderItems->where('status', \App\Models\OrderItem::STATUS_RESERVED),
+            'pending' => $allOrderItems->where('status', \App\Models\OrderItem::STATUS_TRADE_SENT),
+            'completed' => $allOrderItems->where('status', \App\Models\OrderItem::STATUS_COMPLETED),
+            'cancelled' => $allOrderItems->where('status', \App\Models\OrderItem::STATUS_CANCELLED)
+        ];
+
+        // Считаем количество в каждой группе
+        $counts = [
+            'new' => $orderItemsByStatus['new']->count(),
+            'pending' => $orderItemsByStatus['pending']->count(),
+            'completed' => $orderItemsByStatus['completed']->count(),
+            'cancelled' => $orderItemsByStatus['cancelled']->count()
+        ];
+
+        $currentOrderItems = $orderItemsByStatus[$activeTab] ?? collect();
+
+        return [
+            'order_items' => $currentOrderItems->values(),
+            'counts' => $counts,
+            'activeTab' => $activeTab
+        ];
+    }
+
+    /**
+     * Получить данные покупок для пользователя (покупки отображаются по заказам)
+     */
+    private function getPurchasesData(Client $client, string $activeTab): array
+    {
+        // Получаем заказы где пользователь является покупателем
+        $allOrders = Order::with(['items' => function($query) {
+                // Загружаем только нужные данные из order_items
+                $query->select('id', 'order_id', 'listing_id', 'item_name', 'item_image_url', 'price', 'status', 'seller_name');
+            }])
+            ->where('buyer_id', $client->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Группируем заказы по статусам
+        $ordersByStatus = [
+            'new' => $allOrders->where('status', self::ORDER_STATUS_NEW),
+            'pending' => $allOrders->where('status', self::ORDER_STATUS_PENDING),
+            'completed' => $allOrders->where('status', self::ORDER_STATUS_COMPLETED),
+            'cancelled' => $allOrders->filter(function($order) {
+                return in_array($order->status, self::ORDER_STATUSES_CANCELLED);
+            })
+        ];
+
+        // Считаем количество в каждой группе
+        $counts = [
+            'new' => $ordersByStatus['new']->count(),
+            'pending' => $ordersByStatus['pending']->count(),
+            'completed' => $ordersByStatus['completed']->count(),
+            'cancelled' => $ordersByStatus['cancelled']->count()
+        ];
+
+        $currentOrders = $ordersByStatus[$activeTab] ?? collect();
+
+        return [
+            'orders' => $currentOrders->values(),
+            'counts' => $counts,
+            'activeTab' => $activeTab
+        ];
+    }
+
+    /**
+     * Валидировать данные Telegram
+     */
+    private function validateTelegramData(array $telegramData, string $botToken): array
+    {
+        $checkHash = $telegramData['hash'];
+        unset($telegramData['hash']);
+        
+        $dataCheckArr = [];
+        foreach ($telegramData as $key => $value) {
+            $dataCheckArr[] = $key . '=' . $value;
+        }
+        sort($dataCheckArr);
+        $dataCheckString = implode("\n", $dataCheckArr);
+        
+        $secretKey = hash('sha256', $botToken, true);
+        $calculatedHash = hash_hmac('sha256', $dataCheckString, $secretKey);
+        
+        $isValid = strcmp($calculatedHash, $checkHash) === 0;
+        $timeDiff = time() - (int)$telegramData['auth_date'];
+        $isExpired = $timeDiff > self::TELEGRAM_DATA_EXPIRY;
+        
+        return [
+            'valid' => $isValid,
+            'expired' => $isExpired,
+            'time_diff' => $timeDiff
+        ];
     }
 }

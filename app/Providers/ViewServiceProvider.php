@@ -79,20 +79,25 @@ class ViewServiceProvider extends ServiceProvider
                     'icon' => 'ri-shopping-cart-2-line',
                     'order' => 5
                 ],
+                'sales' => [
+                    'title' => __('profile.tabs.sales'),
+                    'icon' => 'ri-money-dollar-circle-line',
+                    'order' => 6
+                ],
                 'auctions' => [
                     'title' => __('profile.tabs.auctions'),
                     'icon' => 'ri-store-2-line',
-                    'order' => 6
+                    'order' => 7
                 ],
                 'balance' => [
                     'title' => __('profile.tabs.balance'),
                     'icon' => 'ri-bank-card-line',
-                    'order' => 7
+                    'order' => 8
                 ],
                 'settings' => [
                     'title' => __('profile.tabs.settings'),
                     'icon' => 'ri-settings-3-line',
-                    'order' => 8
+                    'order' => 9
                 ]
             ];
 

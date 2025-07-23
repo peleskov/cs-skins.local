@@ -6,7 +6,8 @@ return [
         'trading' => 'Торговля',
         'inventory' => 'Инвентарь',
         'favorites' => 'Избранное',
-        'orders' => 'Заказы',
+        'orders' => 'Покупки',
+        'sales' => 'Продажи',
         'auctions' => 'Мои аукционы',
         'balance' => 'Баланс',
         'settings' => 'Настройки'

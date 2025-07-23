@@ -207,7 +207,6 @@ export default {
 
 			} catch (error) {
 				console.error('Checkout error:', error);
-				window.toast.error(handleApiError(error));
 			} finally {
 				this.isProcessing = false;
 			}

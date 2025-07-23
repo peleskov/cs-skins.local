@@ -48,9 +48,12 @@ class PlatformAPI {
     
     async getPendingOrders() {
         try {
+            console.log('📡 Запрос заказов с API...');
             const response = await this.makeRequest('/orders/pending');
+            console.log('📥 Ответ API:', response);
             return response.data || [];
         } catch (error) {
+            console.error('❌ Ошибка API при получении заказов:', error);
             throw error;
         }
     }
@@ -176,14 +179,18 @@ class TradingAssistant {
     
     async checkForNewOrders() {
         try {
+            console.log('🔍 Проверяем новые заказы...');
             const orders = await this.platformAPI.getPendingOrders();
+            console.log('📦 Получено заказов:', orders?.length || 0);
             
             if (orders && orders.length > 0) {
+                console.log('✅ Найдены заказы:', orders);
                 for (const order of orders) {
                     await this.processOrder(order);
                 }
             }
         } catch (error) {
+            console.error('❌ Ошибка получения заказов:', error);
             if (error.status === 401) {
                 await this.stopPolling();
                 await this.storage.clearAuth();

@@ -38,7 +38,7 @@
 												style="width: 40px; height: 30px; object-fit: contain;" class="me-2">
 											<div class="flex-grow-1">
 												<div class="cart-item-name text-truncate" style="font-size: 12px;">
-													{{ item.item.name }}
+													{{ item.item?.name }}
 												</div>
 												<div class="cart-item-price text-muted" style="font-size: 11px;">
 													{{ formatPrice(item.price) }} ₽

@@ -8,8 +8,7 @@
 					:disabled="isSyncing || syncCooldownRemaining > 0">
 					<i :class="['ri-refresh-line', 'me-1', { 'ri-spin': isSyncing }]"></i>
 					<span v-if="isSyncing">Обновление...</span>
-					<span v-else-if="syncCooldownRemaining > 0">Обновить через {{
-						formatCooldownTime(syncCooldownRemaining) }}</span>
+					<span v-else-if="syncCooldownRemaining > 0">Обновить через {{ getTimeRemaining(syncCooldownRemaining) }}</span>
 					<span v-else>Обновить инвентарь</span>
 				</button>
 			</div>
@@ -336,8 +335,8 @@
 </template>
 
 <script>
-import { formatPrice } from '../../utils/helpers';
-import { getApiHeaders, handleApiError } from '../../utils/helpers';
+import axios from 'axios';
+import { formatPrice, handleApiError, getTimeRemaining } from '../../utils/helpers';
 
 export default {
 	name: 'ProfileInventory',
@@ -381,16 +380,8 @@ export default {
 		async loadInventoryData() {
 			this.isLoading = true;
 			try {
-				const response = await fetch('/inventory', {
-					headers: getApiHeaders()
-				});
-				
-				if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-
-				const data = await response.json();
+				const response = await axios.get('/inventory');
+				const data = response.data;
 
 				if (data.success) {
 					this.inventoryData = data.data;
@@ -399,8 +390,17 @@ export default {
 					this.hasTradeUrl = data.data.has_trade_url;
 
 					// Проверяем, нужно ли запустить кулдаун для синхронизации
-					if (data.data.stats && data.data.stats.last_sync) {
-						const lastSyncTime = new Date(data.data.stats.last_sync);
+					// Сначала проверяем localStorage, затем данные с сервера
+					const storedSyncTime = localStorage.getItem('inventory_last_sync');
+					let lastSyncTime = null;
+					
+					if (storedSyncTime) {
+						lastSyncTime = new Date(storedSyncTime);
+					} else if (data.data.stats && data.data.stats.last_sync) {
+						lastSyncTime = new Date(data.data.stats.last_sync);
+					}
+					
+					if (lastSyncTime) {
 						const now = new Date();
 						const timeDiff = now - lastSyncTime;
 						const cooldownTime = 2 * 60 * 1000; // 2 минуты в мс
@@ -440,20 +440,15 @@ export default {
 			this.isSyncing = true;
 
 			try {
-				const response = await fetch('/inventory/sync', {
-					method: 'POST',
-					headers: getApiHeaders()
-				});
-				
-				if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-
-				const data = await response.json();
+				const response = await axios.post('/inventory/sync');
+				const data = response.data;
 
 				if (data.success) {
 					window.toast.success(`Инвентарь обновлен! Загружено предметов: ${data.data.items_count}`);
+
+					// Сохраняем время синхронизации в localStorage
+					const syncTime = new Date().toISOString();
+					localStorage.setItem('inventory_last_sync', syncTime);
 
 					// Обновляем данные без перезагрузки страницы
 					await this.loadInventoryData();
@@ -494,15 +489,7 @@ export default {
 			}, 1000);
 		},
 
-		formatCooldownTime(seconds) {
-			const minutes = Math.floor(seconds / 60);
-			const remainingSeconds = seconds % 60;
-
-			if (minutes > 0) {
-				return `${minutes} мин ${remainingSeconds} сек`;
-			}
-			return `${remainingSeconds} сек`;
-		},
+		getTimeRemaining,
 
 		setActiveInventoryTab(tab) {
 			this.activeInventoryTab = tab;
@@ -623,19 +610,10 @@ export default {
 				});
 				
 				// Отправляем запрос на создание листинга
-				const response = await fetch('/inventory/create-listing', {
-					method: 'POST',
-					headers: getApiHeaders(),
-					body: JSON.stringify({
-						steam_asset_id: this.itemToSell.steam_asset_id
-					})
+				const response = await axios.post('/inventory/create-listing', {
+					steam_asset_id: this.itemToSell.steam_asset_id
 				});
-				
-				if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-				const data = await response.json();
+				const data = response.data;
 				
 				if (data.success) {
 					// Помечаем предмет как выставленный на продажу

@@ -2,7 +2,7 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
-
+use Illuminate\Support\Facades\Schedule;
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
@@ -47,3 +47,5 @@ Artisan::command('extension:list {--path=storage/app/extensions : Directory to l
     $this->comment('💡 Используйте: php artisan extension:pack --help для создания новых архивов');
     
 })->purpose('List packed browser extensions');
+
+// Планировщик задач больше не нужен - используем отложенные jobs

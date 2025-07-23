@@ -237,32 +237,73 @@ class ExtensionController extends Controller
                 ], 403);
             }
 
-            // Создаем или обновляем Trade запись
-            $trade = Trade::updateOrCreate(
-                ['order_id' => $order->id],
-                [
-                    'buyer_id' => $order->client_id,
-                    'seller_id' => $clientId,
-                    'status' => $request->status,
-                    'trade_offer_id' => $request->trade_offer_id,
-                    'error_message' => $request->error,
-                    'updated_at' => now()
-                ]
-            );
+            // Получаем order_items продавца из этого заказа
+            $sellerOrderItems = $order->items()
+                ->where('seller_id', $clientId)
+                ->get();
 
-            // Обновляем статус заказа если нужно
-            if ($request->status === 'trade_sent') {
-                $order->update(['status' => 'processing']);
-            } elseif ($request->status === 'completed') {
-                $order->update(['status' => 'completed']);
-            } elseif ($request->status === 'error' || $request->status === 'cancelled') {
-                $order->update(['status' => 'failed']);
+            if ($sellerOrderItems->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'У вас нет товаров в этом заказе'
+                ], 404);
             }
+
+            // Маппинг статусов для совместимости с базой данных
+            $statusMapping = [
+                'trade_sent' => Trade::STATUS_PENDING,
+                'completed' => Trade::STATUS_COMPLETED,
+                'error' => Trade::STATUS_CANCELLED,
+                'cancelled' => Trade::STATUS_CANCELLED
+            ];
+            
+            $dbStatus = $statusMapping[$request->status] ?? Trade::STATUS_CANCELLED;
+
+            // Создаем или обновляем Trade записи для каждого listing_id продавца
+            foreach ($sellerOrderItems as $orderItem) {
+                Trade::updateOrCreate(
+                    ['listing_id' => $orderItem->listing_id],
+                    [
+                        'buyer_id' => $order->buyer_id,
+                        'seller_id' => $clientId,
+                        'price' => $orderItem->price,
+                        'status' => $dbStatus,
+                        'trade_offer_id' => $request->trade_offer_id,
+                        'type' => Trade::TYPE_P2P,
+                        'initiated_at' => $request->status === 'trade_sent' ? now() : null,
+                        'completed_at' => $request->status === 'completed' ? now() : null
+                    ]
+                );
+                
+                // Обновляем статус order_item
+                if ($request->status === 'trade_sent') {
+                    $orderItem->sendTrade();
+                } elseif ($request->status === 'completed') {
+                    $orderItem->complete();
+                } elseif ($request->status === 'cancelled') {
+                    $orderItem->cancel();
+                    // Освобождаем листинг при отмене
+                    if ($orderItem->listing) {
+                        $orderItem->listing->activate();
+                    }
+                }
+                // Временно отключаем автоматическую отмену при status === 'error'
+            }
+
+            // Обновляем общий статус заказа если нужно
+            if ($request->status === 'trade_sent') {
+                $order->update(['status' => Order::STATUS_PROCESSING]);
+            } elseif ($request->status === 'completed') {
+                $order->update(['status' => Order::STATUS_COMPLETED]);
+            } elseif ($request->status === 'cancelled') {
+                $order->update(['status' => Order::STATUS_CANCELLED]);
+            }
+            // Временно отключаем автоматическую отмену при status === 'error'
 
             // Логируем изменение статуса
             Log::info('Trade status updated', [
                 'order_id' => $order->id,
-                'trade_id' => $trade->id,
+                'seller_order_items_count' => $sellerOrderItems->count(),
                 'status' => $request->status,
                 'client_id' => $clientId,
                 'trade_offer_id' => $request->trade_offer_id
@@ -272,8 +313,8 @@ class ExtensionController extends Controller
                 'success' => true,
                 'message' => 'Статус обновлен',
                 'data' => [
-                    'trade_id' => $trade->id,
-                    'status' => $trade->status
+                    'updated_items' => $sellerOrderItems->count(),
+                    'status' => $request->status
                 ]
             ]);
 

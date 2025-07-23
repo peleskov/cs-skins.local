@@ -2,7 +2,8 @@
  * API клиент для работы с корзиной
  */
 
-import { getApiHeaders, handleApiError } from './helpers';
+import axios from 'axios';
+import { handleApiError } from './helpers';
 
 class CartAPI {
     constructor() {
@@ -14,15 +15,8 @@ class CartAPI {
      */
     async getItems() {
         try {
-            const response = await fetch(this.baseUrl, {
-                headers: getApiHeaders()
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            return await response.json();
+            const response = await axios.get(this.baseUrl);
+            return response.data;
         } catch (error) {
             throw error;
         }
@@ -33,27 +27,10 @@ class CartAPI {
      */
     async addItem(listingId) {
         try {
-            const response = await fetch(`${this.baseUrl}/add`, {
-                method: 'POST',
-                headers: getApiHeaders(),
-                body: JSON.stringify({ listing_id: listingId })
+            const response = await axios.post(`${this.baseUrl}/add`, {
+                listing_id: listingId
             });
-            
-            if (!response.ok) {
-                // Пытаемся получить сообщение об ошибке от сервера
-                let errorMessage = `HTTP error! status: ${response.status}`;
-                try {
-                    const errorData = await response.json();
-                    if (errorData.message) {
-                        errorMessage = errorData.message;
-                    }
-                } catch (e) {
-                    // Если не удалось распарсить JSON, используем дефолтное сообщение
-                }
-                throw new Error(errorMessage);
-            }
-            
-            return await response.json();
+            return response.data;
         } catch (error) {
             throw error;
         }
@@ -64,16 +41,8 @@ class CartAPI {
      */
     async removeItem(listingId) {
         try {
-            const response = await fetch(`${this.baseUrl}/${listingId}`, {
-                method: 'DELETE',
-                headers: getApiHeaders()
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            return await response.json();
+            const response = await axios.delete(`${this.baseUrl}/${listingId}`);
+            return response.data;
         } catch (error) {
             throw error;
         }
@@ -84,16 +53,8 @@ class CartAPI {
      */
     async clearCart() {
         try {
-            const response = await fetch(this.baseUrl, {
-                method: 'DELETE',
-                headers: getApiHeaders()
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            return await response.json();
+            const response = await axios.delete(this.baseUrl);
+            return response.data;
         } catch (error) {
             throw error;
         }
@@ -104,15 +65,8 @@ class CartAPI {
      */
     async getCount() {
         try {
-            const response = await fetch(`${this.baseUrl}/count`, {
-                headers: getApiHeaders()
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            return await response.json();
+            const response = await axios.get(`${this.baseUrl}/count`);
+            return response.data;
         } catch (error) {
             throw error;
         }
@@ -139,25 +93,8 @@ class OrderAPI {
      */
     async createOrder() {
         try {
-            const response = await fetch(`${this.baseUrl}/create`, {
-                method: 'POST',
-                headers: getApiHeaders()
-            });
-            
-            if (!response.ok) {
-                let errorMessage = `HTTP error! status: ${response.status}`;
-                try {
-                    const errorData = await response.json();
-                    if (errorData.message) {
-                        errorMessage = errorData.message;
-                    }
-                } catch (e) {
-                    // Если не удалось распарсить JSON, используем дефолтное сообщение
-                }
-                throw new Error(errorMessage);
-            }
-            
-            return await response.json();
+            const response = await axios.post(`${this.baseUrl}/create`);
+            return response.data;
         } catch (error) {
             throw error;
         }
@@ -168,25 +105,8 @@ class OrderAPI {
      */
     async payOrder(orderId) {
         try {
-            const response = await fetch(`${this.baseUrl}/${orderId}/pay`, {
-                method: 'POST',
-                headers: getApiHeaders()
-            });
-            
-            if (!response.ok) {
-                let errorMessage = `HTTP error! status: ${response.status}`;
-                try {
-                    const errorData = await response.json();
-                    if (errorData.message) {
-                        errorMessage = errorData.message;
-                    }
-                } catch (e) {
-                    // Если не удалось распарсить JSON, используем дефолтное сообщение
-                }
-                throw new Error(errorMessage);
-            }
-            
-            return await response.json();
+            const response = await axios.post(`${this.baseUrl}/${orderId}/pay`);
+            return response.data;
         } catch (error) {
             throw error;
         }
@@ -197,15 +117,8 @@ class OrderAPI {
      */
     async getMyOrders(page = 1) {
         try {
-            const response = await fetch(`${this.baseUrl}/my?page=${page}`, {
-                headers: getApiHeaders()
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            return await response.json();
+            const response = await axios.get(`${this.baseUrl}/my?page=${page}`);
+            return response.data;
         } catch (error) {
             throw error;
         }

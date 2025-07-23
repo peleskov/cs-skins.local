@@ -12,6 +12,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Настраиваем доверенные прокси для Cloudflare
+        $middleware->trustProxies(at: '*');
+        
         $middleware->alias([
             'auth.client' => \App\Http\Middleware\AuthenticateClient::class,
             'is.bot' => \App\Http\Middleware\IsBot::class,

@@ -29,3 +29,21 @@ Route::prefix('ext-api')->name('extension.')->middleware('extension.cors')->cont
         Route::post('/telemetry', 'sendTelemetry')->name('telemetry');
     });
 });
+
+// SSE endpoint временно отключен (вызывал перегрузку Apache)
+// Route::prefix('ext-api')->middleware('extension.cors')->group(function () {
+//     Route::get('/sse/orders', [SseController::class, 'orders'])->name('extension.sse.orders');
+// });
+
+// Публичный endpoint для начальной конфигурации расширения
+Route::prefix('ext-api')->group(function () {
+    Route::get('/init', function() {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'api_url' => config('app.url'),
+                'api_version' => '1.0.0'
+            ]
+        ]);
+    })->name('extension.init');
+});

@@ -222,6 +222,23 @@ class PopupInterface {
             }
         });
         
+        // Слушаем сообщения от background script
+        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+            if (message.type === 'NEW_ORDER_RECEIVED') {
+                console.log('📦 Получено уведомление о новом заказе:', message.orderId);
+                // Обновляем статистику немедленно
+                this.updateStats();
+                this.updateActivity();
+                // Показываем уведомление пользователю
+                this.showNotification('Новый заказ получен!', 'success');
+            } else if (message.type === 'TRADE_STATUS_CHANGED') {
+                console.log('🔄 Изменение статуса трейда:', message.event);
+                // Обновляем статистику при любом изменении трейда
+                this.updateStats();
+                this.updateActivity();
+            }
+        });
+        
         const toggleBtn = document.getElementById('toggleBtn');
         const refreshBtn = document.getElementById('refreshBtn');
         const settingsBtn = document.getElementById('settingsBtn');
@@ -297,9 +314,16 @@ class PopupInterface {
         const userName = document.getElementById('userName');
         const userSteam = document.getElementById('userSteam');
         const userAvatar = document.getElementById('userAvatar');
+        const userDetailsLink = document.getElementById('userDetailsLink');
         
         userName.textContent = this.userInfo.name || 'Пользователь';
         userSteam.textContent = this.userInfo.steam_id ? `Steam ID: ${this.userInfo.steam_id}` : '';
+        
+        // Устанавливаем ссылку на Steam профиль
+        if (this.userInfo.steam_id) {
+            userDetailsLink.href = `https://steamcommunity.com/profiles/${this.userInfo.steam_id}`;
+            userDetailsLink.title = 'Открыть Steam профиль';
+        }
         
         if (this.userInfo.steam_avatar) {
             userAvatar.src = this.userInfo.steam_avatar;
@@ -310,19 +334,31 @@ class PopupInterface {
     
     async updateStats() {
         try {
-            const stats = await this.storage.getStats();
             const extensionStats = await this.api.getExtensionStats();
             
-            document.getElementById('ordersToday').textContent = extensionStats?.ordersToday || 0;
-            document.getElementById('totalTrades').textContent = stats.tradesCreated || 0;
+            // Безопасно обновляем статистику трейдов
+            const activeTradesEl = document.getElementById('activeTrades');
+            const cancelledTradesEl = document.getElementById('cancelledTrades');
+            const tradesTodayEl = document.getElementById('tradesToday');
+            const successRateEl = document.getElementById('successRate');
             
-            const successRate = stats.tradesCreated > 0 
-                ? Math.round((stats.tradesSuccessful / stats.tradesCreated) * 100)
-                : 0;
-            document.getElementById('successRate').textContent = `${successRate}%`;
+            if (activeTradesEl) activeTradesEl.textContent = extensionStats?.activeTrades || 0;
+            if (cancelledTradesEl) cancelledTradesEl.textContent = extensionStats?.cancelledTrades || 0;
+            if (tradesTodayEl) tradesTodayEl.textContent = extensionStats?.tradesToday || 0;
+            if (successRateEl) successRateEl.textContent = `${extensionStats?.successRate || 0}%`;
             
         } catch (error) {
-            // Ignore stats update errors
+            console.error('Ошибка обновления статистики:', error);
+            // Показываем 0 при ошибке, только если элементы существуют
+            const activeTradesEl = document.getElementById('activeTrades');
+            const cancelledTradesEl = document.getElementById('cancelledTrades');
+            const tradesTodayEl = document.getElementById('tradesToday');
+            const successRateEl = document.getElementById('successRate');
+            
+            if (activeTradesEl) activeTradesEl.textContent = '0';
+            if (cancelledTradesEl) cancelledTradesEl.textContent = '0';
+            if (tradesTodayEl) tradesTodayEl.textContent = '0';
+            if (successRateEl) successRateEl.textContent = '0%';
         }
     }
     

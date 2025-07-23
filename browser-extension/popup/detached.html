@@ -32,10 +32,10 @@
     <div class="popup-container">
         <!-- Заголовок -->
         <div class="header">
-            <div class="logo">
+            <a href="https://cs-skins.s1temaker.ru" target="_blank" class="logo logo-link" title="Открыть CS-SKINS.pro">
                 <img src="../assets/icons/icon-32.png" alt="CS-SKINS.pro" class="logo-icon">
                 <span class="logo-text">CS-SKINS.pro</span>
-            </div>
+            </a>
             <div class="header-controls">
                 <button id="detachBtn" class="btn btn-detach" title="Вернуться к popup">
                     <svg class="detach-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14">
@@ -101,31 +101,38 @@
                     <img id="userAvatar" src="" alt="Avatar" style="display: none;">
                     <div class="avatar-placeholder">👤</div>
                 </div>
-                <div class="user-details">
+                <a href="#" id="userDetailsLink" target="_blank" class="user-details user-details-link">
                     <div class="user-name" id="userName">Загрузка...</div>
                     <div class="user-steam" id="userSteam"></div>
+                </a>
+            </div>
+
+            <!-- Статистика трейдов -->
+            <div class="stats-section">
+                <h4 class="stats-title">Трейды</h4>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="activeTrades">0</div>
+                        <div class="stat-label">Активных</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="cancelledTrades">0</div>
+                        <div class="stat-label">Отмененых</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="tradesToday">0</div>
+                        <div class="stat-label">Сегодня</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="successRate">0%</div>
+                        <div class="stat-label">Успешность</div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Статистика -->
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <div class="stat-value" id="ordersToday">0</div>
-                    <div class="stat-label">Заказов сегодня</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="totalTrades">0</div>
-                    <div class="stat-label">Всего трейдов</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="successRate">0%</div>
-                    <div class="stat-label">Успешность</div>
-                </div>
-            </div>
-
-            <!-- Последние действия -->
+            <!-- Последние события -->
             <div class="recent-activity">
-                <h4>Последние действия</h4>
+                <h4>Последние события</h4>
                 <div class="activity-list" id="activityList">
                     <div class="activity-item">
                         <div class="activity-text">Нет активности</div>

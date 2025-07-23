@@ -39,7 +39,13 @@ class ExtensionCors
 
         $response = $next($request);
 
-        // Добавляем CORS заголовки к ответу
+        // StreamedResponse обрабатываем особым образом
+        if ($response instanceof \Symfony\Component\HttpFoundation\StreamedResponse) {
+            // Для SSE заголовки уже установлены в контроллере
+            return $response;
+        }
+
+        // Добавляем CORS заголовки к обычным ответам
         return $response
             ->header('Access-Control-Allow-Origin', '*')
             ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')

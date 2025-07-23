@@ -173,6 +173,8 @@ class CartService
                     'name' => $listing->inventory_item_name,
                     'image_url' => $listing->inventory_icon_url ? 'https://steamcommunity-a.akamaihd.net/economy/image/' . $listing->inventory_icon_url : null,
                     'type' => $listing->inventory_type,
+                    'market_hash_name' => $listing->market_hash_name,
+                    'steam_asset_id' => $listing->steam_asset_id,
                 ],
                 'price' => (float) $listing->price,
                 'wear_name' => $listing->wear_name,

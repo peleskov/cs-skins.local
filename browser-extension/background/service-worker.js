@@ -120,6 +120,26 @@ class ExtensionStorage {
             userInfo: null
         });
     }
+    
+    async addLogEntry(type, message, data = {}) {
+        const currentData = await this.getData();
+        const logs = currentData.logs || [];
+        
+        const logEntry = {
+            id: Date.now(),
+            type: type,
+            message: message,
+            data: data,
+            timestamp: new Date().toISOString()
+        };
+        
+        logs.unshift(logEntry);
+        if (logs.length > 100) {
+            logs.splice(100);
+        }
+        
+        return await this.setData({ logs });
+    }
 }
 
 // Основной класс Trading Assistant
@@ -127,7 +147,8 @@ class TradingAssistant {
     constructor() {
         this.isActive = false;
         this.isAuthorized = false;
-        this.pollInterval = null;
+        this.wsConnection = null;
+        this.heartbeatInterval = null;
         this.platformAPI = new PlatformAPI();
         this.storage = new ExtensionStorage();
         
@@ -137,38 +158,214 @@ class TradingAssistant {
     async init() {
         this.isAuthorized = await this.storage.isAuthorized();
         if (this.isAuthorized) {
-            await this.startPolling();
+            // Тестируем WebSocket подключение
+            //console.log('🔗 Тестируем WebSocket подключение...');
+            await this.connectWebSocket();
         }
         
         await updateActivityIcon();
     }
     
-    async startPolling() {
-        if (this.pollInterval) {
-            clearInterval(this.pollInterval);
-        }
+    async connectWebSocket() {
+        // Отключаем старое соединение если есть
+        this.disconnectWebSocket();
         
         this.isActive = true;
         startKeepAlive();
         
-        this.pollInterval = setInterval(async () => {
-            try {
-                await this.checkForNewOrders();
-            } catch (error) {
-                // Order check error ignored
+        try {
+            const token = await this.platformAPI.getAuthToken();
+            if (!token) {
+                console.error('❌ Нет токена для WebSocket подключения');
+                return;
             }
-        }, 5000);
+            
+            // Подключаемся к Laravel Reverb WebSocket серверу через стандартный HTTPS порт
+            const wsUrl = 'wss://cs-skins.s1temaker.ru/ws/app/cs-skins-key?protocol=7&client=js&version=8.0.1&flash=false';
+            
+            console.log('🔗 WebSocket подключение к:', wsUrl);
+            
+            // Создаем WebSocket соединение
+            this.wsConnection = new WebSocket(wsUrl);
+            
+            // Таймаут для подключения WebSocket (30 секунд)
+            const connectionTimeout = setTimeout(() => {
+                if (this.wsConnection && this.wsConnection.readyState === WebSocket.CONNECTING) {
+                    console.error('⏰ WebSocket подключение превысило таймаут (30 сек)');
+                    this.wsConnection.close();
+                    this.wsConnection = null;
+                }
+            }, 30000);
+            
+            // Обработчик подключения WebSocket
+            this.wsConnection.onopen = (event) => {
+                console.log('✅ WebSocket подключен:', event);
+                clearTimeout(connectionTimeout);
+                this.storage.addLogEntry('success', 'Расширение активировано');
+                
+                // Запускаем heartbeat для поддержания соединения
+                this.startHeartbeat();
+                
+                // Подписываемся на канал заказов
+                this.subscribeToOrderChannel();
+            };
+            
+            // Обработчик сообщений WebSocket
+            this.wsConnection.onmessage = async (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('📨 WebSocket сообщение:', data);
+                    
+                    // Проверяем тип события
+                    if (data.event === 'trade_reserved') {
+                        const trade = data.data;
+                        console.log('🔒 Трейд зарезервирован через WebSocket:', trade);
+                        this.storage.addLogEntry('info', 'Новый трейд');
+                        
+                        // Уведомляем popup об обновлении статистики
+                        chrome.runtime.sendMessage({
+                            type: 'TRADE_STATUS_CHANGED',
+                            event: 'trade_reserved'
+                        }).catch(() => {});
+                    } else if (data.event === 'trade_sent') {
+                        const trade = data.data;
+                        console.log('📤 Трейд отправлен через WebSocket:', trade);
+                        this.storage.addLogEntry('success', 'Трейд отправлен в Steam');
+                        
+                        chrome.runtime.sendMessage({
+                            type: 'TRADE_STATUS_CHANGED',
+                            event: 'trade_sent'
+                        }).catch(() => {});
+                    } else if (data.event === 'trade_completed') {
+                        const trade = data.data;
+                        console.log('✅ Трейд завершен через WebSocket:', trade);
+                        this.storage.addLogEntry('success', 'Трейд завершен');
+                        
+                        chrome.runtime.sendMessage({
+                            type: 'TRADE_STATUS_CHANGED',
+                            event: 'trade_completed'
+                        }).catch(() => {});
+                    } else if (data.event === 'trade_cancelled') {
+                        const trade = data.data;
+                        console.log('❌ Трейд отменен через WebSocket:', trade);
+                        this.storage.addLogEntry('warning', 'Трейд отменен');
+                        
+                        chrome.runtime.sendMessage({
+                            type: 'TRADE_STATUS_CHANGED',
+                            event: 'trade_cancelled'
+                        }).catch(() => {});
+                    } else if (data.event === 'pusher:pong') {
+                        console.log('💓 Получен WebSocket pong');
+                    } else if (data.event === 'pusher:subscription_succeeded' || data.event === 'pusher_internal:subscription_succeeded') {
+                        console.log('✅ Подписка на канал успешна:', data.channel);
+                    } else if (data.event === 'pusher:subscription_error') {
+                        console.error('❌ Ошибка подписки на канал:', data);
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ Ошибка обработки WebSocket сообщения:', error);
+                }
+            };
+            
+            // Обработчик ошибок WebSocket
+            this.wsConnection.onerror = (event) => {
+                console.error('❌ WebSocket ошибка подключения:', event);
+                clearTimeout(connectionTimeout);
+                this.storage.addLogEntry('error', 'Соединение прервано');
+            };
+            
+            // Обработчик закрытия WebSocket
+            this.wsConnection.onclose = (event) => {
+                console.log('🔌 WebSocket соединение закрыто:', event.code, event.reason);
+                clearTimeout(connectionTimeout);
+                
+                if (event.code !== 1000) { // Не нормальное закрытие
+                    this.storage.addLogEntry('error', 'Соединение прервано');
+                    console.log('❌ WebSocket закрыт неожиданно, код:', event.code, 'причина:', event.reason);
+                    
+                    // Переподключаемся через 5 секунд
+                    setTimeout(() => {
+                        if (this.isActive && this.isAuthorized) {
+                            console.log('🔄 Переподключение WebSocket...');
+                            this.connectWebSocket();
+                        }
+                    }, 5000);
+                }
+            };
+            
+            // Отключаем polling - используем только WebSocket
+            // this.startBackupPolling();
+            
+        } catch (error) {
+            console.error('❌ Ошибка создания WebSocket подключения:', error);
+            // Не используем fallback на polling
+            this.isActive = false;
+        }
         
         await updateActivityIcon();
     }
     
-    async stopPolling() {
-        if (this.pollInterval) {
-            clearInterval(this.pollInterval);
-            this.pollInterval = null;
+    disconnectWebSocket() {
+        if (this.wsConnection) {
+            this.wsConnection.close();
+            this.wsConnection = null;
+            console.log('🔌 WebSocket отключен');
         }
+        this.stopHeartbeat();
+    }
+    
+    startHeartbeat() {
+        // Отправляем ping каждые 25 секунд (меньше чем activity_timeout=30)
+        this.heartbeatInterval = setInterval(() => {
+            if (this.wsConnection && this.wsConnection.readyState === WebSocket.OPEN) {
+                console.log('💓 Отправляем WebSocket ping');
+                this.wsConnection.send(JSON.stringify({
+                    event: 'pusher:ping',
+                    data: {}
+                }));
+            }
+        }, 25000);
+    }
+    
+    stopHeartbeat() {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+        }
+    }
+    
+    async subscribeToOrderChannel() {
+        if (this.wsConnection && this.wsConnection.readyState === WebSocket.OPEN) {
+            // Получаем ID клиента для подписки на персональный канал
+            try {
+                const token = await this.platformAPI.getAuthToken();
+                const userResponse = await this.platformAPI.makeRequest('/user');
+                const clientId = userResponse.data.id;
+                
+                const channelName = `seller-${clientId}`;
+                console.log('📡 Подписываемся на канал', channelName);
+                
+                this.wsConnection.send(JSON.stringify({
+                    event: 'pusher:subscribe',
+                    data: {
+                        channel: channelName
+                    }
+                }));
+            } catch (error) {
+                console.error('❌ Ошибка подписки на канал:', error);
+            }
+        }
+    }
+    
+    
+    
+    async stop() {
+        this.disconnectWebSocket();
         
         this.isActive = false;
+        
+        // Очищаем логи при отключении расширения
+        await this.storage.setData({ logs: [] });
         
         if (detachedWindows.size === 0) {
             stopKeepAlive();
@@ -177,61 +374,7 @@ class TradingAssistant {
         await updateActivityIcon();
     }
     
-    async checkForNewOrders() {
-        try {
-            console.log('🔍 Проверяем новые заказы...');
-            const orders = await this.platformAPI.getPendingOrders();
-            console.log('📦 Получено заказов:', orders?.length || 0);
-            
-            if (orders && orders.length > 0) {
-                console.log('✅ Найдены заказы:', orders);
-                for (const order of orders) {
-                    await this.processOrder(order);
-                }
-            }
-        } catch (error) {
-            console.error('❌ Ошибка получения заказов:', error);
-            if (error.status === 401) {
-                await this.stopPolling();
-                await this.storage.clearAuth();
-            }
-        }
-    }
     
-    async processOrder(order) {
-        try {
-            const tabs = await chrome.tabs.query({
-                url: "https://steamcommunity.com/*"
-            });
-            
-            if (tabs.length > 0) {
-                await chrome.tabs.sendMessage(tabs[0].id, {
-                    type: 'CREATE_TRADE_OFFER',
-                    order: order
-                });
-            } else {
-                const tab = await chrome.tabs.create({
-                    url: 'https://steamcommunity.com/tradeoffer/new/',
-                    active: false
-                });
-                
-                setTimeout(async () => {
-                    await chrome.tabs.sendMessage(tab.id, {
-                        type: 'CREATE_TRADE_OFFER',
-                        order: order
-                    });
-                }, 3000);
-            }
-            
-            await this.showNotification(
-                'Новый заказ!',
-                `Создаем трейд для заказа #${order.id} на сумму ${order.total}₽`
-            );
-            
-        } catch (error) {
-            // Order processing error ignored
-        }
-    }
     
     
     async showNotification(title, message) {
@@ -287,7 +430,7 @@ class TradingAssistant {
                 try {
                     await this.storage.setAuthToken(message.token);
                     this.isAuthorized = true;
-                    await this.startPolling();
+                    await this.connectWebSocket();
                     await updateActivityIcon();
                     sendResponse({ success: true });
                 } catch (error) {
@@ -296,7 +439,7 @@ class TradingAssistant {
                 break;
                 
             case 'LOGOUT':
-                await this.stopPolling();
+                await this.stop();
                 await this.storage.clearAuth();
                 this.isAuthorized = false;
                 await updateActivityIcon();
@@ -305,42 +448,18 @@ class TradingAssistant {
                 
             case 'TOGGLE_ACTIVE':
                 if (this.isActive) {
-                    await this.stopPolling();
+                    await this.stop();
                 } else {
                     const isAuthorized = await this.storage.isAuthorized();
                     if (isAuthorized) {
                         this.isAuthorized = true;
-                        await this.startPolling();
+                        await this.connectWebSocket();
                     }
                 }
                 await updateActivityIcon();
                 sendResponse({ isActive: this.isActive });
                 break;
                 
-            case 'TRADE_OFFER_CREATED':
-                try {
-                    await this.platformAPI.updateTradeStatus(
-                        message.orderId, 
-                        'trade_sent',
-                        { tradeOfferId: message.tradeOfferId }
-                    );
-                    // Trade sent successfully
-                } catch (error) {
-                    // Trade status update error ignored
-                }
-                break;
-                
-            case 'TRADE_OFFER_ERROR':
-                try {
-                    await this.platformAPI.updateTradeStatus(
-                        message.orderId, 
-                        'error',
-                        { error: message.error }
-                    );
-                } catch (error) {
-                    // Trade status update error ignored
-                }
-                break;
         }
     }
 }
@@ -446,8 +565,3 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     }
 });
 
-chrome.runtime.onSuspend.addListener(() => {
-    if (tradingAssistant.pollInterval) {
-        clearInterval(tradingAssistant.pollInterval);
-    }
-});

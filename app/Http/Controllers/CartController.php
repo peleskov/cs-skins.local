@@ -34,7 +34,6 @@ class CartController extends Controller
             $total = $this->cartService->getTotal();
             $count = $this->cartService->getCount();
 
-            \Log::info('Cart items data', ['items' => $items->values()->toArray()]);
 
             $response = [
                 'success' => true,
@@ -67,7 +66,6 @@ class CartController extends Controller
      */
     public function add(Request $request): JsonResponse
     {
-        \Log::info('Cart add request', ['listing_id' => $request->listing_id, 'all_data' => $request->all()]);
         
         $request->validate([
             'listing_id' => 'required|integer|exists:listings,id',
@@ -75,7 +73,6 @@ class CartController extends Controller
 
         try {
             $cartItem = $this->cartService->add($request->listing_id);
-            \Log::info('Cart add success', ['listing_id' => $request->listing_id, 'cart_item' => $cartItem]);
             
             return response()->json([
                 'success' => true,
@@ -84,7 +81,6 @@ class CartController extends Controller
                 'cart_count' => $this->cartService->getCount(),
             ]);
         } catch (\Exception $e) {
-            \Log::error('Cart add error', ['listing_id' => $request->listing_id, 'error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),

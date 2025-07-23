@@ -397,29 +397,27 @@ class ExtensionController extends Controller
                 ], 401);
             }
 
-            // Статистика заказов за сегодня
-            $ordersToday = Order::where('status', '!=', 'pending')
+            // Статистика трейдов на основе OrderItems
+            $totalTrades = \App\Models\OrderItem::where('seller_id', $clientId)->count();
+            
+            // Активные трейды (отправленные но не завершенные)
+            $activeTrades = \App\Models\OrderItem::where('seller_id', $clientId)
+                ->where('status', \App\Models\OrderItem::STATUS_TRADE_SENT)
+                ->count();
+            
+            // Отмененные трейды
+            $cancelledTrades = \App\Models\OrderItem::where('seller_id', $clientId)
+                ->where('status', \App\Models\OrderItem::STATUS_CANCELLED)
+                ->count();
+            
+            // Трейды за сегодня
+            $tradesToday = \App\Models\OrderItem::where('seller_id', $clientId)
                 ->whereDate('created_at', today())
-                ->get()
-                ->filter(function ($order) use ($clientId) {
-                    $cartSnapshot = $order->cart_snapshot;
-                    if (!is_array($cartSnapshot)) {
-                        return false;
-                    }
-                    
-                    foreach ($cartSnapshot as $item) {
-                        if (isset($item['seller_id']) && $item['seller_id'] == $clientId) {
-                            return true;
-                        }
-                    }
-                    return false;
-                })
                 ->count();
 
-            // Общая статистика трейдов
-            $totalTrades = Trade::where('seller_id', $clientId)->count();
-            $successfulTrades = Trade::where('seller_id', $clientId)
-                ->where('status', 'completed')
+            // Успешные трейды
+            $successfulTrades = \App\Models\OrderItem::where('seller_id', $clientId)
+                ->where('status', \App\Models\OrderItem::STATUS_COMPLETED)
                 ->count();
 
             // Заработок за последние 30 дней
@@ -452,8 +450,10 @@ class ExtensionController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'ordersToday' => $ordersToday,
                     'totalTrades' => $totalTrades,
+                    'activeTrades' => $activeTrades,
+                    'cancelledTrades' => $cancelledTrades,
+                    'tradesToday' => $tradesToday,
                     'successfulTrades' => $successfulTrades,
                     'recentEarnings' => $recentEarnings,
                     'successRate' => $totalTrades > 0 ? round(($successfulTrades / $totalTrades) * 100, 1) : 0
@@ -535,11 +535,14 @@ class ExtensionController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
+                'api_url' => config('app.url'),
                 'polling_interval' => 5000, // 5 секунд
                 'max_retries' => 3,
                 'trade_timeout' => 300000, // 5 минут
                 'notification_enabled' => true,
-                'api_version' => '1.0.0'
+                'api_version' => '1.0.0',
+                'sse_enabled' => true,
+                'sse_reconnect_delay' => 5000 // 5 секунд
             ]
         ]);
     }

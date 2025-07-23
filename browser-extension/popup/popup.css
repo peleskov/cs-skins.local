@@ -76,6 +76,18 @@ body {
     gap: 8px;
 }
 
+.logo-link {
+    text-decoration: none;
+    color: inherit;
+    padding: 6px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.logo-link:hover {
+    background-color: var(--bg-tertiary);
+}
+
 .logo-icon {
     width: 24px;
     height: 24px;
@@ -347,6 +359,20 @@ body {
     flex: 1;
 }
 
+.user-details-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    padding: 4px;
+    border-radius: 6px;
+    transition: background-color 0.2s ease;
+}
+
+.user-details-link:hover {
+    background-color: var(--bg-tertiary);
+    cursor: pointer;
+}
+
 .user-name {
     font-weight: 500;
     color: var(--text-primary);
@@ -359,11 +385,22 @@ body {
 }
 
 /* Stats */
+.stats-section {
+    margin-bottom: 20px;
+}
+
+.stats-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    text-align: center;
+}
+
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-bottom: 20px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
 }
 
 .stat-item {

@@ -116,21 +116,24 @@ class Order extends Model
                     $listing->reserve();
                 }
 
-                // Создаем запись в order_items с полными данными
+                // Создаем запись в order_items без статуса (nullable)
                 $reservationMinutes = (int) env('RESERVATION_TIME_MINUTES', 5);
                 $orderItem = OrderItem::create([
                     'order_id' => $this->id,
                     'listing_id' => $item['listing_id'],
                     'seller_id' => $item['seller_id'],
                     'quantity' => 1,
-                    'status' => OrderItem::STATUS_RESERVED,
                     'reserved_until' => now()->addMinutes($reservationMinutes),
                     'item_name' => $item['item']['name'] ?? 'Unknown Item',
                     'item_image_url' => $item['item']['image_url'] ?? '',
                     'price' => $item['price'],
                     'seller_name' => $item['seller']['name'] ?? 'Unknown Seller',
                     'buyer_name' => $this->buyer->name
+                    // status не указываем - он nullable
                 ]);
+                
+                // Устанавливаем статус после создания, чтобы сработало событие
+                $orderItem->update(['status' => OrderItem::STATUS_RESERVED]);
 
                 // Запускаем отложенный job для автоматической отмены резерва
                 ReleaseExpiredOrderItem::dispatch($orderItem->id)

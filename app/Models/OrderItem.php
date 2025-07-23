@@ -41,6 +41,36 @@ class OrderItem extends Model
     ];
 
     /**
+     * Boot the model and register event listeners
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::updated(function ($orderItem) {
+            // Отправляем WebSocket события при изменении статуса
+            if ($orderItem->wasChanged('status')) {
+                $newStatus = $orderItem->status;
+                
+                switch ($newStatus) {
+                    case self::STATUS_RESERVED:
+                        broadcast(new \App\Events\TradeReserved($orderItem));
+                        break;
+                    case self::STATUS_TRADE_SENT:
+                        broadcast(new \App\Events\TradeSent($orderItem));
+                        break;
+                    case self::STATUS_COMPLETED:
+                        broadcast(new \App\Events\TradeCompleted($orderItem));
+                        break;
+                    case self::STATUS_CANCELLED:
+                        broadcast(new \App\Events\TradeCancelled($orderItem));
+                        break;
+                }
+            }
+        });
+    }
+
+    /**
      * Связь с заказом
      */
     public function order()

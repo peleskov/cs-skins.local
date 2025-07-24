@@ -193,12 +193,12 @@ class Client extends Authenticatable
         return $this->balance >= $amount;
     }
 
-    public function addBalance(float $amount): void
+    public function credit(float $amount): void
     {
         $this->increment('balance', $amount);
     }
 
-    public function subtractBalance(float $amount): void
+    public function debit(float $amount): void
     {
         $this->decrement('balance', $amount);
     }

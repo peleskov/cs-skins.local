@@ -8,7 +8,6 @@ class SteamTradeInjector {
     }
     
     init() {
-        // Ждем полной загрузки страницы
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.setup());
         } else {
@@ -17,19 +16,13 @@ class SteamTradeInjector {
     }
     
     setup() {
-        // Проверяем, что мы на странице Steam
-        if (!this.isSteamSite()) {
-            return;
-        }
+        if (!this.isSteamSite()) return;
         
-        // Слушаем сообщения от background script
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             this.handleMessage(message, sender, sendResponse);
         });
         
-        // Ищем Steam session данные
         this.extractSteamSession();
-        
         this.isInitialized = true;
     }
     
@@ -38,124 +31,103 @@ class SteamTradeInjector {
     }
     
     handleMessage(message, sender, sendResponse) {
-        
-        switch (message.type) {
-            case 'CREATE_TRADE_OFFER':
-                this.createTradeOffer(message.order)
-                    .then(result => sendResponse(result))
-                    .catch(error => sendResponse({ success: false, error: error.message }));
-                return true; // Асинхронный ответ
-                
-            case 'GET_STEAM_SESSION':
+        const handlers = {
+            'CREATE_TRADE_OFFER': async () => {
+                try {
+                    const result = await this.createTradeOffer(message.order);
+                    sendResponse(result);
+                } catch (error) {
+                    sendResponse({ success: false, error: error.message });
+                }
+            },
+            'GET_STEAM_SESSION': () => {
                 sendResponse({
                     success: true,
                     sessionData: this.getSteamSessionData()
                 });
-                break;
-                
-            default:
-                sendResponse({ success: false, error: 'Unknown message type' });
+            }
+        };
+        
+        const handler = handlers[message.type];
+        if (handler) {
+            handler();
+            return true;
+        } else {
+            sendResponse({ success: false, error: 'Unknown message type' });
         }
     }
     
     async createTradeOffer(order) {
         try {
-            
-            // Получаем Steam session данные
             const sessionData = this.getSteamSessionData();
             if (!sessionData.sessionId) {
                 throw new Error('Не удалось получить Steam session');
             }
             
-            // Подготавливаем данные для трейда
             const tradeData = this.prepareTradeData(order, sessionData);
-            
-            // Отправляем трейд через Steam Web API
             const tradeOfferId = await this.sendTradeOffer(tradeData);
             
-            // Уведомляем background script об успехе
-            chrome.runtime.sendMessage({
-                type: 'TRADE_OFFER_CREATED',
-                orderId: order.id,
-                tradeOfferId: tradeOfferId
-            });
+            this.notifyTradeResult('TRADE_OFFER_CREATED', order.id, { tradeOfferId });
             
             return {
                 success: true,
                 tradeOfferId: tradeOfferId,
                 message: `Трейд-оффер #${tradeOfferId} отправлен покупателю`
             };
-            
         } catch (error) {
-            
-            // Уведомляем background script об ошибке
-            chrome.runtime.sendMessage({
-                type: 'TRADE_OFFER_ERROR',
-                orderId: order.id,
-                error: error.message
-            });
-            
+            this.notifyTradeResult('TRADE_OFFER_ERROR', order.id, { error: error.message });
             throw error;
         }
     }
     
+    notifyTradeResult(type, orderId, data) {
+        chrome.runtime.sendMessage({
+            type,
+            orderId,
+            ...data
+        });
+    }
+    
     getSteamSessionData() {
-        // Извлекаем данные сессии из Steam страницы
-        const sessionData = {
+        return {
             sessionId: this.extractSessionId(),
             steamId: this.extractSteamId(),
             csrfToken: this.extractCSRFToken()
         };
-        
-        console.log('🔑 Steam session данные:', sessionData);
-        return sessionData;
     }
     
     extractSessionId() {
-        // Ищем sessionid в cookies
-        const cookies = document.cookie.split(';');
-        for (let cookie of cookies) {
-            const [name, value] = cookie.trim().split('=');
-            if (name === 'sessionid') {
-                return value;
-            }
-        }
-        
-        // Альтернативно ищем в g_sessionID переменной
+        // Проверяем глобальную переменную сначала
         if (window.g_sessionID) {
             return window.g_sessionID;
         }
         
-        return null;
+        // Ищем в cookies
+        const sessionCookie = document.cookie
+            .split(';')
+            .find(cookie => cookie.trim().startsWith('sessionid='));
+            
+        return sessionCookie ? sessionCookie.split('=')[1] : null;
     }
     
     extractSteamId() {
-        // Ищем Steam ID в глобальных переменных
         if (window.g_steamID) {
             return window.g_steamID;
         }
         
-        // Ищем в URL профиля
         const profileMatch = window.location.href.match(/steamcommunity\.com\/(profiles|id)\/([^\/]+)/);
-        if (profileMatch) {
-            return profileMatch[2];
-        }
-        
-        return null;
+        return profileMatch ? profileMatch[2] : null;
     }
     
     extractCSRFToken() {
-        // Ищем CSRF токен в мета тегах
         const metaToken = document.querySelector('meta[name="csrf-token"]');
         if (metaToken) {
             return metaToken.getAttribute('content');
         }
         
-        // Ищем в скриптах
-        const scripts = document.querySelectorAll('script');
-        for (let script of scripts) {
-            const content = script.textContent;
-            const tokenMatch = content.match(/sessionid['"]\s*:\s*['"]([^'"]+)['"]/);
+        const scripts = Array.from(document.querySelectorAll('script'));
+        for (const script of scripts) {
+            const tokenMatch = script.textContent && script.textContent.match(/sessionid['"]\s*:\s*['"]([^'"]+)['"]/);
             if (tokenMatch) {
                 return tokenMatch[1];
             }
@@ -239,19 +211,14 @@ class SteamTradeInjector {
             return result.tradeofferid;
             
         } catch (error) {
-            console.error('❌ Ошибка отправки трейда через Steam API:', error);
             throw error;
         }
     }
     
     extractSteamSession() {
-        // Сохраняем важные данные Steam в локальное хранилище для использования
         const sessionData = this.getSteamSessionData();
         
         if (sessionData.sessionId) {
-            console.log('✅ Steam session данные извлечены');
-            
-            // Отправляем данные background script для сохранения
             chrome.runtime.sendMessage({
                 type: 'STEAM_SESSION_EXTRACTED',
                 sessionData: sessionData
@@ -259,20 +226,6 @@ class SteamTradeInjector {
         }
     }
     
-    // Утилита для отладки - показывает информацию о странице
-    debugPageInfo() {
-        console.log('🔍 Steam Page Debug Info:', {
-            url: window.location.href,
-            sessionId: this.extractSessionId(),
-            steamId: this.extractSteamId(),
-            csrfToken: this.extractCSRFToken(),
-            globalVars: {
-                g_sessionID: window.g_sessionID,
-                g_steamID: window.g_steamID,
-                g_rgWalletInfo: window.g_rgWalletInfo
-            }
-        });
-    }
 }
 
 // Инициализируем content script

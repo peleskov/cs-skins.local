@@ -48,12 +48,9 @@ class PlatformAPI {
     
     async getPendingOrders() {
         try {
-            console.log('📡 Запрос заказов с API...');
             const response = await this.makeRequest('/orders/pending');
-            console.log('📥 Ответ API:', response);
             return response.data || [];
         } catch (error) {
-            console.error('❌ Ошибка API при получении заказов:', error);
             throw error;
         }
     }
@@ -66,7 +63,6 @@ class PlatformAPI {
             });
             return response;
         } catch (error) {
-            // Ignore trade status update errors
             throw error;
         }
     }
@@ -138,7 +134,15 @@ class ExtensionStorage {
             logs.splice(100);
         }
         
-        return await this.setData({ logs });
+        const result = await this.setData({ logs });
+        
+        // Уведомляем popup об обновлении лога для немедленного отображения
+        chrome.runtime.sendMessage({
+            type: 'LOG_UPDATED',
+            logEntry: logEntry
+        }).catch(() => {});
+        
+        return result;
     }
 }
 
@@ -151,6 +155,7 @@ class TradingAssistant {
         this.heartbeatInterval = null;
         this.platformAPI = new PlatformAPI();
         this.storage = new ExtensionStorage();
+        this.lastStatsRequest = 0;
         
         this.init();
     }
@@ -158,8 +163,8 @@ class TradingAssistant {
     async init() {
         this.isAuthorized = await this.storage.isAuthorized();
         if (this.isAuthorized) {
-            // Тестируем WebSocket подключение
-            //console.log('🔗 Тестируем WebSocket подключение...');
+            // Восстанавливаем последнюю статистику при запуске
+            await this.restoreLastStats();
             await this.connectWebSocket();
         }
         
@@ -176,14 +181,12 @@ class TradingAssistant {
         try {
             const token = await this.platformAPI.getAuthToken();
             if (!token) {
-                console.error('❌ Нет токена для WebSocket подключения');
                 return;
             }
             
             // Подключаемся к Laravel Reverb WebSocket серверу через стандартный HTTPS порт
             const wsUrl = 'wss://cs-skins.s1temaker.ru/ws/app/cs-skins-key?protocol=7&client=js&version=8.0.1&flash=false';
             
-            console.log('🔗 WebSocket подключение к:', wsUrl);
             
             // Создаем WebSocket соединение
             this.wsConnection = new WebSocket(wsUrl);
@@ -191,7 +194,6 @@ class TradingAssistant {
             // Таймаут для подключения WebSocket (30 секунд)
             const connectionTimeout = setTimeout(() => {
                 if (this.wsConnection && this.wsConnection.readyState === WebSocket.CONNECTING) {
-                    console.error('⏰ WebSocket подключение превысило таймаут (30 сек)');
                     this.wsConnection.close();
                     this.wsConnection = null;
                 }
@@ -199,7 +201,6 @@ class TradingAssistant {
             
             // Обработчик подключения WebSocket
             this.wsConnection.onopen = (event) => {
-                console.log('✅ WebSocket подключен:', event);
                 clearTimeout(connectionTimeout);
                 this.storage.addLogEntry('success', 'Расширение активировано');
                 
@@ -214,91 +215,53 @@ class TradingAssistant {
             this.wsConnection.onmessage = async (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    console.log('📨 WebSocket сообщение:', data);
+                    //console.log('WebSocket message received:', data);
                     
-                    // Проверяем тип события
-                    if (data.event === 'trade_reserved') {
-                        const trade = data.data;
-                        console.log('🔒 Трейд зарезервирован через WebSocket:', trade);
-                        this.storage.addLogEntry('info', 'Новый трейд');
-                        
-                        // Уведомляем popup об обновлении статистики
-                        chrome.runtime.sendMessage({
-                            type: 'TRADE_STATUS_CHANGED',
-                            event: 'trade_reserved'
-                        }).catch(() => {});
-                    } else if (data.event === 'trade_sent') {
-                        const trade = data.data;
-                        console.log('📤 Трейд отправлен через WebSocket:', trade);
-                        this.storage.addLogEntry('success', 'Трейд отправлен в Steam');
-                        
-                        chrome.runtime.sendMessage({
-                            type: 'TRADE_STATUS_CHANGED',
-                            event: 'trade_sent'
-                        }).catch(() => {});
-                    } else if (data.event === 'trade_completed') {
-                        const trade = data.data;
-                        console.log('✅ Трейд завершен через WebSocket:', trade);
-                        this.storage.addLogEntry('success', 'Трейд завершен');
-                        
-                        chrome.runtime.sendMessage({
-                            type: 'TRADE_STATUS_CHANGED',
-                            event: 'trade_completed'
-                        }).catch(() => {});
-                    } else if (data.event === 'trade_cancelled') {
-                        const trade = data.data;
-                        console.log('❌ Трейд отменен через WebSocket:', trade);
-                        this.storage.addLogEntry('warning', 'Трейд отменен');
-                        
-                        chrome.runtime.sendMessage({
-                            type: 'TRADE_STATUS_CHANGED',
-                            event: 'trade_cancelled'
-                        }).catch(() => {});
-                    } else if (data.event === 'pusher:pong') {
-                        console.log('💓 Получен WebSocket pong');
-                    } else if (data.event === 'pusher:subscription_succeeded' || data.event === 'pusher_internal:subscription_succeeded') {
-                        console.log('✅ Подписка на канал успешна:', data.channel);
-                    } else if (data.event === 'pusher:subscription_error') {
-                        console.error('❌ Ошибка подписки на канал:', data);
+                    // Парсим данные события если они в виде JSON строки
+                    let eventData = data;
+                    if (data.data && typeof data.data === 'string') {
+                        try {
+                            const parsedData = JSON.parse(data.data);
+                            eventData = parsedData;  // Используем только распарсенные данные
+                            //console.log('Parsed event data:', eventData);
+                        } catch (e) {
+                            //console.log('Failed to parse data.data as JSON, using as is');
+                            eventData = data;
+                        }
                     }
                     
+                    // Обрабатываем события трейдов
+                    await this.handleTradeEvent(data.event, eventData);
+                    
                 } catch (error) {
-                    console.error('❌ Ошибка обработки WebSocket сообщения:', error);
+                    // Ignore WebSocket message errors
                 }
             };
             
             // Обработчик ошибок WebSocket
             this.wsConnection.onerror = (event) => {
-                console.error('❌ WebSocket ошибка подключения:', event);
                 clearTimeout(connectionTimeout);
                 this.storage.addLogEntry('error', 'Соединение прервано');
             };
             
             // Обработчик закрытия WebSocket
             this.wsConnection.onclose = (event) => {
-                console.log('🔌 WebSocket соединение закрыто:', event.code, event.reason);
                 clearTimeout(connectionTimeout);
                 
-                if (event.code !== 1000) { // Не нормальное закрытие
+                if (event.code !== 1000) {
                     this.storage.addLogEntry('error', 'Соединение прервано');
-                    console.log('❌ WebSocket закрыт неожиданно, код:', event.code, 'причина:', event.reason);
                     
                     // Переподключаемся через 5 секунд
                     setTimeout(() => {
                         if (this.isActive && this.isAuthorized) {
-                            console.log('🔄 Переподключение WebSocket...');
                             this.connectWebSocket();
                         }
                     }, 5000);
                 }
             };
             
-            // Отключаем polling - используем только WebSocket
-            // this.startBackupPolling();
             
         } catch (error) {
-            console.error('❌ Ошибка создания WebSocket подключения:', error);
-            // Не используем fallback на polling
             this.isActive = false;
         }
         
@@ -309,7 +272,6 @@ class TradingAssistant {
         if (this.wsConnection) {
             this.wsConnection.close();
             this.wsConnection = null;
-            console.log('🔌 WebSocket отключен');
         }
         this.stopHeartbeat();
     }
@@ -318,7 +280,6 @@ class TradingAssistant {
         // Отправляем ping каждые 25 секунд (меньше чем activity_timeout=30)
         this.heartbeatInterval = setInterval(() => {
             if (this.wsConnection && this.wsConnection.readyState === WebSocket.OPEN) {
-                console.log('💓 Отправляем WebSocket ping');
                 this.wsConnection.send(JSON.stringify({
                     event: 'pusher:ping',
                     data: {}
@@ -335,29 +296,128 @@ class TradingAssistant {
     }
     
     async subscribeToOrderChannel() {
-        if (this.wsConnection && this.wsConnection.readyState === WebSocket.OPEN) {
-            // Получаем ID клиента для подписки на персональный канал
-            try {
-                const token = await this.platformAPI.getAuthToken();
-                const userResponse = await this.platformAPI.makeRequest('/user');
-                const clientId = userResponse.data.id;
+        if (!this.wsConnection || this.wsConnection.readyState !== WebSocket.OPEN) return;
+        
+        try {
+            const data = await this.storage.getData();
+            const channelName = data.websocketChannel;
+            
+            if (!channelName) {
                 
-                const channelName = `seller-${clientId}`;
-                console.log('📡 Подписываемся на канал', channelName);
-                
-                this.wsConnection.send(JSON.stringify({
-                    event: 'pusher:subscribe',
-                    data: {
-                        channel: channelName
-                    }
-                }));
-            } catch (error) {
-                console.error('❌ Ошибка подписки на канал:', error);
+                // Если канала нет, значит расширение авторизовано по старой схеме
+                // Разавторизуем и требуем повторной авторизации
+                await this.logout();
+                await this.showNotification('Требуется переавторизация', 'Обновите расширение - войдите заново с вашим токеном.');
+                return;
             }
+            
+            this.wsConnection.send(JSON.stringify({
+                event: 'pusher:subscribe',
+                data: { channel: channelName }
+            }));
+        } catch (error) {
+            // Ignore channel subscription errors
         }
     }
     
+    async handleTradeEvent(eventType, eventData) {
+        //console.log('WebSocket event received:', eventType, eventData);
+        
+        // Универсальная обработка статистики для всех сообщений
+        if (eventData.stats) {
+            // Сохраняем статистику в storage для восстановления после рефреша
+            await this.storage.setData({ lastStats: eventData.stats });
+            
+            chrome.runtime.sendMessage({
+                type: 'STATS_RECEIVED',
+                stats: eventData.stats
+            }).catch(() => {});
+        }
+        
+        // Универсальное добавление лога для всех сообщений
+        if (eventData.log_message) {
+            await this.storage.addLogEntry('info', eventData.log_message);
+        }
+        
+        // Специфичная обработка только для определенных событий
+        if (eventType === 'force_logout') {
+            const message = eventData.message || 'Токен изменен. Требуется переавторизация.';
+            
+            await this.storage.addLogEntry('warning', message);
+            await this.logout();
+            
+            chrome.runtime.sendMessage({
+                type: 'FORCE_LOGOUT',
+                message: message
+            }).catch(() => {});
+            
+            await this.showNotification('Требуется переавторизация', message);
+            
+        } else if (eventType === 'trade_reserved') {
+            // Пока не открываем Steam автоматически
+        }
+        
+        // Для события 'stats' ничего дополнительного не делаем - статистика уже обновлена выше
+    }
     
+    
+    async getCurrentUserId() {
+        try {
+            const userResponse = await this.platformAPI.makeRequest('/user');
+            return userResponse.data.id;
+        } catch (error) {
+            return 3; // fallback ID
+        }
+    }
+    
+    async restoreLastStats() {
+        try {
+            const data = await this.storage.getData();
+            if (data.lastStats) {
+                chrome.runtime.sendMessage({
+                    type: 'STATS_RECEIVED',
+                    stats: data.lastStats
+                }).catch(() => {});
+            }
+        } catch (error) {
+            // Ignore stats restore errors
+        }
+    }
+    
+    async requestStats() {
+        if (!this.wsConnection || this.wsConnection.readyState !== WebSocket.OPEN) {
+            
+            // Если не подключен, пробуем подключиться
+            if (this.isAuthorized && !this.isActive) {
+                await this.connectWebSocket();
+            }
+            return;
+        }
+        
+        try {
+            const data = await this.storage.getData();
+            const channel = data.websocketChannel;
+            
+            if (!channel) {
+                
+                // Если канала нет, значит расширение авторизовано по старой схеме
+                await this.logout();
+                await this.showNotification('Требуется переавторизация', 'Обновите расширение - войдите заново с вашим токеном.');
+                return;
+            }
+            
+            
+            // Client events должны отправляться на канал
+            this.wsConnection.send(JSON.stringify({
+                event: 'client-stats-request',
+                data: {},
+                channel: channel
+            }));
+            
+        } catch (error) {
+            // Ignore stats request errors
+        }
+    }
     
     async stop() {
         this.disconnectWebSocket();
@@ -387,163 +447,204 @@ class TradingAssistant {
     }
     
     async handleMessage(message, sender, sendResponse) {
-        switch (message.type) {
-            case 'GET_STATUS':
-                sendResponse({
-                    isActive: this.isActive,
-                    isAuthorized: this.isAuthorized
-                });
-                break;
-                
-            case 'OPEN_DETACHED_WINDOW':
+        const handlers = {
+            'GET_STATUS': () => sendResponse({
+                isActive: this.isActive,
+                isAuthorized: this.isAuthorized
+            }),
+            
+            'OPEN_DETACHED_WINDOW': async () => {
                 try {
-                    const window = await chrome.windows.create({
-                        url: chrome.runtime.getURL('popup/detached.html'),
-                        type: 'popup',
-                        width: 420,
-                        height: 600,
-                        focused: true,
-                        left: 100,
-                        top: 100
-                    });
-                    
-                    detachedWindows.add(window.id);
-                    startKeepAlive();
-                    
-                    try {
-                        if (chrome.windows.update && window.id) {
-                            await chrome.windows.update(window.id, {
-                                focused: true
-                            });
-                        }
-                    } catch (iconError) {
-                        // Window update error ignored
-                    }
-                    
+                    const window = await this.createDetachedWindow();
                     sendResponse({ success: true, windowId: window.id });
                 } catch (error) {
                     sendResponse({ success: false, error: error.message });
                 }
-                break;
-                
-            case 'AUTHORIZE':
+            },
+            
+            'AUTHORIZE': async () => {
                 try {
-                    await this.storage.setAuthToken(message.token);
-                    this.isAuthorized = true;
-                    await this.connectWebSocket();
-                    await updateActivityIcon();
+                    await this.authorize(message.token);
                     sendResponse({ success: true });
                 } catch (error) {
                     sendResponse({ success: false, error: error.message });
                 }
-                break;
-                
-            case 'LOGOUT':
-                await this.stop();
-                await this.storage.clearAuth();
-                this.isAuthorized = false;
-                await updateActivityIcon();
+            },
+            
+            'LOGOUT': async () => {
+                await this.logout();
                 sendResponse({ success: true });
-                break;
-                
-            case 'TOGGLE_ACTIVE':
-                if (this.isActive) {
-                    await this.stop();
-                } else {
-                    const isAuthorized = await this.storage.isAuthorized();
-                    if (isAuthorized) {
-                        this.isAuthorized = true;
-                        await this.connectWebSocket();
-                    }
-                }
-                await updateActivityIcon();
+            },
+            
+            'TOGGLE_ACTIVE': async () => {
+                await this.toggleActive();
                 sendResponse({ isActive: this.isActive });
-                break;
-                
+            },
+            
+            'REQUEST_STATS': async () => {
+                await this.requestStats();
+                sendResponse({ success: true });
+            },
+            
+            'GET_CACHED_STATS': async () => {
+                try {
+                    const data = await this.storage.getData();
+                    sendResponse({ 
+                        success: true, 
+                        stats: data.lastStats || null 
+                    });
+                } catch (error) {
+                    sendResponse({ success: false, error: error.message });
+                }
+            }
+        };
+        
+        const handler = handlers[message.type];
+        if (handler) {
+            await handler();
         }
+    }
+    
+    async createDetachedWindow() {
+        const window = await chrome.windows.create({
+            url: chrome.runtime.getURL('index.html'),
+            type: 'popup',
+            width: 420,
+            height: 600,
+            focused: true,
+            left: 100,
+            top: 100
+        });
+        
+        detachedWindows.add(window.id);
+        startKeepAlive();
+        
+        try {
+            if (chrome.windows.update && window.id) {
+                await chrome.windows.update(window.id, { focused: true });
+            }
+        } catch (error) {
+            // Window update error ignored
+        }
+        
+        return window;
+    }
+    
+    async authorize(token) {
+        try {
+            // Авторизуемся на сервере и получаем канал
+            const response = await this.platformAPI.makeRequest('/auth', {
+                method: 'POST',
+                body: JSON.stringify({ token })
+            });
+            
+            if (response.success && response.channel) {
+                await this.storage.setData({
+                    authToken: token,
+                    websocketChannel: response.channel,
+                    authorizedAt: new Date().toISOString()
+                });
+                
+                this.isAuthorized = true;
+                await this.connectWebSocket();
+                await updateActivityIcon();
+            } else {
+                throw new Error('Failed to get WebSocket channel');
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
+    
+    async logout() {
+        await this.stop();
+        await this.storage.clearAuth();
+        this.isAuthorized = false;
+        await updateActivityIcon();
+    }
+    
+    async toggleActive() {
+        if (this.isActive) {
+            await this.stop();
+        } else {
+            const isAuthorized = await this.storage.isAuthorized();
+            if (isAuthorized) {
+                this.isAuthorized = true;
+                await this.connectWebSocket();
+            }
+        }
+        await updateActivityIcon();
     }
 }
 
 // Создаем экземпляр Trading Assistant
 const tradingAssistant = new TradingAssistant();
 
-// Отслеживание detached окон и keep-alive система
+// Глобальные переменные
 let detachedWindows = new Set();
 let keepAliveTimer = null;
-let isExtensionActive = false;
 
-// Функции для поддержания активного состояния service worker
+// Keep-alive система
 function startKeepAlive() {
     if (keepAliveTimer) return;
     
-    // Создаем алармы для активности и тикера
-    chrome.alarms.create('keepAlive', { periodInMinutes: 1 }); // keep-alive
-    chrome.alarms.create('badgeTicker', { periodInMinutes: 0.1 }); // тикер каждые 6 сек
-    
-    // Сразу обновляем иконку
+    chrome.alarms.create('keepAlive', { periodInMinutes: 1 });
+    chrome.alarms.create('badgeTicker', { periodInMinutes: 0.1 });
     updateActivityIcon();
 }
 
 function stopKeepAlive() {
     chrome.alarms.clear('keepAlive');
     chrome.alarms.clear('badgeTicker');
-    chrome.action.setBadgeText({ text: '' }); // очищаем badge
+    chrome.action.setBadgeText({ text: '' });
     keepAliveTimer = null;
 }
 
-// Обработчик алармов  
 chrome.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === 'keepAlive' || alarm.name === 'badgeTicker') {
+    if (['keepAlive', 'badgeTicker'].includes(alarm.name)) {
         updateActivityIcon();
     }
 });
 
-// Функция обновления иконки через badge
 async function updateActivityIcon() {
     try {
-        // Обновляем title
-        const title = (tradingAssistant.isActive && tradingAssistant.isAuthorized)
+        const { isActive, isAuthorized } = tradingAssistant;
+        
+        const title = isActive && isAuthorized
             ? 'CS-SKINS.pro - Активен'
-            : tradingAssistant.isAuthorized
+            : isAuthorized
             ? 'CS-SKINS.pro - Подключен'
             : 'CS-SKINS.pro - Не подключен';
             
         await chrome.action.setTitle({ title });
         
-        if (tradingAssistant.isActive && tradingAssistant.isAuthorized) {
-            // Активно И авторизовано - зеленый badge
-            chrome.action.setBadgeText({ text: '●' });
-            chrome.action.setBadgeBackgroundColor({ color: '#44ff44' });
-            
-        } else if (tradingAssistant.isAuthorized) {
-            // Авторизовано но неактивно - оранжевый badge  
-            chrome.action.setBadgeText({ text: '○' });
-            chrome.action.setBadgeBackgroundColor({ color: '#ff8d2f' });
-            
-        } else if (detachedWindows.size > 0) {
-            // Detached окно открыто но не авторизовано - серый но круглый
-            chrome.action.setBadgeText({ text: '○' });
-            chrome.action.setBadgeBackgroundColor({ color: '#888888' });
-            
-        } else {
-            // Не авторизовано - серый крестик
-            chrome.action.setBadgeText({ text: '×' });
-            chrome.action.setBadgeBackgroundColor({ color: '#888888' });
-        }
+        const badgeConfig = getBadgeConfig(isActive, isAuthorized);
+        chrome.action.setBadgeText({ text: badgeConfig.text });
+        chrome.action.setBadgeBackgroundColor({ color: badgeConfig.color });
         
     } catch (error) {
-        // Ignore icon update errors - fallback to default
         chrome.action.setBadgeText({ text: '' });
     }
 }
 
-// Обработчики событий Chrome API
+function getBadgeConfig(isActive, isAuthorized) {
+    if (isActive && isAuthorized) {
+        return { text: '●', color: '#44ff44' };
+    } else if (isAuthorized) {
+        return { text: '○', color: '#ff8d2f' };
+    } else if (detachedWindows.size > 0) {
+        return { text: '○', color: '#888888' };
+    } else {
+        return { text: '×', color: '#888888' };
+    }
+}
+
+// Обработчики событий
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     tradingAssistant.handleMessage(message, sender, sendResponse);
     return true;
 });
 
-// Обработчик закрытия окон
 chrome.windows.onRemoved.addListener(async (windowId) => {
     if (detachedWindows.has(windowId)) {
         detachedWindows.delete(windowId);

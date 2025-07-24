@@ -54,16 +54,16 @@ class OrderItem extends Model
                 
                 switch ($newStatus) {
                     case self::STATUS_RESERVED:
-                        broadcast(new \App\Events\TradeReserved($orderItem));
+                        broadcast(\App\Events\ExtensionEvents::tradeReserved($orderItem));
                         break;
                     case self::STATUS_TRADE_SENT:
-                        broadcast(new \App\Events\TradeSent($orderItem));
+                        broadcast(\App\Events\ExtensionEvents::stats($orderItem->seller_id, null, 'Трейд отправлен'));
                         break;
                     case self::STATUS_COMPLETED:
-                        broadcast(new \App\Events\TradeCompleted($orderItem));
+                        broadcast(\App\Events\ExtensionEvents::stats($orderItem->seller_id, null, 'Трейд завершен'));
                         break;
                     case self::STATUS_CANCELLED:
-                        broadcast(new \App\Events\TradeCancelled($orderItem));
+                        broadcast(\App\Events\ExtensionEvents::stats($orderItem->seller_id, null, 'Трейд отменен'));
                         break;
                 }
             }

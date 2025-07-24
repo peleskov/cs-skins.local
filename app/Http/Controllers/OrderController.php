@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use App\Jobs\ReleaseExpiredOrderItem;
 
 class OrderController extends Controller
 {
@@ -80,28 +81,113 @@ class OrderController extends Controller
             DB::beginTransaction();
 
             try {
+                // Сначала пытаемся зарезервировать все товары
+                $reservedItems = [];
+                $failedItems = [];
+                
+                foreach ($cartItems as $item) {
+                    if (isset($item['seller_id'])) {
+                        // Получаем листинг для резервирования
+                        $listing = \App\Models\Listing::find($item['listing_id']);
+                        if ($listing && $listing->reserve()) {
+                            $reservedItems[] = $item;
+                        } else {
+                            $failedItems[] = $item;
+                        }
+                    }
+                }
+                
+                // Если не удалось зарезервировать все товары
+                if (!empty($failedItems)) {
+                    // Освобождаем уже зарезервированные товары
+                    foreach ($reservedItems as $item) {
+                        $listing = \App\Models\Listing::find($item['listing_id']);
+                        if ($listing) {
+                            $listing->activate(); // Возвращаем в статус ACTIVE
+                        }
+                    }
+                    
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Некоторые товары уже проданы другим покупателям: ' . 
+                            implode(', ', array_column($failedItems, 'item.name'))
+                    ], 400);
+                }
 
-                // Создаем заказ
+                // Проверяем и списываем баланс только после успешного резервирования всех товаров
+                $client = auth('client')->user();
+                if (!$client->hasEnoughBalance($total)) {
+                    // Освобождаем зарезервированные товары
+                    foreach ($reservedItems as $item) {
+                        $listing = \App\Models\Listing::find($item['listing_id']);
+                        if ($listing) {
+                            $listing->activate();
+                        }
+                    }
+                    
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Недостаточно средств на балансе для оплаты заказа'
+                    ], 400);
+                }
+
+                // Списываем средства с баланса
+                $client->debit($total);
+                
+                // Создаем сразу оплаченный заказ
                 $order = Order::create([
                     'order_number' => Order::generateOrderNumber(),
                     'buyer_id' => auth('client')->id(),
                     'total_amount' => $total,
                     'cart_snapshot' => $cartItems->toArray(),
-                    'status' => Order::STATUS_PENDING,
-                    'payment_status' => Order::PAYMENT_STATUS_PENDING
+                    'status' => Order::STATUS_PAID,
+                    'payment_status' => Order::PAYMENT_STATUS_PAID,
+                    'payment_method' => 'balance',
+                    'payment_transaction_id' => 'BALANCE_' . uniqid(),
+                    'paid_at' => now()
                 ]);
 
+                // Создаем записи в order_items для зарезервированных товаров
+                foreach ($reservedItems as $item) {
+                    $reservationMinutes = (int) env('RESERVATION_TIME_MINUTES', 5);
+                    $orderItem = \App\Models\OrderItem::create([
+                        'order_id' => $order->id,
+                        'listing_id' => $item['listing_id'],
+                        'seller_id' => $item['seller_id'],
+                        'quantity' => 1,
+                        'reserved_until' => now()->addMinutes($reservationMinutes),
+                        'item_name' => $item['item']['name'] ?? 'Unknown Item',
+                        'item_image_url' => $item['item']['image_url'] ?? '',
+                        'price' => $item['price'],
+                        'seller_name' => $item['seller']['name'] ?? 'Unknown Seller',
+                        'buyer_name' => $client->name ?? 'Unknown Buyer'
+                    ]);
+                    
+                    // Устанавливаем статус отдельно, чтобы сработало событие updated
+                    $orderItem->update(['status' => \App\Models\OrderItem::STATUS_RESERVED]);
+                    
+                    // Запускаем отложенный job для автоматической отмены резерва
+                    ReleaseExpiredOrderItem::dispatch($orderItem->id)
+                        ->delay($orderItem->reserved_until);
+                }
+
+                // Очищаем корзину после успешного создания и оплаты заказа
+                $this->cartService->clear();
 
                 DB::commit();
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Заказ создан успешно',
+                    'message' => 'Заказ успешно оплачен!',
                     'order' => [
                         'id' => $order->id,
                         'order_number' => $order->order_number,
                         'total_amount' => (float) $order->total_amount,
-                        'status' => $order->status
+                        'status' => $order->status,
+                        'payment_status' => $order->payment_status,
+                        'paid_at' => $order->paid_at->toISOString()
                     ]
                 ]);
 
@@ -147,12 +233,12 @@ class OrderController extends Controller
         }
 
         try {
-            // Повторно валидируем корзину перед оплатой
+            // Повторно валидируем корзину прямо перед резервированием
             $removedItems = $this->cartService->validate();
             if (!empty($removedItems)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Некоторые товары в заказе больше не доступны. Обновите корзину.',
+                    'message' => 'Некоторые товары в корзине больше не доступны. Обновите корзину.',
                     'removed_items' => $removedItems
                 ], 400);
             }
@@ -165,9 +251,21 @@ class OrderController extends Controller
                 ], 400);
             }
 
-            // Тестовая оплата - просто отмечаем как оплаченный
-            $transactionId = 'TEST_' . uniqid();
-            $order->pay($transactionId, 'test');
+            // Проверяем баланс пользователя
+            $client = auth('client')->user();
+            if (!$client->hasEnoughBalance($order->total_amount)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Недостаточно средств на балансе для оплаты заказа'
+                ], 400);
+            }
+
+            // Списываем средства с баланса
+            $client->debit($order->total_amount);
+            
+            // Отмечаем заказ как оплаченный
+            $transactionId = 'BALANCE_' . uniqid();
+            $order->pay($transactionId, 'balance');
 
             // Очищаем корзину только после успешной оплаты и создания order_items
             $this->cartService->clear();

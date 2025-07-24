@@ -61,10 +61,6 @@ class PlatformAPI {
         return response.data;
     }
     
-    async getExtensionStats() {
-        const response = await this.makeRequest('/stats');
-        return response.data;
-    }
 }
 
 // Storage клиент (копия из service worker)
@@ -160,7 +156,15 @@ class ExtensionStorage {
             logs.splice(100);
         }
         
-        return await this.setData({ logs });
+        const result = await this.setData({ logs });
+        
+        // Уведомляем об обновлении лога (хотя в popup это менее критично)
+        chrome.runtime.sendMessage({
+            type: 'LOG_UPDATED',
+            logEntry: logEntry
+        }).catch(() => {});
+        
+        return result;
     }
 }
 
@@ -224,19 +228,7 @@ class PopupInterface {
         
         // Слушаем сообщения от background script
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-            if (message.type === 'NEW_ORDER_RECEIVED') {
-                console.log('📦 Получено уведомление о новом заказе:', message.orderId);
-                // Обновляем статистику немедленно
-                this.updateStats();
-                this.updateActivity();
-                // Показываем уведомление пользователю
-                this.showNotification('Новый заказ получен!', 'success');
-            } else if (message.type === 'TRADE_STATUS_CHANGED') {
-                console.log('🔄 Изменение статуса трейда:', message.event);
-                // Обновляем статистику при любом изменении трейда
-                this.updateStats();
-                this.updateActivity();
-            }
+            this.handleBackgroundMessage(message);
         });
         
         const toggleBtn = document.getElementById('toggleBtn');
@@ -244,11 +236,13 @@ class PopupInterface {
         const settingsBtn = document.getElementById('settingsBtn');
         const logoutBtn = document.getElementById('logoutBtn');
         const detachBtn = document.getElementById('detachBtn');
+        const clearLogBtn = document.getElementById('clearLogBtn');
         
-        toggleBtn?.addEventListener('click', () => this.handleToggle());
-        refreshBtn?.addEventListener('click', () => this.handleRefresh());
-        settingsBtn?.addEventListener('click', () => this.handleSettings());
-        logoutBtn?.addEventListener('click', () => this.handleLogout());
+        if (toggleBtn) toggleBtn.addEventListener('click', () => this.handleToggle());
+        if (refreshBtn) refreshBtn.addEventListener('click', () => this.handleRefresh());
+        if (settingsBtn) settingsBtn.addEventListener('click', () => this.handleSettings());
+        if (logoutBtn) logoutBtn.addEventListener('click', () => this.handleLogout());
+        if (clearLogBtn) clearLogBtn.addEventListener('click', () => this.handleClearLog());
         
         // Добавляем обработчик detach только если это не отдельное окно
         if (detachBtn && !window.isDetachedWindow) {
@@ -263,7 +257,7 @@ class PopupInterface {
         }
         
         const notificationClose = document.querySelector('.notification-close');
-        notificationClose?.addEventListener('click', () => this.hideNotification());
+        if (notificationClose) notificationClose.addEventListener('click', () => this.hideNotification());
     }
     
     updateInterface() {
@@ -281,15 +275,59 @@ class PopupInterface {
         const statusDot = statusIndicator.querySelector('.status-dot');
         const statusText = statusIndicator.querySelector('.status-text');
         
-        if (this.extensionStatus.isActive && this.isAuthorized) {
-            statusDot.className = 'status-dot connected';
-            statusText.textContent = 'Активен';
-        } else if (this.isAuthorized) {
-            statusDot.className = 'status-dot warning';
-            statusText.textContent = 'Подключен';
+        const { isActive, isAuthorized } = this.extensionStatus;
+        const status = this.getStatusConfig(isActive && this.isAuthorized, this.isAuthorized);
+        
+        statusDot.className = `status-dot ${status.class}`;
+        statusText.textContent = status.text;
+    }
+    
+    getStatusConfig(isActive, isAuthorized) {
+        if (isActive) {
+            return { class: 'connected', text: 'Активен' };
+        } else if (isAuthorized) {
+            return { class: 'warning', text: 'Подключен' };
         } else {
-            statusDot.className = 'status-dot';
-            statusText.textContent = 'Не подключен';
+            return { class: '', text: 'Не подключен' };
+        }
+    }
+    
+    handleBackgroundMessage(message) {
+        const handlers = {
+            'NEW_ORDER_RECEIVED': () => {
+                // Статистика придет автоматически с событием
+                this.updateActivity();
+                this.showNotification('Новый заказ получен!', 'success');
+            },
+            'TRADE_STATUS_CHANGED': () => {
+                // Статистика придет автоматически с событием
+                this.updateActivity();
+            },
+            'LOG_UPDATED': () => {
+                this.updateActivity();
+            },
+            'STATS_RECEIVED': () => {
+                // Получили статистику от background script
+                if (message.stats) {
+                    this.setStatsValues(message.stats);
+                }
+                // Скрываем лоадер
+                this.hideLoader();
+            },
+            'FORCE_LOGOUT': () => {
+                // Принудительное отключение
+                this.isAuthorized = false;
+                this.userInfo = null;
+                this.extensionStatus = { isActive: false, isAuthorized: false };
+                
+                this.updateInterface();
+                this.showNotification(message.message || 'Требуется переавторизация', 'warning');
+            }
+        };
+        
+        const handler = handlers[message.type];
+        if (handler) {
+            handler();
         }
     }
     
@@ -303,7 +341,8 @@ class PopupInterface {
         document.getElementById('authorizedContent').style.display = 'block';
         
         this.updateUserInfo();
-        this.updateStats();
+        // НЕ запрашиваем статистику автоматически при открытии popup
+        // Пользователь может запросить её вручную кнопкой обновления
         this.updateControls();
         this.updateActivity();
     }
@@ -334,32 +373,32 @@ class PopupInterface {
     
     async updateStats() {
         try {
-            const extensionStats = await this.api.getExtensionStats();
+            // Показываем лоадер
+            this.showLoader();
             
-            // Безопасно обновляем статистику трейдов
-            const activeTradesEl = document.getElementById('activeTrades');
-            const cancelledTradesEl = document.getElementById('cancelledTrades');
-            const tradesTodayEl = document.getElementById('tradesToday');
-            const successRateEl = document.getElementById('successRate');
-            
-            if (activeTradesEl) activeTradesEl.textContent = extensionStats?.activeTrades || 0;
-            if (cancelledTradesEl) cancelledTradesEl.textContent = extensionStats?.cancelledTrades || 0;
-            if (tradesTodayEl) tradesTodayEl.textContent = extensionStats?.tradesToday || 0;
-            if (successRateEl) successRateEl.textContent = `${extensionStats?.successRate || 0}%`;
-            
+            // Запрашиваем статистику через WebSocket
+            await this.sendMessageToBackground('REQUEST_STATS');
+            // Статистика придет через событие stats в handleBackgroundMessage
         } catch (error) {
-            console.error('Ошибка обновления статистики:', error);
-            // Показываем 0 при ошибке, только если элементы существуют
-            const activeTradesEl = document.getElementById('activeTrades');
-            const cancelledTradesEl = document.getElementById('cancelledTrades');
-            const tradesTodayEl = document.getElementById('tradesToday');
-            const successRateEl = document.getElementById('successRate');
-            
-            if (activeTradesEl) activeTradesEl.textContent = '0';
-            if (cancelledTradesEl) cancelledTradesEl.textContent = '0';
-            if (tradesTodayEl) tradesTodayEl.textContent = '0';
-            if (successRateEl) successRateEl.textContent = '0%';
+            console.error('Error requesting stats:', error);
+            this.hideLoader();
         }
+    }
+    
+    setStatsValues(stats) {
+        const statistics = (stats && stats.statistics) || {};
+        
+        const statFields = {
+            'activeTrades': statistics.active || 0,
+            'completedTrades': statistics.completed || 0,
+            'cancelledTrades': statistics.cancelled || 0,
+            'totalTradesToday': statistics.total || 0
+        };
+        
+        Object.entries(statFields).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value;
+        });
     }
     
     updateControls() {
@@ -384,26 +423,32 @@ class PopupInterface {
             const logs = await this.storage.getLogs(5);
             const activityList = document.getElementById('activityList');
             
-            if (logs.length === 0) {
-                activityList.innerHTML = `
-                    <div class="activity-item">
-                        <div class="activity-text">Нет активности</div>
-                        <div class="activity-time">—</div>
-                    </div>
-                `;
-                return;
-            }
-            
-            activityList.innerHTML = logs.map(log => `
-                <div class="activity-item">
-                    <div class="activity-text">${log.message}</div>
-                    <div class="activity-time">${this.formatTime(log.timestamp)}</div>
-                </div>
-            `).join('');
-            
+            const html = logs.length === 0 
+                ? this.getEmptyActivityHtml()
+                : logs.map(log => this.getActivityItemHtml(log)).join('');
+                
+            activityList.innerHTML = html;
         } catch (error) {
             // Ignore activity update errors
         }
+    }
+    
+    getEmptyActivityHtml() {
+        return `
+            <div class="activity-item">
+                <div class="activity-text">Нет активности</div>
+                <div class="activity-time">—</div>
+            </div>
+        `;
+    }
+    
+    getActivityItemHtml(log) {
+        return `
+            <div class="activity-item">
+                <div class="activity-text">${log.message}</div>
+                <div class="activity-time">${this.formatTime(log.timestamp)}</div>
+            </div>
+        `;
     }
     
     async handleAuthorize() {
@@ -423,18 +468,28 @@ class PopupInterface {
         btnLoader.style.display = 'inline';
         
         try {
-            await this.storage.setAuthToken(token);
-            await this.api.authorize(token);
-            await this.loadUserInfo();
+            // Сначала авторизуемся на сервере и получаем канал
+            const response = await this.api.authorize(token);
             
-            await this.sendMessageToBackground('AUTHORIZE', { token });
-            
-            this.isAuthorized = true;
-            await this.loadState();
-            this.updateInterface();
-            
-            this.showNotification('Успешно подключено!', 'success');
-            await this.storage.addLogEntry('success', 'Расширение подключено к аккаунту');
+            if (response.success && response.channel) {
+                await this.storage.setData({
+                    authToken: token,
+                    websocketChannel: response.channel,
+                    authorizedAt: new Date().toISOString()
+                });
+                
+                await this.loadUserInfo();
+                await this.sendMessageToBackground('AUTHORIZE', { token });
+                
+                this.isAuthorized = true;
+                await this.loadState();
+                this.updateInterface();
+                
+                this.showNotification('Успешно подключено!', 'success');
+                await this.storage.addLogEntry('success', 'Расширение подключено к аккаунту');
+            } else {
+                throw new Error('Failed to get WebSocket channel');
+            }
             
         } catch (error) {
             this.showNotification('Ошибка подключения. Проверьте токен.', 'error');
@@ -465,9 +520,19 @@ class PopupInterface {
     }
     
     async handleRefresh() {
-        await this.loadState();
-        this.updateInterface();
-        this.showNotification('Статус обновлен', 'success');
+        try {
+            // Запрашиваем статистику (отправит событие на сервер через WebSocket)
+            await this.updateStats();
+            
+            await this.loadState();
+            this.updateInterface();
+            
+            // Логируем в расширении
+            await this.storage.addLogEntry('info', 'Обновлена статистика');
+        } catch (error) {
+            console.error('Error during refresh:', error);
+            this.showNotification('Ошибка обновления', 'error');
+        }
     }
     
     handleSettings() {
@@ -508,6 +573,16 @@ class PopupInterface {
         }
     }
     
+    async handleClearLog() {
+        try {
+            await this.storage.setData({ logs: [] });
+            this.updateActivity();
+            this.showNotification('Лог очищен', 'success');
+        } catch (error) {
+            this.showNotification('Ошибка очистки лога', 'error');
+        }
+    }
+    
     showNotification(message, type = 'info') {
         const notification = document.getElementById('notification');
         const notificationText = notification.querySelector('.notification-text');
@@ -524,6 +599,20 @@ class PopupInterface {
     hideNotification() {
         const notification = document.getElementById('notification');
         notification.style.display = 'none';
+    }
+    
+    showLoader() {
+        const loader = document.getElementById('fullscreenLoader');
+        if (loader) {
+            loader.classList.add('active');
+        }
+    }
+    
+    hideLoader() {
+        const loader = document.getElementById('fullscreenLoader');
+        if (loader) {
+            loader.classList.remove('active');
+        }
     }
     
     async sendMessageToBackground(type, data = {}) {
@@ -556,21 +645,72 @@ class PopupInterface {
     
     startPeriodicUpdate() {
         setInterval(async () => {
-            if (this.isAuthorized) {
-                await this.loadState();
-                this.updateStatusIndicator();
-                this.updateControls();
-                
-                if (Date.now() % 60000 < 10000) {
-                    this.updateStats();
-                    this.updateActivity();
-                }
-            }
+            if (!this.isAuthorized) return;
+            
+            await this.loadState();
+            this.updateStatusIndicator();
+            this.updateControls();
+            
+            // Обновляем только активность (логи), но не статистику
+            this.updateActivity();
         }, 10000);
     }
 }
 
+// Логика для detached окна - определяем по типу окна
+function initDetachedWindow() {
+    window.isDetachedWindow = true;
+    
+    // Применяем класс для detached окна
+    document.body.classList.add('detached-window');
+    
+    // Меняем tooltip кнопки detach
+    const detachBtn = document.getElementById('detachBtn');
+    if (detachBtn) {
+        detachBtn.title = 'Вернуться к popup';
+    }
+    
+    // Обновляем заголовок окна в зависимости от состояния
+    function updateWindowTitle() {
+        const statusTextEl = document.querySelector('.status-text');
+        const statusText = (statusTextEl && statusTextEl.textContent) || 'Не подключен';
+        const baseTitle = 'CS-SKINS.pro Trading Assistant';
+        document.title = `${baseTitle} - ${statusText}`;
+    }
+    
+    // Обновляем заголовок при изменениях
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.target.classList && mutation.target.classList.contains('status-text')) {
+                updateWindowTitle();
+            }
+        });
+    });
+    
+    // Наблюдаем за изменениями статуса
+    const statusIndicator = document.getElementById('statusIndicator');
+    if (statusIndicator) {
+        observer.observe(statusIndicator, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+    }
+    
+    // Первоначальное обновление заголовка
+    setTimeout(updateWindowTitle, 1000);
+}
+
 // Инициализируем popup когда DOM готов
 document.addEventListener('DOMContentLoaded', () => {
+    // Проверяем тип окна для detached режима
+    if (window.chrome && chrome.windows) {
+        chrome.windows.getCurrent((currentWindow) => {
+            if (currentWindow.type === 'popup') {
+                initDetachedWindow();
+            }
+        });
+    }
+    
     new PopupInterface();
 });

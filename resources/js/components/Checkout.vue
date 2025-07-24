@@ -31,25 +31,17 @@
 					<!-- Order summary -->
 					<div class="cart-summary mb-4 p-3 bg-light rounded">
 						<div class="row align-items-center">
-							<div class="col-md-8">
+							<div class="col-md-8 mb-2 mb-md-0">
 								<h5 class="mb-1">Заказ на сумму: <strong class="text-primary">{{ formatPrice(cartTotal) }} ₽</strong></h5>
 								<p class="text-muted mb-0">Товаров: {{ cartItems.length }}</p>
 							</div>
 							<div class="col-md-4 text-end">
-								<div class="mb-2">
-									<label class="form-label small">Способ оплаты:</label>
-									<select class="form-select form-select-sm" v-model="selectedPaymentMethod">
-										<option value="test">Тестовая оплата</option>
-										<option value="card" disabled>Банковская карта (скоро)</option>
-										<option value="crypto" disabled>Криптовалюта (скоро)</option>
-									</select>
-								</div>
-								<button class="btn theme-btn w-100" 
+								<button class="btn theme-btn" 
 								        @click="placeOrder" 
-								        :disabled="isProcessing || !selectedPaymentMethod">
+								        :disabled="isProcessing">
 									<i v-if="isProcessing" class="ri-loader-2-line me-1"></i>
-									<i v-else class="ri-shopping-cart-line me-1"></i>
-									{{ isProcessing ? 'Обрабатываем...' : 'Оплатить заказ' }}
+									<i v-else class="ri-wallet-line me-1"></i>
+									{{ isProcessing ? 'Обрабатываем...' : 'Оплатить с баланса' }}
 								</button>
 							</div>
 						</div>
@@ -147,7 +139,6 @@ export default {
 			cartItems: [],
 			cartTotal: 0,
 			orderNotes: '',
-			selectedPaymentMethod: 'test',
 			showSuccessModal: false,
 			currentOrder: null
 		}
@@ -175,29 +166,16 @@ export default {
 		},
 
 		async placeOrder() {
-			if (!this.selectedPaymentMethod) {
-				window.toast.error('Выберите способ оплаты');
-				return;
-			}
-
 			this.isProcessing = true;
 			try {
-				// Создаем заказ
+				// Создаем и сразу оплачиваем заказ (списание с баланса)
 				const orderResponse = await orderAPI.createOrder();
 				if (!orderResponse.success) {
 					throw new Error(orderResponse.message);
 				}
 
-				const order = orderResponse.order;
-
-				// Оплачиваем заказ
-				const paymentResponse = await orderAPI.payOrder(order.id);
-				if (!paymentResponse.success) {
-					throw new Error(paymentResponse.message);
-				}
-
 				// Показываем модал успеха
-				this.currentOrder = paymentResponse.order;
+				this.currentOrder = orderResponse.order;
 				this.showSuccessModal = true;
 
 				// Обновляем счетчик корзины в header
@@ -207,6 +185,7 @@ export default {
 
 			} catch (error) {
 				console.error('Checkout error:', error);
+				// Toast будет показан автоматически через глобальный interceptor axios
 			} finally {
 				this.isProcessing = false;
 			}

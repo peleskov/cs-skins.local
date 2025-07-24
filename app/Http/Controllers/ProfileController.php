@@ -556,11 +556,35 @@ class ProfileController extends Controller
     {
         try {
             $client = $this->getAuthenticatedClient();
-            $token = $client->regenerateExtensionToken();
+            
+            // Получаем старый токен для отправки force_logout на старый канал
+            $oldToken = $client->extension_token;
+            
+            // Генерируем новый токен
+            $newToken = $client->regenerateExtensionToken();
+            
+            // Если был старый токен, отправляем force_logout на старый канал
+            if ($oldToken) {
+                $oldChannel = $this->generateChannel($client->id, $oldToken);
+                
+                try {
+                    broadcast(\App\Events\ExtensionEvents::forceLogout($oldChannel, 'Токен изменен. Требуется переавторизация.'));
+                    Log::info('Force logout sent to old channel', [
+                        'client_id' => $client->id,
+                        'old_channel' => $oldChannel
+                    ]);
+                } catch (\Exception $e) {
+                    Log::warning('Failed to send force logout', [
+                        'client_id' => $client->id,
+                        'old_channel' => $oldChannel,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
 
             return response()->json([
                 'success' => true,
-                'token' => $token,
+                'token' => $newToken,
                 'message' => 'Токен расширения перегенерирован успешно'
             ]);
 
@@ -696,5 +720,14 @@ class ProfileController extends Controller
             'expired' => $isExpired,
             'time_diff' => $timeDiff
         ];
+    }
+
+    /**
+     * Генерация канала на основе seller_id и токена
+     */
+    private function generateChannel(int $sellerId, string $token): string
+    {
+        $hash = substr(hash('sha256', $sellerId . $token), 0, 16);
+        return "seller-{$sellerId}-{$hash}";
     }
 }

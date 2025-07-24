@@ -43,6 +43,10 @@ return [
             ],
             'client_options' => [
                 // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html
+                'timeout' => 5, // Уменьшаем timeout до 5 секунд
+                'connect_timeout' => 2, // Timeout подключения 2 секунды
+                'http_errors' => false, // Не бросать исключения на HTTP ошибки
+                'verify' => false, // Отключаем SSL проверку для локальных запросов
             ],
         ],
 

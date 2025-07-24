@@ -134,11 +134,16 @@ class Listing extends Model
         ]);
     }
 
-    public function reserve(): void
+    public function reserve(): bool
     {
-        $this->update([
-            'status' => self::STATUS_RESERVED,
-        ]);
+        // Атомарная проверка и обновление - резервируем только если статус ACTIVE
+        $updated = $this->where('id', $this->id)
+            ->where('status', self::STATUS_ACTIVE)
+            ->update([
+                'status' => self::STATUS_RESERVED,
+            ]);
+            
+        return $updated > 0;
     }
 
     public function expire(): void

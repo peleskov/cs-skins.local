@@ -4,40 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CS-SKINS.pro Trading Assistant</title>
-    <link rel="icon" type="image/png" sizes="16x16" href="../assets/icons/icon-16.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png">
-    <link rel="icon" type="image/png" sizes="48x48" href="../assets/icons/icon-48.png">
-    <link rel="shortcut icon" href="../assets/icons/icon-48.png">
-    <link rel="stylesheet" href="popup.css">
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: auto;
-        }
-        
-        .popup-container {
-            width: 100%;
-            min-height: 100vh;
-            max-width: none;
-        }
-        
-        /* Изменяем кнопку отвязки на кнопку возврата в отдельном окне */
-        .btn-detach .detach-icon {
-            transform: rotate(180deg);
-        }
-    </style>
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/icon-16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/icon-32.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="assets/icons/icon-48.png">
+    <link rel="shortcut icon" href="assets/icons/icon-48.png">
+    <link rel="stylesheet" href="assets/css/index.css">
 </head>
 <body>
+    <!-- Полноэкранный лоадер -->
+    <div class="fullscreen-loader" id="fullscreenLoader">
+        <div class="loader-content">
+            <div class="loader-spinner"></div>
+            <div class="loader-text">Загрузка статистики...</div>
+        </div>
+    </div>
+    
     <div class="popup-container">
         <!-- Заголовок -->
         <div class="header">
             <a href="https://cs-skins.s1temaker.ru" target="_blank" class="logo logo-link" title="Открыть CS-SKINS.pro">
-                <img src="../assets/icons/icon-32.png" alt="CS-SKINS.pro" class="logo-icon">
+                <img src="assets/icons/icon-32.png" alt="CS-SKINS.pro" class="logo-icon">
                 <span class="logo-text">CS-SKINS.pro</span>
             </a>
             <div class="header-controls">
-                <button id="detachBtn" class="btn btn-detach" title="Вернуться к popup">
+                <button id="detachBtn" class="btn btn-detach" title="Открыть в отдельном окне">
                     <svg class="detach-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14">
                         <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                     </svg>
@@ -109,30 +99,36 @@
 
             <!-- Статистика трейдов -->
             <div class="stats-section">
-                <h4 class="stats-title">Трейды</h4>
-                <div class="stats-grid">
+                <h4 class="stats-title">Трейды сегодня</h4>
+                <div class="stats-row">
                     <div class="stat-item">
                         <div class="stat-value" id="activeTrades">0</div>
-                        <div class="stat-label">Активных</div>
+                        <div class="stat-label">Активные</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="completedTrades">0</div>
+                        <div class="stat-label">Завершенные</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-value" id="cancelledTrades">0</div>
-                        <div class="stat-label">Отмененых</div>
+                        <div class="stat-label">Отмененные</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-value" id="tradesToday">0</div>
-                        <div class="stat-label">Сегодня</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="successRate">0%</div>
-                        <div class="stat-label">Успешность</div>
+                        <div class="stat-value" id="totalTradesToday">0</div>
+                        <div class="stat-label">Всего</div>
                     </div>
                 </div>
             </div>
 
+
             <!-- Последние события -->
             <div class="recent-activity">
-                <h4>Последние события</h4>
+                <div class="activity-header">
+                    <h4>Последние события</h4>
+                    <button id="clearLogBtn" class="clear-log-btn" title="Очистить лог">
+                        <span class="clear-icon">✕</span>
+                    </button>
+                </div>
                 <div class="activity-list" id="activityList">
                     <div class="activity-item">
                         <div class="activity-text">Нет активности</div>
@@ -199,7 +195,6 @@
         </div>
     </div>
 
-    <script src="detached.js"></script>
-    <script src="popup.js"></script>
+    <script src="assets/js/index.js"></script>
 </body>
 </html>

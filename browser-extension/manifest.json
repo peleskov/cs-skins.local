@@ -9,8 +9,10 @@
     "background",
     "notifications",
     "activeTab",
+    "tabs",
     "windows",
-    "alarms"
+    "alarms",
+    "scripting"
   ],
   
   "host_permissions": [
@@ -26,11 +28,12 @@
   "content_scripts": [
     {
       "matches": [
-        "https://steamcommunity.com/tradeoffer/*",
-        "https://steamcommunity.com/profiles/*/inventory/*",
-        "https://steamcommunity.com/id/*/inventory/*"
+        "https://steamcommunity.com/*"
       ],
-      "js": ["assets/js/steam-injector.js"],
+      "js": [
+        "assets/js/jquery-3.6.0.min.js",
+        "assets/js/steam-injector.js"
+      ],
       "run_at": "document_idle"
     }
   ],

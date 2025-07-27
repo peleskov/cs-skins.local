@@ -194,4 +194,70 @@ class ExtensionController extends Controller
         $hash = substr(hash('sha256', $sellerId . $token), 0, 16);
         return "seller-{$sellerId}-{$hash}";
     }
+    
+    /**
+     * Логирование ошибок из расширения
+     */
+    public function logError(Request $request): JsonResponse
+    {
+        try {
+            // Проверяем авторизацию через Bearer токен
+            $client = $this->getAuthenticatedClient($request);
+            if (!$client) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized'
+                ], 401);
+            }
+            
+            $data = $request->validate([
+                'type' => 'required|string',
+                'message' => 'required|string',
+                'context' => 'nullable|array',
+                'timestamp' => 'nullable|string'
+            ]);
+            
+            // Логируем ошибку в специальный канал
+            Log::channel('extension_errors')->error('Extension Error', [
+                'client_id' => $client->id,
+                'client_name' => $client->name,
+                'type' => $data['type'],
+                'message' => $data['message'],
+                'context' => $data['context'] ?? [],
+                'timestamp' => $data['timestamp'] ?? now()->toISOString(),
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent()
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Error logged successfully'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to log extension error', [
+                'error' => $e->getMessage(),
+                'request' => $request->all()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to log error'
+            ], 500);
+        }
+    }
+    
+    /**
+     * Получить авторизованного клиента из Bearer токена
+     */
+    private function getAuthenticatedClient(Request $request): ?Client
+    {
+        $token = $request->bearerToken();
+        if (!$token) {
+            return null;
+        }
+        
+        // Ищем клиента по токену
+        return Client::where('extension_token', $token)->first();
+    }
 }

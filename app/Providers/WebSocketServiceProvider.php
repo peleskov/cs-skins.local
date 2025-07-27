@@ -32,7 +32,7 @@ class WebSocketServiceProvider extends ServiceProvider
             $stats = $provider->getSellerStats($sellerId);
             
             // Отправляем статистику сразу, так как данные легкие
-            Log::info('Отправка статистики через broadcast', ['seller_id' => $sellerId]);
+            //Log::info('Отправка статистики через broadcast', ['seller_id' => $sellerId]);
             
             try {
                 // Получаем токен клиента для генерации правильного канала
@@ -42,7 +42,7 @@ class WebSocketServiceProvider extends ServiceProvider
                     
                     // Отправляем напрямую через WebSocket соединение, минуя HTTP API
                     $this->sendMessageDirectly($channel, 'stats', ['stats' => $stats]);
-                    Log::info('Статистика отправлена успешно через WebSocket', ['seller_id' => $sellerId, 'channel' => $channel, 'stats' => $stats]);
+                    //Log::info('Статистика отправлена успешно через WebSocket', ['seller_id' => $sellerId, 'channel' => $channel, 'stats' => $stats]);
                 } else {
                     Log::warning('Не удалось найти токен клиента для отправки статистики', ['seller_id' => $sellerId]);
                 }
@@ -278,22 +278,24 @@ class WebSocketServiceProvider extends ServiceProvider
                     'data' => json_encode($messageData),
                     'channel' => $channel
                 ]);
-                
+                /*
                 Log::info('Отправляем сообщение через WebSocket соединения', [
                     'channel' => $channel,
                     'connections_count' => count($connections)
                 ]);
-                
+                */
+
                 // Отправляем сообщение всем подключенным клиентам
                 foreach ($connections as $connection) {
                     $connection->connection()->send($message);
                 }
-                
+                /*
                 Log::info('Сообщение отправлено мгновенно через WebSocket', [
                     'channel' => $channel,
                     'event' => $eventType,
                     'data' => $data
                 ]);
+                */
             } else {
                 Log::warning('Канал не найден или нет подключений', ['channel' => $channel]);
             }

@@ -66,6 +66,24 @@ class PlatformAPI {
             throw error;
         }
     }
+    
+    async logError(errorType, errorMessage, context = {}) {
+        try {
+            const response = await this.makeRequest('/log-error', {
+                method: 'POST',
+                body: JSON.stringify({
+                    type: errorType,
+                    message: errorMessage,
+                    context: context,
+                    timestamp: new Date().toISOString()
+                })
+            });
+            return response;
+        } catch (error) {
+            // Не выбрасываем ошибку, чтобы не прерывать основной процесс
+            console.error('Failed to log error to server:', error);
+        }
+    }
 }
 
 // Класс для работы с хранилищем
@@ -156,6 +174,7 @@ class TradingAssistant {
         this.platformAPI = new PlatformAPI();
         this.storage = new ExtensionStorage();
         this.lastStatsRequest = 0;
+        this.currentSteamId = null;
         
         this.init();
     }
@@ -165,10 +184,166 @@ class TradingAssistant {
         if (this.isAuthorized) {
             // Восстанавливаем последнюю статистику при запуске
             await this.restoreLastStats();
+            
+            // Проверяем Steam сессию при запуске
+            await this.performSteamCheck();
+            
             await this.connectWebSocket();
+            
+            // Запускаем периодическую проверку Steam каждые 30 секунд
+            this.startSteamMonitoring();
         }
         
         await updateActivityIcon();
+    }
+    
+    startSteamMonitoring() {
+        // Очищаем старый интервал если есть
+        if (this.steamCheckInterval) {
+            clearInterval(this.steamCheckInterval);
+        }
+        
+        // Проверяем Steam каждые 30 секунд
+        this.steamCheckInterval = setInterval(() => {
+            this.performSteamCheck();
+        }, 30000);
+    }
+    
+    async performSteamCheck() {
+        try {
+            const steamStatus = await this.checkSteamStatusDirect();
+            console.log('[STEAM CHECK] Status:', steamStatus);
+            
+            // Сохраняем результат проверки
+            await this.storage.setData({
+                lastSteamCheck: Date.now(),
+                steamAvailable: steamStatus.available,
+                steamState: steamStatus.state
+            });
+            
+            // Обновляем иконку если нужно
+            await updateActivityIcon();
+            
+        } catch (error) {
+            console.error('[STEAM CHECK] Error:', error);
+        }
+    }
+    
+    async checkSteamStatusDirect() {
+        try {
+            // Получаем все открытые вкладки для диагностики
+            const allTabs = await chrome.tabs.query({});
+            console.log('[STEAM CHECK] All open tabs:', allTabs.map(tab => ({ id: tab.id, url: tab.url, title: tab.title })));
+            
+            // Проверяем наличие активных вкладок Steam
+            const steamTabs = await chrome.tabs.query({
+                url: ["*://steamcommunity.com/*"]
+            });
+            
+            console.log('[STEAM CHECK] Steam tabs found:', steamTabs.length);
+            
+            if (steamTabs.length === 0) {
+                return {
+                    available: false,
+                    state: 'closed',
+                    reason: 'closed'
+                };
+            }
+            
+            // Получаем Steam ID пользователя расширения
+            const data = await this.storage.getData();
+            const expectedSteamId = data.userInfo?.steam_id || null;
+            
+            // Используем первую найденную вкладку Steam
+            const steamTab = steamTabs[0];
+            
+            try {
+                // Инжектируем скрипт для проверки сессии напрямую
+                const [result] = await chrome.scripting.executeScript({
+                    target: { tabId: steamTab.id },
+                    world: 'MAIN',
+                    func: (expectedId) => {
+                        // Проверяем наличие g_steamID
+                        if (typeof g_steamID !== 'undefined' && g_steamID) {
+                            const isCorrectUser = !expectedId || g_steamID === expectedId;
+                            
+                            console.log('[STEAM CHECK] Found steamID:', g_steamID);
+                            console.log('[STEAM CHECK] Expected steamID:', expectedId);
+                            console.log('[STEAM CHECK] Is correct user:', isCorrectUser);
+                            
+                            if (isCorrectUser) {
+                                return {
+                                    available: true,
+                                    state: 'ready',
+                                    steamId: g_steamID,
+                                    isCorrectUser: true,
+                                    reason: 'authenticated'
+                                };
+                            } else {
+                                return {
+                                    available: false,
+                                    state: 'wrong_user',
+                                    steamId: g_steamID,
+                                    isCorrectUser: false,
+                                    reason: 'wrong_user'
+                                };
+                            }
+                        }
+                        
+                        // Проверяем sessionid
+                        if (typeof g_sessionID !== 'undefined' && g_sessionID) {
+                            // Есть сессия, но нет steamID - возможно на странице логина
+                            return {
+                                available: false,
+                                state: 'unauthorized',
+                                reason: 'session_exists_but_not_logged_in'
+                            };
+                        }
+                        
+                        // Не авторизован
+                        return {
+                            available: false,
+                            state: 'unauthorized',
+                            reason: 'not_logged_in'
+                        };
+                    },
+                    args: [expectedSteamId]
+                });
+                
+                if (result && result.result) {
+                    // Сохраняем текущий Steam ID
+                    if (result.result.steamId) {
+                        this.currentSteamId = result.result.steamId;
+                    }
+                    
+                    return result.result;
+                }
+                
+                return {
+                    available: false,
+                    state: 'error',
+                    reason: 'no_result_from_script'
+                };
+                
+            } catch (error) {
+                console.error('[STEAM CHECK] Script injection error:', error);
+                
+                // Если не удалось инжектировать скрипт, возможно вкладка еще загружается
+                return {
+                    available: false,
+                    state: 'loading',
+                    reason: 'script_injection_failed'
+                };
+            }
+            
+        } catch (error) {
+            console.error('[STEAM CHECK] General error:', error);
+            return {
+                available: false,
+                state: 'error',
+                reason: error.message
+            };
+        }
     }
     
     async connectWebSocket() {
@@ -354,7 +529,8 @@ class TradingAssistant {
             await this.showNotification('Требуется переавторизация', message);
             
         } else if (eventType === 'trade_reserved') {
-            // Пока не открываем Steam автоматически
+            // Автоматическое создание трейд-оффера
+            await this.processTrade(eventData);
         }
         
         // Для события 'stats' ничего дополнительного не делаем - статистика уже обновлена выше
@@ -422,6 +598,18 @@ class TradingAssistant {
     async stop() {
         this.disconnectWebSocket();
         
+        // Останавливаем мониторинг Steam
+        if (this.steamCheckInterval) {
+            clearInterval(this.steamCheckInterval);
+            this.steamCheckInterval = null;
+        }
+        
+        // Сбрасываем Steam статус
+        await this.storage.setData({
+            steamAvailable: false,
+            steamState: 'inactive'
+        });
+        
         this.isActive = false;
         
         // Очищаем логи при отключении расширения
@@ -435,7 +623,253 @@ class TradingAssistant {
     }
     
     
+    async processTrade(eventData) {
+        try {
+            // Проверяем что есть необходимые данные для создания трейда
+            if (!eventData.order) {
+                await this.storage.addLogEntry('error', 'Получены неполные данные для трейда');
+                return;
+            }
+            
+            const order = eventData.order;
+            const skinName = order.skin_name || 'Неизвестный предмет';
+            
+            // Проверяем обязательные поля
+            if (!order.steam_asset_id || !order.buyer?.steam_id || !order.buyer?.trade_url) {
+                await this.storage.addLogEntry('error', `Неполные данные для трейда ${skinName}`);
+                return;
+            }
+            
+            // Проверяем статус Steam
+            const steamStatus = await this.checkSteamStatusDirect();
+            if (!steamStatus.available) {
+                await this.storage.addLogEntry('warning', `Трейд ${skinName} отложен: Steam недоступен`);
+                await this.showNotification('Трейд отложен', `${skinName} - Steam недоступен для создания трейда`);
+                return;
+            }
+            
+            await this.storage.addLogEntry('info', `Создание трейда: ${skinName}`);
+            
+            // Логируем данные трейда для отладки
+            console.log('Creating trade offer:', {
+                skin_name: skinName,
+                steam_asset_id: order.steam_asset_id,
+                buyer_steam_id: order.buyer?.steam_id,
+                trade_url: order.buyer?.trade_url
+            });
+            
+            // Создаём трейд используя рабочую логику
+            const tradeResult = await this.createTradeOffer(order);
+            
+            if (tradeResult.success) {
+                await this.storage.addLogEntry('success', `Трейд ${skinName} создан #${tradeResult.tradeofferid}`);
+                await this.showNotification('Трейд создан', `${skinName} отправлен покупателю`);
+                
+                // TODO: Отправить tradeofferid на сервер для мониторинга
+                
+            } else {
+                await this.storage.addLogEntry('error', `Ошибка трейда ${skinName}: ${tradeResult.error}`);
+                
+                // Отправляем ошибку на сервер
+                await this.platformAPI.logError('trade_creation_failed', tradeResult.error, {
+                    skin_name: skinName,
+                    steam_asset_id: order.steam_asset_id,
+                    buyer_steam_id: order.buyer?.steam_id,
+                    buyer_trade_url: order.buyer?.trade_url,
+                    seller_steam_id: this.currentSteamId || 'unknown'
+                });
+                
+                await this.showNotification('Ошибка трейда', skinName);
+            }
+            
+        } catch (error) {
+            await this.storage.addLogEntry('error', `Ошибка создания трейда: ${skinName}`);
+            
+            // Отправляем критическую ошибку на сервер
+            await this.platformAPI.logError('trade_critical_error', error.message, {
+                skin_name: skinName,
+                steam_asset_id: order.steam_asset_id,
+                buyer_steam_id: order.buyer?.steam_id,
+                error_stack: error.stack
+            });
+            
+            await this.showNotification('Ошибка трейда', skinName);
+        }
+    }
     
+    async createTradeOffer(order) {
+        try {
+            const tradeUrl = order.buyer.trade_url;
+            
+            // Находим существующую Steam вкладку
+            const steamTabs = await chrome.tabs.query({ url: 'https://steamcommunity.com/*' });
+            
+            if (!steamTabs.length) {
+                return { success: false, error: 'Нет открытых вкладок Steam' };
+            }
+            
+            const steamTab = steamTabs[0];
+            
+            // Переходим на страницу создания трейда в существующей вкладке
+            await chrome.tabs.update(steamTab.id, { 
+                url: tradeUrl,
+                active: true 
+            });
+            
+            // Ждем загрузки страницы
+            await new Promise(resolve => {
+                chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
+                    if (tabId === steamTab.id && info.status === 'complete') {
+                        chrome.tabs.onUpdated.removeListener(listener);
+                        resolve();
+                    }
+                });
+            });
+            
+            // Небольшая задержка для полной инициализации страницы
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Создаем предложение обмена
+            const [result] = await chrome.scripting.executeScript({
+                target: { tabId: steamTab.id },
+                world: 'MAIN',
+                func: (tradeUrl, assetId) => {
+                    // Парсим trade URL для получения параметров
+                    const urlParams = new URL(tradeUrl);
+                    const partner = urlParams.searchParams.get('partner');
+                    const token = urlParams.searchParams.get('token');
+                    
+                    if (!partner || !token) {
+                        return { success: false, error: 'Неверный формат trade URL' };
+                    }
+                    
+                    // Конвертируем partner в steamid64
+                    const steamId64 = (BigInt(partner) + BigInt('76561197960265728')).toString();
+                    
+                    // Получаем session ID
+                    let sessionId = '';
+                    if (typeof g_sessionID !== 'undefined') {
+                        sessionId = g_sessionID;
+                    } else {
+                        return { success: false, error: 'Не удалось получить session ID' };
+                    }
+                    
+                    // Создаем предложение обмена
+                    const tradeOffer = {
+                        sessionid: sessionId,
+                        serverid: 1,
+                        partner: steamId64,
+                        tradeoffermessage: '',
+                        json_tradeoffer: JSON.stringify({
+                            newversion: true,
+                            version: 2,
+                            me: {
+                                assets: [
+                                    {
+                                        appid: "730",
+                                        contextid: "2",
+                                        amount: 1,
+                                        assetid: assetId
+                                    }
+                                ],
+                                currency: [],
+                                ready: false
+                            },
+                            them: {
+                                assets: [],
+                                currency: [],
+                                ready: false
+                            }
+                        }),
+                        captcha: '',
+                        trade_offer_create_params: JSON.stringify({
+                            trade_offer_access_token: token
+                        })
+                    };
+                    
+                    // Отправляем запрос на создание предложения
+                    return fetch('https://steamcommunity.com/tradeoffer/new/send', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                            'Accept': '*/*',
+                            'Cache-Control': 'no-cache',
+                            'Pragma': 'no-cache',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Referer': tradeUrl
+                        },
+                        body: new URLSearchParams(tradeOffer).toString(),
+                        credentials: 'include'
+                    })
+                    .then(response => {
+                        if (response.status === 200) {
+                            return response.json().then(result => {
+                                if (result && result.tradeofferid) {
+                                    return {
+                                        success: true,
+                                        tradeofferid: result.tradeofferid,
+                                        needs_mobile_confirmation: result.needs_mobile_confirmation
+                                    };
+                                } else {
+                                    return { success: false, error: result.strError || 'Неизвестная ошибка Steam' };
+                                }
+                            });
+                        } else {
+                            return { success: false, error: `HTTP ${response.status}` };
+                        }
+                    })
+                    .catch(error => {
+                        return { success: false, error: error.message };
+                    });
+                },
+                args: [tradeUrl, order.steam_asset_id]
+            });
+            
+            if (result && result.result) {
+                return result.result;
+            }
+            
+            return { success: false, error: 'Не удалось выполнить скрипт создания трейда' };
+            
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+    
+    async createTradeWithTab(order) {
+        try {
+            // Открываем trade URL в новой вкладке
+            const tab = await chrome.tabs.create({
+                url: order.buyer.trade_url,
+                active: false
+            });
+            
+            // Ждём загрузки страницы
+            await new Promise(resolve => {
+                const listener = (tabId, changeInfo) => {
+                    if (tabId === tab.id && changeInfo.status === 'complete') {
+                        chrome.tabs.onUpdated.removeListener(listener);
+                        setTimeout(resolve, 2000); // Даём время на инициализацию
+                    }
+                };
+                chrome.tabs.onUpdated.addListener(listener);
+            });
+            
+            // Выполняем создание трейда на этой странице
+            const result = await chrome.tabs.sendMessage(tab.id, {
+                type: 'CREATE_TRADE_ON_PAGE',
+                order: order
+            });
+            
+            // Закрываем вкладку
+            await chrome.tabs.remove(tab.id);
+            
+            return result;
+            
+        } catch (error) {
+            throw error;
+        }
+    }
     
     async showNotification(title, message) {
         await chrome.notifications.create({
@@ -452,6 +886,11 @@ class TradingAssistant {
                 isActive: this.isActive,
                 isAuthorized: this.isAuthorized
             }),
+            
+            'CHECK_STEAM_STATUS': async () => {
+                const steamStatus = await this.checkSteamStatusDirect();
+                sendResponse(steamStatus);
+            },
             
             'OPEN_DETACHED_WINDOW': async () => {
                 try {
@@ -496,7 +935,32 @@ class TradingAssistant {
                 } catch (error) {
                     sendResponse({ success: false, error: error.message });
                 }
-            }
+            },
+            
+            'CREATE_TRADE_WITH_TAB': async () => {
+                try {
+                    const result = await this.createTradeWithTab(message.order);
+                    sendResponse(result);
+                } catch (error) {
+                    sendResponse({ 
+                        success: false, 
+                        error: error.message 
+                    });
+                }
+            },
+            
+            'GET_USER_STEAM_ID': async () => {
+                try {
+                    const data = await this.storage.getData();
+                    sendResponse({ 
+                        success: true, 
+                        steamId: data.userInfo?.steam_id || null 
+                    });
+                } catch (error) {
+                    sendResponse({ success: false, error: error.message });
+                }
+            },
+            
         };
         
         const handler = handlers[message.type];

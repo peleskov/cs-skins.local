@@ -72,13 +72,27 @@ class ExtensionEvents implements ShouldBroadcastNow
         // Получаем актуальную статистику
         $stats = self::getSellerStats($orderItem->seller_id);
         
-        // Генерируем готовую ссылку для Steam трейда
-        $tradeUrl = self::generateTradeUrl($orderItem);
+        // Получаем данные покупателя
+        $order = $orderItem->order;
+        $buyer = $order->client;
+        
+        // Получаем steam_asset_id через связь с листингом
+        $listing = $orderItem->listing;
+        
+        // Формируем данные для автоматического создания трейда
+        $orderData = [
+            'skin_name' => $orderItem->item_name,
+            'steam_asset_id' => $listing->steam_asset_id,
+            'buyer' => [
+                'steam_id' => $buyer->steam_id,
+                'trade_url' => $buyer->steam_trade_url
+            ]
+        ];
         
         return new self($orderItem->seller_id, 'trade_reserved', [
-            'trade_url' => $tradeUrl,
+            'order' => $orderData,
             'stats' => $stats,
-        ], 'Новый трейд');
+        ], 'Новый трейд: ' . $orderItem->item_name);
     }
 
 

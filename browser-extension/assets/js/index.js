@@ -185,6 +185,11 @@ class PopupInterface {
         this.setupEventListeners();
         this.updateInterface();
         this.startPeriodicUpdate();
+        
+        // Автоматически открываем в detached режиме если это не уже detached окно
+        if (!window.isDetachedWindow) {
+            this.handleDetach();
+        }
     }
     
     async loadState() {
@@ -244,6 +249,7 @@ class PopupInterface {
         if (logoutBtn) logoutBtn.addEventListener('click', () => this.handleLogout());
         if (clearLogBtn) clearLogBtn.addEventListener('click', () => this.handleClearLog());
         
+        
         // Добавляем обработчик detach только если это не отдельное окно
         if (detachBtn && !window.isDetachedWindow) {
             detachBtn.addEventListener('click', () => this.handleDetach());
@@ -271,24 +277,96 @@ class PopupInterface {
     }
     
     updateStatusIndicator() {
-        const statusIndicator = document.getElementById('statusIndicator');
-        const statusDot = statusIndicator.querySelector('.status-dot');
-        const statusText = statusIndicator.querySelector('.status-text');
+        // Обновляем WebSocket статус
+        const websocketIndicator = document.getElementById('websocketStatus');
+        const wsStatusDot = websocketIndicator.querySelector('.status-dot');
+        const wsStatusText = websocketIndicator.querySelector('.status-text');
         
         const { isActive, isAuthorized } = this.extensionStatus;
-        const status = this.getStatusConfig(isActive && this.isAuthorized, this.isAuthorized);
+        const wsStatus = this.getWebSocketStatusConfig(isActive && this.isAuthorized, this.isAuthorized);
         
-        statusDot.className = `status-dot ${status.class}`;
-        statusText.textContent = status.text;
+        wsStatusDot.className = `status-dot ${wsStatus.class}`;
+        wsStatusText.textContent = wsStatus.text;
+        websocketIndicator.title = wsStatus.tooltip;
+        
+        // Проверяем и обновляем Steam статус
+        this.updateSteamStatus();
     }
     
-    getStatusConfig(isActive, isAuthorized) {
-        if (isActive) {
-            return { class: 'connected', text: 'Активен' };
-        } else if (isAuthorized) {
-            return { class: 'warning', text: 'Подключен' };
+    async updateSteamStatus() {
+        const steamIndicator = document.getElementById('steamStatus');
+        const steamStatusDot = steamIndicator.querySelector('.status-dot');
+        const steamStatusText = steamIndicator.querySelector('.status-text');
+        
+        try {
+            const steamStatus = await chrome.runtime.sendMessage({ type: 'CHECK_STEAM_STATUS' });
+            const statusConfig = await this.getSteamStatusConfig(steamStatus);
+            
+            steamStatusDot.className = `status-dot ${statusConfig.class}`;
+            steamStatusText.textContent = statusConfig.text;
+            steamIndicator.title = statusConfig.tooltip;
+        } catch (error) {
+            steamStatusDot.className = 'status-dot';
+            steamStatusText.textContent = 'Ошибка';
+            steamIndicator.title = 'Ошибка связи с background script';
+        }
+    }
+    
+    getWebSocketStatusConfig(isActive, isAuthorized) {
+        // Упрощенная логика: только два состояния
+        if (isActive && isAuthorized) {
+            return { 
+                class: 'connected', 
+                text: 'Активен',
+                tooltip: 'CS-SKINS соединение активно, готов к получению заказов'
+            };
         } else {
-            return { class: '', text: 'Не подключен' };
+            return { 
+                class: 'error', 
+                text: 'Не активен',
+                tooltip: isAuthorized ? 'Нажмите "Запустить" для активации' : 'Требуется авторизация через токен'
+            };
+        }
+    }
+    
+    async getSteamStatusConfig(steamStatus) {
+        // Проверяем, активно ли расширение
+        if (!this.extensionStatus.isActive) {
+            return { 
+                class: 'error', 
+                text: 'Не активен',
+                tooltip: 'Расширение остановлено'
+            };
+        }
+        
+        if (!steamStatus) {
+            return { 
+                class: 'warning', 
+                text: 'Не активен',
+                tooltip: 'Проверяется статус Steam сессии...'
+            };
+        }
+        
+        // Получаем имя пользователя для tooltip
+        const userName = this.userInfo?.name || this.userInfo?.steam_id;
+        
+        // Упрощенная логика: только два состояния
+        if (steamStatus.available && steamStatus.state === 'ready') {
+            return { 
+                class: 'connected', 
+                text: 'Активен',
+                tooltip: 'Steam авторизован, готов к созданию трейдов'
+            };
+        } else {
+            const tooltip = userName 
+                ? `Откройте сайт Steam и авторизуйтесь как ${userName}`
+                : 'Откройте сайт Steam и авторизуйтесь';
+            
+            return { 
+                class: 'error', 
+                text: 'Не активен',
+                tooltip: tooltip
+            };
         }
     }
     
@@ -504,6 +582,11 @@ class PopupInterface {
     
     async handleToggle() {
         try {
+            // Если запускаем расширение, сначала проверяем Steam статус
+            if (!this.extensionStatus.isActive) {
+                await this.updateSteamStatus();
+            }
+            
             const response = await this.sendMessageToBackground('TOGGLE_ACTIVE');
             this.extensionStatus.isActive = response.isActive;
             
@@ -526,6 +609,9 @@ class PopupInterface {
             
             await this.loadState();
             this.updateInterface();
+            
+            // Принудительно обновляем Steam статус
+            await this.updateSteamStatus();
             
             // Логируем в расширении
             await this.storage.addLogEntry('info', 'Обновлена статистика');
@@ -582,6 +668,7 @@ class PopupInterface {
             this.showNotification('Ошибка очистки лога', 'error');
         }
     }
+    
     
     showNotification(message, type = 'info') {
         const notification = document.getElementById('notification');
@@ -644,6 +731,8 @@ class PopupInterface {
     }
     
     startPeriodicUpdate() {
+        let steamCheckCounter = 0;
+        
         setInterval(async () => {
             if (!this.isAuthorized) return;
             
@@ -653,6 +742,13 @@ class PopupInterface {
             
             // Обновляем только активность (логи), но не статистику
             this.updateActivity();
+            
+            // Проверяем Steam статус каждые 30 секунд (каждый 3-й цикл)
+            steamCheckCounter++;
+            if (steamCheckCounter >= 3) {
+                await this.updateSteamStatus();
+                steamCheckCounter = 0;
+            }
         }, 10000);
     }
 }

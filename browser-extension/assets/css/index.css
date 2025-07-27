@@ -132,11 +132,29 @@ body {
     color: inherit;
 }
 
+.status-indicators {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
 .status-indicator {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 12px;
+    gap: 4px;
+    font-size: 11px;
+    cursor: help;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+.status-indicator:hover {
+    background-color: var(--bg-tertiary);
+}
+.status-icon {
+    width: 12px;
+    height: 12px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
 }
 
 .status-dot {

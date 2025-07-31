@@ -186,7 +186,6 @@ class PopupInterface {
         this.updateInterface();
         this.startPeriodicUpdate();
         
-        // Автоматически открываем в detached режиме если это не уже detached окно
         if (!window.isDetachedWindow) {
             this.handleDetach();
         }
@@ -385,12 +384,9 @@ class PopupInterface {
                 this.updateActivity();
             },
             'STATS_RECEIVED': () => {
-                // Получили статистику от background script
-                if (message.stats) {
-                    this.setStatsValues(message.stats);
+                if (document.getElementById('activeTrades')) {
+                    this.displayStats();
                 }
-                // Скрываем лоадер
-                this.hideLoader();
             },
             'FORCE_LOGOUT': () => {
                 // Принудительное отключение
@@ -414,15 +410,15 @@ class PopupInterface {
         document.getElementById('authorizedContent').style.display = 'none';
     }
     
-    showAuthorizedContent() {
+    async showAuthorizedContent() {
         document.getElementById('unauthorizedContent').style.display = 'none';
         document.getElementById('authorizedContent').style.display = 'block';
         
         this.updateUserInfo();
-        // НЕ запрашиваем статистику автоматически при открытии popup
-        // Пользователь может запросить её вручную кнопкой обновления
         this.updateControls();
         this.updateActivity();
+        
+        await this.displayStats();
     }
     
     updateUserInfo() {
@@ -451,32 +447,45 @@ class PopupInterface {
     
     async updateStats() {
         try {
-            // Показываем лоадер
             this.showLoader();
-            
-            // Запрашиваем статистику через WebSocket
             await this.sendMessageToBackground('REQUEST_STATS');
-            // Статистика придет через событие stats в handleBackgroundMessage
+            setTimeout(() => this.displayStats(), 100);
         } catch (error) {
             console.error('Error requesting stats:', error);
             this.hideLoader();
         }
     }
     
-    setStatsValues(stats) {
-        const statistics = (stats && stats.statistics) || {};
+    async displayStats() {
+        if (!document.getElementById('activeTrades')) {
+            return;
+        }
         
-        const statFields = {
-            'activeTrades': statistics.active || 0,
-            'completedTrades': statistics.completed || 0,
-            'cancelledTrades': statistics.cancelled || 0,
-            'totalTradesToday': statistics.total || 0
-        };
+        try {
+            const response = await this.sendMessageToBackground('GET_CACHED_STATS');
+            if (!response.success || !response.stats) {
+                this.hideLoader();
+                return;
+            }
+            
+            const statistics = response.stats.statistics || {};
+            
+            const statFields = {
+                'activeTrades': statistics.active || statistics.pending || 0,
+                'completedTrades': statistics.completed || 0,
+                'cancelledTrades': statistics.cancelled || 0,
+                'totalTradesToday': statistics.total || 0
+            };
+            
+            Object.entries(statFields).forEach(([id, value]) => {
+                const element = document.getElementById(id);
+                if (element) element.textContent = value;
+            });
+        } catch (error) {
+            console.error('Error loading stats from storage:', error);
+        }
         
-        Object.entries(statFields).forEach(([id, value]) => {
-            const element = document.getElementById(id);
-            if (element) element.textContent = value;
-        });
+        this.hideLoader();
     }
     
     updateControls() {
@@ -564,7 +573,6 @@ class PopupInterface {
                 this.updateInterface();
                 
                 this.showNotification('Успешно подключено!', 'success');
-                await this.storage.addLogEntry('success', 'Расширение подключено к аккаунту');
             } else {
                 throw new Error('Failed to get WebSocket channel');
             }
@@ -595,7 +603,6 @@ class PopupInterface {
             const message = response.isActive ? 'Расширение запущено' : 'Расширение остановлено';
             this.showNotification(message, 'success');
             
-            await this.storage.addLogEntry('info', message);
             
         } catch (error) {
             this.showNotification('Ошибка изменения состояния', 'error');
@@ -613,8 +620,6 @@ class PopupInterface {
             // Принудительно обновляем Steam статус
             await this.updateSteamStatus();
             
-            // Логируем в расширении
-            await this.storage.addLogEntry('info', 'Обновлена статистика');
         } catch (error) {
             console.error('Error during refresh:', error);
             this.showNotification('Ошибка обновления', 'error');

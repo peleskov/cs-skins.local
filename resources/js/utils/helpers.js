@@ -21,7 +21,12 @@ export function formatDate(date) {
     
     const dateObj = new Date(date);
     const now = new Date();
-    const diffInMs = now - dateObj;
+    
+    // Сбрасываем время для корректного сравнения дат
+    const dateStart = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+    const nowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    const diffInMs = nowStart - dateStart;
     const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
     
     if (diffInDays === 0) {
@@ -34,7 +39,7 @@ export function formatDate(date) {
             hour: '2-digit', 
             minute: '2-digit' 
         });
-    } else if (diffInDays < 7) {
+    } else if (diffInDays < 7 && diffInDays > 0) {
         return diffInDays + ' дн. назад';
     } else {
         return dateObj.toLocaleDateString('ru-RU', {

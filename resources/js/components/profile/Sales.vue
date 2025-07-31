@@ -55,46 +55,79 @@
 				:class="{ 'show active': activeTab === tabId }" :id="tabId" role="tabpanel"
 				:aria-labelledby="`${tabId}-tab`" tabindex="0">
 
-				<!-- Order Items list (продажи по скинам) -->
+				<!-- Orders list (продажи по заказам) -->
 				<div v-if="!isLoading && currentOrders.length > 0 && activeTab === tabId" class="sales-list">
-					<div v-for="orderItem in currentOrders" :key="orderItem.id" class="order-item mb-2">
-						<!-- Item Details -->
-						<div class="order-items">
-							<div class="item-card d-flex align-items-center p-3 border rounded mb-2 gap-3">
-								<!-- Item Image -->
-								<div class="item-image me-3">
-									<img :src="orderItem.item_image_url" :alt="orderItem.item_name" class="img-fluid"
-										style="width: 60px; height: 60px; object-fit: cover;">
+					<div v-for="order in currentOrders" :key="order.id" class="order-item mb-4 card">
+						<!-- Order Header -->
+						<div class="card-header">
+							<div class="d-flex align-items-center justify-content-between">
+								<div class="d-flex align-items-center gap-3">
+									<button class="btn btn-link p-0 text-decoration-none fw-bold"
+										data-bs-toggle="collapse" :data-bs-target="`#order-${order.id}`"
+										:aria-expanded="false" :aria-controls="`order-${order.id}`">
+										<i class="ri-arrow-right-s-line me-1"></i>
+										Заказ {{ order.order_number }}
+									</button>
+									<span class="badge" :class="getStatusBadgeClass(order.status)">
+										{{ getStatusText(order.status) }}
+									</span>
+									<span v-if="order.reserved_until && order.status === 'processing'"
+										class="badge bg-warning text-dark ms-2">
+										⏰ Резерв: {{ getTimeRemaining(order.reserved_until) }}
+									</span>
+									<small class="text-muted ms-2">
+										Покупатель: <span class="fw-medium">{{ order.buyer?.name || 'Не указан'
+											}}</span>
+									</small>
+								</div>
+								<div class="text-end">
+									<strong class="fs-5 text-success">{{ formatPrice(order.total_amount) }} ₽</strong>
+									<div><small class="text-muted">{{ formatDate(order.created_at) }}</small></div>
+								</div>
+							</div>
+						</div>
+
+						<!-- Collapsible Order Items -->
+						<div :id="`order-${order.id}`" class="collapse">
+							<div class="card-body">
+								<!-- Notes section at the top of collapse -->
+								<div v-if="order.notes || order.system_remarks" class="notes-section mb-3">
+									<div v-if="order.system_remarks" class="bg-light text-muted p-2 mb-2 rounded">
+										<small>{{ order.system_remarks }}</small>
+									</div>
+									<div v-if="order.notes" class="p-2">
+										<p><strong><small>Примечание:</small></strong></p>
+										<p><small>{{ order.notes }}</small></p>
+									</div>
+								</div>
+								<div v-for="item in order.cart_snapshot" :key="item.listing_id" class="order-items">
+									<div class="item-card d-flex align-items-center p-3 border rounded mb-2 gap-3">
+										<!-- Item Image -->
+										<div class="item-image me-3">
+											<img :src="item.item.image_url" :alt="item.item.name" class="img-fluid"
+												style="width: 60px; height: 60px; object-fit: cover;">
+										</div>
+
+										<!-- Item Details -->
+										<div class="item-details flex-grow-1">
+											<h6 class="mb-1">{{ item.item.name }}</h6>
+											<div>Цена: <strong>{{ formatPrice(item.price) }} ₽</strong></div>
+										</div>
+
+										<!-- Item Price -->
+										<div class="item-price text-end">
+											<strong class="fs-6 text-success">{{ formatPrice(item.price) }} ₽</strong>
+										</div>
+									</div>
 								</div>
 
-								<!-- Item Details -->
-								<div class="item-details flex-grow-1">
-									<div class="d-flex align-items-center gap-3">
-										<h6 class="mb-1">{{ orderItem.item_name }}</h6>
-										<span class="badge" :class="getStatusBadgeClass(orderItem.status)">
-											{{ getStatusText(orderItem.status) }}
-										</span>
-									</div>
-									<div>Цена: <strong>{{ formatPrice(orderItem.price) }} ₽</strong></div>
-									<!-- Buyer Info -->
-									<div class="buyer-info mb-1">
-										<small class="text-muted">Покупатель:</small>
-										<strong class="ms-2">{{ orderItem.buyer_name }}</strong>
-										<small class="ms-2 text-muted">Заказ: {{ orderItem.order?.order_number || 'N/A'
-										}}</small>
-									</div>
-									<div class="item-meta text-muted small">
-										<span v-if="orderItem.reserved_until && orderItem.status === 'reserved'">
-											⏰ До окончания резерва: <span class="fw-bold text-warning">{{ getTimeRemaining(orderItem.reserved_until) }}</span>
-										</span>
-									</div>
+								<!-- Trade button for the whole order -->
+								<div v-if="activeTab === 'new'" class="mt-3 text-center">
+									<button class="btn theme-outline btn-sm" @click="sendTrade(order)">
+										<i class="ri-arrow-right-line me-1"></i>
+										Отправить трейд на весь заказ
+									</button>
 								</div>
-
-								<button v-if="activeTab === 'new'" class="btn theme-outline btn-sm"
-									@click="sendTrade(orderItem)">
-									<i class="ri-arrow-right-line me-1"></i>
-									Отправить трейд
-								</button>
 							</div>
 						</div>
 					</div>
@@ -115,7 +148,7 @@
 
 <script>
 import axios from 'axios';
-import { getTimeRemaining } from '../../utils/helpers';
+import { getTimeRemaining, formatDate, formatPrice } from '../../utils/helpers';
 
 export default {
 	name: 'ProfileSales',
@@ -151,13 +184,13 @@ export default {
 	},
 	methods: {
 		getTimeRemaining,
-		
+
 		async loadSales() {
 			this.isLoading = true;
 			try {
 				const response = await axios.get(`/profile/sales?tab=${this.activeTab}`);
 				const data = response.data;
-				this.currentOrders = data.order_items || [];
+				this.currentOrders = data.orders || [];
 				this.counts = data.counts || this.counts;
 			} catch (error) {
 				console.error('Error loading sales:', error);
@@ -180,16 +213,22 @@ export default {
 
 		getStatusBadgeClass(status) {
 			const classes = {
+				'paid': 'bg-warning',
+				'processing': 'bg-info',
 				'reserved': 'bg-warning',
 				'trade_sent': 'bg-info',
 				'completed': 'bg-success',
-				'cancelled': 'bg-danger'
+				'cancelled': 'bg-danger',
+				'failed': 'bg-danger',
+				'refunded': 'bg-secondary'
 			};
 			return classes[status] || 'bg-secondary';
 		},
 
 		getStatusText(status) {
 			const texts = {
+				'paid': 'Оплачен',
+				'processing': 'В обработке',
 				'reserved': 'Ожидает трейда',
 				'trade_sent': 'Трейд отправлен',
 				'completed': 'Завершен',
@@ -218,19 +257,8 @@ export default {
 			return texts[this.activeTab] || '';
 		},
 
-		formatDate(date) {
-			return new Date(date).toLocaleDateString('ru-RU', {
-				year: 'numeric',
-				month: 'short',
-				day: 'numeric',
-				hour: '2-digit',
-				minute: '2-digit'
-			});
-		},
-
-		formatPrice(price) {
-			return Number(price).toLocaleString('ru-RU');
-		},
+		formatDate,
+		formatPrice,
 
 		async sendTrade(orderItem) {
 			// TODO: Интеграция с расширением для отправки трейда
@@ -256,27 +284,27 @@ export default {
 			// Обновляем статусы каждые 10 секунд
 			this.statusUpdateInterval = setInterval(async () => {
 				// Проверяем, есть ли заказы с резервированными товарами в активной вкладке
-				const hasReservedItems = this.currentOrders.some(item => item.status === 'reserved');
-				
+				const hasReservedItems = this.currentOrders.some(order => order.status === 'processing');
+
 				if (hasReservedItems || this.activeTab === 'new') {
 					try {
 						// Тихо обновляем данные без показа лоадера
 						const response = await axios.get(`/profile/sales?tab=${this.activeTab}`);
 						const data = response.data;
-						
+
 						// Сохраняем старые данные для сравнения
 						const oldOrders = [...this.currentOrders];
-						const oldCounts = {...this.counts};
-						
-						this.currentOrders = data.order_items || [];
+						const oldCounts = { ...this.counts };
+
+						this.currentOrders = data.orders || [];
 						this.counts = data.counts || this.counts;
-						
+
 						// Проверяем, изменились ли статусы товаров
 						this.checkForStatusChanges(oldOrders, this.currentOrders);
-						
+
 						// Проверяем, изменились ли счетчики вкладок
 						this.checkForCountChanges(oldCounts, this.counts);
-						
+
 					} catch (error) {
 						console.error('Background status update failed:', error);
 					}

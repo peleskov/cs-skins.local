@@ -32,6 +32,7 @@ class Listing extends Model
         'inspect_url',
         'screenshot_url',
         'status',
+        'reserved_by_order_id',
         'wear_value',
         'pattern_index',
         'stickers',
@@ -91,10 +92,6 @@ class Listing extends Model
         return $this->belongsTo(ClientInventoryItem::class, 'steam_asset_id', 'steam_asset_id');
     }
 
-    public function trades(): HasMany
-    {
-        return $this->hasMany(Trade::class);
-    }
 
     public function scopeActive($query)
     {
@@ -134,13 +131,25 @@ class Listing extends Model
         ]);
     }
 
-    public function reserve(): bool
+    public function reserveForOrder(int $orderId): bool
     {
-        // Атомарная проверка и обновление - резервируем только если статус ACTIVE
         $updated = $this->where('id', $this->id)
             ->where('status', self::STATUS_ACTIVE)
             ->update([
                 'status' => self::STATUS_RESERVED,
+                'reserved_by_order_id' => $orderId,
+            ]);
+            
+        return $updated > 0;
+    }
+
+    public function release(): bool
+    {
+        $updated = $this->where('id', $this->id)
+            ->where('status', self::STATUS_RESERVED)
+            ->update([
+                'status' => self::STATUS_ACTIVE,
+                'reserved_by_order_id' => null,
             ]);
             
         return $updated > 0;

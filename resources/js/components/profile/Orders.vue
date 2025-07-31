@@ -33,7 +33,12 @@
 							<span class="badge" :class="getStatusBadgeClass(order.status)">
 								{{ getStatusText(order.status) }}
 							</span>
-							<small class="text-muted">({{ order.items?.length || 0 }} товаров)</small>
+							<span v-if="order.reserved_until && order.status === 'processing'" class="badge bg-warning text-dark ms-2">
+								⏰ Резерв: {{ getTimeRemaining(order.reserved_until) }}
+							</span>
+							<small class="text-muted ms-2">
+								Продавец: <span class="fw-medium">{{ order.seller?.name || 'Не указан' }}</span>
+							</small>
 						</div>
 						<div class="order-meta text-end">
 							<div class="order-amount mb-1">
@@ -47,39 +52,34 @@
 				<!-- Collapsible Order Items -->
 				<div :id="`order-${order.id}`" class="collapse">
 					<div class="card-body">
-						<div v-if="order.items && order.items.length > 0" class="order-items">
-							<div v-for="item in order.items" :key="item.id" class="item-card d-flex align-items-center p-3 border rounded mb-2">
+						<!-- Notes section at the top of collapse -->
+						<div v-if="order.notes || order.system_remarks" class="notes-section mb-3">
+							<div v-if="order.system_remarks" class="bg-light text-muted p-2 mb-2 rounded">
+								<small>{{ order.system_remarks }}</small>
+							</div>
+							<div v-if="order.notes" class="p-2">
+								<p><strong><small>Примечание:</small></strong></p>
+								<p><small>{{ order.notes }}</small></p>
+							</div>
+						</div>
+						<div v-if="order.cart_snapshot && order.cart_snapshot.length > 0" class="order-items">
+							<div v-for="item in order.cart_snapshot" :key="item.listing_id" class="item-card d-flex align-items-center p-3 border rounded mb-2">
 								<!-- Item Image -->
 								<div class="item-image me-3">
-									<img :src="item.item_image_url" 
-										 :alt="item.item_name" 
+									<img :src="item.item.image_url" 
+										 :alt="item.item.name" 
 										 class="img-fluid rounded"
 										 style="width: 60px; height: 60px; object-fit: cover;">
 								</div>
 
 								<!-- Item Details -->
 								<div class="item-details flex-grow-1">
-									<h6 class="mb-1">{{ item.item_name }}</h6>
-									<div class="item-meta text-muted small">
-										<span>Продавец: {{ item.seller_name }}</span>
-										<span v-if="item.reserved_until && item.status === 'reserved'" class="ms-2">
-											⏰ Резерв: <span class="fw-bold text-warning">{{ getTimeRemaining(item.reserved_until) }}</span>
-										</span>
-									</div>
+									<h6 class="mb-1">{{ item.item.name }}</h6>
 								</div>
 
-								<!-- Item Price & Status -->
+								<!-- Item Price -->
 								<div class="item-price text-end">
 									<strong class="fs-6 text-success">{{ formatPrice(item.price) }} ₽</strong>
-									<div class="mt-1">
-										<span class="badge" :class="getItemStatusBadgeClass(item.status)">
-											{{ getItemStatusText(item.status) }}
-										</span>
-										<!-- Причина отмены для отменённых товаров -->
-										<div v-if="item.status === 'cancelled' && item.cancellation_reason" class="mt-1 text-muted small">
-											{{ item.cancellation_reason }}
-										</div>
-									</div>
 								</div>
 							</div>
 						</div>
@@ -200,6 +200,8 @@ export default {
 			const classes = {
 				'paid': 'bg-warning',
 				'processing': 'bg-info',
+				'reserved': 'bg-warning',
+				'trade_sent': 'bg-info',
 				'completed': 'bg-success',
 				'cancelled': 'bg-danger',
 				'failed': 'bg-danger',
@@ -284,12 +286,12 @@ export default {
 		startStatusUpdates() {
 			// Обновляем статусы каждые 10 секунд
 			this.statusUpdateInterval = setInterval(async () => {
-				// Проверяем, есть ли заказы с резервированными товарами
-				const hasReservedItems = this.orders.some(order => 
-					order.items && order.items.some(item => item.status === 'reserved')
+				// Проверяем, есть ли заказы в обработке
+				const hasActiveOrders = this.orders.some(order => 
+					['paid', 'processing', 'reserved'].includes(order.status)
 				);
 				
-				if (hasReservedItems) {
+				if (hasActiveOrders || this.orders.length > 0) {
 					try {
 						// Тихо обновляем данные без показа лоадера
 						const response = await orderAPI.getMyOrders(this.pagination?.current_page || 1);

@@ -7,6 +7,7 @@ use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 class ExtensionEvents implements ShouldBroadcastNow
 {
@@ -16,6 +17,7 @@ class ExtensionEvents implements ShouldBroadcastNow
     public string $messageType;
     public array $data;
     public string $logMessage;
+    public ?string $customChannel = null;
 
     public function __construct(int $sellerId, string $messageType, array $data, string $logMessage = '')
     {
@@ -42,57 +44,178 @@ class ExtensionEvents implements ShouldBroadcastNow
         return $payload;
     }
 
-    // Статические методы для разных типов сообщений
-    public static function stats(int $sellerId, array $stats = null, string $message = 'Обновлена статистика'): self
+    /**
+     * Определяет контекст выполнения и отправляет событие соответствующим способом
+     */
+    public static function sendSmart(?string $eventType, int $sellerId, array $data, string $logMessage = ''): void
     {
-        if ($stats === null) {
-            $stats = self::getSellerStats($sellerId);
+        // Проверяем, находимся ли мы в контексте WebSocket обработчика
+        $commandLine = implode(' ', $_SERVER['argv'] ?? []);
+        $inWebSocketContext = app()->runningInConsole() && 
+                             strpos($commandLine, 'reverb:start') !== false;
+        
+        
+        if ($inWebSocketContext) {
+            // В WebSocket контексте отправляем напрямую
+            self::sendDirectlyViaWebSocket($eventType, $sellerId, $data, $logMessage);
+        } else {
+            // В обычном контексте используем broadcast
+            $event = new self($sellerId, $eventType, $data, $logMessage);
+            broadcast($event);
         }
-        return new self($sellerId, 'stats', ['stats' => $stats], $message);
+    }
+    
+    /**
+     * Отправка напрямую через WebSocket соединение (только для WebSocket контекста)
+     */
+    private static function sendDirectlyViaWebSocket(?string $eventType, int $sellerId, array $data, string $logMessage = ''): void
+    {
+        try {
+            // Находим клиента и его токен
+            $client = \App\Models\Client::find($sellerId);
+            if (!$client || !$client->extension_token) {
+                return;
+            }
+            
+            // Генерируем канал
+            $hash = substr(hash('sha256', $sellerId . $client->extension_token), 0, 16);
+            $channel = "seller-{$sellerId}-{$hash}";
+            
+            // Проверяем доступность Reverb
+            if (!app()->bound(\Laravel\Reverb\ApplicationManager::class)) {
+                return;
+            }
+            
+            // Получаем Reverb приложение
+            $appManager = app(\Laravel\Reverb\ApplicationManager::class);
+            $appProvider = $appManager->driver();
+            $appId = config('reverb.apps.apps.0.app_id', env('REVERB_APP_ID'));
+            $app = $appProvider->findById($appId);
+            
+            if (!$app) {
+                return;
+            }
+            
+            // Получаем канал и отправляем сообщение
+            if (!app()->bound(\Laravel\Reverb\Protocols\Pusher\Contracts\ChannelManager::class)) {
+                return;
+            }
+            
+            $channelManager = app(\Laravel\Reverb\Protocols\Pusher\Contracts\ChannelManager::class);
+            $reverbChannel = $channelManager->for($app)->find($channel);
+            
+            if ($reverbChannel) {
+                // Добавляем log_message к данным
+                if ($logMessage) {
+                    $data['log_message'] = $logMessage;
+                }
+                
+                $message = json_encode([
+                    'event' => $eventType,
+                    'data' => json_encode($data),
+                    'channel' => $channel
+                ]);
+                
+                foreach ($reverbChannel->connections() as $connection) {
+                    $connection->connection()->send($message);
+                }
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Ошибка прямой отправки через WebSocket', [
+                'seller_id' => $sellerId,
+                'event' => $eventType,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    // Статические методы для разных типов сообщений
+    public static function stats(int $sellerId, string $message = 'Обновлена статистика'): void
+    {
+        $stats = self::getSellerStats($sellerId);
+        self::sendSmart('stats', $sellerId, ['stats' => $stats], $message);
     }
 
-    public static function tradeCreated(int $sellerId, array $tradeData): self
+    // События для TradeOffer
+    public static function tradeOfferCreated($tradeOffer): void
     {
-        return new self($sellerId, 'trade_created', $tradeData, 'Трейд создан в Steam');
-    }
-
-    public static function tradeError(int $sellerId, array $errorData): self
-    {
-        return new self($sellerId, 'trade_error', $errorData, 'Ошибка создания трейда');
-    }
-
-    public static function notification(int $sellerId, string $message, string $type = 'info'): self
-    {
-        return new self($sellerId, 'notification', ['message' => $message, 'type' => $type], $message);
-    }
-
-    // События трейдов
-    public static function tradeReserved($orderItem): self
-    {
-        // Получаем актуальную статистику
-        $stats = self::getSellerStats($orderItem->seller_id);
+        $stats = self::getSellerStats($tradeOffer->seller_id);
         
-        // Получаем данные покупателя
-        $order = $orderItem->order;
-        $buyer = $order->client;
-        
-        // Получаем steam_asset_id через связь с листингом
-        $listing = $orderItem->listing;
-        
-        // Формируем данные для автоматического создания трейда
-        $orderData = [
-            'skin_name' => $orderItem->item_name,
-            'steam_asset_id' => $listing->steam_asset_id,
+        $tradeData = [
+            'trade_offer_id' => $tradeOffer->id,
+            'asset_ids' => $tradeOffer->asset_ids,
             'buyer' => [
-                'steam_id' => $buyer->steam_id,
-                'trade_url' => $buyer->steam_trade_url
+                'steam_id' => $tradeOffer->buyer->steam_id,
+                'trade_url' => $tradeOffer->buyer_trade_url
             ]
         ];
         
-        return new self($orderItem->seller_id, 'trade_reserved', [
-            'order' => $orderData,
+        self::sendSmart('trade_offer_created', $tradeOffer->seller_id, [
+            'trade_offer' => $tradeData,
             'stats' => $stats,
-        ], 'Новый трейд: ' . $orderItem->item_name);
+        ], 'Получена команда на создание Steam трейда');
+    }
+
+    public static function tradeOfferSent($tradeOffer): void
+    {
+        $stats = self::getSellerStats($tradeOffer->seller_id);
+        
+        self::sendSmart('trade_offer_sent', $tradeOffer->seller_id, [
+            'trade_offer_id' => $tradeOffer->id,
+            'steam_trade_offer_id' => $tradeOffer->steam_trade_offer_id,
+            'stats' => $stats,
+        ], 'Трейд отправлен в Steam');
+    }
+
+    public static function tradeOfferCompleted($tradeOffer): void
+    {
+        $stats = self::getSellerStats($tradeOffer->seller_id);
+        
+        self::sendSmart('trade_offer_completed', $tradeOffer->seller_id, [
+            'trade_offer_id' => $tradeOffer->id,
+            'stats' => $stats,
+        ], 'Трейд завершен');
+    }
+
+    public static function tradeOfferCancelled($tradeOffer): void
+    {
+        $stats = self::getSellerStats($tradeOffer->seller_id);
+        
+        if ($tradeOffer->steam_trade_offer_id) {
+            self::sendSmart('trade_offer_cancelled', $tradeOffer->seller_id, [
+                'trade_offer_id' => $tradeOffer->id,
+                'stats' => $stats,
+            ], 'Трейд отменен');
+        } else {
+            self::sendSmart(null, $tradeOffer->seller_id, [
+                'stats' => $stats,
+            ], 'Трейд не создан из-за ошибки Steam');
+        }
+    }
+
+    /**
+     * Команда расширению на отмену Steam трейда
+     */
+    public static function cancelSteamTrade($tradeOffer): void
+    {
+        // Получаем информацию о том, откуда вызывается
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
+        $caller = 'unknown';
+        
+        if (isset($backtrace[1])) {
+            $caller = ($backtrace[1]['class'] ?? '') . '::' . ($backtrace[1]['function'] ?? '');
+            if (isset($backtrace[2])) {
+                $caller .= ' <- ' . ($backtrace[2]['class'] ?? '') . '::' . ($backtrace[2]['function'] ?? '');
+            }
+        }
+        
+        // Используем умную отправку
+        self::sendSmart('cancel_steam_trade', $tradeOffer->seller_id, [
+            'trade_offer_id' => $tradeOffer->id,
+            'steam_trade_offer_id' => $tradeOffer->steam_trade_offer_id,
+            'order_id' => $tradeOffer->order_id
+        ], "Получена команда на отмену Steam трейда");
     }
 
 
@@ -114,6 +237,16 @@ class ExtensionEvents implements ShouldBroadcastNow
         $event = new self(0, 'stats', ['stats' => $stats], 'Обновлена статистика');
         $event->customChannel = $channel;
         return $event;
+    }
+    
+    /**
+     * Ping расширения для проверки доступности
+     */
+    public static function ping(int $sellerId): void
+    {
+        self::sendSmart('ping', $sellerId, [
+            'timestamp' => now()->toISOString()
+        ], 'Проверка доступности расширения');
     }
 
     // Переопределяем broadcastOn для поддержки кастомного канала
@@ -142,32 +275,36 @@ class ExtensionEvents implements ShouldBroadcastNow
     {
         $today = today();
         
-        // Активные трейды за сегодня
-        $activeTrades = \App\Models\OrderItem::where('seller_id', $sellerId)
+        // Статистика по TradeOffer за сегодня
+        $pendingTrades = \App\Models\TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
-            ->where('status', \App\Models\OrderItem::STATUS_TRADE_SENT)
+            ->where('status', \App\Models\TradeOffer::STATUS_PENDING)
+            ->count();
+            
+        $sentTrades = \App\Models\TradeOffer::where('seller_id', $sellerId)
+            ->whereDate('created_at', $today)
+            ->where('status', \App\Models\TradeOffer::STATUS_SENT)
             ->count();
         
-        // Завершенные трейды за сегодня
-        $completedTrades = \App\Models\OrderItem::where('seller_id', $sellerId)
+        $completedTrades = \App\Models\TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
-            ->where('status', \App\Models\OrderItem::STATUS_COMPLETED)
+            ->where('status', \App\Models\TradeOffer::STATUS_COMPLETED)
             ->count();
         
-        // Отмененные трейды за сегодня
-        $cancelledTrades = \App\Models\OrderItem::where('seller_id', $sellerId)
+        $cancelledTrades = \App\Models\TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
-            ->where('status', \App\Models\OrderItem::STATUS_CANCELLED)
+            ->where('status', \App\Models\TradeOffer::STATUS_CANCELLED)
             ->count();
         
         // Всего трейдов за сегодня
-        $totalTradesToday = \App\Models\OrderItem::where('seller_id', $sellerId)
+        $totalTradesToday = \App\Models\TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
             ->count();
 
         return [
             'statistics' => [
-                'active' => $activeTrades,
+                'pending' => $pendingTrades,
+                'sent' => $sentTrades,
                 'completed' => $completedTrades,
                 'cancelled' => $cancelledTrades,
                 'total' => $totalTradesToday
@@ -176,22 +313,4 @@ class ExtensionEvents implements ShouldBroadcastNow
         ];
     }
     
-    /**
-     * Генерация готовой ссылки для Steam трейда
-     */
-    private static function generateTradeUrl($orderItem): string
-    {
-        // Получаем trade URL продавца
-        $seller = \App\Models\Client::find($orderItem->seller_id);
-        
-        if (!$seller || !$seller->steam_trade_url) {
-            return null; // Нет trade URL у продавца
-        }
-        
-        // Добавляем параметр trade_id для идентификации
-        $tradeUrl = $seller->steam_trade_url;
-        $separator = strpos($tradeUrl, '?') !== false ? '&' : '?';
-        
-        return $tradeUrl . $separator . 'trade_id=' . $orderItem->id;
-    }
 }

@@ -27,33 +27,21 @@ class WebSocketServiceProvider extends ServiceProvider
         // Слушатель для обработки запросов статистики
         $provider = $this;
         Event::listen('extension.stats.requested', function ($sellerId) use ($provider) {
-            Log::info('Обработка запроса статистики для продавца', ['seller_id' => $sellerId]);
-            
             $stats = $provider->getSellerStats($sellerId);
             
-            // Отправляем статистику сразу, так как данные легкие
-            //Log::info('Отправка статистики через broadcast', ['seller_id' => $sellerId]);
-            
             try {
-                // Получаем токен клиента для генерации правильного канала
                 $client = \App\Models\Client::find($sellerId);
                 if ($client && $client->extension_token) {
-                    $channel = $this->generateChannel($sellerId, $client->extension_token);
-                    
-                    // Отправляем напрямую через WebSocket соединение, минуя HTTP API
-                    $this->sendMessageDirectly($channel, 'stats', ['stats' => $stats]);
-                    //Log::info('Статистика отправлена успешно через WebSocket', ['seller_id' => $sellerId, 'channel' => $channel, 'stats' => $stats]);
+                    \App\Events\ExtensionEvents::sendSmart('stats', $sellerId, ['stats' => $stats], 'Обновлена статистика');
                 } else {
                     Log::warning('Не удалось найти токен клиента для отправки статистики', ['seller_id' => $sellerId]);
                 }
             } catch (\Exception $e) {
-                Log::warning('Ошибка отправки статистики, но статистика собрана', [
+                Log::warning('Ошибка отправки статистики', [
                     'seller_id' => $sellerId, 
-                    'error' => $e->getMessage(),
-                    'stats' => $stats
+                    'error' => $e->getMessage()
                 ]);
             }
-            
         });
         
         // Обрабатываем WebSocket сообщения
@@ -68,14 +56,6 @@ class WebSocketServiceProvider extends ServiceProvider
                         return;
                     }
                     
-                    // Логируем ВСЕ WebSocket сообщения от расширения (кроме ping)
-                    Log::info('=== WebSocket сообщение получено ===', [
-                        'raw_message' => $message,
-                        'message_type' => gettype($message),
-                        'event_class' => get_class($event),
-                        'timestamp' => now()->toISOString()
-                    ]);
-                    
                     // Парсим сообщение
                     if (is_string($message)) {
                         $data = json_decode($message, true);
@@ -85,11 +65,7 @@ class WebSocketServiceProvider extends ServiceProvider
                             return;
                         }
                         
-                        Log::info('Распарсенные данные WebSocket:', $data ?: ['error' => 'Failed to parse JSON']);
-                        
-                        if ($data && isset($data['event']) && $data['event'] === 'client-stats-request') {
-                            // Логируем событие обновления на сервере
-                            Log::info('Получен запрос на обновление статистики от расширения');
+                        if ($data && isset($data['event']) && $data['event'] === 'client-message') {
                             
                             // Получаем ID продавца из канала
                             $sellerId = $this->extractSellerIdFromChannel($data['channel'] ?? '');
@@ -97,14 +73,35 @@ class WebSocketServiceProvider extends ServiceProvider
                             if ($sellerId) {
                                 // Проверяем авторизацию через канал
                                 if (!$this->isValidChannel($sellerId, $data['channel'])) {
-                                    Log::warning('Неавторизованный запрос статистики - неверный канал', [
+                                    Log::warning('Неавторизованное сообщение от расширения - неверный канал', [
                                         'seller_id' => $sellerId,
                                         'channel' => $data['channel']
                                     ]);
                                     return;
                                 }
                                 
-                                // Инициируем серверное событие которое обработается асинхронно
+                                // Обрабатываем разные типы сообщений, передаем канал для прямого ответа
+                                $this->handleClientMessage($sellerId, $data['data'] ?? [], $data['channel'] ?? null);
+                            } else {
+                                Log::warning('Не удалось извлечь seller_id из канала', [
+                                    'channel' => $data['channel'] ?? 'not_set'
+                                ]);
+                            }
+                            
+                            // ВАЖНО: завершаем обработку для ВСЕХ client-message событий
+                            return;
+                        } elseif ($data && isset($data['event']) && $data['event'] === 'client-stats-request') {
+                            // Старый обработчик для совместимости
+                            $sellerId = $this->extractSellerIdFromChannel($data['channel'] ?? '');
+                            
+                            if ($sellerId) {
+                                if (!$this->isValidChannel($sellerId, $data['channel'])) {
+                                    Log::warning('Неавторизованный запрос статистики', [
+                                        'seller_id' => $sellerId,
+                                        'channel' => $data['channel']
+                                    ]);
+                                    return;
+                                }
                                 event('extension.stats.requested', [$sellerId]);
                             }
                         } elseif ($data && isset($data['event']) && $data['event'] === 'pusher:subscribe') {
@@ -114,27 +111,11 @@ class WebSocketServiceProvider extends ServiceProvider
                                 $sellerId = $this->extractSellerIdFromChannel($channel);
                                 
                                 if ($sellerId && $this->isValidChannel($sellerId, $channel)) {
-                                    // Отправляем статистику при подключении
                                     $stats = $this->getSellerStats($sellerId);
-                                    $this->sendMessageDirectly($channel, 'stats', ['stats' => $stats], 'Расширение подключено');
-                                    
-                                    Log::info('Отправлена статистика при подключении', [
-                                        'seller_id' => $sellerId,
-                                        'channel' => $channel
-                                    ]);
+                                    \App\Events\ExtensionEvents::sendSmart('stats', $sellerId, ['stats' => $stats], 'Расширение подключено');
                                 }
                             }
-                        } else {
-                            Log::info('Неизвестное или неподдерживаемое WebSocket событие:', [
-                                'event' => $data['event'] ?? 'not_set',
-                                'data' => $data
-                            ]);
                         }
-                    } else {
-                        Log::info('WebSocket сообщение не является строкой:', [
-                            'type' => gettype($message),
-                            'content' => $message
-                        ]);
                     }
                 } catch (\Exception $e) {
                     Log::error('WebSocket error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
@@ -151,32 +132,36 @@ class WebSocketServiceProvider extends ServiceProvider
     {
         $today = today();
         
-        // Активные трейды за сегодня
-        $activeTrades = \App\Models\OrderItem::where('seller_id', $sellerId)
+        // Статистика по TradeOffer за сегодня
+        $pendingTrades = \App\Models\TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
-            ->where('status', \App\Models\OrderItem::STATUS_TRADE_SENT)
+            ->where('status', \App\Models\TradeOffer::STATUS_PENDING)
+            ->count();
+            
+        $sentTrades = \App\Models\TradeOffer::where('seller_id', $sellerId)
+            ->whereDate('created_at', $today)
+            ->where('status', \App\Models\TradeOffer::STATUS_SENT)
             ->count();
         
-        // Завершенные трейды за сегодня
-        $completedTrades = \App\Models\OrderItem::where('seller_id', $sellerId)
+        $completedTrades = \App\Models\TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
-            ->where('status', \App\Models\OrderItem::STATUS_COMPLETED)
+            ->where('status', \App\Models\TradeOffer::STATUS_COMPLETED)
             ->count();
         
-        // Отмененные трейды за сегодня
-        $cancelledTrades = \App\Models\OrderItem::where('seller_id', $sellerId)
+        $cancelledTrades = \App\Models\TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
-            ->where('status', \App\Models\OrderItem::STATUS_CANCELLED)
+            ->where('status', \App\Models\TradeOffer::STATUS_CANCELLED)
             ->count();
         
         // Всего трейдов за сегодня
-        $totalTradesToday = \App\Models\OrderItem::where('seller_id', $sellerId)
+        $totalTradesToday = \App\Models\TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
             ->count();
 
         return [
             'statistics' => [
-                'active' => $activeTrades,
+                'pending' => $pendingTrades,
+                'sent' => $sentTrades,
                 'completed' => $completedTrades,
                 'cancelled' => $cancelledTrades,
                 'total' => $totalTradesToday
@@ -222,129 +207,285 @@ class WebSocketServiceProvider extends ServiceProvider
         return $channel === $expectedChannel;
     }
     
-    /**
-     * Отправка сообщения напрямую через WebSocket соединение
-     */
-    private function sendMessageDirectly(string $channel, string $eventType, array $data, string $logMessage = ''): void
-    {
-        try {
-            // Проверяем доступность Reverb (может не работать в queue jobs)
-            if (!app()->bound(\Laravel\Reverb\ApplicationManager::class)) {
-                Log::warning('Reverb недоступен - пропускаем отправку WebSocket сообщения', [
-                    'channel' => $channel,
-                    'event' => $eventType
-                ]);
-                return;
-            }
-            
-            // Получаем приложение через ApplicationManager
-            $appManager = app(\Laravel\Reverb\ApplicationManager::class);
-            $appProvider = $appManager->driver();
-            
-            // Получаем приложение по ID из конфига
-            $appId = config('reverb.apps.apps.0.id', env('REVERB_APP_ID'));
-            $app = $appProvider->findById($appId);
-            
-            if (!$app) {
-                throw new \Exception("Reverb приложение с ID '{$appId}' не найдено");
-            }
-            
-            // Получаем менеджер каналов - проверяем доступность
-            if (!app()->bound(\Laravel\Reverb\Protocols\Pusher\Contracts\ChannelManager::class)) {
-                Log::warning('ChannelManager недоступен - пропускаем отправку WebSocket сообщения', [
-                    'channel' => $channel,
-                    'event' => $eventType
-                ]);
-                return;
-            }
-            
-            $channelManager = app(\Laravel\Reverb\Protocols\Pusher\Contracts\ChannelManager::class);
-            
-            // Получаем канал для нашего приложения
-            $reverbChannel = $channelManager->for($app)->find($channel);
-            
-            if ($reverbChannel) {
-                // Получаем все соединения канала
-                $connections = $reverbChannel->connections();
-                
-                // Создаем сообщение в формате Pusher, который ожидает расширение
-                $messageData = $data;
-                if ($logMessage) {
-                    $messageData['log_message'] = $logMessage;
-                }
-                
-                $message = json_encode([
-                    'event' => $eventType,
-                    'data' => json_encode($messageData),
-                    'channel' => $channel
-                ]);
-                /*
-                Log::info('Отправляем сообщение через WebSocket соединения', [
-                    'channel' => $channel,
-                    'connections_count' => count($connections)
-                ]);
-                */
-
-                // Отправляем сообщение всем подключенным клиентам
-                foreach ($connections as $connection) {
-                    $connection->connection()->send($message);
-                }
-                /*
-                Log::info('Сообщение отправлено мгновенно через WebSocket', [
-                    'channel' => $channel,
-                    'event' => $eventType,
-                    'data' => $data
-                ]);
-                */
-            } else {
-                Log::warning('Канал не найден или нет подключений', ['channel' => $channel]);
-            }
-            
-        } catch (\Exception $e) {
-            Log::error('Ошибка прямой отправки через WebSocket', [
-                'channel' => $channel,
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
+    
     
     /**
-     * Универсальный метод для отправки событий в расширение
+     * Обработка сообщений от расширения
      */
-    public static function sendToExtension(string $eventType, array $data, string $logMessage = '', ?int $sellerId = null, ?string $channel = null): void
+    private function handleClientMessage(int $sellerId, array $messageData, ?string $channel = null): void
     {
-        try {
-            $provider = new self(app());
-            
-            // Если канал не указан, генерируем его из sellerId
-            if (!$channel) {
-                if (!$sellerId) {
-                    Log::error('Не указан ни sellerId ни channel для отправки события', ['event' => $eventType]);
-                    return;
-                }
-                
-                $client = \App\Models\Client::find($sellerId);
-                if (!$client || !$client->extension_token) {
-                    Log::warning('Не удалось найти токен клиента для отправки события', [
-                        'seller_id' => $sellerId,
-                        'event' => $eventType
-                    ]);
-                    return;
-                }
-                
-                $channel = $provider->generateChannel($sellerId, $client->extension_token);
-            }
-            
-            $provider->sendMessageDirectly($channel, $eventType, $data, $logMessage);
-            
-        } catch (\Exception $e) {
-            Log::error('Ошибка отправки события в расширение', [
+        $messageType = $messageData['type'] ?? null;
+        
+        if (!$messageType) {
+            Log::warning('Получено сообщение от расширения без типа', [
                 'seller_id' => $sellerId,
-                'channel' => $channel,
-                'event' => $eventType,
+                'data' => $messageData
+            ]);
+            return;
+        }
+        
+        // Логируем только важные операции (не stats_request)
+        if (!in_array($messageType, ['stats_request'])) {
+            Log::info("Extension: {$messageType}", [
+                'seller_id' => $sellerId,
+                'type' => $messageType
+            ]);
+        }
+        
+        switch ($messageType) {
+            case 'stats_request':
+                // Запрос статистики - если канал передан, отвечаем напрямую
+                if ($channel) {
+                    $stats = $this->getSellerStats($sellerId);
+                    \App\Events\ExtensionEvents::sendSmart('stats', $sellerId, ['stats' => $stats], 'Обновлена статистика');
+                } else {
+                    event('extension.stats.requested', [$sellerId]);
+                }
+                break;
+                
+            case 'trade_offer_sent':
+                // Трейд успешно создан в Steam
+                $this->handleTradeOfferSent($sellerId, $messageData);
+                break;
+                
+            case 'trade_offer_failed':
+                // Ошибка создания трейда
+                $this->handleTradeOfferFailed($sellerId, $messageData);
+                break;
+                
+            case 'error_log':
+                // Логирование ошибок для отладки
+                $this->handleErrorLog($sellerId, $messageData);
+                break;
+                
+            case 'steam_trade_cancelled':
+                // Ответ об отмене Steam трейда
+                $this->handleSteamTradeCancelled($sellerId, $messageData);
+                break;
+                
+            case 'steam_api_error':
+                // Логирование ошибок Steam API для анализа
+                $this->handleSteamApiError($sellerId, $messageData);
+                break;
+                
+            case 'pong':
+                // Ответ на ping - расширение доступно
+                $this->handlePong($sellerId, $messageData);
+                break;
+                
+            default:
+                Log::warning('Неизвестный тип сообщения от расширения', [
+                    'seller_id' => $sellerId,
+                    'type' => $messageType,
+                    'data' => $messageData
+                ]);
+        }
+    }
+    
+    /**
+     * Обработка успешного создания трейда
+     */
+    private function handleTradeOfferSent(int $sellerId, array $data): void
+    {
+        $tradeOfferId = $data['trade_offer_id'] ?? null;
+        $steamTradeOfferId = $data['steam_trade_offer_id'] ?? null;
+        
+        if (!$tradeOfferId || !$steamTradeOfferId) {
+            Log::warning('Неполные данные для обновления трейд оффера', [
+                'seller_id' => $sellerId,
+                'data' => $data
+            ]);
+            return;
+        }
+        
+        try {
+            $tradeOffer = \App\Models\TradeOffer::find($tradeOfferId);
+            
+            if ($tradeOffer) {
+                // Обновляем TradeOffer без broadcast
+                $tradeOffer->update([
+                    'status' => \App\Models\TradeOffer::STATUS_SENT,
+                    'steam_trade_offer_id' => $steamTradeOfferId,
+                    'is_ready' => false,
+                ]);
+                
+                // Активируем следующий TradeOffer
+                \App\Models\TradeOffer::where('seller_id', $sellerId)
+                    ->where('status', \App\Models\TradeOffer::STATUS_PENDING)
+                    ->where('is_ready', false)
+                    ->orderBy('created_at', 'asc')
+                    ->limit(1)
+                    ->update(['is_ready' => true]);
+            } else {
+                Log::warning('TradeOffer не найден для обновления', [
+                    'trade_offer_id' => $tradeOfferId,
+                    'seller_id' => $sellerId
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Ошибка обновления TradeOffer', [
+                'trade_offer_id' => $tradeOfferId,
+                'seller_id' => $sellerId,
+                'error' => $e->getMessage()
+            ]);
+        }
+        
+        // Отправляем подтверждение после обновления базы (не блокирует)
+        if ($tradeOfferId && $steamTradeOfferId) {
+        }
+    }
+    
+    /**
+     * Обработка ошибки создания трейда
+     */
+    private function handleTradeOfferFailed(int $sellerId, array $data): void
+    {
+        $tradeOfferId = $data['trade_offer_id'] ?? null;
+        $error = $data['error'] ?? 'Unknown error';
+        
+        if (!$tradeOfferId) {
+            Log::warning('Нет ID трейд оффера для отметки как failed', [
+                'seller_id' => $sellerId,
+                'data' => $data
+            ]);
+            return;
+        }
+        
+        try {
+            $tradeOffer = \App\Models\TradeOffer::find($tradeOfferId);
+            
+            if ($tradeOffer) {
+                // Отменяем весь заказ через централизованный метод
+                $order = $tradeOffer->order;
+                if ($order) {
+                    $order->cancel('Не удалось создать трейд-предложение. Возможно, продавец временно недоступен или превышен лимит трейдов.');
+                }
+                
+                Log::info('TradeOffer отменен из-за ошибки', [
+                    'trade_offer_id' => $tradeOfferId,
+                    'error' => $error,
+                    'seller_id' => $sellerId
+                ]);
+            } else {
+                Log::warning('TradeOffer не найден для отмены', [
+                    'trade_offer_id' => $tradeOfferId,
+                    'seller_id' => $sellerId
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Ошибка отмены TradeOffer', [
+                'trade_offer_id' => $tradeOfferId,
+                'seller_id' => $sellerId,
                 'error' => $e->getMessage()
             ]);
         }
     }
     
+    /**
+     * Обработка логов ошибок для отладки
+     */
+    private function handleErrorLog(int $sellerId, array $data): void
+    {
+        $errorType = $data['type'] ?? 'unknown';
+        $message = $data['message'] ?? 'No message';
+        $context = $data['context'] ?? [];
+        $timestamp = $data['timestamp'] ?? now()->toISOString();
+        
+        Log::info("Extension Error Log [{$errorType}]", [
+            'seller_id' => $sellerId,
+            'error_type' => $errorType,
+            'message' => $message,
+            'context' => $context,
+            'extension_timestamp' => $timestamp,
+            'server_timestamp' => now()->toISOString()
+        ]);
+    }
+    
+    /**
+     * Обработка ответа об отмене Steam трейда
+     */
+    private function handleSteamTradeCancelled(int $sellerId, array $data): void
+    {
+        $tradeOfferId = $data['trade_offer_id'] ?? null;
+        $success = $data['success'] ?? false;
+        $error = $data['error'] ?? null;
+        
+        // Логируем только неуспешные отмены
+        if (!$success) {
+            Log::warning('Ошибка отмены Steam трейда', [
+                'seller_id' => $sellerId,
+                'trade_offer_id' => $tradeOfferId,
+                'error' => $error
+            ]);
+        }
+        
+        if ($tradeOfferId) {
+            $tradeOffer = \App\Models\TradeOffer::find($tradeOfferId);
+            
+            if ($tradeOffer) {
+                if ($success) {
+                    $order = $tradeOffer->order;
+                    $order->cancel('Steam трейд отменен по истечению резерва');
+                    
+                    // Отправляем подтверждение в расширение
+                    \App\Events\ExtensionEvents::tradeOfferCancelled($tradeOffer);
+                } else {
+                    Log::error('Не удалось отменить Steam трейд', [
+                        'trade_offer_id' => $tradeOfferId,
+                        'error' => $error
+                    ]);
+                }
+            }
+        }
+    }
+    
+    /**
+     * Обработка ошибок Steam API для анализа
+     */
+    private function handleSteamApiError(int $sellerId, array $data): void
+    {
+        $operation = $data['operation'] ?? 'unknown';
+        $url = $data['url'] ?? 'unknown';
+        $httpStatus = $data['httpStatus'] ?? null;
+        $rawResponse = $data['rawResponse'] ?? null;
+        $error = $data['error'] ?? 'No error message';
+        $extensionVersion = $data['extension_version'] ?? 'unknown';
+        
+        Log::warning("Steam API Error: {$operation}", [
+            'seller_id' => $sellerId,
+            'operation' => $operation,
+            'http_status' => $httpStatus,
+            'error' => $error,
+            'raw_response' => $rawResponse
+        ]);
+        
+        // Можно также сохранить в базу данных для анализа паттернов ошибок
+        // или отправить в monitoring систему
+    }
+    
+    /**
+     * Обработка ответа на ping от расширения
+     */
+    private function handlePong(int $sellerId, array $data): void
+    {
+        $timestamp = $data['timestamp'] ?? null;
+        $steamAvailable = $data['steam_available'] ?? false;
+        $steamState = $data['steam_state'] ?? 'unknown';
+        $steamReason = $data['steam_reason'] ?? 'unknown';
+        
+        Log::info('Extension pong received', [
+            'seller_id' => $sellerId,
+            'timestamp' => $timestamp,
+            'steam_available' => $steamAvailable,
+            'steam_state' => $steamState,
+            'steam_reason' => $steamReason,
+            'response_time' => $timestamp ? now()->diffInMilliseconds($timestamp) : null
+        ]);
+        
+        // Сохраняем информацию о готовности только если все готово
+        if ($steamAvailable) {
+            \Cache::put("extension_available_{$sellerId}", true, 60); // 60 секунд
+        }
+        // Если не готов - просто не сохраняем в кеш, Job повторится
+    }
 }

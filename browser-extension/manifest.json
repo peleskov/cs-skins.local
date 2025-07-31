@@ -12,13 +12,15 @@
     "tabs",
     "windows",
     "alarms",
-    "scripting"
+    "scripting",
+    "cookies"
   ],
   
   "host_permissions": [
     "https://steamcommunity.com/*",
     "https://cs-skins.s1temaker.ru/*",
-    "https://cs-skins.local/*"
+    "https://cs-skins.local/*",
+    "https://api.steampowered.com/*"
   ],
   
   "background": {
@@ -31,7 +33,7 @@
         "https://steamcommunity.com/*"
       ],
       "js": [
-        "assets/js/jquery-3.6.0.min.js",
+        "assets/js/axios.min.js",
         "assets/js/steam-injector.js"
       ],
       "run_at": "document_idle"

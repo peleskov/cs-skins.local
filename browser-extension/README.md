@@ -68,12 +68,11 @@ browser-extension/
 - **Сервер**: Laravel Reverb WebSocket сервер
 - **URL**: `wss://cs-skins.s1temaker.ru/ws/app/cs-skins-key`
 - **Протокол**: Pusher-совместимый (protocol=7, version=8.0.1)
-- **Каналы**: `seller-{user_id}` для получения событий продавца
+- **Каналы**: `seller-{user_id}-{hash}` для получения событий продавца (с хешем токена для безопасности)
 - **События**: 
-  - `trade_reserved` - новый заказ создан
-  - `trade_sent` - трейд-оффер отправлен
-  - `trade_completed` - трейд завершен покупателем  
-  - `trade_cancelled` - трейд отменен
+  - `trade_offer_created` - новое торговое предложение создано (группа товаров)
+  - `stats` - обновление статистики продавца
+  - `force_logout` - принудительный выход (токен изменен)
 - **Heartbeat**: ping каждые 25 секунд для поддержания соединения
 
 ### Безопасность
@@ -114,15 +113,17 @@ browser-extension/
 ```
 1. Покупатель оформляет заказ на сайте
    ↓
-2. WebSocket событие 'trade_reserved' → расширение
+2. Сервер группирует товары по продавцам в TradeOffer
    ↓
-3. Content script извлекает Steam session данные
+3. WebSocket событие 'trade_offer_created' → расширение
    ↓
-4. Создание Trade Offer через Steam Web API
+4. Content script извлекает Steam session данные
    ↓
-5. WebSocket событие 'trade_sent' → сервер
+5. Создание Trade Offer для группы товаров через Steam Web API
    ↓
-6. Покупатель принимает трейд в Steam
+6. WebSocket событие 'trade_offer_sent' → сервер (через sendToServer)
+   ↓
+7. Покупатель принимает трейд в Steam
    ↓
 7. WebSocket событие 'trade_completed' → завершение
 ```

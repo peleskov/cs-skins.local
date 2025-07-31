@@ -39,10 +39,6 @@ class Transaction extends Model
         return $this->belongsTo(Client::class);
     }
 
-    public function trade(): BelongsTo
-    {
-        return $this->belongsTo(Trade::class);
-    }
 
     public function scopeCompleted($query)
     {

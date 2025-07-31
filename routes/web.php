@@ -65,7 +65,6 @@ Route::prefix('api')->name('api.')->group(function () {
     // Маршруты для заказов
     Route::prefix('orders')->name('orders.')->controller(OrderController::class)->group(function () {
         Route::post('/create', 'createOrder')->name('create')->middleware(['auth:client', 'throttle:10,1']);
-        Route::post('/{order}/pay', 'payOrder')->name('pay')->middleware(['auth:client', 'throttle:5,1']);
         Route::get('/my', 'getMyOrders')->name('my')->middleware(['auth:client', 'throttle:60,1']);
     });
     

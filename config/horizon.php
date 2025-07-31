@@ -198,15 +198,41 @@ return [
     'environments' => [
         'production' => [
             'supervisor-1' => [
+                'connection' => 'redis',
+                'queue' => ['default'],
+                'balance' => 'auto',
                 'maxProcesses' => 10,
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
+                'tries' => 3,
+            ],
+            'trade-offers' => [
+                'connection' => 'redis',
+                'queue' => ['trade-offers'],
+                'balance' => 'auto',
+                'maxProcesses' => 8,
+                'tries' => 3,
+                'timeout' => 300,
+                'nice' => 0,
             ],
         ],
 
         'local' => [
             'supervisor-1' => [
+                'connection' => 'redis',
+                'queue' => ['default'],
+                'balance' => 'auto',
                 'maxProcesses' => 3,
+                'tries' => 3,
+            ],
+            'trade-offers' => [
+                'connection' => 'redis',
+                'queue' => ['trade-offers'],
+                'balance' => 'auto',
+                'maxProcesses' => 5,
+                'tries' => 3,
+                'timeout' => 300,
+                'nice' => 0,
             ],
         ],
     ],

@@ -82,25 +82,25 @@ class WebSocketHandler
         $today = today();
         
         // Активные трейды за сегодня
-        $activeTrades = \App\Models\OrderItem::where('seller_id', $sellerId)
+        $activeTrades = \App\Models\TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
-            ->where('status', \App\Models\OrderItem::STATUS_TRADE_SENT)
+            ->whereIn('status', [\App\Models\TradeOffer::STATUS_PENDING, \App\Models\TradeOffer::STATUS_DISPATCHED, \App\Models\TradeOffer::STATUS_SENT])
             ->count();
         
         // Завершенные трейды за сегодня
-        $completedTrades = \App\Models\OrderItem::where('seller_id', $sellerId)
+        $completedTrades = \App\Models\TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
-            ->where('status', \App\Models\OrderItem::STATUS_COMPLETED)
+            ->where('status', \App\Models\TradeOffer::STATUS_COMPLETED)
             ->count();
         
         // Отмененные трейды за сегодня
-        $cancelledTrades = \App\Models\OrderItem::where('seller_id', $sellerId)
+        $cancelledTrades = \App\Models\TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
-            ->where('status', \App\Models\OrderItem::STATUS_CANCELLED)
+            ->where('status', \App\Models\TradeOffer::STATUS_CANCELLED)
             ->count();
         
         // Всего трейдов за сегодня
-        $totalTradesToday = \App\Models\OrderItem::where('seller_id', $sellerId)
+        $totalTradesToday = \App\Models\TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
             ->count();
 

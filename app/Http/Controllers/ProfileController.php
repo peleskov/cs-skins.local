@@ -617,36 +617,38 @@ class ProfileController extends Controller
     }
 
     /**
-     * Получить данные продаж для пользователя (продажи отображаются по скинам)
+     * Получить данные продаж для пользователя (заказы где пользователь является продавцом)
      */
     private function getSalesData(Client $client, string $activeTab): array
     {
-        // Получаем order_items где пользователь является продавцом
-        $allOrderItems = \App\Models\OrderItem::with(['order.buyer:id,name,steam_id', 'listing:id,price'])
+        // Получаем заказы где пользователь является продавцом
+        $allOrders = Order::with(['buyer:id,name,steam_id', 'listings'])
             ->where('seller_id', $client->id)
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Группируем order_items по статусам (соответствие статусов order_items и заказов)
-        $orderItemsByStatus = [
-            'new' => $allOrderItems->where('status', \App\Models\OrderItem::STATUS_RESERVED),
-            'pending' => $allOrderItems->where('status', \App\Models\OrderItem::STATUS_TRADE_SENT),
-            'completed' => $allOrderItems->where('status', \App\Models\OrderItem::STATUS_COMPLETED),
-            'cancelled' => $allOrderItems->where('status', \App\Models\OrderItem::STATUS_CANCELLED)
+        // Группируем заказы по статусам
+        $ordersByStatus = [
+            'new' => $allOrders->where('status', self::ORDER_STATUS_NEW),
+            'pending' => $allOrders->where('status', self::ORDER_STATUS_PENDING),
+            'completed' => $allOrders->where('status', self::ORDER_STATUS_COMPLETED),
+            'cancelled' => $allOrders->filter(function($order) {
+                return in_array($order->status, self::ORDER_STATUSES_CANCELLED);
+            })
         ];
 
         // Считаем количество в каждой группе
         $counts = [
-            'new' => $orderItemsByStatus['new']->count(),
-            'pending' => $orderItemsByStatus['pending']->count(),
-            'completed' => $orderItemsByStatus['completed']->count(),
-            'cancelled' => $orderItemsByStatus['cancelled']->count()
+            'new' => $ordersByStatus['new']->count(),
+            'pending' => $ordersByStatus['pending']->count(),
+            'completed' => $ordersByStatus['completed']->count(),
+            'cancelled' => $ordersByStatus['cancelled']->count()
         ];
 
-        $currentOrderItems = $orderItemsByStatus[$activeTab] ?? collect();
+        $currentOrders = $ordersByStatus[$activeTab] ?? collect();
 
         return [
-            'order_items' => $currentOrderItems->values(),
+            'orders' => $currentOrders->values(),
             'counts' => $counts,
             'activeTab' => $activeTab
         ];
@@ -658,10 +660,7 @@ class ProfileController extends Controller
     private function getPurchasesData(Client $client, string $activeTab): array
     {
         // Получаем заказы где пользователь является покупателем
-        $allOrders = Order::with(['items' => function($query) {
-                // Загружаем только нужные данные из order_items
-                $query->select('id', 'order_id', 'listing_id', 'item_name', 'item_image_url', 'price', 'status', 'seller_name');
-            }])
+        $allOrders = Order::with(['seller:id,name,steam_id'])
             ->where('buyer_id', $client->id)
             ->orderBy('created_at', 'desc')
             ->get();

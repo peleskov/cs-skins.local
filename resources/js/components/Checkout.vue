@@ -106,10 +106,31 @@
 				</div>
 				<div class="modal-body text-center">
 					<i class="ri-check-double-line text-success" style="font-size: 3rem;"></i>
-					<h4 class="mt-3">Заказ {{ currentOrder?.order_number }}</h4>
-					<p class="mb-3">Сумма: <strong>{{ formatPrice(currentOrder?.total_amount) }} ₽</strong></p>
-					<p class="text-muted">
-						Заказ успешно оплачен и передан в обработку. 
+					<h4 class="mt-3">{{ createdOrders.length === 1 ? 'Заказ успешно оформлен!' : `Оформлено заказов: ${createdOrders.length}` }}</h4>
+					
+					<!-- Orders list -->
+					<div class="mt-3">
+						<div v-for="order in createdOrders" :key="order.id" class="border rounded p-2 mb-2 text-start">
+							<div class="d-flex justify-content-between align-items-center">
+								<span>
+									<strong>Заказ {{ order.order_number }}</strong>
+									<small class="text-muted d-block">Продавец: {{ order.seller?.name || 'Не указан' }}</small>
+								</span>
+								<strong class="text-primary">{{ formatPrice(order.total_amount) }} ₽</strong>
+							</div>
+						</div>
+						
+						<!-- Total amount if multiple orders -->
+						<div v-if="createdOrders.length > 1" class="mt-3 pt-3 border-top">
+							<div class="d-flex justify-content-between align-items-center">
+								<strong>Итого:</strong>
+								<strong class="text-success fs-5">{{ formatPrice(totalAmount) }} ₽</strong>
+							</div>
+						</div>
+					</div>
+					
+					<p class="text-muted mt-3">
+						{{ createdOrders.length === 1 ? 'Заказ' : 'Заказы' }} успешно оплачены и переданы в обработку. 
 						Вы получите уведомление, когда трейд-оффер будет отправлен.
 					</p>
 				</div>
@@ -140,11 +161,16 @@ export default {
 			cartTotal: 0,
 			orderNotes: '',
 			showSuccessModal: false,
-			currentOrder: null
+			createdOrders: []
 		}
 	},
 	async mounted() {
 		await this.loadCartItems();
+	},
+	computed: {
+		totalAmount() {
+			return this.createdOrders.reduce((sum, order) => sum + parseFloat(order.total_amount), 0);
+		}
 	},
 	methods: {
 		formatPrice,
@@ -175,7 +201,7 @@ export default {
 				}
 
 				// Показываем модал успеха
-				this.currentOrder = orderResponse.order;
+				this.createdOrders = orderResponse.orders || [];
 				this.showSuccessModal = true;
 
 				// Обновляем счетчик корзины в header

@@ -1,9 +1,12 @@
-// CS-SKINS.pro Trading Assistant - Steam Content Script
+/**
+ * CS-SKINS.pro Trading Assistant - Steam Content Script
+ * Обрабатывает создание и отмену трейд-офферов через централизованный SteamAPI
+ */
 class SteamTradeInjector {
     constructor() {
         this.isInitialized = false;
-        this.pendingOrders = [];
-        
+        this.sessionId = null;
+        this.steamId = null;
         this.init();
     }
     
@@ -20,9 +23,10 @@ class SteamTradeInjector {
         
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             this.handleMessage(message, sender, sendResponse);
+            return true; // Указываем что будет асинхронный ответ
         });
         
-        this.extractSteamSession();
+        this.loadSteamSession();
         this.isInitialized = true;
     }
     
@@ -30,297 +34,143 @@ class SteamTradeInjector {
         return window.location.hostname === 'steamcommunity.com';
     }
     
-    handleMessage(message, sender, sendResponse) {
-        const handlers = {
-            'CREATE_TRADE_OFFER': async () => {
-                // Выполняем создание трейда напрямую на текущей странице
-                console.log('=== CREATE_TRADE_OFFER начало ===');
-                console.log('URL страницы:', window.location.href);
-                console.log('jQuery доступен:', typeof $ !== 'undefined');
-                console.log('Order data:', message.order);
-                
-                try {
-                    const sessionData = this.getSteamSessionData();
-                    console.log('Session data:', sessionData);
-                    
-                    if (!sessionData.sessionId) {
-                        throw new Error('Не удалось получить Steam session');
-                    }
-                    
-                    const tradeData = this.prepareTradeData(message.order, sessionData);
-                    console.log('Prepared trade data:', tradeData);
-                    
-                    const tradeOfferId = await this.sendTradeOffer(tradeData, message.order);
-                    console.log('Trade offer created with ID:', tradeOfferId);
-                    
-                    sendResponse({
-                        success: true,
-                        tradeOfferId: tradeOfferId,
-                        message: `Трейд-оффер #${tradeOfferId} отправлен покупателю`
-                    });
-                } catch (error) {
-                    console.error('=== CREATE_TRADE_OFFER ошибка ===', error);
-                    sendResponse({ 
-                        success: false, 
-                        error: error.message,
-                        context: error.context || {}
-                    });
-                }
-            },
-            'GET_STEAM_SESSION': () => {
-                sendResponse({
-                    success: true,
-                    sessionData: this.getSteamSessionData()
-                });
-            },
-            'CREATE_TRADE_ON_PAGE': async () => {
-                try {
-                    const sessionData = this.getSteamSessionData();
-                    if (!sessionData.sessionId) {
-                        throw new Error('Не удалось получить Steam session');
-                    }
-                    
-                    const tradeData = this.prepareTradeData(message.order, sessionData);
-                    const tradeOfferId = await this.sendTradeOffer(tradeData, message.order);
-                    
-                    sendResponse({
-                        success: true,
-                        tradeOfferId: tradeOfferId,
-                        message: `Трейд-оффер #${tradeOfferId} отправлен покупателю`
-                    });
-                } catch (error) {
-                    sendResponse({ 
-                        success: false, 
-                        error: error.message,
-                        context: error.context || {}
-                    });
-                }
-            },
-            'CHECK_STEAM_SESSION': () => {
-                const sessionData = this.getSteamSessionData();
-                const expectedSteamId = message.expectedSteamId;
-                
-                // Проверяем наличие Steam ID и соответствие
-                const hasSteamId = !!sessionData.steamId;
-                const isCorrectUser = !expectedSteamId || sessionData.steamId === expectedSteamId;
-                
-                let reason = 'not_logged_in';
-                let isAuthenticated = false;
-                
-                if (!hasSteamId) {
-                    reason = 'not_logged_in';
-                } else if (expectedSteamId && !isCorrectUser) {
-                    reason = 'wrong_user';
-                } else {
-                    reason = 'authenticated';
-                    isAuthenticated = true;
-                }
-                
-                sendResponse({
-                    available: isAuthenticated,
-                    steamId: sessionData.steamId,
-                    loggedIn: hasSteamId,
-                    reason: reason,
-                    debug: {
-                        url: window.location.href,
-                        hasGSessionID: !!window.g_sessionID,
-                        hasGSteamID: !!window.g_steamID,
-                        hasCookies: document.cookie.includes('sessionid'),
-                        sessionId: !!sessionData.sessionId,
-                        steamId: !!sessionData.steamId,
-                        expectedSteamId: expectedSteamId,
-                        isCorrectUser: isCorrectUser
-                    }
-                });
-            }
-        };
-        
-        const handler = handlers[message.type];
-        if (handler) {
-            handler();
-            return true;
-        } else {
+    /**
+     * Обработчик сообщений от service-worker
+     */
+    async handleMessage(message, sender, sendResponse) {
+        if (message.type !== 'STEAM_API_REQUEST') {
             sendResponse({ success: false, error: 'Unknown message type' });
             return false;
         }
+        
+        try {
+            const config = message.config;
+            
+            // Добавляем session ID если нужно
+            if (config.data && config.data.sessionid === '') {
+                if (!this.sessionId) {
+                    throw new Error('Не удалось получить Steam session');
+                }
+                config.data.sessionid = this.sessionId;
+            }
+            
+            // Выполняем AJAX запрос
+            const result = await this.executeAjaxRequest(config);
+            sendResponse({ success: true, ...result });
+            
+        } catch (error) {
+            sendResponse({ 
+                success: false, 
+                error: error.message,
+                httpStatus: error.httpStatus,
+                rawResponse: error.rawResponse
+            });
+        }
+        
+        return true;
     }
     
-    
-    getSteamSessionData() {
-        return {
-            sessionId: this.extractSessionId(),
-            steamId: this.extractSteamId(),
-            csrfToken: this.extractCSRFToken()
-        };
-    }
-    
-    extractSessionId() {
-        // Проверяем глобальную переменную сначала
+    /**
+     * Загрузка Steam сессии при инициализации
+     */
+    loadSteamSession() {
+        // Извлечение Session ID
         if (window.g_sessionID) {
-            return window.g_sessionID;
+            this.sessionId = window.g_sessionID;
+        } else {
+            const sessionCookie = document.cookie
+                .split(';')
+                .find(cookie => cookie.trim().startsWith('sessionid='));
+            this.sessionId = sessionCookie ? sessionCookie.split('=')[1] : null;
         }
         
-        // Ищем в cookies
-        const sessionCookie = document.cookie
-            .split(';')
-            .find(cookie => cookie.trim().startsWith('sessionid='));
-            
-        return sessionCookie ? sessionCookie.split('=')[1] : null;
-    }
-    
-    extractSteamId() {
+        // Извлечение Steam ID
         if (window.g_steamID) {
-            return window.g_steamID;
+            this.steamId = window.g_steamID;
+        } else {
+            const profileMatch = window.location.href.match(/steamcommunity\.com\/(profiles|id)\/([^\/]+)/);
+            this.steamId = profileMatch ? profileMatch[2] : null;
         }
         
-        const profileMatch = window.location.href.match(/steamcommunity\.com\/(profiles|id)\/([^\/]+)/);
-        return profileMatch ? profileMatch[2] : null;
-    }
-    
-    extractCSRFToken() {
-        const metaToken = document.querySelector('meta[name="csrf-token"]');
-        if (metaToken) {
-            return metaToken.getAttribute('content');
-        }
-        
-        const scripts = Array.from(document.querySelectorAll('script'));
-        for (const script of scripts) {
-            const tokenMatch = script.textContent && script.textContent.match(/sessionid['"]\s*:\s*['"]([^'"]+)['"]/);
-            if (tokenMatch) {
-                return tokenMatch[1];
-            }
-        }
-        
-        return null;
-    }
-    
-    prepareTradeData(order, sessionData) {
-        // Подготавливаем данные точно как в ручном запросе
-        const tradeData = {
-            sessionid: sessionData.sessionId,
-            serverid: '1',
-            partner: order.buyer.steam_id,
-            tradeoffermessage: '', // Пустое сообщение как в ручном запросе
-            json_tradeoffer: JSON.stringify({
-                newversion: true,
-                version: 4,
-                me: {
-                    assets: [{
-                        appid: "730",
-                        contextid: "2", 
-                        amount: 1,
-                        assetid: order.steam_asset_id
-                    }],
-                    currency: [],
-                    ready: false
-                },
-                them: {
-                    assets: [],
-                    currency: [],
-                    ready: false
-                }
-            }),
-            captcha: '',
-            trade_offer_create_params: JSON.stringify({
-                trade_offer_access_token: this.extractTradeToken(order.buyer.trade_url)
-            })
-        };
-        
-        return tradeData;
-    }
-    
-    
-    extractTradeToken(tradeUrl) {
-        // Извлекаем токен из Trade URL
-        const tokenMatch = tradeUrl.match(/token=([a-zA-Z0-9_-]+)/);
-        return tokenMatch ? tokenMatch[1] : '';
-    }
-    
-    async sendTradeOffer(tradeData, order) {
-        return new Promise((resolve, reject) => {
-            // Логируем все параметры перед отправкой
-            console.log('Trade offer parameters:', {
-                sessionid: tradeData.sessionid,
-                partner: tradeData.partner,
-                tradeoffermessage: tradeData.tradeoffermessage,
-                json_tradeoffer: tradeData.json_tradeoffer,
-                trade_offer_create_params: tradeData.trade_offer_create_params
-            });
-            
-            // Проверяем наличие jQuery
-            if (typeof $ === 'undefined' || !$.ajax) {
-                reject(new Error('jQuery не найден на странице Steam'));
-                return;
-            }
-            
-            // Используем jQuery AJAX как в оригинальном Steam коде
-            $.ajax({
-                url: 'https://steamcommunity.com/tradeoffer/new/send',
-                type: 'POST',
-                data: tradeData,
-                beforeSend: function(xhr) {
-                    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-                },
-                success: function(result) {
-                    console.log('Steam API jQuery response:', result);
-                    
-                    if (result.strError) {
-                        const error = new Error(result.strError);
-                        error.context = {
-                            steamResponse: result,
-                            requestData: {
-                                partner: tradeData.partner,
-                                assetId: JSON.parse(tradeData.json_tradeoffer).me.assets[0].assetid
-                            }
-                        };
-                        reject(error);
-                        return;
-                    }
-                    
-                    if (!result.tradeofferid) {
-                        const error = new Error('Не получен ID трейд-оффера');
-                        error.context = {
-                            steamResponse: result
-                        };
-                        reject(error);
-                        return;
-                    }
-                    
-                    resolve(result.tradeofferid);
-                },
-                error: function(jqXHR, textStatus, errorThrown) {
-                    console.error('Steam API jQuery error:', {
-                        status: jqXHR.status,
-                        statusText: jqXHR.statusText,
-                        responseText: jqXHR.responseText,
-                        textStatus: textStatus,
-                        errorThrown: errorThrown
-                    });
-                    
-                    const error = new Error(`AJAX Error: ${textStatus} - ${errorThrown}`);
-                    error.context = {
-                        httpStatus: jqXHR.status,
-                        responseText: jqXHR.responseText,
-                        partner: tradeData.partner,
-                        assetId: tradeData.json_tradeoffer ? JSON.parse(tradeData.json_tradeoffer).me.assets[0].assetid : 'unknown'
-                    };
-                    reject(error);
-                }
-            });
-        });
-    }
-    
-    extractSteamSession() {
-        const sessionData = this.getSteamSessionData();
-        
-        if (sessionData.sessionId) {
+        // Отправляем данные в service-worker
+        if (this.sessionId) {
             chrome.runtime.sendMessage({
                 type: 'STEAM_SESSION_EXTRACTED',
-                sessionData: sessionData
+                sessionData: { sessionId: this.sessionId, steamId: this.steamId }
             });
         }
     }
     
+    /**
+     * Универсальный метод для выполнения AJAX запросов к Steam API
+     */
+    async executeAjaxRequest(config) {
+        const { url, method = 'POST', data = {}, successValidator, operation } = config;
+        
+        try {
+            let requestConfig = {
+                url: url,
+                method: method,
+                validateStatus: () => true // Не бросать ошибку на HTTP статусы
+            };
+            
+            // Для GET запросов данные идут в params (URL), для POST - в data
+            if (method.toUpperCase() === 'GET') {
+                requestConfig.params = data;
+                requestConfig.headers = {
+                    'Accept': 'application/json'
+                };
+            } else {
+                requestConfig.data = data;
+                requestConfig.headers = {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                };
+            }
+            
+            const response = await axios(requestConfig);
+            
+            // Для операций получения статуса трейда - проверяем по-другому
+            if (operation === 'getTradeOfferStatus') {
+                if (response.status === 200 && response.data?.response) {
+                    return {
+                        success: true,
+                        result: response.data
+                    };
+                }
+            }
+            
+            // Для обычных трейд операций - только HTTP 200 с tradeofferid считается успехом
+            if (response.status === 200 && response.data?.tradeofferid) {
+                return response.data;
+            }
+            
+            // Все остальные ответы - неуспешные, но не ошибки расширения
+            console.log(`[Steam API] Non-success response:`, {
+                status: response.status,
+                data: response.data,
+                operation: operation
+            });
+            
+            // Возвращаем структуру для обработки как неуспешный результат
+            return {
+                success: false,
+                rawResponse: response
+            };
+            
+        } catch (error) {
+            // Обработка ошибок axios
+            if (error.response) {
+                const apiError = new Error(error.message || 'Request failed');
+                apiError.httpStatus = error.response.status;
+                apiError.rawResponse = error.response.data;
+                throw apiError;
+            } else {
+                // Ошибка валидации или сети
+                throw error;
+            }
+        }
+    }
 }
 
 // Инициализируем content script

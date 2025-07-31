@@ -233,6 +233,10 @@ class WebSocketServiceProvider extends ServiceProvider
         }
         
         switch ($messageType) {
+            case 'session_data':
+                $this->handleSessionData($sellerId, $messageData, $channel);
+                break;
+                
             case 'stats_request':
                 // Запрос статистики - если канал передан, отвечаем напрямую
                 if ($channel) {
@@ -282,6 +286,57 @@ class WebSocketServiceProvider extends ServiceProvider
         }
     }
     
+    /**
+     * Обработка данных Steam сессии от расширения
+     */
+    private function handleSessionData(int $sellerId, array $data, ?string $channel = null): void
+    {
+        if (!isset($data['session'])) {
+            Log::warning('Session data missing session field', ['seller_id' => $sellerId]);
+            return;
+        }
+
+        $sessionData = $data['session'];
+        
+        if (!isset($sessionData['sessionid']) || !isset($sessionData['steamid'])) {
+            Log::warning('Invalid session data structure', [
+                'seller_id' => $sellerId,
+                'has_sessionid' => isset($sessionData['sessionid']),
+                'has_steamid' => isset($sessionData['steamid'])
+            ]);
+            return;
+        }
+
+        $client = \App\Models\Client::find($sellerId);
+        if (!$client) {
+            Log::warning('Client not found', ['seller_id' => $sellerId]);
+            return;
+        }
+
+        if ($client->steam_id !== $sessionData['steamid']) {
+            Log::warning('Steam ID mismatch', [
+                'seller_id' => $sellerId,
+                'expected' => $client->steam_id,
+                'received' => $sessionData['steamid']
+            ]);
+            return;
+        }
+
+        $sessionCache = app(\App\Services\SteamSessionCache::class);
+        $success = $sessionCache->set($sellerId, $sessionData);
+        
+        if ($success) {
+            \App\Events\ExtensionEvents::sendSmart('session_received', $sellerId, [
+                'status' => 'success',
+                'expires_in' => $sessionCache->getExpiresInSeconds($sellerId)
+            ], 'Steam сессия получена и кеширована');
+            
+            Log::info('Session data processed successfully', ['seller_id' => $sellerId]);
+        } else {
+            Log::error('Failed to cache session data', ['seller_id' => $sellerId]);
+        }
+    }
+
     /**
      * Обработка успешного создания трейда
      */

@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "CS-SKINS Trading Assistant v2",
+  "version": "2.0.0",
+  "description": "Автоматизация торговли на CS-SKINS.pro",
+  "permissions": [
+    "storage",
+    "tabs",
+    "cookies",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://steamcommunity.com/*",
+    "https://cs-skins.s1temaker.ru/*",
+    "http://localhost/*"
+  ],
+  "background": {
+    "service_worker": "assets/js/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://steamcommunity.com/*"],
+      "js": ["assets/js/steam-injector.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "action": {
+    "default_icon": {
+      "16": "assets/icons/icon-16.png",
+      "32": "assets/icons/icon-32.png",
+      "48": "assets/icons/icon-48.png",
+      "128": "assets/icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "assets/icons/icon-16.png",
+    "32": "assets/icons/icon-32.png",
+    "48": "assets/icons/icon-48.png",
+    "128": "assets/icons/icon-128.png"
+  }
+}

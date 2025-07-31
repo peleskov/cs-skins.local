@@ -261,4 +261,16 @@ class Client extends Authenticatable
     {
         return $this->generateExtensionToken();
     }
+
+    /**
+     * Получить Account ID (32-битный) из Steam ID64
+     */
+    public function getAccountId(): string
+    {
+        if (!$this->steam_id) {
+            return '';
+        }
+        
+        return (string)((int)$this->steam_id - 76561197960265728);
+    }
 }

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS-SKINS Trading Assistant</title>
+    <link rel="stylesheet" href="assets/css/index.css">
+</head>
+
+<body>
+    <!-- Полноэкранный лоадер -->
+    <div class="fullscreen-loader" id="fullscreenLoader">
+        <div class="loader-content">
+            <div class="loader-spinner"></div>
+            <div class="loader-text">Подключение к серверу...</div>
+        </div>
+    </div>
+
+    <div class="popup-container">
+        <div class="header">
+            <a href="https://cs-skins.s1temaker.ru" target="_blank" class="logo logo-link" title="Открыть CS-SKINS.pro">
+                <img src="assets/icons/icon-32.png" alt="CS-SKINS.pro" class="logo-icon">
+                <span class="logo-text">CS-SKINS.pro</span>
+            </a>
+            <div class="header-controls">
+                <div class="status-indicators">
+                    <div class="status-indicator" id="websocketStatus" title="Соединение с CS-SKINS.pro сервером">
+                        <svg class="status-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12"
+                            height="12">
+                            <path fill="currentColor"
+                                d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
+                        </svg>
+                        <span class="status-dot"></span>
+                        <span class="status-text">Сервер</span>
+                    </div>
+                    <div class="status-indicator" id="steamStatus" title="Статус Steam сессии">
+                        <svg class="status-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12"
+                            height="12">
+                            <path fill="currentColor"
+                                d="M12.01 2.2c-5.49 0-9.95 4.46-9.95 9.95 0 1.82.49 3.53 1.34 5L7.99 19.8c.28-.09.58-.14.89-.14 1.66 0 3.02 1.35 3.02 3.01 0 .31-.05.61-.14.89L16.35 20c1.47-.85 2.65-2.17 3.5-3.65L12.01 2.2zM8.89 17.32c-.83 0-1.51-.68-1.51-1.51s.68-1.51 1.51-1.51 1.51.68 1.51 1.51-.68 1.51-1.51 1.51zm6.22-4.51c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z" />
+                        </svg>
+                        <span class="status-dot"></span>
+                        <span class="status-text">Steam</span>
+                    </div>
+                </div>
+            </div>
+            <button id="toggleBtn" class="btn-toggle" title="Отключить расширение">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 49 49">
+                    <path
+                        d="M24.718 49c-11.54 0-20.929-9.389-20.929-20.93 0-7.386 3.776-14.083 10.102-17.913a2.867 2.867 0 1 1 2.971 4.905c-4.595 2.782-7.338 7.646-7.338 13.008 0 8.379 6.816 15.195 15.195 15.195 8.379 0 15.194-6.816 15.194-15.195 0-5.45-2.944-10.515-7.687-13.215a2.867 2.867 0 1 1 2.837-4.982 20.985 20.985 0 0 1 10.585 18.198C45.647 39.611 36.26 49 24.718 49zM24.5 27.784c-1.583 0-3.5-1.284-3.5-2.867V4.274c0-1.583 1.917-2.867 3.5-2.867S28 2.691 28 4.274v20.643c0 1.583-1.917 2.867-3.5 2.867z">
+                    </path>
+                </svg>
+            </button>
+        </div>
+
+        <div class="content-section" id="unauthorizedContent">
+            <div class="auth-container">
+                <h3>Настройка расширения</h3>
+                <p class="auth-description">
+                    Для работы расширения необходимо связать его с вашим аккаунтом CS-SKINS.pro
+                </p>
+
+                <div class="auth-steps">
+                    <div class="step">
+                        <span class="step-number">1</span>
+                        <span class="step-text">Войдите в свой профиль на сайте</span>
+                    </div>
+                    <div class="step">
+                        <span class="step-number">2</span>
+                        <span class="step-text">Найдите "Токен расширения" в информации профиля</span>
+                    </div>
+                    <div class="step">
+                        <span class="step-number">3</span>
+                        <span class="step-text">Вставьте токен в поле ниже</span>
+                    </div>
+                </div>
+
+                <div class="auth-form">
+                    <input type="password" id="authToken" placeholder="Вставьте токен авторизации" class="auth-input">
+                    <button id="authorizeBtn" class="btn btn-primary">
+                        <span class="btn-text">Подключить</span>
+                        <span class="btn-loader" style="display: none;">⏳</span>
+                    </button>
+                </div>
+
+                <div class="quick-links">
+                    <a href="https://cs-skins.s1temaker.ru/profile" target="_blank" class="link">
+                        Открыть профиль →
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-section" id="authorizedContent" style="display: none;">
+            <div class="user-info">
+                <div class="user-avatar">
+                    <img id="userAvatar" src="" alt="Avatar" style="display: none;">
+                    <div class="avatar-placeholder">👤</div>
+                </div>
+                <div class="user-details">
+                    <div class="user-name" id="userName">Пользователь</div>
+                    <div class="user-steam" id="userSteam"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="notification" id="notification" style="display: none;">
+            <div class="notification-content">
+                <span class="notification-text"></span>
+                <button class="notification-close">&times;</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/index.js"></script>
+</body>
+
+</html>

@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Steam;
 
 use App\Models\Client;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
-class SteamSessionCache
+class SessionCache
 {
     private const CACHE_PREFIX = 'steam_session:';
     private const DEFAULT_TTL = 180; // 3 минуты

@@ -9,9 +9,9 @@ use Laravel\Reverb\Events\MessageReceived;
 
 class WebSocketHandler
 {
-    private SteamSessionCache $sessionCache;
+    private \App\Services\Steam\SessionCache $sessionCache;
 
-    public function __construct(SteamSessionCache $sessionCache)
+    public function __construct(\App\Services\Steam\SessionCache $sessionCache)
     {
         $this->sessionCache = $sessionCache;
     }
@@ -51,6 +51,15 @@ class WebSocketHandler
         }
 
         $sessionData = $data['session'];
+        
+        // Логируем полученные данные сессии для отладки
+        Log::info('Received session data', [
+            'seller_id' => $sellerId,
+            'has_sessionid' => isset($sessionData['sessionid']),
+            'has_steamLoginSecure' => isset($sessionData['steamLoginSecure']),
+            'has_steamid' => isset($sessionData['steamid']),
+            'session_keys' => array_keys($sessionData)
+        ]);
         
         if (!isset($sessionData['sessionid']) || !isset($sessionData['steamid'])) {
             Log::warning('Invalid session data structure', [

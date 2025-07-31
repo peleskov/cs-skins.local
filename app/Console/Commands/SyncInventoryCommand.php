@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Client;
 use App\Models\ClientInventoryItem;
-use App\Services\SteamInventoryService;
+use App\Services\Steam\InventoryService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -53,7 +53,7 @@ class SyncInventoryCommand extends Command
         $this->info("Синхронизация инвентаря для {$client->name} ({$steamId})");
 
         try {
-            $inventoryService = app(SteamInventoryService::class);
+            $inventoryService = app(InventoryService::class);
             
             if ($force) {
                 $inventory = $inventoryService->refreshInventory($steamId);

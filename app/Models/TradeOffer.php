@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use App\Services\Steam\TradeService;
+use Exception;
 
 class TradeOffer extends Model
 {
@@ -25,11 +28,21 @@ class TradeOffer extends Model
         'is_ready' => 'boolean',
     ];
 
-    const STATUS_PENDING = 'pending';
-    const STATUS_DISPATCHED = 'dispatched';
-    const STATUS_SENT = 'sent';
-    const STATUS_COMPLETED = 'completed';
-    const STATUS_CANCELLED = 'cancelled';
+    // Steam статусы (из steam-tradeoffer-manager ETradeOfferState)
+    const STATUS_INVALID = 'Invalid';
+    const STATUS_ACTIVE = 'Active'; 
+    const STATUS_ACCEPTED = 'Accepted';
+    const STATUS_COUNTERED = 'Countered';
+    const STATUS_EXPIRED = 'Expired';
+    const STATUS_CANCELED = 'Canceled';
+    const STATUS_DECLINED = 'Declined';
+    const STATUS_INVALID_ITEMS = 'InvalidItems';
+    const STATUS_CREATED_NEEDS_CONFIRMATION = 'CreatedNeedsConfirmation';
+    const STATUS_CANCELED_BY_SECOND_FACTOR = 'CanceledBySecondFactor';
+    const STATUS_IN_ESCROW = 'InEscrow';
+    
+    // Дополнительный локальный статус
+    const STATUS_PENDING = 'Pending'; // Ожидает создания в Steam
 
     /**
      * Связь с заказом
@@ -64,24 +77,34 @@ class TradeOffer extends Model
         return $this->status === self::STATUS_PENDING;
     }
 
-    public function isSent(): bool
+    public function isActive(): bool
     {
-        return $this->status === self::STATUS_SENT;
+        return in_array($this->status, [
+            self::STATUS_ACTIVE,
+            self::STATUS_CREATED_NEEDS_CONFIRMATION,
+            self::STATUS_IN_ESCROW
+        ]);
     }
 
     public function isCompleted(): bool
     {
-        return $this->status === self::STATUS_COMPLETED;
+        return $this->status === self::STATUS_ACCEPTED;
     }
 
     public function isCancelled(): bool
     {
-        return $this->status === self::STATUS_CANCELLED;
+        return in_array($this->status, [
+            self::STATUS_CANCELED,
+            self::STATUS_DECLINED,
+            self::STATUS_EXPIRED,
+            self::STATUS_INVALID_ITEMS,
+            self::STATUS_CANCELED_BY_SECOND_FACTOR
+        ]);
     }
 
-    public function isDispatched(): bool
+    public function isCountered(): bool
     {
-        return $this->status === self::STATUS_DISPATCHED;
+        return $this->status === self::STATUS_COUNTERED;
     }
 
     public function isReady(): bool
@@ -107,68 +130,93 @@ class TradeOffer extends Model
                 return;
             }
             
-            // Отправляем события при изменении статуса через умную отправку
+            // Логируем изменения статуса для отладки
             if ($tradeOffer->wasChanged('status')) {
+                $oldStatus = $tradeOffer->getOriginal('status');
                 $newStatus = $tradeOffer->status;
                 
-                switch ($newStatus) {
-                    case self::STATUS_SENT:
-                        \App\Events\ExtensionEvents::tradeOfferSent($tradeOffer);
-                        break;
-                    case self::STATUS_COMPLETED:
-                        \App\Events\ExtensionEvents::tradeOfferCompleted($tradeOffer);
-                        break;
-                    case self::STATUS_CANCELLED:
-                        \App\Events\ExtensionEvents::tradeOfferCancelled($tradeOffer);
-                        break;
-                }
+                Log::info('Trade offer status changed', [
+                    'trade_offer_id' => $tradeOffer->id,
+                    'steam_trade_offer_id' => $tradeOffer->steam_trade_offer_id,
+                    'old_status' => $oldStatus,
+                    'new_status' => $newStatus
+                ]);
             }
         });
     }
 
     /**
-     * Методы для изменения статуса
+     * Установить статус от Steam
      */
-    public function markAsSent(string $steamTradeOfferId): void
+    public function setStatus(string $steamStatus): void
     {
-        DB::transaction(function () use ($steamTradeOfferId) {
-            // Обновляем текущий TradeOffer
-            $this->update([
-                'status' => self::STATUS_SENT,
-                'steam_trade_offer_id' => $steamTradeOfferId,
-                'is_ready' => false,
-            ]);
-
-            // Активируем следующий TradeOffer этого продавца
-            self::where('seller_id', $this->seller_id)
-                ->where('status', self::STATUS_PENDING)
-                ->where('is_ready', false)
-                ->orderBy('created_at', 'asc')
-                ->limit(1)
-                ->update(['is_ready' => true]);
-        });
+        $this->update(['status' => $steamStatus]);
     }
 
-    public function markAsDispatched(): void
-    {
-        $this->update([
-            'status' => self::STATUS_DISPATCHED,
-        ]);
-    }
+    /**
+     * Steam API методы
+     */
 
-    public function complete(): void
+    /**
+     * Создать трейд в Steam и обновить локальный статус
+     */
+    public function create(): array
     {
-        $this->update([
-            'status' => self::STATUS_COMPLETED,
-        ]);
-    }
+        if ($this->steam_trade_offer_id) {
+            throw new Exception("Trade offer already created in Steam");
+        }
 
-    public function cancel(): void
-    {
+        $steamTradeService = app(TradeService::class);
+        $result = $steamTradeService->createTradeOffer($this);
+
+        // Обновляем модель с результатами Steam
         $this->update([
-            'status' => self::STATUS_CANCELLED,
+            'steam_trade_offer_id' => $result['steam_trade_offer_id'],
+            'status' => $result['status'],
             'is_ready' => false,
         ]);
+
+        return $result;
+    }
+
+    /**
+     * Отменить трейд в Steam и обновить локальный статус
+     */
+    public function cancel(): bool
+    {
+        if (!$this->steam_trade_offer_id) {
+            throw new Exception("Trade offer not created in Steam yet");
+        }
+
+        $steamTradeService = app(TradeService::class);
+        $result = $steamTradeService->cancelTradeOffer($this);
+
+        if ($result['success']) {
+            $this->setStatus(self::STATUS_CANCELED);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Получить актуальный статус из Steam и обновить локальный
+     */
+    public function status(): string
+    {
+        if (!$this->steam_trade_offer_id) {
+            throw new Exception("Trade offer not created in Steam yet");
+        }
+
+        $steamTradeService = app(TradeService::class);
+        $steamStatus = $steamTradeService->checkTradeStatus($this->steam_trade_offer_id, $this->seller_id);
+
+        // Обновляем локальный статус если изменился
+        if ($steamStatus !== $this->status) {
+            $this->setStatus($steamStatus);
+        }
+
+        return $steamStatus;
     }
 
 

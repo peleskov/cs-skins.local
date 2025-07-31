@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Steam;
 
 use App\Models\Client;
 use App\Models\Item;
@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
-class SteamInventoryService
+class InventoryService
 {
     private const STEAM_INVENTORY_URL = 'https://steamcommunity.com/inventory/%s/730/2?l=russian';
     private const CS2_APP_ID = 730;

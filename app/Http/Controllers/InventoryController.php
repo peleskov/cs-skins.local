@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\ClientInventoryItem;
 use App\Models\Listing;
-use App\Services\SteamInventoryService;
+use App\Services\Steam\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;

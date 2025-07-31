@@ -224,13 +224,6 @@ class WebSocketServiceProvider extends ServiceProvider
             return;
         }
         
-        // Логируем только важные операции (не stats_request)
-        if (!in_array($messageType, ['stats_request'])) {
-            Log::info("Extension: {$messageType}", [
-                'seller_id' => $sellerId,
-                'type' => $messageType
-            ]);
-        }
         
         switch ($messageType) {
             case 'session_data':
@@ -322,7 +315,7 @@ class WebSocketServiceProvider extends ServiceProvider
             return;
         }
 
-        $sessionCache = app(\App\Services\SteamSessionCache::class);
+        $sessionCache = app(\App\Services\Steam\SessionCache::class);
         $success = $sessionCache->set($sellerId, $sessionData);
         
         if ($success) {
@@ -331,7 +324,6 @@ class WebSocketServiceProvider extends ServiceProvider
                 'expires_in' => $sessionCache->getExpiresInSeconds($sellerId)
             ], 'Steam сессия получена и кеширована');
             
-            Log::info('Session data processed successfully', ['seller_id' => $sellerId]);
         } else {
             Log::error('Failed to cache session data', ['seller_id' => $sellerId]);
         }

@@ -1,19 +1,18 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Steam;
 
 use App\Models\TradeOffer;
 use App\Models\Client;
-use App\Events\ExtensionEvents;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Exception;
 
-class SteamTradeService
+class TradeService
 {
-    private SteamSessionCache $sessionCache;
+    private SessionCache $sessionCache;
 
-    public function __construct(SteamSessionCache $sessionCache)
+    public function __construct(SessionCache $sessionCache)
     {
         $this->sessionCache = $sessionCache;
     }
@@ -46,6 +45,10 @@ class SteamTradeService
             throw new Exception('Seller or buyer not found');
         }
 
+        if (empty($buyer->steam_trade_url)) {
+            throw new Exception('Buyer trade URL not found');
+        }
+
         $sessionData = $this->sessionCache->get($seller->id);
         
         if (!$sessionData) {
@@ -54,7 +57,7 @@ class SteamTradeService
 
         // Подготавливаем данные для Steam Community (точно как в Node.js)
         $offerData = $this->buildOfferData($tradeOffer->asset_ids);
-        $params = $this->buildTradeParams($tradeOffer->buyer_trade_url);
+        $params = $this->buildTradeParams($buyer->steam_trade_url);
         
         $formData = [
             'sessionid' => $sessionData['sessionid'],
@@ -68,7 +71,7 @@ class SteamTradeService
         ];
 
         // Формируем referer как в Node.js
-        $token = $this->extractTokenFromTradeUrl($tradeOffer->buyer_trade_url);
+        $token = $this->extractTokenFromTradeUrl($buyer->steam_trade_url);
         $referer = "https://steamcommunity.com/tradeoffer/new/?partner={$buyer->getAccountId()}" . 
                    ($token ? "&token={$token}" : '');
 
@@ -116,7 +119,7 @@ class SteamTradeService
         }
 
         $buyer = Client::find($tradeOffer->buyer_id);
-        $token = $this->extractTokenFromTradeUrl($tradeOffer->buyer_trade_url);
+        $token = $this->extractTokenFromTradeUrl($buyer->steam_trade_url);
         $referer = "https://steamcommunity.com/tradeoffer/{$tradeOffer->steam_trade_offer_id}/?partner={$buyer->getAccountId()}" . 
                    ($token ? "&token={$token}" : '');
 
@@ -351,5 +354,121 @@ class SteamTradeService
         ]);
 
         return $errorType;
+    }
+
+    /**
+     * Проверка статуса трейд оффера (копируем логику из Node.js steam-tradeoffer-manager)
+     */
+    public function checkTradeStatus(string $steamTradeOfferId, int $sellerId): string
+    {
+        $seller = Client::find($sellerId);
+        if (!$seller) {
+            throw new Exception('Seller not found');
+        }
+
+        $sessionData = $this->sessionCache->get($seller->id);
+        
+        if (!$sessionData) {
+            throw new Exception('No cached Steam session available for seller');
+        }
+
+        Log::info('Checking Steam trade offer status', [
+            'steam_trade_offer_id' => $steamTradeOfferId,
+            'seller_id' => $sellerId
+        ]);
+
+        // Извлекаем access_token из steamLoginSecure cookie (как в steam-tradeoffer-manager)
+        $accessToken = $this->extractAccessTokenFromSession($sessionData);
+        
+        if (!$accessToken) {
+            throw new Exception('Access token not found in session data');
+        }
+
+        // Используем Steam Web API как в steam-tradeoffer-manager
+        $response = Http::timeout(15)
+            ->get('https://api.steampowered.com/IEconService/GetTradeOffer/v1/', [
+                'access_token' => $accessToken,
+                'tradeofferid' => $steamTradeOfferId,
+                'language' => 'english'
+            ]);
+
+        if ($response->status() !== 200) {
+            throw new Exception("HTTP error {$response->status()}");
+        }
+
+        $body = $response->json();
+        
+        if (!$body || !isset($body['response'])) {
+            throw new Exception('Malformed API response');
+        }
+
+        if (!isset($body['response']['offer'])) {
+            throw new Exception('No matching offer found');
+        }
+
+        $offer = $body['response']['offer'];
+        $status = $this->mapTradeOfferState($offer['trade_offer_state']);
+
+        Log::info('Steam trade offer status retrieved', [
+            'steam_trade_offer_id' => $steamTradeOfferId,
+            'status' => $status,
+            'raw_state' => $offer['trade_offer_state']
+        ]);
+
+        return $status;
+    }
+
+    /**
+     * Извлечение access_token из steamLoginSecure cookie (как в steam-tradeoffer-manager)
+     */
+    private function extractAccessTokenFromSession(array $sessionData): ?string
+    {
+        if (!isset($sessionData['steamLoginSecure'])) {
+            return null;
+        }
+
+        $cookieValue = urldecode($sessionData['steamLoginSecure']);
+        $parts = explode('||', $cookieValue);
+        
+        if (count($parts) < 2) {
+            return null;
+        }
+
+        return $parts[1]; // access_token - вторая часть после ||
+    }
+
+
+    /**
+     * Маппинг числовых статусов Steam на текстовые (из steam-tradeoffer-manager)
+     */
+    private function mapTradeOfferState(int $state): string
+    {
+        // Константы из steam-tradeoffer-manager ETradeOfferState
+        switch ($state) {
+            case 1:
+                return 'Invalid';
+            case 2:
+                return 'Active';
+            case 3:
+                return 'Accepted';
+            case 4:
+                return 'Countered';
+            case 5:
+                return 'Expired';
+            case 6:
+                return 'Canceled';
+            case 7:
+                return 'Declined';
+            case 8:
+                return 'InvalidItems';
+            case 9:
+                return 'CreatedNeedsConfirmation';
+            case 10:
+                return 'CanceledBySecondFactor';
+            case 11:
+                return 'InEscrow';
+            default:
+                return 'Unknown';
+        }
     }
 }

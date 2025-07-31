@@ -95,11 +95,54 @@ class TradingAssistant {
     }
     
     async getSteamSession(tabId) {
-        return new Promise((resolve) => {
-            chrome.tabs.sendMessage(tabId, { type: 'GET_STEAM_SESSION' }, (response) => {
-                resolve(chrome.runtime.lastError ? null : response);
+        try {
+            // Сначала получаем данные из content script
+            const contentScriptData = await new Promise((resolve) => {
+                chrome.tabs.sendMessage(tabId, { type: 'GET_STEAM_SESSION' }, (response) => {
+                    resolve(chrome.runtime.lastError ? null : response);
+                });
             });
-        });
+            
+            if (!contentScriptData) {
+                return null;
+            }
+            
+            // Теперь получаем cookies через Chrome API (как в v1)
+            const cookies = await this.getSteamCookies();
+            
+            // Объединяем данные
+            return {
+                ...contentScriptData,
+                steamLoginSecure: cookies.steamLoginSecure || null
+            };
+            
+        } catch (error) {
+            return null;
+        }
+    }
+    
+    /**
+     * Получение куки Steam из браузера (из v1)
+     */
+    async getSteamCookies() {
+        try {
+            const sessionIdCookie = await chrome.cookies.get({
+                url: 'https://steamcommunity.com',
+                name: 'sessionid'
+            });
+            
+            const steamLoginSecureCookie = await chrome.cookies.get({
+                url: 'https://steamcommunity.com',
+                name: 'steamLoginSecure'
+            });
+            
+            return {
+                sessionid: sessionIdCookie?.value || null,
+                steamLoginSecure: steamLoginSecureCookie?.value || null
+            };
+        } catch (error) {
+            return {};
+        }
     }
     
     async getValidSteamSession() {

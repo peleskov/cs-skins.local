@@ -121,12 +121,31 @@
 									</div>
 								</div>
 
-								<!-- Trade button for the whole order -->
-								<div v-if="activeTab === 'new'" class="mt-3 text-center">
-									<button class="btn theme-outline btn-sm" @click="sendTrade(order)">
-										<i class="ri-arrow-right-line me-1"></i>
-										Отправить трейд на весь заказ
-									</button>
+								<!-- Actions section -->
+								<div v-if="['new', 'pending'].includes(activeTab)" class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+									<!-- Trade button for the whole order -->
+									<div v-if="activeTab === 'new'" class="text-center">
+										<button class="btn theme-outline btn-sm" @click="sendTrade(order)">
+											<i class="ri-arrow-right-line me-1"></i>
+											Отправить трейд на весь заказ
+										</button>
+									</div>
+									<div v-else class="flex-grow-1"></div>
+									
+									<!-- Cancel button -->
+									<div v-if="canCancelOrder(order)">
+										<button 
+											@click="cancelOrder(order)" 
+											class="btn btn-danger btn-sm"
+											:disabled="cancellingOrderId === order.id">
+											<span v-if="cancellingOrderId === order.id">
+												<i class="ri-loader-4-line ri-spin"></i> Отменяем...
+											</span>
+											<span v-else>
+												<i class="ri-close-circle-line"></i> Отменить заказ
+											</span>
+										</button>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -140,6 +159,40 @@
 					</div>
 					<h4>{{ getEmptyStateText() }}</h4>
 					<p class="text-muted">{{ getEmptyStateSubtext() }}</p>
+				</div>
+			</div>
+		</div>
+
+		<!-- Модальное окно подтверждения отмены заказа -->
+		<div class="modal fade" id="confirmCancelModal" tabindex="-1" aria-labelledby="confirmCancelModalLabel" aria-hidden="true">
+			<div class="modal-dialog modal-dialog-centered">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title" id="confirmCancelModalLabel">
+							<i class="ri-close-circle-line me-2 text-danger"></i>Отменить заказ
+						</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+					</div>
+					<div class="modal-body">
+						<div v-if="orderToCancel" class="mb-3">
+							<div class="d-flex align-items-center justify-content-between">
+								<div>
+									<h6 class="mb-1">Заказ {{ orderToCancel.order_number }}</h6>
+									<small class="text-muted">Покупатель: {{ orderToCancel.buyer?.name || 'Не указан' }}</small>
+								</div>
+								<div class="text-end">
+									<strong class="text-success">{{ formatPrice(orderToCancel.total_amount) }} ₽</strong>
+								</div>
+							</div>
+						</div>
+						<p>Вы уверены, что хотите отменить этот заказ? Средства будут возвращены покупателю.</p>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn theme-outline" data-bs-dismiss="modal">Отмена</button>
+						<button type="button" class="btn btn-danger" @click="confirmCancelOrder">
+							<i class="ri-close-circle-line me-1"></i>Отменить заказ
+						</button>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -170,7 +223,9 @@ export default {
 				cancelled: 0
 			},
 			timerInterval: null,
-			statusUpdateInterval: null
+			statusUpdateInterval: null,
+			cancellingOrderId: null,
+			orderToCancel: null
 		}
 	},
 	mounted() {
@@ -334,6 +389,46 @@ export default {
 
 		checkForCountChanges(oldCounts, newCounts) {
 			// Проверяем изменения в счетчиках вкладок - товары автоматически переносятся
+		},
+
+		canCancelOrder(order) {
+			// Можно отменить только активные заказы
+			return ['paid', 'processing'].includes(order.status) && !this.cancellingOrderId;
+		},
+
+		cancelOrder(order) {
+			this.orderToCancel = order;
+			const modal = new bootstrap.Modal(document.getElementById('confirmCancelModal'));
+			modal.show();
+		},
+
+		async confirmCancelOrder() {
+			if (!this.orderToCancel) return;
+
+			this.cancellingOrderId = this.orderToCancel.id;
+
+			try {
+				const response = await axios.post(`/api/orders/${this.orderToCancel.id}/cancel`);
+				
+				if (response.data.success) {
+					window.toast.success(response.data.message || 'Заказ успешно отменен');
+					// Обновляем данные
+					await this.loadSales();
+				} else {
+					window.toast.error(response.data.message || 'Ошибка при отмене заказа');
+				}
+			} catch (error) {
+				console.error('Cancel order error:', error);
+				window.toast.error(error.response?.data?.message || 'Ошибка при отмене заказа');
+			} finally {
+				// Закрываем модальное окно
+				const modal = bootstrap.Modal.getInstance(document.getElementById('confirmCancelModal'));
+				if (modal) {
+					modal.hide();
+				}
+				this.cancellingOrderId = null;
+				this.orderToCancel = null;
+			}
 		}
 	}
 }

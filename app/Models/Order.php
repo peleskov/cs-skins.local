@@ -174,8 +174,7 @@ class Order extends Model
     {
         DB::transaction(function () use ($reason) {
             $this->tradeOffers()->update([
-                'status' => TradeOffer::STATUS_CANCELLED,
-                'is_ready' => false
+                'status' => TradeOffer::STATUS_CANCELED
             ]);
             
             $this->update([
@@ -216,15 +215,9 @@ class Order extends Model
 
         $sellerId = $this->seller_id;
 
-        $activeTradesCount = TradeOffer::where('seller_id', $sellerId)
-            ->whereIn('status', [TradeOffer::STATUS_PENDING, TradeOffer::STATUS_DISPATCHED])
-            ->count();
-
         $assetIds = collect($this->cart_snapshot)->map(function ($item) {
             return $item['item']['steam_asset_id'] ?? null;
         })->filter()->values()->toArray();
-
-        $isReady = $activeTradesCount === 0;
 
         TradeOffer::create([
             'order_id' => $this->id,
@@ -233,7 +226,6 @@ class Order extends Model
             'buyer_trade_url' => $this->buyer->steam_trade_url,
             'asset_ids' => $assetIds,
             'status' => TradeOffer::STATUS_PENDING,
-            'is_ready' => $isReady,
         ]);
     }
 

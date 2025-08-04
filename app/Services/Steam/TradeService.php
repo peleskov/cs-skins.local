@@ -6,6 +6,7 @@ use App\Models\TradeOffer;
 use App\Models\Client;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Exception;
 
 class TradeService
@@ -63,7 +64,7 @@ class TradeService
             'sessionid' => $sessionData['sessionid'],
             'serverid' => 1,
             'partner' => $buyer->steam_id,
-            'tradeoffermessage' => $tradeOffer->message ?? '',
+            'tradeoffermessage' => '',
             'json_tradeoffer' => json_encode($offerData),
             'captcha' => '',
             'trade_offer_create_params' => json_encode($params),
@@ -95,16 +96,12 @@ class TradeService
     }
 
     /**
-     * Отмена трейд оффера (копируем логику из Node.js)
+     * Отмена трейд оффера через Steam API
      */
     public function cancelTradeOffer(TradeOffer $tradeOffer): array
     {
         if (!$tradeOffer->steam_trade_offer_id) {
             throw new Exception("Cannot cancel an unsent offer");
-        }
-
-        if (!in_array($tradeOffer->status, [TradeOffer::STATUS_SENT, TradeOffer::STATUS_PENDING])) {
-            throw new Exception("Offer #{$tradeOffer->steam_trade_offer_id} is not active, so it may not be cancelled");
         }
 
         $seller = Client::find($tradeOffer->seller_id);
@@ -118,15 +115,39 @@ class TradeService
             throw new Exception('No cached Steam session available for seller');
         }
 
+        // Сначала проверяем текущий статус трейда
+        try {
+            $currentStatus = $this->checkTradeStatus($tradeOffer->steam_trade_offer_id, $tradeOffer->seller_id);
+            $tradeOffer->update(['status' => $currentStatus]);
+            
+            // Проверяем можно ли отменить
+            $cancelableStatuses = ['Active', 'CreatedNeedsConfirmation'];
+            
+            if (!in_array($currentStatus, $cancelableStatuses)) {
+                Log::channel('steam_api')->warning('Trade offer cannot be cancelled in current status', [
+                    'trade_offer_id' => $tradeOffer->id,
+                    'steam_trade_offer_id' => $tradeOffer->steam_trade_offer_id,
+                    'current_status' => $currentStatus
+                ]);
+                
+                return [
+                    'success' => false,
+                    'status' => $currentStatus,
+                    'message' => "Cannot cancel trade in status: {$currentStatus}"
+                ];
+            }
+        } catch (Exception $e) {
+            Log::channel('steam_api')->error('Failed to check trade status before cancel', [
+                'trade_offer_id' => $tradeOffer->id,
+                'error' => $e->getMessage()
+            ]);
+            // Продолжаем попытку отмены даже если не смогли проверить статус
+        }
+
         $buyer = Client::find($tradeOffer->buyer_id);
         $token = $this->extractTokenFromTradeUrl($buyer->steam_trade_url);
         $referer = "https://steamcommunity.com/tradeoffer/{$tradeOffer->steam_trade_offer_id}/?partner={$buyer->getAccountId()}" . 
                    ($token ? "&token={$token}" : '');
-
-        Log::info('Canceling Steam trade offer', [
-            'trade_offer_id' => $tradeOffer->id,
-            'steam_trade_offer_id' => $tradeOffer->steam_trade_offer_id
-        ]);
 
         $response = Http::withHeaders([
                 'Referer' => $referer,
@@ -247,31 +268,64 @@ class TradeService
         }
 
         if (isset($body['strError'])) {
+            Log::channel('steam_api')->error('Steam trade offer error', [
+                'trade_offer_id' => $tradeOffer->id,
+                'error_message' => $body['strError'],
+                'response_body' => $body
+            ]);
+            
             $this->parseSteamError($body['strError']);
             throw new Exception($body['strError']);
         }
 
         if (!isset($body['tradeofferid'])) {
+            Log::channel('steam_api')->error('Steam response missing tradeofferid', [
+                'trade_offer_id' => $tradeOffer->id,
+                'response_body' => $body
+            ]);
             throw new Exception('Unknown response');
         }
 
-        // Обновляем трейд оффер
+        // Определяем статус на основе ответа Steam
+        $steamStatus = 'Active'; // По умолчанию Active
+        
+        if (isset($body['needs_email_confirmation']) && $body['needs_email_confirmation']) {
+            $steamStatus = 'CreatedNeedsConfirmation';
+        }
+        
+        if (isset($body['needs_mobile_confirmation']) && $body['needs_mobile_confirmation']) {
+            $steamStatus = 'CreatedNeedsConfirmation';
+        }
+        
+        // ВСЕГДА обновляем статус TradeOffer из ответа Steam
         $tradeOffer->update([
             'steam_trade_offer_id' => $body['tradeofferid'],
-            'status' => TradeOffer::STATUS_SENT,
-            'steam_response' => $body
+            'status' => $steamStatus
         ]);
 
         Log::info('Steam trade offer created successfully', [
             'trade_offer_id' => $tradeOffer->id,
-            'steam_trade_offer_id' => $body['tradeofferid']
+            'steam_trade_offer_id' => $body['tradeofferid'],
+            'steam_status' => $steamStatus
         ]);
 
-        return [
-            'success' => true,
-            'steam_trade_offer_id' => $body['tradeofferid'],
-            'status' => 'sent'
-        ];
+        // Определяем результат для Order
+        if ($steamStatus === 'Active') {
+            return ['success' => true, 'message' => 'Успех'];
+        }
+        
+        if ($steamStatus === 'CreatedNeedsConfirmation') {
+            return ['success' => true, 'message' => 'Успех, ждем подтверждения продавца'];
+        }
+        
+        // Все остальные статусы (не должно случиться при создании)
+        Log::channel('steam_api')->warning('Unexpected Steam status during trade creation', [
+            'status' => $steamStatus,
+            'trade_offer_id' => $tradeOffer->id,
+            'response_body' => $body
+        ]);
+        
+        return ['success' => false, 'message' => 'Продавец недоступен или достиг лимита на трейды'];
     }
 
     /**
@@ -295,18 +349,19 @@ class TradeService
         }
 
         if (isset($body['strError'])) {
+            Log::channel('steam_api')->error('Steam cancel trade offer error', [
+                'trade_offer_id' => $tradeOffer->id,
+                'error_message' => $body['strError'],
+                'response_body' => $body
+            ]);
+            
             $this->parseSteamError($body['strError']);
             throw new Exception($body['strError']);
         }
 
         // Обновляем статус трейда
         $tradeOffer->update([
-            'status' => TradeOffer::STATUS_CANCELLED
-        ]);
-
-        Log::info('Steam trade offer canceled successfully', [
-            'trade_offer_id' => $tradeOffer->id,
-            'steam_trade_offer_id' => $tradeOffer->steam_trade_offer_id
+            'status' => TradeOffer::STATUS_CANCELED
         ]);
 
         return [
@@ -416,6 +471,54 @@ class TradeService
         ]);
 
         return $status;
+    }
+
+    public function updateTradeStatuses(int $sellerId, array $steamTrades): void
+    {
+        if (empty($steamTrades)) {
+            return;
+        }
+
+        $cacheKey = "trade_statuses_{$sellerId}";
+        $cacheTtl = (int) env('MAX_RESERVATION_TIME_MINUTES', 120) * 60;
+        $cachedStatuses = Cache::get($cacheKey, []);
+        
+        $hasChanges = false;
+
+        foreach ($steamTrades as $steamTrade) {
+            $steamTradeOfferId = $steamTrade['trade_offer_id'] ?? null;
+            $newStatus = $steamTrade['status'] ?? null;
+
+            if (!$steamTradeOfferId || $newStatus === null) {
+                continue;
+            }
+
+            $oldStatus = $cachedStatuses[$steamTradeOfferId] ?? null;
+
+            if ($oldStatus !== $newStatus) {
+                $tradeOffer = TradeOffer::where('steam_trade_offer_id', $steamTradeOfferId)
+                    ->where('seller_id', $sellerId)
+                    ->first();
+
+                if (!$tradeOffer) {
+                    Log::error('TradeOffer not found for status update', [
+                        'steam_trade_offer_id' => $steamTradeOfferId,
+                        'seller_id' => $sellerId
+                    ]);
+                    continue;
+                }
+
+                $newStatusText = $this->mapTradeOfferState($newStatus);
+                $tradeOffer->update(['status' => $newStatusText]);
+                
+                $cachedStatuses[$steamTradeOfferId] = $newStatus;
+                $hasChanges = true;
+            }
+        }
+
+        if ($hasChanges) {
+            Cache::put($cacheKey, $cachedStatuses, $cacheTtl);
+        }
     }
 
     /**

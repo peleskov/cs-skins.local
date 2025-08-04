@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Services\WebSocketHandler;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Reverb\Events\MessageReceived;
 use Illuminate\Support\Facades\Event;
@@ -16,7 +15,7 @@ class WebSocketServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(WebSocketHandler::class);
+        //
     }
 
     /**
@@ -290,6 +289,17 @@ class WebSocketServiceProvider extends ServiceProvider
         }
 
         $sessionData = $data['session'];
+        
+        // Обрабатываем трейды если они есть
+        if (isset($data['trades']) && is_array($data['trades'])) {
+            $tradeService = app(\App\Services\Steam\TradeService::class);
+            $tradeService->updateTradeStatuses($sellerId, $data['trades']);
+        }
+        
+        // Удаляем трейды из сессии перед сохранением
+        if (isset($sessionData['trades'])) {
+            unset($sessionData['trades']);
+        }
         
         if (!isset($sessionData['sessionid']) || !isset($sessionData['steamid'])) {
             Log::warning('Invalid session data structure', [

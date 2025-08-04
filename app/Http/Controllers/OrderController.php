@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Services\CartService;
+use App\Services\CancelOrderService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
@@ -14,7 +15,8 @@ use App\Jobs\ReleaseExpiredOrderItem;
 class OrderController extends Controller
 {
     public function __construct(
-        private CartService $cartService
+        private CartService $cartService,
+        private CancelOrderService $cancelService
     ) {}
 
     /**
@@ -229,5 +231,46 @@ class OrderController extends Controller
         
         // Помечаем заказ как оплаченный и запускаем логику после оплаты
         $order->pay('BALANCE_' . uniqid(), 'balance');
+    }
+
+    /**
+     * Отменить заказ
+     */
+    public function cancel(Request $request, Order $order): JsonResponse
+    {
+        $client = auth('client')->user();
+        
+        // Проверка прав
+        if ($client->id !== $order->buyer_id && $client->id !== $order->seller_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'У вас нет прав на отмену этого заказа'
+            ], 403);
+        }
+        
+        // Проверка статуса
+        if ($order->status === Order::STATUS_COMPLETED) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Завершенный заказ нельзя отменить'
+            ], 400);
+        }
+        
+        if ($order->status === Order::STATUS_CANCELLED) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Заказ уже отменен'
+            ], 400);
+        }
+        
+        // Определяем причину отмены
+        $reason = $client->id === $order->buyer_id 
+            ? 'Отменено покупателем' 
+            : 'Отменено продавцом';
+        
+        // Отменяем заказ
+        $result = $this->cancelService->cancelOrder($order, $reason);
+        
+        return response()->json($result, $result['success'] ? 200 : 400);
     }
 }

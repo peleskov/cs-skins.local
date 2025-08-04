@@ -2,20 +2,28 @@
 
 namespace App\Jobs;
 
-use App\Events\ExtensionEvents;
 use App\Models\TradeOffer;
+use App\Models\Order;
+use App\Services\Steam\TradeService;
+use App\Services\Steam\SessionCache;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Exception;
+use Throwable;
 
 class ProcessTradeOffer implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public TradeOffer $tradeOffer;
+    
+    public $tries = 2;
+    public $timeout = 300; // 5 минут
 
     /**
      * Create a new job instance.
@@ -31,23 +39,10 @@ class ProcessTradeOffer implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(TradeService $tradeService, SessionCache $sessionCache): void
     {
         // Перезагружаем модель для актуальных данных
         $this->tradeOffer->refresh();
-
-        // Проверяем, готов ли TradeOffer к отправке
-        if (!$this->tradeOffer->isReady()) {
-            Log::info('TradeOffer не готов к отправке, откладываем', [
-                'trade_offer_id' => $this->tradeOffer->id,
-                'seller_id' => $this->tradeOffer->seller_id,
-                'is_ready' => $this->tradeOffer->is_ready,
-            ]);
-            
-            // Откладываем на 15 секунд
-            $this->release(15);
-            return;
-        }
 
         // Проверяем, что статус все еще pending
         if (!$this->tradeOffer->isPending()) {
@@ -58,38 +53,90 @@ class ProcessTradeOffer implements ShouldQueue
             return;
         }
 
-        // Меняем статус на dispatched
-        $this->tradeOffer->markAsDispatched();
-
-        // Проверяем доступность расширения перед отправкой трейда
-        if (!$this->checkExtensionAvailability()) {
-            Log::warning('Extension недоступно, повторяем через 30 секунд', [
+        $sellerId = $this->tradeOffer->seller_id;
+        
+        // Получаем блокировку продавца (Redis lock с TTL 5 минут)
+        $lock = Cache::lock("trade:seller:{$sellerId}:processing", 300);
+        
+        if (!$lock->get()) {
+            // Отложить с экспонентной задержкой
+            $delay = min($this->attempts() * 10, 60);
+            
+            Log::info('Продавец занят обработкой другого трейда, откладываем', [
                 'trade_offer_id' => $this->tradeOffer->id,
-                'seller_id' => $this->tradeOffer->seller_id,
-                'attempts' => $this->attempts()
+                'seller_id' => $sellerId,
+                'delay' => $delay
             ]);
             
-            // Повторяем через 30 секунд
-            $this->release(30);
+            $this->release($delay);
             return;
         }
 
-        Log::info('Отправляем TradeOffer в расширение', [
-            'trade_offer_id' => $this->tradeOffer->id,
-            'seller_id' => $this->tradeOffer->seller_id,
-            'order_id' => $this->tradeOffer->order_id,
-        ]);
-
-        // Отправляем событие в расширение
-        ExtensionEvents::tradeOfferCreated($this->tradeOffer);
+        try {
+            // Валидация перед обработкой
+            $this->validateBeforeProcessing($sessionCache);
+            
+            Log::info('Создаем TradeOffer через Steam API', [
+                'trade_offer_id' => $this->tradeOffer->id,
+                'seller_id' => $sellerId,
+                'buyer_id' => $this->tradeOffer->buyer_id,
+                'order_id' => $this->tradeOffer->order_id,
+            ]);
+            
+            // Создаем трейд через TradeService
+            $result = $tradeService->createTradeOffer($this->tradeOffer);
+            
+            if ($result['success']) {
+                // Обновляем статус заказа при необходимости
+                if ($this->tradeOffer->fresh()->status === TradeOffer::STATUS_CREATED_NEEDS_CONFIRMATION) {
+                    $this->tradeOffer->order->update([
+                        'status' => Order::STATUS_PROCESSING,
+                        'system_remarks' => 'Ожидаем подтверждения продавца'
+                    ]);
+                }
+                
+                Log::info('TradeOffer успешно создан', [
+                    'trade_offer_id' => $this->tradeOffer->id,
+                    'message' => $result['message']
+                ]);
+            } else {
+                // Неуспешно - отменяем заказ
+                $this->tradeOffer->order->cancel($result['message']);
+                return;
+            }
+            
+        } catch (Exception $e) {
+            // Классификация ошибки и решение о повторе/отмене
+            if ($this->attempts() >= $this->tries || $this->isCriticalError($e)) {
+                Log::error('Критическая ошибка при создании трейда, отменяем заказ', [
+                    'trade_offer_id' => $this->tradeOffer->id,
+                    'error' => $e->getMessage(),
+                    'attempts' => $this->attempts()
+                ]);
+                
+                $this->tradeOffer->order->cancel("В настоящий момент продавец недоступен");
+                return;
+            }
+            
+            Log::warning('Временная ошибка при создании трейда, повторяем попытку', [
+                'trade_offer_id' => $this->tradeOffer->id,
+                'error' => $e->getMessage(),
+                'attempts' => $this->attempts()
+            ]);
+            
+            // Повторить попытку
+            throw $e;
+        } finally {
+            $lock->release();
+        }
     }
 
     /**
      * The job failed to process.
      */
-    public function failed(\Throwable $exception): void
+    public function failed(Throwable $exception): void
     {
-        Log::error('Ошибка обработки TradeOffer', [
+        Log::error('Ошибка обработки TradeOffer после всех попыток', [
             'trade_offer_id' => $this->tradeOffer->id,
             'seller_id' => $this->tradeOffer->seller_id,
             'error' => $exception->getMessage(),
@@ -97,34 +144,76 @@ class ProcessTradeOffer implements ShouldQueue
         ]);
 
         // При критической ошибке отменяем весь заказ
-        $order = $this->tradeOffer->order;
-        $order->cancel('Продавец не доступен в настоящий момент, нет возможности выполнить заказ');
+        $this->tradeOffer->order->cancel('Продавец не доступен в настоящий момент, нет возможности выполнить заказ');
     }
     
     /**
-     * Проверка доступности расширения через ping-pong
+     * Валидация перед обработкой
      */
-    private function checkExtensionAvailability(): bool
+    private function validateBeforeProcessing(SessionCache $sessionCache): void
     {
-        $sellerId = $this->tradeOffer->seller_id;
-        
-        // Отправляем ping
-        ExtensionEvents::ping($sellerId);
-        
-        // Ждем pong в течение 5 секунд
-        $timeout = 5; // секунд
-        $start = time();
-        
-        while ((time() - $start) < $timeout) {
-            if (\Cache::has("extension_available_{$sellerId}")) {
-                \Cache::forget("extension_available_{$sellerId}");
-                return true;
-            }
-            
-            // Ждем 100ms перед следующей проверкой
-            usleep(100000);
+        // Проверяем статус трейда
+        if (!$this->tradeOffer->isPending()) {
+            throw new Exception('TradeOffer is not in pending status');
         }
         
-        return false;
+        // Проверяем наличие сессии продавца
+        if (!$sessionCache->has($this->tradeOffer->seller_id)) {
+            throw new Exception('No cached Steam session available for seller');
+        }
+        
+        // Проверяем время жизни сессии (не старше 5 минут)
+        $sessionAge = $sessionCache->getExpiresInSeconds($this->tradeOffer->seller_id);
+        if ($sessionAge <= 0) {
+            throw new Exception('Steam session has expired');
+        }
+    }
+    
+    /**
+     * Определение критических ошибок
+     */
+    private function isCriticalError(Exception $e): bool
+    {
+        $message = $e->getMessage();
+        
+        // Критические ошибки Steam
+        $criticalErrors = [
+            'TradeBan',
+            'TargetCannotTrade', 
+            'NewDevice',
+            'Invalid trade URL',
+            'Invalid input SteamID',
+            'Not Logged In',
+            'No cached Steam session',
+            'Steam session has expired',
+            'Seller or buyer not found',
+            'Cannot send an empty trade offer',
+            'This offer has already been sent'
+        ];
+        
+        foreach ($criticalErrors as $error) {
+            if (stripos($message, $error) !== false) {
+                return true;
+            }
+        }
+        
+        // Временные ошибки (не критические)
+        $temporaryErrors = [
+            'ItemServerUnavailable',
+            'OfferLimitExceeded',
+            'HTTP error 5', // 500+ ошибки
+            'HTTP error 429', // Rate limit
+            'cURL error', // Сетевые ошибки
+            'Connection timed out'
+        ];
+        
+        foreach ($temporaryErrors as $error) {
+            if (stripos($message, $error) !== false) {
+                return false;
+            }
+        }
+        
+        // По умолчанию считаем ошибку критической
+        return true;
     }
 }

@@ -23,14 +23,14 @@ class SessionCache
         ];
         
         $success = Cache::put($cacheKey, $data, $ttl);
-        
+        /*
         if ($success) {
             Log::info('Steam session cached', [
                 'client_id' => $clientId,
                 'expires_at' => $data['expires_at']
             ]);
         }
-        
+        */
         return $success;
     }
 
@@ -100,7 +100,10 @@ class SessionCache
         
         // Для Redis
         if (Cache::getStore() instanceof \Illuminate\Cache\RedisStore) {
-            $redis = Cache::getStore()->getRedis();
+            /** @var \Illuminate\Cache\RedisStore $store */
+            $store = Cache::getStore();
+            /** @var \Illuminate\Redis\Connections\Connection $redis */
+            $redis = $store->getRedis();
             $keys = $redis->keys($pattern);
         }
         

@@ -83,6 +83,21 @@
 								</div>
 							</div>
 						</div>
+						
+						<!-- Actions section -->
+						<div v-if="canCancelOrder(order)" class="d-flex justify-content-end mt-3 pt-3 border-top">
+							<button 
+								@click="cancelOrder(order)" 
+								class="btn btn-danger btn-sm"
+								:disabled="cancellingOrderId === order.id">
+								<span v-if="cancellingOrderId === order.id">
+									<i class="ri-loader-4-line ri-spin"></i> Отменяем...
+								</span>
+								<span v-else>
+									<i class="ri-close-circle-line"></i> Отменить заказ
+								</span>
+							</button>
+						</div>
 
 					</div>
 				</div>
@@ -138,6 +153,40 @@
 			</a>
 		</div>
 
+		<!-- Модальное окно подтверждения отмены заказа -->
+		<div class="modal fade" id="confirmCancelModal" tabindex="-1" aria-labelledby="confirmCancelModalLabel" aria-hidden="true">
+			<div class="modal-dialog modal-dialog-centered">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title" id="confirmCancelModalLabel">
+							<i class="ri-close-circle-line me-2 text-danger"></i>Отменить заказ
+						</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+					</div>
+					<div class="modal-body">
+						<div v-if="orderToCancel" class="mb-3">
+							<div class="d-flex align-items-center justify-content-between">
+								<div>
+									<h6 class="mb-1">Заказ {{ orderToCancel.order_number }}</h6>
+									<small class="text-muted">Продавец: {{ orderToCancel.seller?.name || 'Не указан' }}</small>
+								</div>
+								<div class="text-end">
+									<strong class="text-primary">{{ formatPrice(orderToCancel.total_amount) }} ₽</strong>
+								</div>
+							</div>
+						</div>
+						<p>Вы уверены, что хотите отменить этот заказ? Средства будут возвращены на ваш баланс.</p>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn theme-outline" data-bs-dismiss="modal">Отмена</button>
+						<button type="button" class="btn btn-danger" @click="confirmCancelOrder">
+							<i class="ri-close-circle-line me-1"></i>Отменить заказ
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
 	</div>
 </template>
 
@@ -159,7 +208,9 @@ export default {
 			pagination: null,
 			isLoading: false,
 			timerInterval: null,
-			statusUpdateInterval: null
+			statusUpdateInterval: null,
+			cancellingOrderId: null,
+			orderToCancel: null
 		}
 	},
 	async mounted() {
@@ -314,6 +365,46 @@ export default {
 			if (this.statusUpdateInterval) {
 				clearInterval(this.statusUpdateInterval);
 				this.statusUpdateInterval = null;
+			}
+		},
+
+		canCancelOrder(order) {
+			// Можно отменить только активные заказы
+			return ['paid', 'processing'].includes(order.status) && !this.cancellingOrderId;
+		},
+
+		cancelOrder(order) {
+			this.orderToCancel = order;
+			const modal = new bootstrap.Modal(document.getElementById('confirmCancelModal'));
+			modal.show();
+		},
+
+		async confirmCancelOrder() {
+			if (!this.orderToCancel) return;
+
+			this.cancellingOrderId = this.orderToCancel.id;
+
+			try {
+				const response = await orderAPI.cancelOrder(this.orderToCancel.id);
+				
+				if (response.success) {
+					window.toast.success(response.message || 'Заказ успешно отменен');
+					// Обновляем список заказов
+					await this.loadOrders(this.pagination?.current_page || 1);
+				} else {
+					window.toast.error(response.message || 'Ошибка при отмене заказа');
+				}
+			} catch (error) {
+				console.error('Cancel order error:', error);
+				window.toast.error(error.response?.data?.message || 'Ошибка при отмене заказа');
+			} finally {
+				// Закрываем модальное окно
+				const modal = bootstrap.Modal.getInstance(document.getElementById('confirmCancelModal'));
+				if (modal) {
+					modal.hide();
+				}
+				this.cancellingOrderId = null;
+				this.orderToCancel = null;
 			}
 		}
 	}

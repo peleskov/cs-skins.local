@@ -19,13 +19,11 @@ class TradeOffer extends Model
         'buyer_trade_url',
         'asset_ids',
         'status',
-        'is_ready',
         'steam_trade_offer_id',
     ];
 
     protected $casts = [
         'asset_ids' => 'array',
-        'is_ready' => 'boolean',
     ];
 
     // Steam статусы (из steam-tradeoffer-manager ETradeOfferState)
@@ -107,10 +105,6 @@ class TradeOffer extends Model
         return $this->status === self::STATUS_COUNTERED;
     }
 
-    public function isReady(): bool
-    {
-        return $this->is_ready;
-    }
 
     /**
      * Boot the model and register event listeners
@@ -158,25 +152,16 @@ class TradeOffer extends Model
      */
 
     /**
-     * Создать трейд в Steam и обновить локальный статус
+     * Создать трейд в БД и автоматически отправить в очередь для создания в Steam
      */
-    public function create(): array
+    public static function create(array $attributes = []): self
     {
-        if ($this->steam_trade_offer_id) {
-            throw new Exception("Trade offer already created in Steam");
-        }
-
-        $steamTradeService = app(TradeService::class);
-        $result = $steamTradeService->createTradeOffer($this);
-
-        // Обновляем модель с результатами Steam
-        $this->update([
-            'steam_trade_offer_id' => $result['steam_trade_offer_id'],
-            'status' => $result['status'],
-            'is_ready' => false,
-        ]);
-
-        return $result;
+        // Создаем запись в БД через родительский метод
+        $tradeOffer = static::query()->create($attributes);
+        
+        // ProcessTradeOfferJob уже автоматически диспатчится в boot() методе при created event
+        
+        return $tradeOffer;
     }
 
     /**
@@ -227,15 +212,5 @@ class TradeOffer extends Model
     public function scopePending($query)
     {
         return $query->where('status', self::STATUS_PENDING);
-    }
-
-    public function scopeSent($query)
-    {
-        return $query->where('status', self::STATUS_SENT);
-    }
-
-    public function scopeCompleted($query)
-    {
-        return $query->where('status', self::STATUS_COMPLETED);
     }
 }

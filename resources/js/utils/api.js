@@ -123,6 +123,18 @@ class OrderAPI {
             throw error;
         }
     }
+
+    /**
+     * Отменить заказ
+     */
+    async cancelOrder(orderId) {
+        try {
+            const response = await axios.post(`${this.baseUrl}/${orderId}/cancel`);
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 // Экспортируем singleton instance

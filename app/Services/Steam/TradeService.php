@@ -501,10 +501,6 @@ class TradeService
                     ->first();
 
                 if (!$tradeOffer) {
-                    Log::error('TradeOffer not found for status update', [
-                        'steam_trade_offer_id' => $steamTradeOfferId,
-                        'seller_id' => $sellerId
-                    ]);
                     continue;
                 }
 

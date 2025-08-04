@@ -64,11 +64,9 @@ class TradingAssistant {
                         trade_offer_id: trade.tradeofferid,
                         status: trade.trade_offer_state
                     }));
-                    console.log('📤 Отправляем', dataToSend.trades.length, 'трейдов на сервер');
                 }
                 
                 const sent = await this.sendToServer('session_data', dataToSend);
-                console.log('📡 Данные отправлены на сервер:', sent ? 'успешно' : 'ошибка');
                 
                 // Статус станет 'active' только когда сервер ответит session_received
                 // Пока ставим 'pending' - ждем ответа от сервера
@@ -133,9 +131,8 @@ class TradingAssistant {
                         resolve(response);
                     });
                 });
-                console.log('🧪 Трейды получены:', trades ? trades.length : 0, 'шт.');
             } catch (error) {
-                console.log('⚠️ Не удалось получить трейды:', error.message);
+                //console.log('⚠️ Не удалось получить трейды:', error.message);
             }
             
             // Объединяем данные сессии и трейдов

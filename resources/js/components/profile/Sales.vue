@@ -62,12 +62,99 @@
 						<div class="card-header">
 							<div class="d-flex align-items-center justify-content-between">
 								<div class="d-flex align-items-center gap-3">
-									<button class="btn btn-link p-0 text-decoration-none fw-bold"
-										data-bs-toggle="collapse" :data-bs-target="`#order-${order.id}`"
-										:aria-expanded="false" :aria-controls="`order-${order.id}`">
-										<i class="ri-arrow-right-s-line me-1"></i>
-										Заказ {{ order.order_number }}
-									</button>
+									<div>
+										<button class="btn btn-link p-0 text-decoration-none fw-bold"
+											data-bs-toggle="collapse" :data-bs-target="`#order-${order.id}`"
+											:aria-expanded="false" :aria-controls="`order-${order.id}`">
+											<i class="ri-arrow-right-s-line me-1"></i>
+											Заказ {{ order.order_number }}
+										</button>
+										
+										<!-- Progress bar -->
+										<div class="mt-1">
+											<div class="d-flex align-items-center" style="gap: 0.25rem;">
+												<!-- Step 1: Оплачен -->
+												<span class="badge rounded-circle" 
+													  style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"
+													  :class="getStepClass(order, 1)"
+													  data-bs-toggle="tooltip"
+													  data-bs-placement="top"
+													  :title="getStepTooltip(order, 1)">
+													<i class="ri-money-dollar-circle-line" style="font-size: 12px;"></i>
+												</span>
+												
+												<!-- Connector 1->2 -->
+												<div class="flex-grow-1 border-top border-2" 
+													 :class="getCurrentStep(order) >= 2 ? 'border-secondary' : 'border-secondary opacity-25'"></div>
+												
+												<!-- Step 2: Создан трейд -->
+												<span class="badge rounded-circle" 
+													  style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"
+													  :class="getStepClass(order, 2)"
+													  data-bs-toggle="tooltip"
+													  data-bs-placement="top"
+													  :title="getStepTooltip(order, 2)">
+													<i class="ri-arrow-left-right-line" style="font-size: 12px;"></i>
+												</span>
+												
+												<!-- Connector 2->3 -->
+												<div class="flex-grow-1 border-top border-2" 
+													 :class="getCurrentStep(order) >= 3 ? 'border-secondary' : 'border-secondary opacity-25'"></div>
+												
+												<!-- Step 3: Продавец подтвердил -->
+												<span class="badge rounded-circle" 
+													  style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"
+													  :class="getStepClass(order, 3)"
+													  data-bs-toggle="tooltip"
+													  data-bs-placement="top"
+													  :title="getStepTooltip(order, 3)">
+													<i class="ri-user-check-line" style="font-size: 12px;"></i>
+												</span>
+												
+												<!-- Connector 3->4 -->
+												<div class="flex-grow-1 border-top border-2" 
+													 :class="getCurrentStep(order) >= 4 ? 'border-secondary' : 'border-secondary opacity-25'"></div>
+												
+												<!-- Step 4: Покупатель подтвердил -->
+												<span class="badge rounded-circle" 
+													  style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"
+													  :class="getStepClass(order, 4)"
+													  data-bs-toggle="tooltip"
+													  data-bs-placement="top"
+													  :title="getStepTooltip(order, 4)">
+													<i class="ri-user-received-2-line" style="font-size: 12px;"></i>
+												</span>
+												
+												<!-- Connector 4->5 -->
+												<div class="flex-grow-1 border-top border-2" 
+													 :class="getCurrentStep(order) >= 5 ? 'border-secondary' : 'border-secondary opacity-25'"></div>
+												
+												<!-- Step 5: Завершен -->
+												<span class="badge rounded-circle" 
+													  style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"
+													  :class="getStepClass(order, 5)"
+													  data-bs-toggle="tooltip"
+													  data-bs-placement="top"
+													  :title="getStepTooltip(order, 5)">
+													<i class="ri-check-line" style="font-size: 12px;"></i>
+												</span>
+												
+												<!-- Connector 5->6 -->
+												<div class="flex-grow-1 border-top border-2" 
+													 :class="getCurrentStep(order) >= 6 ? 'border-secondary' : 'border-secondary opacity-25'"></div>
+												
+												<!-- Step 6: Деньги переданы/возвращены -->
+												<span class="badge rounded-circle" 
+													  style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"
+													  :class="getStepClass(order, 6)"
+													  data-bs-toggle="tooltip"
+													  data-bs-placement="top"
+													  :title="getStepTooltip(order, 6)">
+													<i :class="order.status === 'cancelled' ? 'ri-refund-line' : 'ri-hand-coin-line'" style="font-size: 12px;"></i>
+												</span>
+											</div>
+										</div>
+									</div>
 									<span class="badge" :class="getStatusBadgeClass(order.status)">
 										{{ getStatusText(order.status) }}
 									</span>
@@ -429,7 +516,102 @@ export default {
 				this.cancellingOrderId = null;
 				this.orderToCancel = null;
 			}
+		},
+
+		getCurrentStep(order) {
+			// Шаг 1: Оплачен - всегда пройден
+			// Если есть история трейда - показываем детальный прогресс
+			// Если нет истории трейда - показываем сразу финальный статус
+			
+			if (order.trade_status_history && order.trade_status_history.length > 0) {
+				// Есть история трейда - определяем шаг по последнему статусу
+				const lastStatus = order.trade_status_history[order.trade_status_history.length - 1].status;
+				if (order.status === 'completed') return 6; // Деньги переданы продавцу
+				if (order.status === 'cancelled') return 6; // Деньги возвращены покупателю
+				if (lastStatus === 'Accepted') return 5; // Завершен
+				if (lastStatus === 'Active') return 4; // Покупатель подтвердил
+				if (lastStatus === 'CreatedNeedsConfirmation') return 3; // Продавец подтвердил
+				if (lastStatus === 'Трейд создан в Steam') return 2; // Создан в Steam
+				return 2; // Любой другой статус трейда
+			} else {
+				// Нет истории трейда - показываем финальный статус заказа
+				if (order.status === 'completed') return 6; // Завершен
+				if (order.status === 'cancelled') return 6; // Отменен
+				return 1; // Только оплачен
+			}
+		},
+
+		getStepClass(order, step) {
+			const currentStep = this.getCurrentStep(order);
+			
+			if (step <= currentStep) {
+				return 'bg-secondary'; // Пройденные этапы
+			} else {
+				return 'bg-secondary opacity-25'; // Предстоящие полупрозрачные
+			}
+		},
+
+		getStepTooltip(order, step) {
+			const tooltips = {
+				1: 'Заказ оплачен',
+				2: 'Создан трейд-офер в Steam',
+				3: 'Продавец подтвердил',
+				4: 'Покупатель подтвердил', 
+				5: 'Завершен'
+			};
+
+			// Показываем тултип для всех пройденных этапов
+			if (this.isStepCompleted(order, step)) {
+				return tooltips[step];
+			}
+
+			// Для текущих этапов тоже показываем
+			if (this.isStepCurrent(order, step)) {
+				switch (step) {
+					case 1: return 'Оплачивается...';
+					case 2: return 'Создается трейд-офер...';
+					case 3: return 'Ожидание подтверждения продавца';
+					case 4: return 'Ожидание подтверждения покупателя';
+					case 5: return 'Завершается...';
+					default: return tooltips[step];
+				}
+			}
+
+			// Для ошибочных состояний
+			if (this.isStepFailed(order, step)) {
+				switch (step) {
+					case 2: return 'Отменен: ' + (order.trade_status === 'Expired' ? 'истек срок резерва' : 'трейд отклонен');
+					default: return 'Отменен';
+				}
+			}
+
+			return null;
+		},
+
+		hasActiveProgress(order, fromStep, toStep) {
+			// Показываем анимацию если текущий этап = fromStep
+			return this.isStepCurrent(order, toStep);
 		}
 	}
 }
 </script>
+
+<style scoped>
+@keyframes moveRight {
+	0% {
+		left: -20px;
+		opacity: 0;
+	}
+	50% {
+		opacity: 1;
+	}
+	100% {
+		left: 100%;
+		opacity: 0;
+	}
+}
+
+.animate-progress {
+	border-radius: 1px;
+}
+</style>

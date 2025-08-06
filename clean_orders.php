@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\TradeOffer;
 use App\Models\Listing;
 use App\Models\Transaction;
+use App\Models\TradeOfferStatusHistory;
 
 echo "=== Очистка заказов и связанных данных ===\n\n";
 
@@ -17,11 +18,13 @@ echo "=== Очистка заказов и связанных данных ===\n
 $ordersCount = Order::count();
 $tradeOffersCount = TradeOffer::count();
 $transactionsCount = Transaction::count();
+$historyCount = TradeOfferStatusHistory::count();
 $reservedListings = Listing::where('reserved_by_order_id', '!=', null)->count();
 
 echo "Найдено для удаления:\n";
 echo "- Заказов: $ordersCount\n";
 echo "- TradeOffers: $tradeOffersCount\n";
+echo "- Записей истории трейдов: $historyCount\n";
 echo "- Транзакций: $transactionsCount\n";
 echo "- Зарезервированных листингов: $reservedListings\n\n";
 
@@ -37,6 +40,9 @@ echo "✓ {$activeOrders->count()} активных заказов отмене�
 echo "Удаление данных...\n";
 
 DB::statement('SET FOREIGN_KEY_CHECKS=0');
+
+DB::table('trade_offer_status_history')->truncate();
+echo "✓ Trade Offer Status History удалена\n";
 
 DB::table('trade_offers')->truncate();
 echo "✓ TradeOffers удалены\n";

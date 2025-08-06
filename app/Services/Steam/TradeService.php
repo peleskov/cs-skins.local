@@ -3,6 +3,7 @@
 namespace App\Services\Steam;
 
 use App\Models\TradeOffer;
+use App\Models\TradeOfferStatusHistory;
 use App\Models\Client;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -297,11 +298,9 @@ class TradeService
             $steamStatus = 'CreatedNeedsConfirmation';
         }
         
-        // ВСЕГДА обновляем статус TradeOffer из ответа Steam
-        $tradeOffer->update([
-            'steam_trade_offer_id' => $body['tradeofferid'],
-            'status' => $steamStatus
-        ]);
+        $tradeOffer->steam_trade_offer_id = $body['tradeofferid'];
+        $tradeOffer->status = $steamStatus;
+        $tradeOffer->save();
 
         Log::info('Steam trade offer created successfully', [
             'trade_offer_id' => $tradeOffer->id,

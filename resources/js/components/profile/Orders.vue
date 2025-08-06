@@ -21,24 +21,38 @@
 					<!-- Order Header -->
 					<div class="d-flex align-items-center justify-content-between">
 						<div class="d-flex align-items-center gap-3">
-							<button 
-								class="btn btn-link p-0 text-decoration-none fw-bold"
-								data-bs-toggle="collapse" 
-								:data-bs-target="`#order-${order.id}`" 
-								:aria-expanded="false" 
-								:aria-controls="`order-${order.id}`">
-								<i class="ri-arrow-right-s-line me-1"></i>
-								Заказ {{ order.order_number }}
-							</button>
-							<span class="badge" :class="getStatusBadgeClass(order.status)">
-								{{ getStatusText(order.status) }}
-							</span>
-							<span v-if="order.reserved_until && order.status === 'processing'" class="badge bg-warning text-dark ms-2">
-								⏰ Резерв: {{ getTimeRemaining(order.reserved_until) }}
-							</span>
-							<small class="text-muted ms-2">
-								Продавец: <span class="fw-medium">{{ order.seller?.name || 'Не указан' }}</span>
-							</small>
+							<div class="d-flex flex-column gap-2">
+								<div class="col d-flex align-items-center gap-2">
+									<div>
+										<button class="btn btn-link p-0 text-decoration-none fw-bold"
+											data-bs-toggle="collapse" :data-bs-target="`#order-${order.id}`"
+											:aria-expanded="false" :aria-controls="`order-${order.id}`">
+											<i class="ri-arrow-right-s-line me-1"></i>
+											Заказ {{ order.order_number }}
+										</button>
+									</div>
+									<span v-if="order.reserved_until && order.status === 'processing'"
+										class="badge bg-warning text-dark ms-2">
+										⏰ Резерв: {{ getTimeRemaining(order.reserved_until) }}
+									</span>
+									<small class="text-muted ms-2">
+										Продавец: <span class="fw-medium">{{ order.seller?.name || 'Не указан' }}</span>
+									</small>
+
+								</div>
+								<!-- Progress bar -->
+								<div class="col border-top pt-2 mt-2">
+									<div class="d-flex align-items-start progress-bar-container">
+										<!-- Прогресс-бар на основе истории трейда -->
+										<div v-for="step in getProgressSteps(order)" :key="step.id"
+											class="progress-step" :class="step.cssClass">
+											<i class="step-ico"></i>
+											{{ step.title }}
+										</div>
+									</div>
+								</div>
+
+							</div>
 						</div>
 						<div class="order-meta text-end">
 							<div class="order-amount mb-1">
@@ -63,13 +77,12 @@
 							</div>
 						</div>
 						<div v-if="order.cart_snapshot && order.cart_snapshot.length > 0" class="order-items">
-							<div v-for="item in order.cart_snapshot" :key="item.listing_id" class="item-card d-flex align-items-center p-3 border rounded mb-2">
+							<div v-for="item in order.cart_snapshot" :key="item.listing_id"
+								class="item-card d-flex align-items-center p-3 border rounded mb-2">
 								<!-- Item Image -->
 								<div class="item-image me-3">
-									<img :src="item.item.image_url" 
-										 :alt="item.item.name" 
-										 class="img-fluid rounded"
-										 style="width: 60px; height: 60px; object-fit: cover;">
+									<img :src="item.item.image_url" :alt="item.item.name" class="img-fluid rounded"
+										style="width: 60px; height: 60px; object-fit: cover;">
 								</div>
 
 								<!-- Item Details -->
@@ -83,12 +96,10 @@
 								</div>
 							</div>
 						</div>
-						
+
 						<!-- Actions section -->
 						<div v-if="canCancelOrder(order)" class="d-flex justify-content-end mt-3 pt-3 border-top">
-							<button 
-								@click="cancelOrder(order)" 
-								class="btn btn-danger btn-sm"
+							<button @click="cancelOrder(order)" class="btn btn-danger btn-sm"
 								:disabled="cancellingOrderId === order.id">
 								<span v-if="cancellingOrderId === order.id">
 									<i class="ri-loader-4-line ri-spin"></i> Отменяем...
@@ -113,26 +124,26 @@
 							</button>
 						</li>
 						<li class="page-item" :class="{ disabled: pagination.current_page === 1 }">
-							<button class="page-link" @click="loadOrders(pagination.current_page - 1)" 
-							        :disabled="pagination.current_page === 1">
+							<button class="page-link" @click="loadOrders(pagination.current_page - 1)"
+								:disabled="pagination.current_page === 1">
 								Предыдущая
 							</button>
 						</li>
-						
-						<li v-for="page in getVisiblePages()" :key="page" class="page-item" 
-						    :class="{ active: page === pagination.current_page }">
+
+						<li v-for="page in getVisiblePages()" :key="page" class="page-item"
+							:class="{ active: page === pagination.current_page }">
 							<button class="page-link" @click="loadOrders(page)">{{ page }}</button>
 						</li>
-						
+
 						<li class="page-item" :class="{ disabled: pagination.current_page === pagination.last_page }">
-							<button class="page-link" @click="loadOrders(pagination.current_page + 1)" 
-							        :disabled="pagination.current_page === pagination.last_page">
+							<button class="page-link" @click="loadOrders(pagination.current_page + 1)"
+								:disabled="pagination.current_page === pagination.last_page">
 								Следующая
 							</button>
 						</li>
 						<li class="page-item" :class="{ disabled: pagination.current_page === pagination.last_page }">
-							<button class="page-link" @click="loadOrders(pagination.last_page)" 
-							        :disabled="pagination.current_page === pagination.last_page">
+							<button class="page-link" @click="loadOrders(pagination.last_page)"
+								:disabled="pagination.current_page === pagination.last_page">
 								Последняя
 							</button>
 						</li>
@@ -154,7 +165,8 @@
 		</div>
 
 		<!-- Модальное окно подтверждения отмены заказа -->
-		<div class="modal fade" id="confirmCancelModal" tabindex="-1" aria-labelledby="confirmCancelModalLabel" aria-hidden="true">
+		<div class="modal fade" id="confirmCancelModal" tabindex="-1" aria-labelledby="confirmCancelModalLabel"
+			aria-hidden="true">
 			<div class="modal-dialog modal-dialog-centered">
 				<div class="modal-content">
 					<div class="modal-header">
@@ -168,10 +180,12 @@
 							<div class="d-flex align-items-center justify-content-between">
 								<div>
 									<h6 class="mb-1">Заказ {{ orderToCancel.order_number }}</h6>
-									<small class="text-muted">Продавец: {{ orderToCancel.seller?.name || 'Не указан' }}</small>
+									<small class="text-muted">Продавец: {{ orderToCancel.seller?.name || 'Не указан'
+									}}</small>
 								</div>
 								<div class="text-end">
-									<strong class="text-primary">{{ formatPrice(orderToCancel.total_amount) }} ₽</strong>
+									<strong class="text-primary">{{ formatPrice(orderToCancel.total_amount) }}
+										₽</strong>
 								</div>
 							</div>
 						</div>
@@ -233,6 +247,7 @@ export default {
 				const response = await orderAPI.getMyOrders(page);
 				if (response.success) {
 					this.orders = response.data.data;
+					console.log('Orders loaded:', this.orders); // Debug
 					this.pagination = {
 						current_page: response.data.current_page,
 						last_page: response.data.last_page,
@@ -264,7 +279,7 @@ export default {
 		getStatusText(status) {
 			const texts = {
 				'paid': 'Оплачен',
-				'processing': 'В обработке', 
+				'processing': 'В обработке',
 				'completed': 'Завершен',
 				'cancelled': 'Отменен',
 				'failed': 'Ошибка',
@@ -296,15 +311,15 @@ export default {
 
 		getVisiblePages() {
 			if (!this.pagination) return [];
-			
+
 			const current = this.pagination.current_page;
 			const last = this.pagination.last_page;
 			const pages = [];
-			
+
 			// Показываем до 5 страниц
 			let start = Math.max(1, current - 2);
 			let end = Math.min(last, current + 2);
-			
+
 			// Корректируем если нужно показать 5 страниц
 			if (end - start < 4) {
 				if (start === 1) {
@@ -313,11 +328,11 @@ export default {
 					start = Math.max(1, end - 4);
 				}
 			}
-			
+
 			for (let i = start; i <= end; i++) {
 				pages.push(i);
 			}
-			
+
 			return pages;
 		},
 
@@ -338,10 +353,10 @@ export default {
 			// Обновляем статусы каждые 10 секунд
 			this.statusUpdateInterval = setInterval(async () => {
 				// Проверяем, есть ли заказы в обработке
-				const hasActiveOrders = this.orders.some(order => 
+				const hasActiveOrders = this.orders.some(order =>
 					['paid', 'processing', 'reserved'].includes(order.status)
 				);
-				
+
 				if (hasActiveOrders || this.orders.length > 0) {
 					try {
 						// Тихо обновляем данные без показа лоадера
@@ -386,7 +401,7 @@ export default {
 
 			try {
 				const response = await orderAPI.cancelOrder(this.orderToCancel.id);
-				
+
 				if (response.success) {
 					window.toast.success(response.message || 'Заказ успешно отменен');
 					// Обновляем список заказов
@@ -406,7 +421,58 @@ export default {
 				this.cancellingOrderId = null;
 				this.orderToCancel = null;
 			}
-		}
+		},
+
+		getProgressSteps(order) {
+			const steps = [];
+			let stepId = 0;
+
+			// Шаг 1: Всегда "Оплачен"
+			steps.push({
+				id: ++stepId,
+				title: 'Оплачен',
+				cssClass: ''
+			});
+
+			// Шаги из истории трейда
+			if (order.trade_status_history && order.trade_status_history.length > 0) {
+				order.trade_status_history.forEach(history => {
+					const title = this.mapStatusToTitle(history.status);
+					const cssClass = this.mapStatusToCssClass(history.status);
+					
+					steps.push({
+						id: ++stepId,
+						title: title,
+						cssClass: cssClass
+					});
+				});
+			}
+
+
+			return steps;
+		},
+
+		mapStatusToTitle(status) {
+			const titles = {
+				'Трейд создан в Steam': 'Создан в Steam',
+				'CreatedNeedsConfirmation': 'Подтверждение продавца',
+				'Active': 'Подтверждение покупателя',
+				'Accepted': 'Трейд принят',
+				'completed': 'Завершен',
+				'cancelled': 'Отменен',
+				'Declined': 'Отклонен',
+				'Expired': 'Истек срок',
+				'Canceled': 'Отменен'
+			};
+			return titles[status] || status;
+		},
+
+		mapStatusToCssClass(status) {
+			if (status === 'completed') return 'completed';
+			if (status === 'cancelled') return 'cancelled';
+			return '';
+		},
+
 	}
 }
 </script>

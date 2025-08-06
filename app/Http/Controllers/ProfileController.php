@@ -622,7 +622,7 @@ class ProfileController extends Controller
     private function getSalesData(Client $client, string $activeTab): array
     {
         // Получаем заказы где пользователь является продавцом
-        $allOrders = Order::with(['buyer:id,name,steam_id', 'listings'])
+        $allOrders = Order::with(['buyer:id,name,steam_id', 'listings', 'tradeOffer.statusHistory'])
             ->where('seller_id', $client->id)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -660,7 +660,7 @@ class ProfileController extends Controller
     private function getPurchasesData(Client $client, string $activeTab): array
     {
         // Получаем заказы где пользователь является покупателем
-        $allOrders = Order::with(['seller:id,name,steam_id'])
+        $allOrders = Order::with(['seller:id,name,steam_id', 'tradeOffer.statusHistory'])
             ->where('buyer_id', $client->id)
             ->orderBy('created_at', 'desc')
             ->get();

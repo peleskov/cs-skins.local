@@ -68,19 +68,23 @@ class OrderController extends Controller
                 foreach ($itemsBySeller as $sellerId => $sellerItems) {
                     $sellerTotal = $sellerItems->sum('price');
                     
-                    // Создаем отдельный заказ для каждого продавца
+                    // Списываем средства с баланса до создания заказа
+                    $client = auth('client')->user();
+                    $client->debit($sellerTotal);
+                    
+                    // Создаем заказ сразу оплаченным
                     $order = Order::create([
                         'order_number' => Order::generateOrderNumber(),
                         'buyer_id' => auth('client')->id(),
                         'seller_id' => $sellerId,
                         'total_amount' => $sellerTotal,
                         'cart_snapshot' => $sellerItems->toArray(),
-                        'status' => Order::STATUS_PAID,
-                        'payment_status' => Order::PAYMENT_STATUS_PENDING,
+                        'status' => Order::STATUS_PROCESSING,
+                        'payment_status' => Order::PAYMENT_STATUS_PAID,
+                        'paid_at' => now(),
+                        'payment_transaction_id' => 'BALANCE_' . uniqid(),
+                        'payment_method' => 'balance',
                     ]);
-
-                    // Оплачиваем с баланса
-                    $this->payFromBalance($order);
                     
                     // Загружаем данные продавца
                     $order->load('seller:id,name');
@@ -138,7 +142,7 @@ class OrderController extends Controller
         }
 
         try {
-            $orders = Order::with(['seller:id,name,steam_id'])
+            $orders = Order::with(['seller:id,name,steam_id', 'tradeOffer.statusHistory'])
                 ->where('buyer_id', auth('client')->id())
                 ->orderBy('created_at', 'desc')
                 ->paginate(10);
@@ -219,19 +223,6 @@ class OrderController extends Controller
         }
     }
 
-    /**
-     * Оплата заказа с баланса
-     */
-    private function payFromBalance(Order $order): void
-    {
-        $client = auth('client')->user();
-        
-        // Списываем средства с баланса
-        $client->debit($order->total_amount);
-        
-        // Помечаем заказ как оплаченный и запускаем логику после оплаты
-        $order->pay('BALANCE_' . uniqid(), 'balance');
-    }
 
     /**
      * Отменить заказ

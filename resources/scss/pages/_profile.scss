@@ -661,3 +661,141 @@
 
 
 }
+
+.orders-list {
+	.order-item {
+		.progress-bar-container {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			margin-top: 10px;
+
+			.progress-step {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				text-align: center;
+				cursor: pointer;
+				opacity: 0.7;
+				font-size: 11px;
+				position: relative;
+				width: 80px;
+				word-wrap: break-word;
+				line-height: 1.2;
+				opacity: 0.5;
+
+				&:not(:last-child) {
+					margin-right: 20px;
+				}
+
+				.step-ico {
+					width: 18px;
+					height: 18px;
+					position: relative;
+					border-radius: 6px;
+					background-color: rgba(var(--theme-color), 1);
+					margin-bottom: 5px;
+
+					&::after {
+						content: '';
+						position: absolute;
+						left: 50%;
+						top: 50%;
+						transform: translate(-50%, -50%);
+						width: 10px;
+						height: 10px;
+						background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Ctext x='5' y='7' text-anchor='middle' fill='white' font-size='8' font-weight='bold'%3E?%3C/text%3E%3C/svg%3E");
+						background-repeat: no-repeat;
+						background-position: center;
+						background-size: 10px 10px;
+					}
+				}
+
+				// Стрелки между шагами
+				&:not(:first-child)::before {
+					content: '';
+					position: absolute;
+					left: -40px; // Точно по центру между шагами (80px/2 + 20px/2)
+					top: 9px; // Позиционируем на уровне центра иконки
+					transform: translateY(-50%);
+					width: 56px; // Ширина стрелки
+					height: 12px;
+					background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='12' viewBox='0 0 11 12'%3E%3Cpath fill='%23f2a93e' fill-rule='evenodd' d='M.22 11.825c.243.234.636.234.878 0L6.24 6.94a1.17 1.17 0 0 0 0-1.696L1.087.175A.638.638 0 0 0 .188.169a.585.585 0 0 0-.007.855l4.736 4.57a.585.585 0 0 1 0 .848L.22 10.977a.584.584 0 0 0 0 .848'/%3E%3C/svg%3E");
+					background-repeat: repeat-x;
+					background-position: center;
+				}
+
+				&.completed {
+					opacity: 1;
+
+					.step-ico {
+						background-color: #28a745;
+
+						&::after {
+							content: '';
+							position: absolute;
+							left: 50%;
+							top: 50%;
+							transform: translate(-50%, -50%);
+							width: 10px;
+							height: 10px;
+							background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='white' d='M8.5 2.5L4 7 1.5 4.5l1-1L4 5l3.5-3.5z'/%3E%3C/svg%3E");
+							background-repeat: no-repeat;
+							background-position: center;
+							background-size: 10px 10px;
+						}
+					}
+				}
+
+				&.cancelled {
+					opacity: 1;
+
+					.step-ico {
+						background-color: #dc3545;
+
+						&::after {
+							content: '';
+							position: absolute;
+							left: 50%;
+							top: 50%;
+							transform: translate(-50%, -50%);
+							width: 10px;
+							height: 10px;
+							background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='none' stroke='white' stroke-width='1.5' stroke-linecap='round' d='M2.5 2.5l5 5m0-5l-5 5'/%3E%3C/svg%3E");
+							background-repeat: no-repeat;
+							background-position: center;
+							background-size: 10px 10px;
+						}
+					}
+				}
+
+				// Первый шаг и все промежуточные шаги показывают галочку
+				&:first-child,
+				&:not(:last-child) {
+					opacity: 1;
+
+					.step-ico {
+						&::after {
+							background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='white' d='M8.5 2.5L4 7 1.5 4.5l1-1L4 5l3.5-3.5z'/%3E%3C/svg%3E");
+						}
+					}
+				}
+
+				// Анимация стрелок для последнего шага (кроме финальных)
+				&:last-child:not(.completed):not(.cancelled)::before {
+					animation: moveArrows 1s linear infinite;
+				}
+			}
+		}
+	}
+}
+
+@keyframes moveArrows {
+	0% {
+		background-position: 0 center;
+	}
+
+	100% {
+		background-position: 11px center;
+	}
+}

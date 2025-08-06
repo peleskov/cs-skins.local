@@ -30,7 +30,7 @@ class ReleaseExpiredOrder implements ShouldQueue
      */
     public function handle(CancelOrderService $cancelService): void
     {
-        $order = Order::with(['buyer', 'tradeOffers'])->find($this->orderId);
+        $order = Order::with(['buyer', 'tradeOffer'])->find($this->orderId);
         
         if (!$order) {
             Log::error("Order {$this->orderId} not found");

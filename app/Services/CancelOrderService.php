@@ -21,7 +21,7 @@ class CancelOrderService
             return ['success' => true, 'message' => 'Заказ уже отменен'];
         }
 
-        $tradeOffer = $order->tradeOffers()->first();
+        $tradeOffer = $order->tradeOffer;
         
         if (!$tradeOffer) {
             $order->cancel($reason);

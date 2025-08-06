@@ -3,6 +3,10 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Models\Order;
+use App\Models\TradeOffer;
+use App\Observers\OrderObserver;
+use App\Observers\TradeOfferObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,6 +28,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Регистрируем Observer'ы
+        Order::observe(OrderObserver::class);
+        TradeOffer::observe(TradeOfferObserver::class);
+        
         // Принудительно используем HTTPS для всех URL
         \URL::forceScheme('https');
         

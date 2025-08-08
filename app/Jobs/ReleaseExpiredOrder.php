@@ -37,7 +37,7 @@ class ReleaseExpiredOrder implements ShouldQueue
             return;
         }
 
-        if ($order->status === Order::STATUS_CANCELLED) {
+        if ($order->status === Order::STATUS_CANCELLED || $order->status === Order::STATUS_COMPLETED) {
             return;
         }
         

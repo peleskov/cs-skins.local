@@ -169,9 +169,10 @@ class InventoryController extends Controller
             ], 400);
         }
         
-        // Проверяем существующий листинг для этого предмета
+        // Проверяем существующий активный листинг для этого предмета  
         $existingListing = Listing::where('steam_asset_id', $steamAssetId)
             ->where('seller_id', $client->id)
+            ->whereNotIn('status', ['sold']) // исключаем проданные
             ->first();
             
         if ($existingListing) {
@@ -208,12 +209,8 @@ class InventoryController extends Controller
                         'message' => 'Произошла ошибка при реактивации листинга'
                     ], 500);
                 }
-            } elseif ($existingListing->status === 'sold') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Этот предмет уже продан'
-                ], 400);
             }
+            // Убираем проверку sold статуса - таких листингов не будет в выборке
         }
         
         try {

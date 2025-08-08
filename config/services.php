@@ -42,7 +42,7 @@ return [
         'allowed_hosts' => [
             parse_url(env('APP_URL'), PHP_URL_HOST),
         ],
-        'force_https' => false,
+        'force_https' => true,
     ],
 
 ];

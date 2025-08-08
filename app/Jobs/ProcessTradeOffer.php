@@ -75,14 +75,14 @@ class ProcessTradeOffer implements ShouldQueue
         try {
             // Валидация перед обработкой
             $this->validateBeforeProcessing($sessionCache);
-            
+            /*
             Log::info('Создаем TradeOffer через Steam API', [
                 'trade_offer_id' => $this->tradeOffer->id,
                 'seller_id' => $sellerId,
                 'buyer_id' => $this->tradeOffer->buyer_id,
                 'order_id' => $this->tradeOffer->order_id,
             ]);
-            
+            */
             // Создаем трейд через TradeService
             $result = $tradeService->createTradeOffer($this->tradeOffer);
             
@@ -95,10 +95,13 @@ class ProcessTradeOffer implements ShouldQueue
                     ]);
                 }
                 
+                /*
                 Log::info('TradeOffer успешно создан', [
                     'trade_offer_id' => $this->tradeOffer->id,
                     'message' => $result['message']
                 ]);
+                */
+                
             } else {
                 // Неуспешно - отменяем заказ
                 $this->tradeOffer->order->cancel($result['message']);

@@ -11,7 +11,7 @@ Broadcast::channel('extension-orders', function () {
     return true;
 });
 
-// Канал для конкретного продавца
-Broadcast::channel('seller-{sellerId}', function () {
+// Канал для конкретного продавца (с хешем для безопасности)
+Broadcast::channel('seller-{sellerId}-{hash}', function () {
     return true;
 });

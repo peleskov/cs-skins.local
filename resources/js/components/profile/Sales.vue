@@ -6,34 +6,24 @@
 		</div>
 
 		<!-- Tabs Navigation -->
-		<ul class="nav nav-tabs tab-style1 mb-4" id="salesTab" role="tablist">
+		<ul class="nav nav-tabs tab-style1 mb-4" id="ordersTab" role="tablist">
 			<li class="nav-item" role="presentation">
-				<button class="nav-link" :class="{ active: activeTab === 'new' }" id="new-tab" data-bs-toggle="tab"
-					data-bs-target="#new" type="button" role="tab" @click="setActiveTab('new')">
-					Новые
-					<span v-if="counts.new > 0" class="badge bg-body-secondary ms-1">{{ counts.new }}</span>
-				</button>
-			</li>
-			<li class="nav-item" role="presentation">
-				<button class="nav-link" :class="{ active: activeTab === 'pending' }" id="pending-tab"
-					data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab"
-					@click="setActiveTab('pending')">
-					Ожидающие
-					<span v-if="counts.pending > 0" class="badge bg-body-secondary ms-1">{{ counts.pending }}</span>
+				<button class="nav-link" :class="{ active: activeTab === 'current' }" id="current-tab" data-bs-toggle="tab"
+					data-bs-target="#current" type="button" role="tab">
+					Текущие
+					<span v-if="counts.current > 0" class="badge bg-body-secondary ms-1">{{ counts.current }}</span>
 				</button>
 			</li>
 			<li class="nav-item" role="presentation">
 				<button class="nav-link" :class="{ active: activeTab === 'completed' }" id="completed-tab"
-					data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab"
-					@click="setActiveTab('completed')">
-					Завершенные
+					data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab">
+					Успешные
 					<span v-if="counts.completed > 0" class="badge bg-body-secondary ms-1">{{ counts.completed }}</span>
 				</button>
 			</li>
 			<li class="nav-item" role="presentation">
 				<button class="nav-link" :class="{ active: activeTab === 'cancelled' }" id="cancelled-tab"
-					data-bs-toggle="tab" data-bs-target="#cancelled" type="button" role="tab"
-					@click="setActiveTab('cancelled')">
+					data-bs-toggle="tab" data-bs-target="#cancelled" type="button" role="tab">
 					Отмененные
 					<span v-if="counts.cancelled > 0" class="badge bg-body-secondary ms-1">{{ counts.cancelled }}</span>
 				</button>
@@ -49,209 +39,89 @@
 			<p class="mt-3">Загружаем продажи...</p>
 		</div>
 
-		<div class="tab-content" id="salesTabContent">
-			<!-- Единый компонент для всех табов -->
-			<div v-for="tabId in ['new', 'pending', 'completed', 'cancelled']" :key="tabId" class="tab-pane fade"
-				:class="{ 'show active': activeTab === tabId }" :id="tabId" role="tabpanel"
-				:aria-labelledby="`${tabId}-tab`" tabindex="0">
-
-				<!-- Orders list (продажи по заказам) -->
-				<div v-if="!isLoading && currentOrders.length > 0 && activeTab === tabId" class="sales-list">
-					<div v-for="order in currentOrders" :key="order.id" class="order-item mb-4 card">
-						<!-- Order Header -->
-						<div class="card-header">
-							<div class="d-flex align-items-center justify-content-between">
-								<div class="d-flex align-items-center gap-3">
-									<div>
-										<button class="btn btn-link p-0 text-decoration-none fw-bold"
-											data-bs-toggle="collapse" :data-bs-target="`#order-${order.id}`"
-											:aria-expanded="false" :aria-controls="`order-${order.id}`">
-											<i class="ri-arrow-right-s-line me-1"></i>
-											Заказ {{ order.order_number }}
-										</button>
-										
-										<!-- Progress bar -->
-										<div class="mt-1">
-											<div class="d-flex align-items-center" style="gap: 0.25rem;">
-												<!-- Step 1: Оплачен -->
-												<span class="badge rounded-circle" 
-													  style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"
-													  :class="getStepClass(order, 1)"
-													  data-bs-toggle="tooltip"
-													  data-bs-placement="top"
-													  :title="getStepTooltip(order, 1)">
-													<i class="ri-money-dollar-circle-line" style="font-size: 12px;"></i>
-												</span>
-												
-												<!-- Connector 1->2 -->
-												<div class="flex-grow-1 border-top border-2" 
-													 :class="getCurrentStep(order) >= 2 ? 'border-secondary' : 'border-secondary opacity-25'"></div>
-												
-												<!-- Step 2: Создан трейд -->
-												<span class="badge rounded-circle" 
-													  style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"
-													  :class="getStepClass(order, 2)"
-													  data-bs-toggle="tooltip"
-													  data-bs-placement="top"
-													  :title="getStepTooltip(order, 2)">
-													<i class="ri-arrow-left-right-line" style="font-size: 12px;"></i>
-												</span>
-												
-												<!-- Connector 2->3 -->
-												<div class="flex-grow-1 border-top border-2" 
-													 :class="getCurrentStep(order) >= 3 ? 'border-secondary' : 'border-secondary opacity-25'"></div>
-												
-												<!-- Step 3: Продавец подтвердил -->
-												<span class="badge rounded-circle" 
-													  style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"
-													  :class="getStepClass(order, 3)"
-													  data-bs-toggle="tooltip"
-													  data-bs-placement="top"
-													  :title="getStepTooltip(order, 3)">
-													<i class="ri-user-check-line" style="font-size: 12px;"></i>
-												</span>
-												
-												<!-- Connector 3->4 -->
-												<div class="flex-grow-1 border-top border-2" 
-													 :class="getCurrentStep(order) >= 4 ? 'border-secondary' : 'border-secondary opacity-25'"></div>
-												
-												<!-- Step 4: Покупатель подтвердил -->
-												<span class="badge rounded-circle" 
-													  style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"
-													  :class="getStepClass(order, 4)"
-													  data-bs-toggle="tooltip"
-													  data-bs-placement="top"
-													  :title="getStepTooltip(order, 4)">
-													<i class="ri-user-received-2-line" style="font-size: 12px;"></i>
-												</span>
-												
-												<!-- Connector 4->5 -->
-												<div class="flex-grow-1 border-top border-2" 
-													 :class="getCurrentStep(order) >= 5 ? 'border-secondary' : 'border-secondary opacity-25'"></div>
-												
-												<!-- Step 5: Завершен -->
-												<span class="badge rounded-circle" 
-													  style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"
-													  :class="getStepClass(order, 5)"
-													  data-bs-toggle="tooltip"
-													  data-bs-placement="top"
-													  :title="getStepTooltip(order, 5)">
-													<i class="ri-check-line" style="font-size: 12px;"></i>
-												</span>
-												
-												<!-- Connector 5->6 -->
-												<div class="flex-grow-1 border-top border-2" 
-													 :class="getCurrentStep(order) >= 6 ? 'border-secondary' : 'border-secondary opacity-25'"></div>
-												
-												<!-- Step 6: Деньги переданы/возвращены -->
-												<span class="badge rounded-circle" 
-													  style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"
-													  :class="getStepClass(order, 6)"
-													  data-bs-toggle="tooltip"
-													  data-bs-placement="top"
-													  :title="getStepTooltip(order, 6)">
-													<i :class="order.status === 'cancelled' ? 'ri-refund-line' : 'ri-hand-coin-line'" style="font-size: 12px;"></i>
-												</span>
-											</div>
-										</div>
-									</div>
-									<span class="badge" :class="getStatusBadgeClass(order.status)">
-										{{ getStatusText(order.status) }}
-									</span>
-									<span v-if="order.reserved_until && order.status === 'processing'"
-										class="badge bg-warning text-dark ms-2">
-										⏰ Резерв: {{ getTimeRemaining(order.reserved_until) }}
-									</span>
-									<small class="text-muted ms-2">
-										Покупатель: <span class="fw-medium">{{ order.buyer?.name || 'Не указан'
-											}}</span>
-									</small>
-								</div>
-								<div class="text-end">
-									<strong class="fs-5 text-success">{{ formatPrice(order.total_amount) }} ₽</strong>
-									<div><small class="text-muted">{{ formatDate(order.created_at) }}</small></div>
-								</div>
-							</div>
-						</div>
-
-						<!-- Collapsible Order Items -->
-						<div :id="`order-${order.id}`" class="collapse">
-							<div class="card-body">
-								<!-- Notes section at the top of collapse -->
-								<div v-if="order.notes || order.system_remarks" class="notes-section mb-3">
-									<div v-if="order.system_remarks" class="bg-light text-muted p-2 mb-2 rounded">
-										<small>{{ order.system_remarks }}</small>
-									</div>
-									<div v-if="order.notes" class="p-2">
-										<p><strong><small>Примечание:</small></strong></p>
-										<p><small>{{ order.notes }}</small></p>
-									</div>
-								</div>
-								<div v-for="item in order.cart_snapshot" :key="item.listing_id" class="order-items">
-									<div class="item-card d-flex align-items-center p-3 border rounded mb-2 gap-3">
-										<!-- Item Image -->
-										<div class="item-image me-3">
-											<img :src="item.item.image_url" :alt="item.item.name" class="img-fluid"
-												style="width: 60px; height: 60px; object-fit: cover;">
-										</div>
-
-										<!-- Item Details -->
-										<div class="item-details flex-grow-1">
-											<h6 class="mb-1">{{ item.item.name }}</h6>
-											<div>Цена: <strong>{{ formatPrice(item.price) }} ₽</strong></div>
-										</div>
-
-										<!-- Item Price -->
-										<div class="item-price text-end">
-											<strong class="fs-6 text-success">{{ formatPrice(item.price) }} ₽</strong>
-										</div>
-									</div>
-								</div>
-
-								<!-- Actions section -->
-								<div v-if="['new', 'pending'].includes(activeTab)" class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-									<!-- Trade button for the whole order -->
-									<div v-if="activeTab === 'new'" class="text-center">
-										<button class="btn theme-outline btn-sm" @click="sendTrade(order)">
-											<i class="ri-arrow-right-line me-1"></i>
-											Отправить трейд на весь заказ
-										</button>
-									</div>
-									<div v-else class="flex-grow-1"></div>
-									
-									<!-- Cancel button -->
-									<div v-if="canCancelOrder(order)">
-										<button 
-											@click="cancelOrder(order)" 
-											class="btn btn-danger btn-sm"
-											:disabled="cancellingOrderId === order.id">
-											<span v-if="cancellingOrderId === order.id">
-												<i class="ri-loader-4-line ri-spin"></i> Отменяем...
-											</span>
-											<span v-else>
-												<i class="ri-close-circle-line"></i> Отменить заказ
-											</span>
-										</button>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
+		<div class="tab-content" id="ordersTabContent">
+			<!-- Текущие заказы -->
+			<div class="tab-pane fade show active" id="current" role="tabpanel" aria-labelledby="current-tab" tabindex="0">
+				<!-- Orders list -->
+				<div v-if="!isLoading && orders.length > 0" class="orders-list">
+					<OrderItem
+						v-for="order in orders"
+						:key="order.id"
+						:order="order"
+						user-type="buyer"
+						:show-cancel-button="canCancelOrder(order)"
+						@cancel-order="cancelOrder"
+					/>
 				</div>
-
 				<!-- Empty state -->
-				<div v-else-if="!isLoading && activeTab === tabId" class="text-center py-5">
+				<div v-else-if="!isLoading" class="text-center py-5">
 					<div class="empty-state-icon mb-3">
-						<i class="ri-shopping-bag-2-line" style="font-size: 4rem; color: #ccc;"></i>
+						<i class="ri-shopping-cart-line" style="font-size: 4rem; color: #ccc;"></i>
 					</div>
 					<h4>{{ getEmptyStateText() }}</h4>
-					<p class="text-muted">{{ getEmptyStateSubtext() }}</p>
+					<p class="text-muted mb-4">{{ getEmptyStateSubtext() }}</p>
+					<a href="/marketplace" class="btn theme-btn">
+						<i class="ri-store-line me-1"></i>Перейти в маркетплейс
+					</a>
+				</div>
+			</div>
+
+			<!-- Успешные заказы -->
+			<div class="tab-pane fade" id="completed" role="tabpanel" aria-labelledby="completed-tab" tabindex="0">
+				<!-- Orders list -->
+				<div v-if="!isLoading && orders.length > 0" class="orders-list">
+					<OrderItem
+						v-for="order in orders"
+						:key="order.id"
+						:order="order"
+						user-type="buyer"
+						:show-cancel-button="canCancelOrder(order)"
+						@cancel-order="cancelOrder"
+					/>
+				</div>
+				<!-- Empty state -->
+				<div v-else-if="!isLoading" class="text-center py-5">
+					<div class="empty-state-icon mb-3">
+						<i class="ri-shopping-cart-line" style="font-size: 4rem; color: #ccc;"></i>
+					</div>
+					<h4>{{ getEmptyStateText() }}</h4>
+					<p class="text-muted mb-4">{{ getEmptyStateSubtext() }}</p>
+					<a href="/marketplace" class="btn theme-btn">
+						<i class="ri-store-line me-1"></i>Перейти в маркетплейс
+					</a>
+				</div>
+			</div>
+
+			<!-- Отмененные заказы -->
+			<div class="tab-pane fade" id="cancelled" role="tabpanel" aria-labelledby="cancelled-tab" tabindex="0">
+				<!-- Orders list -->
+				<div v-if="!isLoading && orders.length > 0" class="orders-list">
+					<OrderItem
+						v-for="order in orders"
+						:key="order.id"
+						:order="order"
+						user-type="buyer"
+						:show-cancel-button="canCancelOrder(order)"
+						@cancel-order="cancelOrder"
+					/>
+				</div>
+				<!-- Empty state -->
+				<div v-else-if="!isLoading" class="text-center py-5">
+					<div class="empty-state-icon mb-3">
+						<i class="ri-shopping-cart-line" style="font-size: 4rem; color: #ccc;"></i>
+					</div>
+					<h4>{{ getEmptyStateText() }}</h4>
+					<p class="text-muted mb-4">{{ getEmptyStateSubtext() }}</p>
+					<a href="/marketplace" class="btn theme-btn">
+						<i class="ri-store-line me-1"></i>Перейти в маркетплейс
+					</a>
 				</div>
 			</div>
 		</div>
 
 		<!-- Модальное окно подтверждения отмены заказа -->
-		<div class="modal fade" id="confirmCancelModal" tabindex="-1" aria-labelledby="confirmCancelModalLabel" aria-hidden="true">
+		<div class="modal fade" id="confirmCancelModal" tabindex="-1" aria-labelledby="confirmCancelModalLabel"
+			aria-hidden="true">
 			<div class="modal-dialog modal-dialog-centered">
 				<div class="modal-content">
 					<div class="modal-header">
@@ -265,14 +135,16 @@
 							<div class="d-flex align-items-center justify-content-between">
 								<div>
 									<h6 class="mb-1">Заказ {{ orderToCancel.order_number }}</h6>
-									<small class="text-muted">Покупатель: {{ orderToCancel.buyer?.name || 'Не указан' }}</small>
+									<small class="text-muted">Продавец: {{ orderToCancel.seller?.name || 'Не указан'
+									}}</small>
 								</div>
 								<div class="text-end">
-									<strong class="text-success">{{ formatPrice(orderToCancel.total_amount) }} ₽</strong>
+									<strong class="text-primary">{{ formatPrice(orderToCancel.total_amount) }}
+										₽</strong>
 								</div>
 							</div>
 						</div>
-						<p>Вы уверены, что хотите отменить этот заказ? Средства будут возвращены покупателю.</p>
+						<p>Вы уверены, что хотите отменить этот заказ? Средства будут возвращены на ваш баланс.</p>
 					</div>
 					<div class="modal-footer">
 						<button type="button" class="btn theme-outline" data-bs-dismiss="modal">Отмена</button>
@@ -283,15 +155,23 @@
 				</div>
 			</div>
 		</div>
+
 	</div>
 </template>
 
 <script>
-import axios from 'axios';
-import { getTimeRemaining, formatDate, formatPrice } from '../../utils/helpers';
+import { formatPrice, handleApiError } from '../../utils/helpers';
+import { orderAPI } from '../../utils/api';
+import OrderItem from './OrderItem.vue';
+
+// Константы для интервалов обновления
+const UPDATE_INTERVAL = 10000; // 10 секунд для обновления статусов
 
 export default {
 	name: 'ProfileSales',
+	components: {
+		OrderItem
+	},
 	props: {
 		client: {
 			type: Object,
@@ -300,158 +180,136 @@ export default {
 	},
 	data() {
 		return {
-			isLoading: true,
-			activeTab: 'new',
-			currentOrders: [],
+			orders: [],
+			allOrders: [], // все заказы для фильтрации
+			pagination: null,
+			isLoading: false,
+			activeTab: 'current',
 			counts: {
-				new: 0,
-				pending: 0,
+				current: 0,
 				completed: 0,
 				cancelled: 0
 			},
-			timerInterval: null,
 			statusUpdateInterval: null,
 			cancellingOrderId: null,
 			orderToCancel: null
 		}
 	},
-	mounted() {
-		this.loadSales();
-		this.startTimer();
+	async mounted() {
+		await this.loadOrders();
 		this.startStatusUpdates();
+		
+		// Добавляем обработчик событий Bootstrap табов
+		this.$nextTick(() => {
+			const tabElements = document.querySelectorAll('#ordersTab button[data-bs-toggle="tab"]');
+			tabElements.forEach(tab => {
+				tab.addEventListener('shown.bs.tab', (event) => {
+					const tabId = event.target.getAttribute('data-bs-target')?.substring(1);
+					if (tabId) {
+						this.activeTab = tabId;
+						this.orders = this.filterOrdersByTab(this.allOrders || []);
+					}
+				});
+			});
+		});
 	},
 	beforeUnmount() {
-		this.stopTimer();
 		this.stopStatusUpdates();
 	},
 	methods: {
-		getTimeRemaining,
+		formatPrice,
 
-		async loadSales() {
+		async loadOrders(page = 1) {
 			this.isLoading = true;
 			try {
-				const response = await axios.get(`/profile/sales?tab=${this.activeTab}`);
-				const data = response.data;
-				this.currentOrders = data.orders || [];
-				this.counts = data.counts || this.counts;
+				const response = await orderAPI.getMySales(page);
+				if (response.success) {
+					this.allOrders = response.data.data;
+					
+					// Фильтруем заказы по активному табу
+					this.orders = this.filterOrdersByTab(this.allOrders);
+					
+					this.pagination = {
+						current_page: response.data.current_page,
+						last_page: response.data.last_page,
+						total: response.data.total
+					};
+					
+					// Подсчитываем количество заказов по статусам
+					this.updateCounts(this.allOrders);
+				}
 			} catch (error) {
-				console.error('Error loading sales:', error);
+				console.error('Error loading orders:', error);
+				window.toast.error('Ошибка при загрузке заказов');
 			} finally {
 				this.isLoading = false;
 			}
 		},
 
-		setActiveTab(tab) {
-			if (this.activeTab !== tab) {
-				this.activeTab = tab;
-				this.loadSales();
-			}
-		},
-
-		getItemImage(item) {
-			// Возвращаем изображение скина или плейсхолдер
-			return item.image_url || '/images/skins/placeholder.png';
-		},
-
-		getStatusBadgeClass(status) {
-			const classes = {
-				'paid': 'bg-warning',
-				'processing': 'bg-info',
-				'reserved': 'bg-warning',
-				'trade_sent': 'bg-info',
-				'completed': 'bg-success',
-				'cancelled': 'bg-danger',
-				'failed': 'bg-danger',
-				'refunded': 'bg-secondary'
-			};
-			return classes[status] || 'bg-secondary';
-		},
-
-		getStatusText(status) {
-			const texts = {
-				'paid': 'Оплачен',
-				'processing': 'В обработке',
-				'reserved': 'Ожидает трейда',
-				'trade_sent': 'Трейд отправлен',
-				'completed': 'Завершен',
-				'cancelled': 'Отменен'
-			};
-			return texts[status] || status;
-		},
-
-		getEmptyStateText() {
-			const texts = {
-				'new': 'Нет новых заказов',
-				'pending': 'Нет ожидающих трейдов',
-				'completed': 'Нет завершенных продаж',
-				'cancelled': 'Нет отмененных заказов'
-			};
-			return texts[this.activeTab] || 'Нет заказов';
-		},
-
-		getEmptyStateSubtext() {
-			const texts = {
-				'new': 'Новые заказы появятся здесь после оплаты покупателями',
-				'pending': 'Отправленные трейды будут отображаться в этом разделе',
-				'completed': 'Здесь будут показаны все успешно завершенные продажи',
-				'cancelled': 'Отмененные и проблемные заказы появятся в этом списке'
-			};
-			return texts[this.activeTab] || '';
-		},
-
-		formatDate,
-		formatPrice,
-
-		async sendTrade(orderItem) {
-			// TODO: Интеграция с расширением для отправки трейда
-			console.log('Sending trade for order item:', orderItem.id);
-			alert('Функция отправки трейда будет реализована с расширением');
-		},
-
-
-		startTimer() {
-			this.timerInterval = setInterval(() => {
-				this.$forceUpdate(); // Принуждаем Vue к перерисовке для обновления таймеров
-			}, 1000);
-		},
-
-		stopTimer() {
-			if (this.timerInterval) {
-				clearInterval(this.timerInterval);
-				this.timerInterval = null;
-			}
-		},
 
 		startStatusUpdates() {
-			// Обновляем статусы каждые 10 секунд
-			this.statusUpdateInterval = setInterval(async () => {
-				// Проверяем, есть ли заказы с резервированными товарами в активной вкладке
-				const hasReservedItems = this.currentOrders.some(order => order.status === 'processing');
+			this.statusUpdateInterval = setInterval(() => {
+				this.updateOrdersInBackground();
+			}, UPDATE_INTERVAL);
+		},
 
-				if (hasReservedItems || this.activeTab === 'new') {
-					try {
-						// Тихо обновляем данные без показа лоадера
-						const response = await axios.get(`/profile/sales?tab=${this.activeTab}`);
-						const data = response.data;
+		filterOrdersByTab(orders) {
+			let filtered;
+			switch (this.activeTab) {
+				case 'current':
+					filtered = orders.filter(order => ['paid', 'processing'].includes(order.status));
+					break;
+				case 'completed':
+					filtered = orders.filter(order => order.status === 'completed');
+					break;
+				case 'cancelled':
+					filtered = orders.filter(order => order.status === 'cancelled');
+					break;
+				default:
+					filtered = orders;
+			}
+			return filtered;
+		},
 
-						// Сохраняем старые данные для сравнения
-						const oldOrders = [...this.currentOrders];
-						const oldCounts = { ...this.counts };
+		updateCounts(orders) {
+			const current = orders.filter(order => ['paid', 'processing'].includes(order.status));
+			const completed = orders.filter(order => order.status === 'completed');
+			const cancelled = orders.filter(order => order.status === 'cancelled');
+			
+			this.counts.current = current.length;
+			this.counts.completed = completed.length;
+			this.counts.cancelled = cancelled.length;
+		},
 
-						this.currentOrders = data.orders || [];
-						this.counts = data.counts || this.counts;
+		async updateOrdersInBackground() {
+			// Всегда проверяем обновления, если есть хотя бы один заказ
+			if (this.allOrders.length === 0) {
+				return; // Только если совсем нет заказов
+			}
 
-						// Проверяем, изменились ли статусы товаров
-						this.checkForStatusChanges(oldOrders, this.currentOrders);
-
-						// Проверяем, изменились ли счетчики вкладок
-						this.checkForCountChanges(oldCounts, this.counts);
-
-					} catch (error) {
-						console.error('Background status update failed:', error);
+			try {
+				const response = await orderAPI.getMySales(this.pagination?.current_page || 1);
+				if (response.success) {
+					const newAllOrders = response.data.data;
+					
+					// Проверяем, изменились ли заказы
+					const hasChanges = this.hasOrderChanges(this.allOrders, newAllOrders);
+					
+					if (hasChanges) {
+						this.allOrders = newAllOrders;
+						this.orders = this.filterOrdersByTab(this.allOrders);
+						this.updateCounts(this.allOrders);
 					}
+					
+					this.pagination = {
+						current_page: response.data.current_page,
+						last_page: response.data.last_page,
+						total: response.data.total
+					};
 				}
-			}, 10000); // 10 секунд
+			} catch (error) {
+				console.error('Background status update failed:', error);
+			}
 		},
 
 		stopStatusUpdates() {
@@ -461,25 +319,7 @@ export default {
 			}
 		},
 
-		checkForStatusChanges(oldOrders, newOrders) {
-			// Проверяем изменения статусов и показываем уведомления
-			for (const newItem of newOrders) {
-				const oldItem = oldOrders.find(o => o.id === newItem.id);
-				if (oldItem && oldItem.status !== newItem.status) {
-					// Статус изменился
-					if (newItem.status === 'cancelled' && oldItem.status === 'reserved') {
-						window.toast.warning(`Резерв товара "${newItem.item_name}" истек и был отменен`);
-					}
-				}
-			}
-		},
-
-		checkForCountChanges(oldCounts, newCounts) {
-			// Проверяем изменения в счетчиках вкладок - товары автоматически переносятся
-		},
-
 		canCancelOrder(order) {
-			// Можно отменить только активные заказы
 			return ['paid', 'processing'].includes(order.status) && !this.cancellingOrderId;
 		},
 
@@ -495,14 +335,14 @@ export default {
 			this.cancellingOrderId = this.orderToCancel.id;
 
 			try {
-				const response = await axios.post(`/api/orders/${this.orderToCancel.id}/cancel`);
-				
-				if (response.data.success) {
-					window.toast.success(response.data.message || 'Заказ успешно отменен');
-					// Обновляем данные
-					await this.loadSales();
+				const response = await orderAPI.cancelOrder(this.orderToCancel.id);
+
+				if (response.success) {
+					window.toast.success(response.message || 'Заказ успешно отменен');
+					// Обновляем список заказов
+					await this.loadOrders(this.pagination?.current_page || 1);
 				} else {
-					window.toast.error(response.data.message || 'Ошибка при отмене заказа');
+					window.toast.error(response.message || 'Ошибка при отмене заказа');
 				}
 			} catch (error) {
 				console.error('Cancel order error:', error);
@@ -518,100 +358,47 @@ export default {
 			}
 		},
 
-		getCurrentStep(order) {
-			// Шаг 1: Оплачен - всегда пройден
-			// Если есть история трейда - показываем детальный прогресс
-			// Если нет истории трейда - показываем сразу финальный статус
+		hasOrderChanges(oldOrders, newOrders) {
+			if (!oldOrders || !newOrders) return true;
+			if (oldOrders.length !== newOrders.length) return true;
 			
-			if (order.trade_status_history && order.trade_status_history.length > 0) {
-				// Есть история трейда - определяем шаг по последнему статусу
-				const lastStatus = order.trade_status_history[order.trade_status_history.length - 1].status;
-				if (order.status === 'completed') return 6; // Деньги переданы продавцу
-				if (order.status === 'cancelled') return 6; // Деньги возвращены покупателю
-				if (lastStatus === 'Accepted') return 5; // Завершен
-				if (lastStatus === 'Active') return 4; // Покупатель подтвердил
-				if (lastStatus === 'CreatedNeedsConfirmation') return 3; // Продавец подтвердил
-				if (lastStatus === 'Трейд создан в Steam') return 2; // Создан в Steam
-				return 2; // Любой другой статус трейда
-			} else {
-				// Нет истории трейда - показываем финальный статус заказа
-				if (order.status === 'completed') return 6; // Завершен
-				if (order.status === 'cancelled') return 6; // Отменен
-				return 1; // Только оплачен
+			// Проверяем изменения в заказах
+			for (let newOrder of newOrders) {
+				const oldOrder = oldOrders.find(o => o.id === newOrder.id);
+				if (!oldOrder) return true;
+				
+				// Проверяем изменения статуса
+				if (oldOrder.status !== newOrder.status) {
+					return true;
+				}
+				
+				// Проверяем изменения в истории статусов трейда
+				const oldHistoryLength = oldOrder.trade_status_history?.length || 0;
+				const newHistoryLength = newOrder.trade_status_history?.length || 0;
+				if (oldHistoryLength !== newHistoryLength) {
+					return true;
+				}
 			}
+			return false;
 		},
 
-		getStepClass(order, step) {
-			const currentStep = this.getCurrentStep(order);
-			
-			if (step <= currentStep) {
-				return 'bg-secondary'; // Пройденные этапы
-			} else {
-				return 'bg-secondary opacity-25'; // Предстоящие полупрозрачные
-			}
-		},
-
-		getStepTooltip(order, step) {
-			const tooltips = {
-				1: 'Заказ оплачен',
-				2: 'Создан трейд-офер в Steam',
-				3: 'Продавец подтвердил',
-				4: 'Покупатель подтвердил', 
-				5: 'Завершен'
+		getEmptyStateText() {
+			const texts = {
+				'current': 'Нет текущих заказов',
+				'completed': 'Нет успешных заказов',
+				'cancelled': 'Нет отмененных заказов'
 			};
-
-			// Показываем тултип для всех пройденных этапов
-			if (this.isStepCompleted(order, step)) {
-				return tooltips[step];
-			}
-
-			// Для текущих этапов тоже показываем
-			if (this.isStepCurrent(order, step)) {
-				switch (step) {
-					case 1: return 'Оплачивается...';
-					case 2: return 'Создается трейд-офер...';
-					case 3: return 'Ожидание подтверждения продавца';
-					case 4: return 'Ожидание подтверждения покупателя';
-					case 5: return 'Завершается...';
-					default: return tooltips[step];
-				}
-			}
-
-			// Для ошибочных состояний
-			if (this.isStepFailed(order, step)) {
-				switch (step) {
-					case 2: return 'Отменен: ' + (order.trade_status === 'Expired' ? 'истек срок резерва' : 'трейд отклонен');
-					default: return 'Отменен';
-				}
-			}
-
-			return null;
+			return texts[this.activeTab] || 'Нет заказов';
 		},
 
-		hasActiveProgress(order, fromStep, toStep) {
-			// Показываем анимацию если текущий этап = fromStep
-			return this.isStepCurrent(order, toStep);
+		getEmptyStateSubtext() {
+			const texts = {
+				'current': 'Заказы в обработке отображаются здесь',
+				'completed': 'Успешно завершенные покупки будут отображаться здесь',
+				'cancelled': 'Отмененные и проблемные заказы появятся в этом списке'
+			};
+			return texts[this.activeTab] || '';
 		}
 	}
 }
 </script>
-
-<style scoped>
-@keyframes moveRight {
-	0% {
-		left: -20px;
-		opacity: 0;
-	}
-	50% {
-		opacity: 1;
-	}
-	100% {
-		left: 100%;
-		opacity: 0;
-	}
-}
-
-.animate-progress {
-	border-radius: 1px;
-}
-</style>

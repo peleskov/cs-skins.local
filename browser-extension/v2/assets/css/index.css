@@ -348,6 +348,13 @@ body.expanded .popup-container {
     display: flex;
 }
 
+.loader-toggle {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 10000;
+}
+
 .loader-content {
     text-align: center;
     background: var(--bg-primary);

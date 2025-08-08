@@ -18,7 +18,7 @@ class TradeService
     {
         $this->sessionCache = $sessionCache;
     }
-    
+
     // Статусы ошибок Steam (копируем из Node.js версии)
     public const ERROR_TRADE_BAN = 'TradeBan';
     public const ERROR_NEW_DEVICE = 'NewDevice';
@@ -42,7 +42,7 @@ class TradeService
 
         $seller = Client::find($tradeOffer->seller_id);
         $buyer = Client::find($tradeOffer->buyer_id);
-        
+
         if (!$seller || !$buyer) {
             throw new Exception('Seller or buyer not found');
         }
@@ -52,7 +52,7 @@ class TradeService
         }
 
         $sessionData = $this->sessionCache->get($seller->id);
-        
+
         if (!$sessionData) {
             throw new Exception('No cached Steam session available for seller');
         }
@@ -60,7 +60,7 @@ class TradeService
         // Подготавливаем данные для Steam Community (точно как в Node.js)
         $offerData = $this->buildOfferData($tradeOffer->asset_ids);
         $params = $this->buildTradeParams($buyer->steam_trade_url);
-        
+
         $formData = [
             'sessionid' => $sessionData['sessionid'],
             'serverid' => 1,
@@ -74,21 +74,23 @@ class TradeService
 
         // Формируем referer как в Node.js
         $token = $this->extractTokenFromTradeUrl($buyer->steam_trade_url);
-        $referer = "https://steamcommunity.com/tradeoffer/new/?partner={$buyer->getAccountId()}" . 
-                   ($token ? "&token={$token}" : '');
+        $referer = "https://steamcommunity.com/tradeoffer/new/?partner={$buyer->getAccountId()}" .
+            ($token ? "&token={$token}" : '');
 
+        /*
         Log::info('Creating Steam trade offer', [
             'trade_offer_id' => $tradeOffer->id,
             'seller_id' => $seller->id,
             'buyer_id' => $buyer->id,
             'asset_count' => count($tradeOffer->asset_ids)
         ]);
+        */
 
         // Делаем запрос к Steam Community с cookies сессии
         $response = Http::withHeaders([
-                'Referer' => $referer,
-                'Cookie' => $this->buildCookieHeader($sessionData)
-            ])
+            'Referer' => $referer,
+            'Cookie' => $this->buildCookieHeader($sessionData)
+        ])
             ->timeout(30)
             ->asForm()
             ->post('https://steamcommunity.com/tradeoffer/new/send', $formData);
@@ -111,7 +113,7 @@ class TradeService
         }
 
         $sessionData = $this->sessionCache->get($seller->id);
-        
+
         if (!$sessionData) {
             throw new Exception('No cached Steam session available for seller');
         }
@@ -120,17 +122,17 @@ class TradeService
         try {
             $currentStatus = $this->checkTradeStatus($tradeOffer->steam_trade_offer_id, $tradeOffer->seller_id);
             $tradeOffer->update(['status' => $currentStatus]);
-            
+
             // Проверяем можно ли отменить
             $cancelableStatuses = ['Active', 'CreatedNeedsConfirmation'];
-            
+
             if (!in_array($currentStatus, $cancelableStatuses)) {
                 Log::channel('steam_api')->warning('Trade offer cannot be cancelled in current status', [
                     'trade_offer_id' => $tradeOffer->id,
                     'steam_trade_offer_id' => $tradeOffer->steam_trade_offer_id,
                     'current_status' => $currentStatus
                 ]);
-                
+
                 return [
                     'success' => false,
                     'status' => $currentStatus,
@@ -147,13 +149,13 @@ class TradeService
 
         $buyer = Client::find($tradeOffer->buyer_id);
         $token = $this->extractTokenFromTradeUrl($buyer->steam_trade_url);
-        $referer = "https://steamcommunity.com/tradeoffer/{$tradeOffer->steam_trade_offer_id}/?partner={$buyer->getAccountId()}" . 
-                   ($token ? "&token={$token}" : '');
+        $referer = "https://steamcommunity.com/tradeoffer/{$tradeOffer->steam_trade_offer_id}/?partner={$buyer->getAccountId()}" .
+            ($token ? "&token={$token}" : '');
 
         $response = Http::withHeaders([
-                'Referer' => $referer,
-                'Cookie' => $this->buildCookieHeader($sessionData)
-            ])
+            'Referer' => $referer,
+            'Cookie' => $this->buildCookieHeader($sessionData)
+        ])
             ->timeout(15)
             ->asForm()
             ->post("https://steamcommunity.com/tradeoffer/{$tradeOffer->steam_trade_offer_id}/cancel", [
@@ -170,7 +172,7 @@ class TradeService
     private function buildOfferData(array $assetIds): array
     {
         $assets = [];
-        
+
         foreach ($assetIds as $assetId) {
             if (strpos($assetId, '_') !== false) {
                 [$contextId, $actualAssetId] = explode('_', $assetId, 2);
@@ -178,7 +180,7 @@ class TradeService
                 $contextId = '2'; // CS2 context
                 $actualAssetId = $assetId;
             }
-            
+
             $assets[] = [
                 'appid' => 730, // CS2
                 'contextid' => $contextId,
@@ -209,12 +211,12 @@ class TradeService
     private function buildTradeParams(string $tradeUrl): array
     {
         $params = [];
-        
+
         $token = $this->extractTokenFromTradeUrl($tradeUrl);
         if ($token) {
             $params['trade_offer_access_token'] = $token;
         }
-        
+
         return $params;
     }
 
@@ -226,7 +228,7 @@ class TradeService
         if (preg_match('/[?&]token=([a-zA-Z0-9_-]+)/', $tradeUrl, $matches)) {
             return $matches[1];
         }
-        
+
         return null;
     }
 
@@ -236,15 +238,15 @@ class TradeService
     private function buildCookieHeader(array $sessionData): string
     {
         $cookies = [];
-        
+
         if (isset($sessionData['sessionid'])) {
             $cookies[] = "sessionid={$sessionData['sessionid']}";
         }
-        
+
         if (isset($sessionData['steamLoginSecure'])) {
             $cookies[] = "steamLoginSecure={$sessionData['steamLoginSecure']}";
         }
-        
+
         return implode('; ', $cookies);
     }
 
@@ -263,7 +265,7 @@ class TradeService
         }
 
         $body = $response->json();
-        
+
         if (!$body) {
             throw new Exception('Malformed JSON response');
         }
@@ -274,7 +276,7 @@ class TradeService
                 'error_message' => $body['strError'],
                 'response_body' => $body
             ]);
-            
+
             $this->parseSteamError($body['strError']);
             throw new Exception($body['strError']);
         }
@@ -289,41 +291,43 @@ class TradeService
 
         // Определяем статус на основе ответа Steam
         $steamStatus = 'Active'; // По умолчанию Active
-        
+
         if (isset($body['needs_email_confirmation']) && $body['needs_email_confirmation']) {
             $steamStatus = 'CreatedNeedsConfirmation';
         }
-        
+
         if (isset($body['needs_mobile_confirmation']) && $body['needs_mobile_confirmation']) {
             $steamStatus = 'CreatedNeedsConfirmation';
         }
-        
+
         $tradeOffer->steam_trade_offer_id = $body['tradeofferid'];
         $tradeOffer->status = $steamStatus;
         $tradeOffer->save();
 
+        /*
         Log::info('Steam trade offer created successfully', [
             'trade_offer_id' => $tradeOffer->id,
             'steam_trade_offer_id' => $body['tradeofferid'],
             'steam_status' => $steamStatus
         ]);
+        */
 
         // Определяем результат для Order
         if ($steamStatus === 'Active') {
             return ['success' => true, 'message' => 'Успех'];
         }
-        
+
         if ($steamStatus === 'CreatedNeedsConfirmation') {
             return ['success' => true, 'message' => 'Успех, ждем подтверждения продавца'];
         }
-        
+
         // Все остальные статусы (не должно случиться при создании)
         Log::channel('steam_api')->warning('Unexpected Steam status during trade creation', [
             'status' => $steamStatus,
             'trade_offer_id' => $tradeOffer->id,
             'response_body' => $body
         ]);
-        
+
         return ['success' => false, 'message' => 'Продавец недоступен или достиг лимита на трейды'];
     }
 
@@ -342,7 +346,7 @@ class TradeService
         }
 
         $body = $response->json();
-        
+
         if (!$body) {
             throw new Exception('Malformed JSON response');
         }
@@ -353,7 +357,7 @@ class TradeService
                 'error_message' => $body['strError'],
                 'response_body' => $body
             ]);
-            
+
             $this->parseSteamError($body['strError']);
             throw new Exception($body['strError']);
         }
@@ -421,7 +425,7 @@ class TradeService
         }
 
         $sessionData = $this->sessionCache->get($seller->id);
-        
+
         if (!$sessionData) {
             throw new Exception('No cached Steam session available for seller');
         }
@@ -433,7 +437,7 @@ class TradeService
 
         // Извлекаем access_token из steamLoginSecure cookie (как в steam-tradeoffer-manager)
         $accessToken = $this->extractAccessTokenFromSession($sessionData);
-        
+
         if (!$accessToken) {
             throw new Exception('Access token not found in session data');
         }
@@ -451,7 +455,7 @@ class TradeService
         }
 
         $body = $response->json();
-        
+
         if (!$body || !isset($body['response'])) {
             throw new Exception('Malformed API response');
         }
@@ -481,7 +485,7 @@ class TradeService
         $cacheKey = "trade_statuses_{$sellerId}";
         $cacheTtl = (int) env('MAX_RESERVATION_TIME_MINUTES', 120) * 60;
         $cachedStatuses = Cache::get($cacheKey, []);
-        
+
         $hasChanges = false;
 
         foreach ($steamTrades as $steamTrade) {
@@ -505,7 +509,7 @@ class TradeService
 
                 $newStatusText = $this->mapTradeOfferState($newStatus);
                 $tradeOffer->update(['status' => $newStatusText]);
-                
+
                 $cachedStatuses[$steamTradeOfferId] = $newStatus;
                 $hasChanges = true;
             }
@@ -527,7 +531,7 @@ class TradeService
 
         $cookieValue = urldecode($sessionData['steamLoginSecure']);
         $parts = explode('||', $cookieValue);
-        
+
         if (count($parts) < 2) {
             return null;
         }

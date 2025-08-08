@@ -161,6 +161,37 @@ class OrderController extends Controller
     }
 
     /**
+     * Получить продажи пользователя
+     */
+    public function getMySales(): JsonResponse
+    {
+        if (!auth('client')->check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Необходимо авторизоваться'
+            ], 401);
+        }
+
+        try {
+            $orders = Order::with(['buyer:id,name,steam_id', 'tradeOffer.statusHistory'])
+                ->where('seller_id', auth('client')->id())
+                ->orderBy('created_at', 'desc')
+                ->paginate(10);
+
+            return response()->json([
+                'success' => true,
+                'data' => $orders
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ошибка при получении продаж: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Валидация корзины
      */
     private function validateCart(): void

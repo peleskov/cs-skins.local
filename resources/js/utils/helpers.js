@@ -168,7 +168,9 @@ export function getTimeRemaining(endTime) {
         return `${hours}ч ${minutes}м ${seconds}с`;
     } else if (minutes > 0) {
         return `${minutes}м ${seconds}с`;
-    } else {
+    } else if (seconds > 0) {
         return `${seconds}с`;
+    } else {
+        return 'Истек';
     }
 }

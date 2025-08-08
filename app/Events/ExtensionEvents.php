@@ -283,17 +283,17 @@ class ExtensionEvents implements ShouldBroadcastNow
             
         $sentTrades = \App\Models\TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
-            ->where('status', \App\Models\TradeOffer::STATUS_SENT)
+            ->where('status', \App\Models\TradeOffer::STATUS_ACTIVE)
             ->count();
         
         $completedTrades = \App\Models\TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
-            ->where('status', \App\Models\TradeOffer::STATUS_COMPLETED)
+            ->where('status', \App\Models\TradeOffer::STATUS_ACCEPTED)
             ->count();
         
         $cancelledTrades = \App\Models\TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
-            ->where('status', \App\Models\TradeOffer::STATUS_CANCELLED)
+            ->where('status', \App\Models\TradeOffer::STATUS_CANCELED)
             ->count();
         
         // Всего трейдов за сегодня

@@ -30,6 +30,7 @@ class TradeOfferObserver
             $oldStatus = $tradeOffer->getOriginal('status');
             $newStatus = $tradeOffer->status;
             
+            /*
             Log::info('Trade offer status changed', [
                 'trade_offer_id' => $tradeOffer->id,
                 'steam_trade_offer_id' => $tradeOffer->steam_trade_offer_id,
@@ -37,21 +38,16 @@ class TradeOfferObserver
                 'new_status' => $newStatus,
                 'order_id' => $tradeOffer->order_id
             ]);
-
-            // Если получили steam_trade_offer_id (трейд успешно создан), добавляем запись о создании
-            if ($tradeOffer->wasChanged('steam_trade_offer_id') && $tradeOffer->steam_trade_offer_id) {
-                Log::info('Recording trade creation history', [
-                    'trade_offer_id' => $tradeOffer->id,
-                    'steam_trade_offer_id' => $tradeOffer->steam_trade_offer_id
-                ]);
-                $this->recordStatusHistory($tradeOffer, 'Трейд создан в Steam');
-            }
+            */
 
             // Записываем изменение статуса
+            /*
             Log::info('Recording status change history', [
                 'trade_offer_id' => $tradeOffer->id,
                 'status' => $newStatus
             ]);
+            */
+            
             $this->recordStatusHistory($tradeOffer, $newStatus);
             $this->processFinalizedStatus($tradeOffer, $newStatus);
         }
@@ -120,10 +116,11 @@ class TradeOfferObserver
             $timestamp = now();
             
             // Проверяем если запись с таким же временем уже существует
+            // Так как MySQL timestamp имеет точность до секунд, добавляем целую секунду
             while (TradeOfferStatusHistory::where('trade_offer_id', $tradeOffer->id)
-                ->where('created_at', $timestamp)
+                ->where('created_at', $timestamp->format('Y-m-d H:i:s'))
                 ->exists()) {
-                $timestamp = $timestamp->addMicrosecond();
+                $timestamp = $timestamp->addSecond();
             }
             
             TradeOfferStatusHistory::create([

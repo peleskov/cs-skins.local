@@ -48,6 +48,7 @@ class PopupManager {
     bindEvents() {
         document.getElementById('authorizeBtn').addEventListener('click', () => this.handleAuthorize());
         document.getElementById('toggleBtn').addEventListener('click', () => this.handleToggle());
+        document.getElementById('loaderLogoutBtn').addEventListener('click', () => this.handleToggle());
         document.querySelector('.notification-close').addEventListener('click', () => this.hideNotification());
         
         chrome.runtime.onMessage.addListener((message) => {
@@ -211,6 +212,7 @@ class PopupManager {
 
     async handleToggle() {
         try {
+            this.hideLoader();
             await chrome.runtime.sendMessage({ type: 'LOGOUT' });
             this.showView('unauthorized');
             this.showNotification('Расширение отключено', 'success');
@@ -255,13 +257,15 @@ class PopupManager {
     
     showLoader(text = 'Загрузка...') {
         const loader = document.getElementById('fullscreenLoader');
+        if (!loader) return;
         const loaderText = loader.querySelector('.loader-text');
-        loaderText.innerHTML = text;
+        if (loaderText) loaderText.innerHTML = text;
         loader.classList.add('active');
     }
     
     hideLoader() {
         const loader = document.getElementById('fullscreenLoader');
+        if (!loader) return;
         loader.classList.remove('active');
     }
     

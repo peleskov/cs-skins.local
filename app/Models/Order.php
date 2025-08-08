@@ -91,6 +91,13 @@ class Order extends Model
     public function complete(): void
     {
         $this->update(['status' => self::STATUS_COMPLETED]);
+        
+        // Помечаем зарезервированные листинги как проданные
+        Listing::where('reserved_by_order_id', $this->id)->update([
+            'status' => Listing::STATUS_SOLD,
+            'sold_at' => now(),
+            'buyer_id' => $this->buyer_id
+        ]);
     }
 
     public function getTradeStatusHistoryAttribute(): array
@@ -105,20 +112,12 @@ class Order extends Model
             ->get()
             ->map(function ($history) {
                 return [
-                    'status' => $this->mapToFinalStatus($history->status),
+                    'status' => $history->status,
                     'created_at' => $history->created_at
                 ];
             })
             ->toArray();
     }
 
-    private function mapToFinalStatus(string $status): string
-    {
-        return match($status) {
-            'Accepted' => 'completed',
-            'Declined', 'Expired', 'Canceled' => 'cancelled',
-            default => $status
-        };
-    }
 
 }

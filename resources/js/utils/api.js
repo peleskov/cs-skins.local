@@ -117,7 +117,19 @@ class OrderAPI {
      */
     async getMyOrders(page = 1) {
         try {
-            const response = await axios.get(`${this.baseUrl}/my?page=${page}`);
+            const response = await axios.get(`${this.baseUrl}/purchases?page=${page}`);
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Получить мои продажи
+     */
+    async getMySales(page = 1) {
+        try {
+            const response = await axios.get(`${this.baseUrl}/sales?page=${page}`);
             return response.data;
         } catch (error) {
             throw error;

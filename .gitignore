@@ -29,3 +29,9 @@ _template/backend
 _docs/TODO.md
 _docs/TODO.md
 tmp
+bitskins-screenshot.cjs
+_docs/cs2inspects-screenshot.cjs
+.gitignore
+_docs/cs2inspects-screenshot.min.js
+_docs/donors_skins.md
+_docs/plan_botbuyer.md

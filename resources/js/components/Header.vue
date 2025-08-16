@@ -1,6 +1,6 @@
 <template>
 	<header>
-		<div class="container">
+		<div class="container-fluid">
 			<nav class="navbar navbar-expand-lg p-0">
 				<button class="navbar-toggler" type="button" data-bs-toggle="collapse"
 					data-bs-target="#offcanvasNavbar">
@@ -8,7 +8,7 @@
 						<i class="ri-menu-line"></i>
 					</span>
 				</button>
-				<a :href="routes.home">
+				<a class="me-lg-3 me-xl-5" :href="routes.home">
 					<img class="img-fluid logo" :src="logoUrl" alt="logo">
 				</a>
 				<div class="nav-option order-md-2">
@@ -93,9 +93,9 @@
 						<button class="navbar-toggler btn-close" id="offcanvas-close"></button>
 					</div>
 					<div class="offcanvas-body">
-						<ul class="navbar-nav justify-content-center flex-grow-1">
+						<ul class="navbar-nav justify-content-start flex-grow-1">
 							<li v-for="(item, key) in mainNavigation" :key="key" class="nav-item">
-								<a class="nav-link" :href="getNavigationUrl(item.route)">{{ item.title }}</a>
+								<a class="nav-link pt-1" :href="getNavigationUrl(item.route)">{{ item.title }}</a>
 							</li>
 						</ul>
 					</div>

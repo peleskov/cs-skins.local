@@ -215,6 +215,15 @@ return [
                 'timeout' => 300,
                 'nice' => 0,
             ],
+            'screenshots' => [
+                'connection' => 'redis',
+                'queue' => ['screenshots'],
+                'balance' => 'simple',
+                'maxProcesses' => 2, // только 2 процесса для скриншотов
+                'tries' => 3,
+                'timeout' => 120, // 2 минуты таймаут
+                'nice' => 10, // низкий приоритет
+            ],
         ],
 
         'local' => [
@@ -233,6 +242,15 @@ return [
                 'tries' => 3,
                 'timeout' => 300,
                 'nice' => 0,
+            ],
+            'screenshots' => [
+                'connection' => 'redis',
+                'queue' => ['screenshots'],
+                'balance' => 'simple',
+                'maxProcesses' => 1, // 1 процесс для local
+                'tries' => 3,
+                'timeout' => 120,
+                'nice' => 10,
             ],
         ],
     ],

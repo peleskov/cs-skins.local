@@ -34,7 +34,7 @@
         .form-control {
           padding: calc(10px + (12 - 10) * ((100vw - 320px) / (1920 - 320)));
           border: 1px solid rgba(var(--dashed-line), 1);
-            color: rgba(var(--dark-text), 0.8);
+          color: rgba(var(--dark-text), 0.8);
 
           &:focus {
             box-shadow: none;
@@ -195,5 +195,19 @@
         border-color: rgba(var(--dashed-line), 1);
       }
     }
+  }
+}
+
+#screenshotModal {
+  .btn-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    z-index: 10;
+  }
+
+  .carousel-control-prev,
+  .carousel-control-next {
+    filter: invert(1);
   }
 }

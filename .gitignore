@@ -16,10 +16,12 @@
 /public/build
 /public/hot
 /public/storage
+/public/images
 /storage/*.key
 /storage/pail
 /vendor
 /_template
+/_tests
 Homestead.json
 Homestead.yaml
 Thumbs.db

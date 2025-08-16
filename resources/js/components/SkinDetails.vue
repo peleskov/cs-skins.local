@@ -47,6 +47,11 @@
                                     class="btn btn-sm theme-outline">
                                     <i class="ri-external-link-line me-1"></i>В Steam
                                 </a>
+                                <button v-if="hasScreenshots()" 
+                                    @click="showScreenshots"
+                                    class="btn btn-sm theme-outline">
+                                    <i class="ri-image-line me-1"></i>Скриншоты
+                                </button>
                             </div>
                         </div>
 
@@ -72,9 +77,6 @@
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <div>
                                     <h3 class="price mb-0">{{ formatPrice(listing.price) }} ₽</h3>
-                                    <p v-if="listing.item?.steam_price_rub" class="steam-price text-muted mb-0">
-                                        Steam: {{ formatPrice(listing.item.steam_price_rub) }} ₽
-                                    </p>
                                 </div>
                                 <div>
                                     <p class="seller-info text-muted mb-0">
@@ -105,7 +107,7 @@
                                 <div class="col-12">
                                     <div class="info-item">
                                         <span class="info-label">Тип:</span>
-                                        <span class="info-value">{{ listing.inventory_type || listing.item?.type }}</span>
+                                        <span class="info-value">{{ listing.inventory_type }}</span>
                                     </div>
                                 </div>
                                 <div class="col-12">
@@ -140,14 +142,8 @@
                                 </div>
                                 <div class="col-12">
                                     <div class="info-item">
-                                        <span class="info-label">ID предмета:</span>
-                                        <span class="info-value">{{ listing.item?.id }}</span>
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <div class="info-item">
-                                        <span class="info-label">Лотов на Steam:</span>
-                                        <span class="info-value">{{ listing.item?.steam_listings_count }}</span>
+                                        <span class="info-label">Asset ID:</span>
+                                        <span class="info-value">{{ listing.steam_asset_id }}</span>
                                     </div>
                                 </div>
                                 <!-- Теги из новой системы -->
@@ -162,24 +158,6 @@
 
                         <!-- Информация о валидности -->
                         <div class="validity-info-box mb-4">
-                            <div v-if="listing.item?.is_valid" class="validity-item valid">
-                                <div class="validity-icon">
-                                    <i class="ri-checkbox-circle-line"></i>
-                                </div>
-                                <div class="validity-content">
-                                    <h6 class="validity-title">Доступна быстрая продажа боту</h6>
-                                    <p class="validity-price">Цена выкупа: <span class="price-value">{{ formatPrice(listing.item?.buyout_price || 0) }} ₽</span></p>
-                                </div>
-                            </div>
-                            <div v-else class="validity-item invalid">
-                                <div class="validity-icon">
-                                    <i class="ri-information-line"></i>
-                                </div>
-                                <div class="validity-content">
-                                    <h6 class="validity-title">Не востребован</h6>
-                                    <p class="validity-description">Менее 200 лотов на Steam маркете</p>
-                                </div>
-                            </div>
                         </div>
 
                     </div>
@@ -311,16 +289,7 @@ export default {
                 return `https://community.steamstatic.com/economy/image/${this.listing.inventory_icon_url}`;
             }
             
-            // Изображения по износу
-            const wearValue = this.listing.wear_value;
-            const item = this.listing.item;
-            
-            if (wearValue <= 0.07 && item?.image_fn) return item.image_fn;
-            if (wearValue <= 0.15 && item?.image_mw) return item.image_mw;
-            if (wearValue <= 0.38 && item?.image_ft) return item.image_ft;
-            if (wearValue <= 0.45 && item?.image_ww) return item.image_ww;
-            if (item?.image_bs) return item.image_bs;
-            if (item?.image_url) return item.image_url;
+            // Fallback к стандартному изображению без категории
             
             return '/images/skin_no_image.svg';
         },
@@ -391,6 +360,91 @@ export default {
 
         handleImageError(event) {
             event.target.closest('.product-main-image').classList.add('image-error');
+        },
+        
+        hasScreenshots() {
+            return this.listing?.screenshots === 1 && this.listing?.screenshot_urls;
+        },
+        
+        showScreenshots() {
+            if (!this.hasScreenshots()) return;
+            
+            const screenshots = [];
+            
+            // Используем screenshot_urls из API
+            if (this.listing.screenshot_urls) {
+                if (this.listing.screenshot_urls.front) {
+                    screenshots.push({
+                        url: this.listing.screenshot_urls.front,
+                        type: 'front',
+                        title: 'Передняя сторона'
+                    });
+                }
+                
+                if (this.listing.screenshot_urls.back) {
+                    screenshots.push({
+                        url: this.listing.screenshot_urls.back,
+                        type: 'back',
+                        title: 'Задняя сторона'
+                    });
+                }
+            }
+            
+            // Создаем модальное окно для показа скриншотов
+            this.openScreenshotModal(screenshots);
+        },
+        
+        openScreenshotModal(screenshots) {
+            // Создаем HTML для модального окна
+            const modalHtml = `
+                <div class="modal fade" id="screenshotModal" tabindex="-1">
+                    <div class="modal-dialog modal-xl modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-body p-0 position-relative">
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                <div id="screenshotCarousel" class="carousel slide" data-bs-ride="carousel">
+                                    <div class="carousel-inner">
+                                        ${screenshots.map((s, i) => `
+                                            <div class="carousel-item ${i === 0 ? 'active' : ''}">
+                                                <img src="${s.url}" class="d-block w-100" alt="${s.title || 'Screenshot'}">
+                                                <div class="carousel-caption d-none d-md-block">
+                                                    <h5>${s.title || 'Скриншот'}</h5>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    ${screenshots.length > 1 ? `
+                                        <button class="carousel-control-prev" type="button" data-bs-target="#screenshotCarousel" data-bs-slide="prev">
+                                            <span class="carousel-control-prev-icon"></span>
+                                        </button>
+                                        <button class="carousel-control-next" type="button" data-bs-target="#screenshotCarousel" data-bs-slide="next">
+                                            <span class="carousel-control-next-icon"></span>
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Удаляем старое модальное окно если есть
+            const oldModal = document.getElementById('screenshotModal');
+            if (oldModal) {
+                oldModal.remove();
+            }
+            
+            // Добавляем новое модальное окно
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Показываем модальное окно
+            const modal = new bootstrap.Modal(document.getElementById('screenshotModal'));
+            modal.show();
+            
+            // Удаляем модальное окно после закрытия
+            document.getElementById('screenshotModal').addEventListener('hidden.bs.modal', function() {
+                this.remove();
+            });
         },
     }
 };

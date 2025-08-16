@@ -1,5 +1,5 @@
 <!-- categories section starts -->
-<section class="categories-section section-b-space">
+<section class="categories-section section-b-space pt-3">
     <div class="container-fluid">
         <div class="theme-arrow">
             <div class="swiper categories-slider categories-style">

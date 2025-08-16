@@ -48,4 +48,8 @@ Artisan::command('extension:list {--path=storage/app/extensions : Directory to l
     
 })->purpose('List packed browser extensions');
 
-// Планировщик задач больше не нужен - используем отложенные jobs
+// Планировщик задач
+Schedule::job(new \App\Jobs\ProcessSkinScreenshots())
+    ->everyMinute()
+    ->onOneServer()
+    ->withoutOverlapping();

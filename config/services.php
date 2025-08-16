@@ -45,4 +45,10 @@ return [
         'force_https' => true,
     ],
 
+    'bitskins' => [
+        'auth_token' => env('BITSKINS_AUTH_TOKEN'),
+        'api_base_url' => env('BITSKINS_API_BASE_URL', 'https://api.bitskins.com'),
+        'image_base_url' => env('BITSKINS_IMAGE_BASE_URL', 'https://ss.bitskins.com'),
+    ],
+
 ];

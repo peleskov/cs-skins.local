@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', $listing->item->name_ru . ' - CS2 Marketplace')
+@section('title', ($listing->inventory_item_name ?: $listing->market_hash_name ?: 'Неизвестный предмет') . ' - CS2 Marketplace')
 
 @section('content')
 @include('partials.breadcrumbs', [
-    'title' => $listing->item->name_ru,
+    'title' => $listing->inventory_item_name ?: $listing->market_hash_name ?: 'Неизвестный предмет',
     'breadcrumbs' => [
         ['title' => 'Маркетплейс', 'url' => route('marketplace.index')],
-        ['title' => $listing->item->name_ru]
+        ['title' => $listing->inventory_item_name ?: $listing->market_hash_name ?: 'Неизвестный предмет']
     ]
 ])
 

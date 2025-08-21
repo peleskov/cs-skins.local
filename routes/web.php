@@ -11,6 +11,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\FavoritesController;
 use App\Http\Controllers\ExtensionController;
+use App\Models\Currency;
 
 // Публичные маршруты
 Route::controller(WebController::class)->group(function () {
@@ -51,6 +52,16 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::get('/csrf-token', function () {
         return response()->json(['csrf_token' => csrf_token()]);
     })->name('csrf-token');
+    
+    // Валюты
+    Route::get('/currencies', function () {
+        $currencies = Currency::where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['code', 'name', 'symbol', 'is_primary', 'exchange_rate']);
+        
+        return response()->json($currencies);
+    })->name('currencies');
     
     // Маршруты для корзины с rate limiting
     Route::prefix('cart')->name('cart.')->controller(CartController::class)->group(function () {

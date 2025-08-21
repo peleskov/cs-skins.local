@@ -859,7 +859,7 @@ class MarketplaceController extends Controller
      */
     public function getListingDetails(Listing $listing): JsonResponse
     {
-        $listing->load(['item', 'seller', 'tags']);
+        $listing->load(['item', 'seller', 'tags', 'inventoryItem.steamMarketItem.priceHistory']);
         
         // Другие предложения этого же предмета
         $otherListings = Listing::with(['seller'])
@@ -889,6 +889,28 @@ class MarketplaceController extends Controller
             $otherListing->is_favorite = $favoriteItemIds->contains($otherListing->id);
         });
 
+        // Получаем историю цен Steam Market за последние 30 дней
+        $steamPriceHistory = [];
+        $steamPriceStats = null;
+        
+        if ($listing->inventoryItem?->steamMarketItem?->priceHistory) {
+            $priceHistory = $listing->inventoryItem->steamMarketItem->priceHistory()
+                ->where('date', '>=', now()->subDays(30))
+                ->orderBy('date')
+                ->get(['date', 'price', 'volume']);
+                
+            $steamPriceHistory = $priceHistory->toArray();
+            
+            if ($priceHistory->count() > 0) {
+                $steamPriceStats = [
+                    'avg_price' => round($priceHistory->avg('price'), 2),
+                    'min_price' => round($priceHistory->min('price'), 2),
+                    'max_price' => round($priceHistory->max('price'), 2),
+                    'total_volume' => $priceHistory->sum('volume'),
+                ];
+            }
+        }
+
         return response()->json([
             'listing' => [
                 'id' => $listing->id,
@@ -914,6 +936,8 @@ class MarketplaceController extends Controller
                     'id' => $listing->seller->id,
                     'name' => $listing->seller->name,
                 ],
+                'steam_price_history' => $steamPriceHistory,
+                'steam_price_stats' => $steamPriceStats,
             ],
             'otherListings' => $otherListings->map(function ($other) {
                 return [

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\ClientInventoryItem;
 use App\Models\Listing;
+use App\Models\Tag;
 use App\Services\Steam\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -251,53 +252,27 @@ class InventoryController extends Controller
             // Обновляем флаги на основе тегов
             $listing->wear_value = $inventoryItem->float_value;
             if ($inventoryItem->quality_id) {
-                $quality = \DB::table('tags')->where('id', $inventoryItem->quality_id)->first();
+                $quality = Tag::find($inventoryItem->quality_id);
                 if ($quality) {
                     $listing->is_stattrak = $quality->normalized_value === 'stattrak';
                     $listing->is_souvenir = $quality->normalized_value === 'souvenir';
                 }
             }
             
-            // Получаем скриншот через Swap.gg API и сохраняем на диск
-            Log::info('Attempting to get screenshot', [
-                'inspect_url' => $listing->inspect_url,
-                'steam_asset_id' => $steamAssetId
-            ]);
-            
-            $floatData = $this->getScreenshotFromSwapGG($listing->inspect_url, $steamAssetId);
-            
-            Log::info('Screenshot result', [
-                'float_data' => $floatData,
-                'steam_asset_id' => $steamAssetId
-            ]);
-            
-            // Обновляем float если получили более точное значение
-            if ($floatData && isset($floatData['float'])) {
-                $listing->float_value = (float)$floatData['float'];
-                Log::info('Updated float value', [
-                    'new_float' => $listing->float_value,
-                    'steam_asset_id' => $steamAssetId
-                ]);
-            }
+            // Скриншоты теперь получаем через BitSkins в SkinScreenshotService
             
             $listing->save();
             
-            // Копируем все теги из инвентаря в листинг
-            $inventoryTags = \DB::table('item_tags')
-                ->where('item_id', $inventoryItem->id)
-                ->where('item_type', 'inventory')
-                ->get();
+            // Копируем все теги из инвентаря в листинг используя Eloquent
+            $inventoryItem->load('tags'); // Загружаем теги если еще не загружены
+            
+            if ($inventoryItem->tags->isNotEmpty()) {
+                // Получаем ID всех тегов
+                $tagIds = $inventoryItem->tags->pluck('id')->toArray();
                 
-            if ($inventoryTags->count() > 0) {
-                $listingTags = [];
-                foreach ($inventoryTags as $tag) {
-                    $listingTags[] = [
-                        'item_id' => $listing->id,
-                        'item_type' => 'listing',
-                        'tag_id' => $tag->tag_id,
-                    ];
-                }
-                \DB::table('item_tags')->insert($listingTags);
+                // Присоединяем теги к листингу
+                // sync() автоматически добавит item_type через отношение
+                $listing->tags()->sync($tagIds);
             }
             
             return response()->json([
@@ -323,52 +298,6 @@ class InventoryController extends Controller
         }
     }
 
-    /*
-    public function show($assetId)
-    {
-        $client = Auth::guard('client')->user();
-        
-        $inventoryItem = ClientInventoryItem::where('client_id', $client->id)
-            ->where('steam_asset_id', $assetId)
-            ->with('item')
-            ->firstOrFail();
-
-        return view('inventory.show', compact('inventoryItem'));
-    }
-
-    public function sell($assetId)
-    {
-        $client = Auth::guard('client')->user();
-        
-        $inventoryItem = ClientInventoryItem::where('client_id', $client->id)
-            ->where('steam_asset_id', $assetId)
-            ->with('item')
-            ->firstOrFail();
-
-        // Проверяем что предмет можно продать
-        if (!$inventoryItem->tradable) {
-            return redirect()->back()
-                ->with('error', 'Данный предмет нельзя продать');
-        }
-
-        // Проверяем что предмет все еще в инвентаре Steam
-        if (!$this->steamInventoryService->validateItemOwnership($client->steam_id, $assetId)) {
-            return redirect()->route('inventory.index')
-                ->with('error', 'Предмет больше не найден в вашем Steam инвентаре');
-        }
-
-        // Получаем рекомендуемую цену
-        $recommendedPrice = $this->calculateRecommendedPrice($inventoryItem);
-
-        return view('inventory.sell', compact('inventoryItem', 'recommendedPrice'));
-    }
-
-    public function createListing(Request $request, $assetId)
-    {
-        return redirect()->route('inventory.index')
-            ->with('success', 'Функция продажи будет реализована позже');
-    }
-    */
 
     private function syncInventory(Client $client): array
     {
@@ -398,158 +327,4 @@ class InventoryController extends Controller
         
         return "steam://rungame/730/76561202255233023/+csgo_econ_action_preview S{$steamId}A{$assetId}D{$steamId32}";
     }
-
-    private function getScreenshotFromSwapGG(string $inspectUrl, string $steamAssetId): ?array
-    {
-        try {
-            // Проверяем, существует ли уже скриншот
-            $screenshotsDir = storage_path('app/public/screenshots');
-            $filename = $steamAssetId . '.jpg';
-            $fullPath = $screenshotsDir . '/' . $filename;
-            
-            Log::info('Checking screenshot file', [
-                'file_path' => $fullPath,
-                'exists' => file_exists($fullPath)
-            ]);
-            
-            if (file_exists($fullPath)) {
-                // Файл уже существует, не скачиваем повторно
-                Log::info('Screenshot file already exists, skipping download');
-                return null;
-            }
-            
-            Log::info('Making API request to Swap.gg');
-            
-            // Сначала получаем сессию
-            $sessionResponse = Http::timeout(30)
-                ->withHeaders([
-                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-                ])
-                ->get('https://swap.gg/cs2-inspects');
-                
-            // Извлекаем куки из ответа
-            $cookies = [];
-            foreach ($sessionResponse->headers()['Set-Cookie'] ?? [] as $cookie) {
-                if (strpos($cookie, 'SwapSession=') === 0) {
-                    $cookies['SwapSession'] = explode(';', explode('=', $cookie, 2)[1])[0];
-                    break;
-                }
-            }
-            
-            if (empty($cookies)) {
-                Log::error('Failed to get SwapSession cookie');
-                return null;
-            }
-            
-            $apiUrl = 'https://api.swap.gg/v2/screenshot?' . http_build_query([
-                'inspectLink' => $inspectUrl
-            ]);
-            
-            $response = Http::timeout(30)
-                ->withHeaders([
-                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                    'Accept' => 'application/json',
-                    'Referer' => 'https://swap.gg/',
-                    'Cookie' => 'SwapSession=' . $cookies['SwapSession']
-                ])
-                ->get($apiUrl);
-            
-            Log::info('Swap.gg API response', [
-                'status_code' => $response->status(),
-                'successful' => $response->successful(),
-                'body' => $response->body()
-            ]);
-            
-            if ($response->successful()) {
-                $data = $response->json();
-                
-                Log::info('Parsed JSON response', ['data' => $data]);
-                
-                if (isset($data['status']) && $data['status'] === 'OK' && isset($data['result']['imageId'])) {
-                    $imageId = $data['result']['imageId'];
-                    $screenshotUrl = "https://s.swap.gg/{$imageId}.jpg";
-                    
-                    // Ждем пока изображение будет готово (максимум 5 попыток)
-                    $maxAttempts = 5;
-                    $attempt = 0;
-                    
-                    while ($attempt < $maxAttempts) {
-                        $imageResponse = Http::timeout(10)->get($screenshotUrl);
-                        
-                        if ($imageResponse->successful()) {
-                            if (!file_exists($screenshotsDir)) {
-                                mkdir($screenshotsDir, 0755, true);
-                            }
-                            
-                            file_put_contents($fullPath, $imageResponse->body());
-                            break;
-                        }
-                        
-                        $attempt++;
-                        sleep(30); // Ждем 30 секунд перед следующей попыткой
-                    }
-                    
-                    // Возвращаем данные для обновления float
-                    $floatData = ['float' => $data['result']['meta']['16']['o'] ?? null];
-                    return $floatData;
-                } else {
-                    Log::error('Swap.gg API returned error', [
-                        'inspect_url' => $inspectUrl,
-                        'steam_asset_id' => $steamAssetId,
-                        'response' => $data
-                    ]);
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error('Error requesting screenshot from Swap.gg', [
-                'inspect_url' => $inspectUrl,
-                'steam_asset_id' => $steamAssetId,
-                'error' => $e->getMessage()
-            ]);
-        }
-        
-        return null;
-    }
-
-
-    /*
-    private function calculateRecommendedPrice(ClientInventoryItem $inventoryItem): float
-    {
-        if (!$inventoryItem->item || !$inventoryItem->item->min_steam_price) {
-            return 0;
-        }
-
-        $basePrice = $inventoryItem->item->min_steam_price;
-        
-        // Корректируем цену в зависимости от float (износа)
-        if ($inventoryItem->float_value) {
-            $wearMultiplier = $this->getWearMultiplier($inventoryItem->float_value);
-            $basePrice *= $wearMultiplier;
-        }
-
-        // Добавляем premium за стикеры (упрощенно)
-        if ($inventoryItem->stickers && count($inventoryItem->stickers) > 0) {
-            $basePrice *= 1.1; // +10% за стикеры
-        }
-
-        return round($basePrice, 2);
-    }
-
-    private function getWearMultiplier(float $floatValue): float
-    {
-        // Упрощенная логика корректировки цены по износу
-        if ($floatValue <= 0.07) {
-            return 1.2; // Factory New - +20%
-        } elseif ($floatValue <= 0.15) {
-            return 1.1; // Minimal Wear - +10%
-        } elseif ($floatValue <= 0.38) {
-            return 1.0; // Field-Tested - без изменений
-        } elseif ($floatValue <= 0.45) {
-            return 0.9; // Well-Worn - -10%
-        } else {
-            return 0.8; // Battle-Scarred - -20%
-        }
-    }
-    */
 }

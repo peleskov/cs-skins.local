@@ -5,6 +5,8 @@ namespace App\Console\Commands;
 use App\Models\Client;
 use App\Models\ClientInventoryItem;
 use App\Services\Steam\InventoryService;
+use App\Jobs\FetchSteamPriceHistory;
+use App\Models\SteamMarketItem;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -99,8 +101,16 @@ class SyncInventoryCommand extends Command
 
         $this->info("Saving " . count($inventory) . " items to database");
 
+        $processedMarketHashNames = [];
+        $jobDelay = 0;
+
         // Сохраняем новый инвентарь
         foreach ($inventory as $item) {
+            // Получаем item_nameid из SteamMarketItem если есть
+            $steamMarketItem = SteamMarketItem::where('market_hash_name', $item['market_hash_name'])->first();
+            $itemNameid = $steamMarketItem?->item_nameid;
+            $itemNameidFetchedAt = $steamMarketItem && $steamMarketItem->item_nameid ? now() : null;
+
             $inventoryItem = $client->inventoryItems()->create([
                 'steam_asset_id' => $item['asset_id'],
                 'steam_class_id' => $item['class_id'],
@@ -119,10 +129,40 @@ class SyncInventoryCommand extends Command
                 'descriptions' => $item['descriptions'] ? json_encode($item['descriptions']) : null,
                 'item_id' => $item['item_id'],
                 'cached_at' => now(),
+                'item_nameid' => $itemNameid,
+                'item_nameid_fetched_at' => $itemNameidFetchedAt,
             ]);
 
             // Парсим и сохраняем теги в новой системе
             $this->parseAndSaveTags($inventoryItem, $item['tags'] ?? []);
+
+            // Запускаем job для получения истории цен только для торгуемых предметов
+            if ($item['market_hash_name'] && $item['tradable'] == 1 && $item['marketable'] == 1 && !in_array($item['market_hash_name'], $processedMarketHashNames)) {
+                try {
+                    // Проверяем нужно ли обновление
+                    $marketItem = SteamMarketItem::where('market_hash_name', $item['market_hash_name'])->first();
+                    
+                    if (!$marketItem || !$marketItem->item_nameid || $marketItem->needsPriceUpdate()) {
+                        // Запускаем job с задержкой для избежания rate limit
+                        FetchSteamPriceHistory::dispatch($item['market_hash_name'])
+                            ->delay(now()->addSeconds($jobDelay * 30))
+                            ->onQueue('default');
+                        
+                        $jobDelay++;
+                    }
+                    
+                    $processedMarketHashNames[] = $item['market_hash_name'];
+                } catch (\Exception $e) {
+                    \Log::error("Failed to dispatch FetchSteamPriceHistory job", [
+                        'market_hash_name' => $item['market_hash_name'], 
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+        }
+
+        if ($jobDelay > 0) {
+            $this->info("  📈 Запланировано {$jobDelay} обновлений истории цен");
         }
     }
 

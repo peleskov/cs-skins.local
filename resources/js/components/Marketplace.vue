@@ -154,7 +154,7 @@
                   </a>
                   <div class="offers">
                     <div class="d-flex align-items-center justify-content-between">
-                      <h4>{{ formatPrice(listing.price) }} ₽</h4>
+                      <h4>{{ formatPrice(listing.price, 'RUB') }}</h4>
                     </div>
                   </div>
                 </div>
@@ -215,7 +215,7 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, computed, nextTick } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick, onUnmounted } from 'vue'
 import { createApp } from 'vue'
 import axios from 'axios'
 import CartButton from './CartButton.vue'
@@ -584,9 +584,23 @@ export default {
       loadTags()
       restoreFiltersFromStorage()
       
+        // Функция обработки смены валюты
+      const handleCurrencyChange = () => {
+        // Принудительно обновляем все цены, создавая новый массив
+        listings.value = listings.value.map(listing => ({...listing}))
+      }
+
+      // Слушаем события смены валюты
+      window.addEventListener('currency-changed', handleCurrencyChange)
+      
       nextTick(() => {
         initializeButtons()
       })
+    })
+
+    // Очистка слушателя при размонтировании
+    onUnmounted(() => {
+      window.removeEventListener('currency-changed', handleCurrencyChange)
     })
 
     return {

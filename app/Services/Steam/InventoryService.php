@@ -57,6 +57,7 @@ class InventoryService
             }
 
             // Логируем статистику инвентаря
+            /*
             if (!empty($data['assets']) && !empty($data['descriptions'])) {
                 Log::info("Steam inventory stats", [
                     'total_assets' => count($data['assets']),
@@ -66,7 +67,7 @@ class InventoryService
                     }, $data['descriptions']), 0, 10)
                 ]);
             }
-
+            */
             return $this->parseInventoryData($data);
             
         } catch (\Exception $e) {
@@ -131,6 +132,7 @@ class InventoryService
         $item = Item::where('steam_market_hash_name', $baseMarketHashName)->first();
         
         // Логируем информацию о ненайденных предметах
+        /*
         if (!$item) {
             Log::info("Item not found in database - saving anyway", [
                 'original_market_hash_name' => $marketHashName,
@@ -143,7 +145,7 @@ class InventoryService
                 'tags' => $description['tags'] ?? []
             ]);
         }
-
+        */
         return [
             'asset_id' => $asset['assetid'],
             'class_id' => $asset['classid'],

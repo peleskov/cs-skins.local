@@ -3,12 +3,168 @@
  */
 
 /**
- * Форматирование цены с разделителями тысяч
+ * Форматирование цены с разделителями тысяч и конвертацией валюты
  * @param {number|string} price - Цена для форматирования
- * @returns {string} Отформатированная цена
+ * @param {string} sourceCurrency - Валюта исходной цены (по умолчанию RUB)
+ * @returns {string} Отформатированная цена с символом валюты
  */
-export function formatPrice(price) {
-    return Number(price).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+export function formatPrice(price, sourceCurrency = 'RUB') {
+    const selectedCurrency = getSelectedCurrency();
+    
+    if (!selectedCurrency) {
+        return Number(price).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    }
+    
+    // Если исходная валюта совпадает с выбранной, возвращаем как есть
+    if (selectedCurrency.code === sourceCurrency) {
+        return Number(price).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ' + selectedCurrency.symbol;
+    }
+    
+    // Конвертируем цену из исходной валюты в выбранную
+    let convertedPrice = price;
+    
+    // Если исходная валюта RUB (рубли), а выбранная другая
+    if (sourceCurrency === 'RUB' && selectedCurrency.code !== 'RUB') {
+        // Конвертируем рубли в выбранную валюту
+        // exchange_rate показывает сколько рублей за единицу валюты
+        convertedPrice = price / selectedCurrency.exchange_rate;
+    } 
+    // Если исходная валюта не RUB, а выбранная RUB  
+    else if (sourceCurrency !== 'RUB' && selectedCurrency.code === 'RUB') {
+        // Находим курс исходной валюты к рублю
+        const sourceCurrencyData = getCurrencyByCode(sourceCurrency);
+        if (sourceCurrencyData) {
+            convertedPrice = price * sourceCurrencyData.exchange_rate;
+        } else {
+            console.warn(`Currency ${sourceCurrency} not found in cache for conversion to RUB`);
+        }
+    }
+    // Если обе валюты не RUB, конвертируем через рубли
+    else if (sourceCurrency !== 'RUB' && selectedCurrency.code !== 'RUB') {
+        const sourceCurrencyData = getCurrencyByCode(sourceCurrency);
+        if (sourceCurrencyData) {
+            // Сначала в рубли, затем в целевую валюту
+            const rubleAmount = price * sourceCurrencyData.exchange_rate;
+            convertedPrice = rubleAmount / selectedCurrency.exchange_rate;
+        } else {
+            console.warn(`Currency ${sourceCurrency} not found in cache for conversion`);
+        }
+    }
+    
+    return Number(convertedPrice).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ' + selectedCurrency.symbol;
+}
+
+/**
+ * Получение выбранной валюты из localStorage
+ * @returns {Object|null} Объект валюты или null
+ */
+function getSelectedCurrency() {
+    try {
+        const saved = localStorage.getItem('selectedCurrency');
+        return saved ? JSON.parse(saved) : null;
+    } catch (error) {
+        console.error('Error getting selected currency:', error);
+        return null;
+    }
+}
+
+/**
+ * Получение данных валюты по коду из кэшированных курсов (синхронно)
+ * @param {string} currencyCode - Код валюты
+ * @returns {Object|null} Объект валюты или null
+ */
+function getCurrencyByCode(currencyCode) {
+    // Сначала проверяем глобальный кэш (наиболее актуальный)
+    if (window.currencyRatesCache && Array.isArray(window.currencyRatesCache)) {
+        const found = window.currencyRatesCache.find(c => c.code === currencyCode);
+        if (found) {
+            return found;
+        }
+    }
+    
+    // Проверяем локальный кэш
+    if (currencyRatesCache && Array.isArray(currencyRatesCache)) {
+        const found = currencyRatesCache.find(c => c.code === currencyCode);
+        if (found) {
+            return found;
+        }
+    }
+    
+    // Логируем доступные валюты для отладки
+    const availableCurrencies = window.currencyRatesCache || currencyRatesCache;
+    if (availableCurrencies && Array.isArray(availableCurrencies)) {
+        console.warn(`Currency ${currencyCode} not found in cache. Available currencies:`, availableCurrencies.map(c => c.code));
+    } else {
+        console.warn('No currency cache available');
+    }
+    
+    return null;
+}
+
+// Кэш курсов валют (глобальный)
+let currencyRatesCache = null;
+let cacheExpiry = null;
+
+// Делаем кэш доступным глобально для обновления из CurrencySelector
+window.currencyRatesCache = currencyRatesCache;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 минут
+
+/**
+ * Получение курсов валют с кэшированием
+ * @returns {Promise<Array>} Массив валют с курсами
+ */
+async function getCurrencyRates() {
+    const now = Date.now();
+    
+    // Проверяем кэш
+    if (currencyRatesCache && cacheExpiry && now < cacheExpiry) {
+        return currencyRatesCache;
+    }
+    
+    try {
+        const response = await fetch('/api/currencies');
+        if (!response.ok) {
+            throw new Error('Failed to fetch currency rates');
+        }
+        
+        const currencies = await response.json();
+        
+        // Кэшируем результат
+        currencyRatesCache = currencies;
+        window.currencyRatesCache = currencies; // Обновляем глобальный кэш
+        cacheExpiry = now + CACHE_DURATION;
+        
+        return currencies;
+    } catch (error) {
+        console.error('Error fetching currency rates:', error);
+        // Возвращаем кэш если есть, иначе пустой массив
+        return currencyRatesCache || [];
+    }
+}
+
+/**
+ * Конвертация цены из основной валюты в целевую валюту
+ * @param {number} price - Цена в основной валюте
+ * @param {string} toCurrency - Целевая валюта
+ * @returns {Promise<number>} Конвертированная цена
+ */
+async function convertPrice(price, toCurrency) {
+    try {
+        const currencies = await getCurrencyRates();
+        
+        const toCurrencyData = currencies.find(c => c.code === toCurrency);
+        
+        if (!toCurrencyData) {
+            console.warn(`Currency not found: ${toCurrency}`);
+            return price;
+        }
+        
+        // Умножаем цену на курс целевой валюты
+        return price * toCurrencyData.exchange_rate;
+    } catch (error) {
+        console.error('Error converting currency:', error);
+        return price;
+    }
 }
 
 /**
@@ -136,6 +292,43 @@ export function handleApiError(error) {
     }
     
     return error.message || 'Произошла неизвестная ошибка. Попробуйте позже.';
+}
+
+/**
+ * Копирование текста в буфер обмена с отображением уведомления
+ * @param {string} text - Текст для копирования
+ * @param {string} successMessage - Сообщение при успешном копировании
+ * @param {string} errorMessage - Сообщение при ошибке
+ * @param {HTMLElement} iconElement - Элемент иконки для временного изменения (опционально)
+ * @returns {Promise<boolean>} true если успешно скопировано
+ */
+export async function copyToClipboard(text, successMessage = 'Скопировано в буфер обмена', errorMessage = 'Не удалось скопировать', iconElement = null) {
+    try {
+        await navigator.clipboard.writeText(text);
+        
+        if (window.toast) {
+            window.toast.success(successMessage);
+        }
+        
+        // Временно меняем иконку если элемент передан
+        if (iconElement) {
+            const originalClass = iconElement.className;
+            iconElement.className = 'ri-check-line text-success';
+            setTimeout(() => {
+                iconElement.className = originalClass;
+            }, 2000);
+        }
+        
+        return true;
+    } catch (err) {
+        console.error('Failed to copy:', err);
+        
+        if (window.toast) {
+            window.toast.error(errorMessage);
+        }
+        
+        return false;
+    }
 }
 
 /**

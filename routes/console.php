@@ -53,3 +53,17 @@ Schedule::job(new \App\Jobs\ProcessSkinScreenshots())
     ->everyMinute()
     ->onOneServer()
     ->withoutOverlapping();
+
+// Обновление курсов валют каждый день в 23:55
+Schedule::command('currency:update')
+    ->dailyAt('23:55')
+    ->onOneServer()
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// Обновление цен Steam предметов каждый час
+Schedule::command('prices:update')
+    ->hourly()
+    ->onOneServer()
+    ->withoutOverlapping()
+    ->runInBackground();

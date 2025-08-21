@@ -12,6 +12,9 @@
 					<img class="img-fluid logo" :src="logoUrl" alt="logo">
 				</a>
 				<div class="nav-option order-md-2">
+					<!-- Currency Selector -->
+					<CurrencySelector />
+					
 					<div class="dropdown-button">
 						<a :href="routes.cart" class="cart-button">
 							<span v-if="cartCount > 0" class="cart-count">{{ cartCount }}</span>
@@ -41,7 +44,7 @@
 													{{ item.item?.name }}
 												</div>
 												<div class="cart-item-price text-muted" style="font-size: 11px;">
-													{{ formatPrice(item.price) }} ₽
+													{{ formatPrice(item.price, 'RUB') }}
 												</div>
 											</div>
 										</div>
@@ -50,7 +53,7 @@
 										</div>
 									</div>
 									<div class="cart-total text-center border-top pt-2">
-										<strong>Итого: {{ formatPrice(cartTotal) }} ₽</strong>
+										<strong>Итого: {{ formatPrice(cartTotal, 'RUB') }}</strong>
 									</div>
 									<div class="cart-actions">
 										<a :href="routes.cart" class="btn theme-btn btn-sm w-100">Перейти в корзину</a>
@@ -108,9 +111,13 @@
 <script>
 import { formatPrice } from '../utils/helpers';
 import { cartAPI } from '../utils/api';
+import CurrencySelector from './CurrencySelector.vue';
 
 export default {
 	name: 'Header',
+	components: {
+		CurrencySelector
+	},
 	setup() {
 		return { formatPrice };
 	},
@@ -185,6 +192,13 @@ export default {
 			}
 			// Иначе используем маршрут из routes prop
 			return this.routes[route] || '#';
+		},
+
+		handleCurrencyChange() {
+			// Принудительно обновляем данные для пересчета цен
+			if (this.cartItems.length > 0) {
+				this.cartItems = [...this.cartItems];
+			}
 		}
 
 	},
@@ -198,11 +212,15 @@ export default {
 
 		// Слушаем события обновления корзины
 		window.addEventListener('cart-updated', this.updateCartFromEvent);
+		
+		// Слушаем события смены валюты
+		window.addEventListener('currency-changed', this.handleCurrencyChange);
 	},
 
 	beforeUnmount() {
-		// Убираем слушатель при размонтировании
+		// Убираем слушатели при размонтировании
 		window.removeEventListener('cart-updated', this.updateCartFromEvent);
+		window.removeEventListener('currency-changed', this.handleCurrencyChange);
 	}
 }
 </script>

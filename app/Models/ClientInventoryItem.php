@@ -34,6 +34,8 @@ class ClientInventoryItem extends Model
         'quality_id',
         'rarity_id',
         'exterior_id',
+        'item_nameid',
+        'item_nameid_fetched_at',
     ];
 
     protected $casts = [
@@ -45,6 +47,7 @@ class ClientInventoryItem extends Model
         'stickers' => 'array',
         'descriptions' => 'array',
         'cached_at' => 'datetime',
+        'item_nameid_fetched_at' => 'datetime',
     ];
 
     protected $appends = ['structured_tags'];
@@ -58,6 +61,11 @@ class ClientInventoryItem extends Model
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);
+    }
+
+    public function steamMarketItem(): BelongsTo
+    {
+        return $this->belongsTo(SteamMarketItem::class, 'item_nameid', 'item_nameid');
     }
 
     public function scopeTradable($query)

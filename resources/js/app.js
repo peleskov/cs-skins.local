@@ -3,6 +3,9 @@ import { createApp } from 'vue';
 import Toast from "vue-toastification";
 import "vue-toastification/dist/index.css";
 import { useToast } from "vue-toastification";
+
+// Глобальная инициализация валют
+import './utils/currency-init.js';
 import Marketplace from './components/Marketplace.vue';
 import SkinDetails from './components/SkinDetails.vue';
 import Profile from './components/Profile.vue';

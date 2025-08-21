@@ -1263,3 +1263,38 @@ header {
     }
   }
 }
+
+// Currency selector styles
+.currency-selector {
+  .currency-display {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    color: white;
+    font-size: 14px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .currency-symbol {
+      font-weight: 600;
+      margin-right: 4px;
+    }
+
+    .currency-code {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-right: 6px;
+    }
+
+    i {
+      opacity: 0.7;
+      font-size: 16px;
+    }
+  }
+}

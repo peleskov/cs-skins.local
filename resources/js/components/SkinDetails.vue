@@ -24,38 +24,57 @@
                             <div v-if="listing.is_souvenir" class="seller-badge souvenir-badge">
                                 <h6>Souvenir</h6>
                             </div>
-                            <div 
-                                data-favorite-button 
-                                :data-listing-id="listing.id"
+                            <div data-favorite-button :data-listing-id="listing.id"
                                 :data-is-favorite="listing.is_favorite"
                                 class="favorite-button-placeholder position-absolute"
                                 style="top: 15px; left: 15px; z-index: 10;">
                             </div>
-                            <img class="img-fluid w-100" 
-                                 :src="getImageUrl()" 
-                                 :alt="getItemName()"
-                                 @error="handleImageError">
+                            <img class="img-fluid w-100" :src="getImageUrl()" :alt="getItemName()"
+                                @error="handleImageError">
                         </div>
                         <!-- Дополнительные ссылки -->
                         <div class="additional-links mb-4">
                             <div class="d-flex flex-wrap gap-2">
-                                <a :href="getInGameInspectUrl()" target="_blank"
-                                    class="btn btn-sm theme-outline">
+                                <a :href="getInGameInspectUrl()" target="_blank" class="btn btn-sm theme-outline">
                                     <i class="ri-gamepad-line me-1"></i>В игре
                                 </a>
-                                <a :href="getSteamMarketUrl()" target="_blank"
-                                    class="btn btn-sm theme-outline">
+                                <a :href="getSteamMarketUrl()" target="_blank" class="btn btn-sm theme-outline">
                                     <i class="ri-external-link-line me-1"></i>В Steam
                                 </a>
-                                <button v-if="hasScreenshots()" 
-                                    @click="showScreenshots"
+                                <button v-if="hasScreenshots()" @click="showScreenshots"
                                     class="btn btn-sm theme-outline">
                                     <i class="ri-image-line me-1"></i>Скриншоты
                                 </button>
                             </div>
                         </div>
-
                     </div>
+                    <!-- История цен Steam Market -->
+                    <div v-if="steamPriceHistory.length > 0" class="product-detail-image p-4 rounded-4 mt-4">
+                        <h5 class="mb-3">
+                            <i class="ri-line-chart-line me-2"></i>История цен
+                        </h5>
+                        <div class="price-chart-container">
+                            <apexchart type="line" height="300" :options="chartOptions" :series="chartSeries">
+                            </apexchart>
+                        </div>
+                        <div class="price-stats mt-3">
+                            <div class="row text-center" v-if="steamPriceStats">
+                                <div class="col-4">
+                                    <small class="text-muted d-block">Средняя цена (30 дней)</small>
+                                    <strong>{{ formatPrice(steamPriceStats.avg_price, 'USD') }}</strong>
+                                </div>
+                                <div class="col-4">
+                                    <small class="text-muted d-block">Минимальная</small>
+                                    <strong>{{ formatPrice(steamPriceStats.min_price, 'USD') }}</strong>
+                                </div>
+                                <div class="col-4">
+                                    <small class="text-muted d-block">Максимальная</small>
+                                    <strong>{{ formatPrice(steamPriceStats.max_price, 'USD') }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
                 <!-- Правая часть: детали и действия -->
@@ -76,7 +95,7 @@
                         <div class="price-section mb-4">
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <div>
-                                    <h3 class="price mb-0">{{ formatPrice(listing.price) }} ₽</h3>
+                                    <h3 class="price mb-0">{{ formatPrice(listing.price, 'RUB') }}</h3>
                                 </div>
                                 <div>
                                     <p class="seller-info text-muted mb-0">
@@ -86,12 +105,8 @@
                             </div>
 
                             <div class="d-flex gap-3">
-                                <div 
-                                    data-cart-button 
-                                    :data-listing-id="listing.id" 
-                                    :data-is-in-cart="listing.is_in_cart"
-                                    data-size="large" 
-                                    data-variant="primary"
+                                <div data-cart-button :data-listing-id="listing.id"
+                                    :data-is-in-cart="listing.is_in_cart" data-size="large" data-variant="primary"
                                     class="flex-fill cart-button-placeholder">
                                 </div>
                                 <button class="btn theme-outline flex-fill" @click="quickBuy">
@@ -147,10 +162,12 @@
                                     </div>
                                 </div>
                                 <!-- Теги из новой системы -->
-                                <div v-if="listing.tags && listing.tags.length > 0" v-for="tag in listing.tags" :key="tag.id" class="col-12">
+                                <div v-if="listing.tags && listing.tags.length > 0" v-for="tag in listing.tags"
+                                    :key="tag.id" class="col-12">
                                     <div class="info-item">
                                         <span class="info-label">{{ tag.category_name }}:</span>
-                                        <span class="info-value" :style="{ color: tag.color ? '#' + tag.color : '' }">{{ tag.display_name }}</span>
+                                        <span class="info-value" :style="{ color: tag.color ? '#' + tag.color : '' }">{{
+                                            tag.display_name }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -183,7 +200,7 @@
                                 <td>{{ other.seller.name }}</td>
                                 <td>{{ other.wear_name }}</td>
                                 <td>{{ other.wear_value.toFixed(4) }}</td>
-                                <td><strong>{{ formatPrice(other.price) }} ₽</strong></td>
+                                <td><strong>{{ formatPrice(other.price, 'RUB') }}</strong></td>
                                 <td>
                                     <a :href="`/marketplace/${other.id}`" class="btn btn-sm theme-outline">
                                         Просмотр
@@ -203,10 +220,14 @@ import { createApp } from 'vue'
 import axios from 'axios'
 import CartButton from './CartButton.vue'
 import FavoriteButton from './FavoriteButton.vue'
+import VueApexCharts from 'vue3-apexcharts'
 import { formatPrice, handleApiError } from '../utils/helpers'
 
 export default {
     name: 'SkinDetails',
+    components: {
+        apexchart: VueApexCharts
+    },
     props: {
         listingId: {
             type: [Number, String],
@@ -221,11 +242,175 @@ export default {
             listing: null,
             otherListings: [],
             loading: true,
-            error: null
+            error: null,
+            steamPriceHistory: [],
+            steamPriceStats: null
         };
+    },
+    computed: {
+        currentCurrencySymbol() {
+            try {
+                const saved = localStorage.getItem('selectedCurrency');
+                return saved ? JSON.parse(saved).symbol : '₽';
+            } catch (error) {
+                return '₽';
+            }
+        },
+        
+        chartSeries() {
+            if (!this.steamPriceHistory.length) return [];
+
+            const priceData = this.steamPriceHistory.map(item => ({
+                x: new Date(item.date).getTime(),
+                y: parseFloat(item.price)
+            }));
+
+            const volumeData = this.steamPriceHistory.map(item => ({
+                x: new Date(item.date).getTime(),
+                y: parseInt(item.volume || 0)
+            }));
+
+            return [
+                {
+                    name: 'Объём продаж',
+                    type: 'column',
+                    data: volumeData
+                },
+                {
+                    name: `Цена (${this.currentCurrencySymbol})`,
+                    type: 'line',
+                    data: priceData
+                }
+            ];
+        },
+        chartOptions() {
+            return {
+                chart: {
+                    height: 300,
+                    toolbar: { show: false },
+                    zoom: { enabled: false },
+                    background: 'transparent',
+                    stacked: false
+                },
+                stroke: {
+                    curve: 'smooth',
+                    width: [0, 2] // 0 для столбцов, 2 для линии
+                },
+                fill: {
+                    type: 'solid',
+                    opacity: 1
+                },
+                colors: ['#e8e8e8', '#f2a93e'], // Светло-серый для объёмов, оранжевый для цены
+                plotOptions: {
+                    bar: {
+                        columnWidth: '80%',
+                        borderRadius: 0
+                    }
+                },
+                grid: {
+                    borderColor: '#e0e0e0',
+                    strokeDashArray: 2,
+                    xaxis: {
+                        lines: { show: false }
+                    },
+                    yaxis: {
+                        lines: { show: true }
+                    }
+                },
+                xaxis: {
+                    type: 'datetime',
+                    tickAmount: 5, // Примерно 5 меток на оси (каждые ~7 дней для 30-дневного периода)
+                    labels: {
+                        style: {
+                            colors: '#666',
+                            fontSize: '11px'
+                        },
+                        datetimeUTC: false,
+                        formatter: function(value, timestamp) {
+                            const date = new Date(timestamp);
+                            return date.toLocaleDateString('ru-RU', { 
+                                day: '2-digit', 
+                                month: 'short' 
+                            }).replace('.', '');
+                        }
+                    },
+                    axisBorder: {
+                        color: '#e0e0e0'
+                    },
+                    axisTicks: {
+                        color: '#e0e0e0'
+                    }
+                },
+                yaxis: [
+                    {
+                        seriesName: 'Объём продаж',
+                        axisTicks: { show: false },
+                        axisBorder: { show: false },
+                        labels: {
+                            style: { colors: '#999', fontSize: '11px' },
+                            formatter: (value) => value.toLocaleString('ru-RU')
+                        },
+                        title: {
+                            text: 'Объём',
+                            style: { color: '#999', fontSize: '12px' }
+                        }
+                    },
+                    {
+                        opposite: true,
+                        seriesName: `Цена (${this.currentCurrencySymbol})`,
+                        axisTicks: { show: false },
+                        axisBorder: { show: false },
+                        labels: {
+                            style: { colors: '#f2a93e', fontSize: '11px' },
+                            formatter: (value) => {
+                                // Конвертируем значение из USD в выбранную валюту
+                                const convertedValue = this.convertPriceForChart(value);
+                                return `${this.currentCurrencySymbol}${convertedValue.toFixed(2)}`;
+                            }
+                        },
+                        title: {
+                            text: 'Цена',
+                            style: { color: '#f2a93e', fontSize: '12px' }
+                        }
+                    }
+                ],
+                tooltip: {
+                    shared: true,
+                    theme: 'light',
+                    x: {
+                        format: 'dd MMM yyyy'
+                    },
+                    y: [
+                        {
+                            formatter: (value) => value ? value.toLocaleString('ru-RU') + ' шт.' : '0 шт.'
+                        },
+                        {
+                            formatter: (value) => {
+                                if (value) {
+                                    const convertedValue = this.convertPriceForChart(value);
+                                    return `${this.currentCurrencySymbol}${convertedValue.toFixed(2)}`;
+                                }
+                                return `${this.currentCurrencySymbol}0.00`;
+                            }
+                        }
+                    ]
+                },
+                legend: {
+                    show: false
+                }
+            };
+        }
     },
     mounted() {
         this.loadListing();
+        
+        // Слушаем события смены валюты
+        window.addEventListener('currency-changed', this.handleCurrencyChange);
+    },
+    
+    beforeUnmount() {
+        // Убираем слушатель при размонтировании
+        window.removeEventListener('currency-changed', this.handleCurrencyChange);
     },
     methods: {
         async loadListing() {
@@ -235,7 +420,9 @@ export default {
 
                 this.listing = data.listing;
                 this.otherListings = data.otherListings || [];
-                
+                this.steamPriceHistory = data.listing.steam_price_history || [];
+                this.steamPriceStats = data.listing.steam_price_stats;
+
                 this.$nextTick(() => {
                     this.initializeCartButton();
                 });
@@ -257,9 +444,9 @@ export default {
 
         getItemDescription() {
             if (!this.listing?.inventory_descriptions) return null;
-            
+
             let descriptions = this.listing.inventory_descriptions;
-            
+
             // Парсим JSON если это строка
             if (typeof descriptions === 'string') {
                 try {
@@ -268,19 +455,19 @@ export default {
                     return null;
                 }
             }
-            
+
             // Ищем описание
             if (Array.isArray(descriptions)) {
                 const descItem = descriptions.find(desc => desc.name === 'description');
                 return descItem?.value || null;
             }
-            
+
             return null;
         },
 
         getImageUrl() {
             if (!this.listing) return '/images/skin_no_image.svg';
-            
+
             // Приоритет: inventory_icon_url → item images по wear → fallback
             if (this.listing.inventory_icon_url) {
                 if (this.listing.inventory_icon_url.startsWith('http')) {
@@ -288,9 +475,9 @@ export default {
                 }
                 return `https://community.steamstatic.com/economy/image/${this.listing.inventory_icon_url}`;
             }
-            
+
             // Fallback к стандартному изображению без категории
-            
+
             return '/images/skin_no_image.svg';
         },
 
@@ -298,7 +485,7 @@ export default {
             if (this.listing?.inspect_url) {
                 return this.listing.inspect_url;
             }
-            
+
             const hashName = this.getItemNameEn();
             const encodedHashName = encodeURIComponent(hashName);
             return `steam://rungame/730/76561202255233023/+csgo_econ_action_preview_search%20${encodedHashName}`;
@@ -314,26 +501,26 @@ export default {
         initializeCartButton() {
             // Инициализируем кнопку корзины
             const cartButton = document.querySelector('[data-cart-button]:not(.cart-initialized)');
-            
+
             if (cartButton && this.listing) {
                 const listingId = parseInt(cartButton.dataset.listingId) || this.listing.id;
                 const size = cartButton.dataset.size || 'large';
                 const variant = cartButton.dataset.variant || 'primary';
                 const initialIsInCart = cartButton.dataset.isInCart === 'true' || this.listing.is_in_cart || false;
-                
+
                 const cartApp = createApp(CartButton, { listingId, size, variant, initialIsInCart });
                 cartApp.mount(cartButton);
                 cartButton.classList.add('cart-initialized');
             }
-            
+
             // Инициализируем кнопку избранного
             const favoriteButton = document.querySelector('[data-favorite-button]:not(.favorite-initialized)');
-            
+
             if (favoriteButton && this.listing) {
                 const listingId = parseInt(favoriteButton.dataset.listingId) || this.listing.id;
                 const initialIsFavorite = favoriteButton.dataset.isFavorite === 'true' || this.listing.is_favorite || false;
-                
-                
+
+
                 const favoriteApp = createApp(FavoriteButton, { listingId, initialIsFavorite });
                 favoriteApp.mount(favoriteButton);
                 favoriteButton.classList.add('favorite-initialized');
@@ -361,16 +548,16 @@ export default {
         handleImageError(event) {
             event.target.closest('.product-main-image').classList.add('image-error');
         },
-        
+
         hasScreenshots() {
             return this.listing?.screenshots === 1 && this.listing?.screenshot_urls;
         },
-        
+
         showScreenshots() {
             if (!this.hasScreenshots()) return;
-            
+
             const screenshots = [];
-            
+
             // Используем screenshot_urls из API
             if (this.listing.screenshot_urls) {
                 if (this.listing.screenshot_urls.front) {
@@ -380,7 +567,7 @@ export default {
                         title: 'Передняя сторона'
                     });
                 }
-                
+
                 if (this.listing.screenshot_urls.back) {
                     screenshots.push({
                         url: this.listing.screenshot_urls.back,
@@ -389,11 +576,56 @@ export default {
                     });
                 }
             }
-            
+
             // Создаем модальное окно для показа скриншотов
             this.openScreenshotModal(screenshots);
         },
-        
+
+        handleCurrencyChange() {
+            // Принудительно обновляем данные для пересчета цен
+            if (this.steamPriceStats) {
+                this.steamPriceStats = {...this.steamPriceStats};
+            }
+            if (this.steamPriceHistory.length > 0) {
+                this.steamPriceHistory = [...this.steamPriceHistory];
+            }
+            if (this.listing) {
+                this.listing = {...this.listing};
+            }
+            if (this.otherListings.length > 0) {
+                this.otherListings = [...this.otherListings];
+            }
+        },
+
+        convertPriceForChart(usdPrice) {
+            // Простая конвертация из USD в выбранную валюту для графика
+            try {
+                const selectedCurrency = JSON.parse(localStorage.getItem('selectedCurrency'));
+                if (!selectedCurrency || selectedCurrency.code === 'USD') {
+                    return usdPrice;
+                }
+                
+                // Если выбранная валюта RUB
+                if (selectedCurrency.code === 'RUB') {
+                    const usdCurrency = window.currencyRatesCache?.find(c => c.code === 'USD');
+                    if (usdCurrency) {
+                        return usdPrice * usdCurrency.exchange_rate;
+                    }
+                }
+                
+                // Для других валют: USD -> RUB -> целевая валюта
+                const usdCurrency = window.currencyRatesCache?.find(c => c.code === 'USD');
+                if (usdCurrency) {
+                    const rubleAmount = usdPrice * usdCurrency.exchange_rate;
+                    return rubleAmount / selectedCurrency.exchange_rate;
+                }
+                
+                return usdPrice;
+            } catch (error) {
+                return usdPrice;
+            }
+        },
+
         openScreenshotModal(screenshots) {
             // Создаем HTML для модального окна
             const modalHtml = `
@@ -427,22 +659,22 @@ export default {
                     </div>
                 </div>
             `;
-            
+
             // Удаляем старое модальное окно если есть
             const oldModal = document.getElementById('screenshotModal');
             if (oldModal) {
                 oldModal.remove();
             }
-            
+
             // Добавляем новое модальное окно
             document.body.insertAdjacentHTML('beforeend', modalHtml);
-            
+
             // Показываем модальное окно
             const modal = new bootstrap.Modal(document.getElementById('screenshotModal'));
             modal.show();
-            
+
             // Удаляем модальное окно после закрытия
-            document.getElementById('screenshotModal').addEventListener('hidden.bs.modal', function() {
+            document.getElementById('screenshotModal').addEventListener('hidden.bs.modal', function () {
                 this.remove();
             });
         },

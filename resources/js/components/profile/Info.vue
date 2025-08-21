@@ -143,7 +143,7 @@
 					<h6>
 						<span v-if="extensionToken">
 							<code>{{ limitString(extensionToken, 20) }}</code>
-							<button class="btn ms-2" @click="copyExtensionToken">
+							<button class="btn ms-2" @click="copyExtensionToken($event)">
 								<i class="ri-file-copy-line"></i>
 							</button>
 						</span>
@@ -332,7 +332,7 @@
 
 <script>
 import axios from 'axios';
-import { formatPrice, getTimeRemaining } from '../../utils/helpers';
+import { formatPrice, getTimeRemaining, copyToClipboard } from '../../utils/helpers';
 
 export default {
 	name: 'ProfileInfo',
@@ -498,25 +498,22 @@ export default {
 		},
 
 		async copyTradeUrl(event) {
-			const url = event.currentTarget.dataset?.url || this.client.steam_trade_url;
-
-			try {
-				await navigator.clipboard.writeText(url);
-				window.toast.success('Trade URL скопирован в буфер обмена');
-
-				// Change icon temporarily
-				const icon = event.currentTarget.querySelector('i');
-				if (icon) {
-					const originalClass = icon.className;
-					icon.className = 'ri-check-line text-success';
-					setTimeout(() => {
-						icon.className = originalClass;
-					}, 2000);
-				}
-			} catch (err) {
-				console.error('Failed to copy:', err);
-				window.toast.error('Не удалось скопировать Trade URL');
+			const url = this.client.steam_trade_url;
+			
+			if (!url) {
+				window.toast.error('Trade URL не найден');
+				return;
 			}
+			
+			// Сохраняем ссылку на иконку до асинхронной операции
+			const icon = event?.currentTarget?.querySelector('i');
+			
+			await copyToClipboard(
+				url, 
+				'Trade URL скопирован в буфер обмена',
+				'Не удалось скопировать Trade URL',
+				icon
+			);
 		},
 
 		// ==================== EXTENSION TOKEN METHODS ====================
@@ -574,14 +571,21 @@ export default {
 			}
 		},
 
-		async copyExtensionToken() {
-			try {
-				await navigator.clipboard.writeText(this.extensionToken);
-				window.toast.success('Токен скопирован в буфер обмена');
-			} catch (err) {
-				console.error('Failed to copy:', err);
-				window.toast.error('Не удалось скопировать токен');
+		async copyExtensionToken(event) {
+			if (!this.extensionToken) {
+				window.toast.error('Токен не найден');
+				return;
 			}
+			
+			// Сохраняем ссылку на иконку до асинхронной операции
+			const icon = event?.currentTarget?.querySelector('i');
+			
+			await copyToClipboard(
+				this.extensionToken,
+				'Токен скопирован в буфер обмена',
+				'Не удалось скопировать токен',
+				icon
+			);
 		},
 
 		clearAndReloadTelegramWidget() {

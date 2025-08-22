@@ -29,6 +29,11 @@ class Listing extends Model
         'type',
         'wear_condition',
         'float_value',
+        'float_min',
+        'float_max',
+        'paint_index',
+        'def_index',
+        'csfloat_id',
         'inspect_url',
         'screenshots',
         'status',
@@ -51,6 +56,11 @@ class Listing extends Model
     protected $casts = [
         'price' => 'decimal:2',
         'float_value' => 'decimal:8',
+        'float_min' => 'float',
+        'float_max' => 'float',
+        'paint_index' => 'integer',
+        'def_index' => 'integer',
+        'csfloat_id' => 'integer',
         'wear_value' => 'float',
         'stickers' => 'array',
         'screenshots' => 'array',
@@ -165,17 +175,20 @@ class Listing extends Model
 
     public function getWearNameAttribute(): string
     {
-        if ($this->wear_value === null) {
+        // Приоритет: float_value -> wear_value -> "Не указано"
+        $floatValue = $this->float_value ?? $this->wear_value;
+        
+        if ($floatValue === null) {
             return 'Не указано';
         }
 
-        if ($this->wear_value <= 0.07) {
+        if ($floatValue <= 0.07) {
             return 'Прямо с завода';
-        } elseif ($this->wear_value <= 0.15) {
+        } elseif ($floatValue <= 0.15) {
             return 'Немного поношенное';
-        } elseif ($this->wear_value <= 0.38) {
+        } elseif ($floatValue <= 0.38) {
             return 'После полевых испытаний';
-        } elseif ($this->wear_value <= 0.45) {
+        } elseif ($floatValue <= 0.45) {
             return 'Поношенное';
         } else {
             return 'Закалённое в боях';

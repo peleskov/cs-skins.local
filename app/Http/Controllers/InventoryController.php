@@ -239,6 +239,11 @@ class InventoryController extends Controller
             $listing->type = 'p2p';
             $listing->wear_condition = $inventoryItem->wear_condition;
             $listing->float_value = $inventoryItem->float_value;
+            $listing->float_min = $inventoryItem->float_min;
+            $listing->float_max = $inventoryItem->float_max;
+            $listing->paint_index = $inventoryItem->paint_index;
+            $listing->def_index = $inventoryItem->def_index;
+            $listing->csfloat_id = $inventoryItem->csfloat_id;
             $listing->pattern_index = $inventoryItem->pattern_index;
             $listing->stickers = $inventoryItem->stickers;
             $listing->inspect_url = $this->generateInspectUrl($client->steam_id, $steamAssetId);

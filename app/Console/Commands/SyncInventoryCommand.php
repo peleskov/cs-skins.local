@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\ClientInventoryItem;
 use App\Services\Steam\InventoryService;
 use App\Jobs\FetchSteamPriceHistory;
+use App\Jobs\FetchFloatValueJob;
 use App\Models\SteamMarketItem;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -103,6 +104,7 @@ class SyncInventoryCommand extends Command
 
         $processedMarketHashNames = [];
         $jobDelay = 0;
+        $floatJobsCreated = 0;
 
         // Сохраняем новый инвентарь
         foreach ($inventory as $item) {
@@ -136,6 +138,15 @@ class SyncInventoryCommand extends Command
             // Парсим и сохраняем теги в новой системе
             $this->parseAndSaveTags($inventoryItem, $item['tags'] ?? []);
 
+            // Создаем Job для получения float данных
+            if ($this->shouldFetchFloatData($item)) {
+                FetchFloatValueJob::dispatch($inventoryItem)
+                    ->delay(now()->addSeconds($floatJobsCreated * 5))
+                    ->onQueue('float-values');
+                
+                $floatJobsCreated++;
+            }
+
             // Запускаем job для получения истории цен только для торгуемых предметов
             if ($item['market_hash_name'] && $item['tradable'] == 1 && $item['marketable'] == 1 && !in_array($item['market_hash_name'], $processedMarketHashNames)) {
                 try {
@@ -163,6 +174,10 @@ class SyncInventoryCommand extends Command
 
         if ($jobDelay > 0) {
             $this->info("  📈 Запланировано {$jobDelay} обновлений истории цен");
+        }
+        
+        if ($floatJobsCreated > 0) {
+            $this->info("  🎯 Запланировано {$floatJobsCreated} получений float данных");
         }
     }
 
@@ -346,5 +361,67 @@ class SyncInventoryCommand extends Command
                 // Для остальных категорий просто нормализуем имя
                 return strtolower(preg_replace('/[^a-zA-Z0-9]/', '_', $steamInternalName));
         }
+    }
+
+    /**
+     * Определяет нужно ли получать float данные для предмета
+     */
+    private function shouldFetchFloatData(array $item): bool
+    {
+        // Получаем float данные только для:
+        // 1. Торгуемых и маркетируемых предметов
+        // 2. Предметов с inspect_url
+        // 3. Исключаем дешевые предметы (стикеры, граффити и т.д.)
+        
+        if (!($item['tradable'] ?? false) || !($item['marketable'] ?? false)) {
+            return false;
+        }
+
+        if (empty($item['inspect_url'])) {
+            return false;
+        }
+
+        // Исключаем предметы которые точно не имеют float
+        $excludeTypes = [
+            'CSGO_Tool_Sticker',
+            'CSGO_Tool_Spray', 
+            'CSGO_Tool_WeaponCase',
+            'CSGO_Tool_WeaponCaseKey',
+            'CSGO_Type_MusicKit',
+            'CSGO_Type_Agent',
+            'CSGO_Type_Pass',
+            'CSGO_Tool_StickerCapsule',
+            'CSGO_Tool_GraffitiCapsule',
+            'CSGO_Tool_Pin',
+            'CSGO_Tool_Patch'
+        ];
+        
+        // Также исключаем по названию рынка (дополнительная проверка)
+        $marketHashName = strtolower($item['market_hash_name'] ?? '');
+        $excludePatterns = [
+            'sticker |',
+            'graffiti |',
+            'music kit |',
+            'case |',
+            'capsule |',
+            'key |',
+            'patch |',
+            'pin |'
+        ];
+        
+        foreach ($excludePatterns as $pattern) {
+            if (str_contains($marketHashName, $pattern)) {
+                return false;
+            }
+        }
+
+        $tags = $item['tags'] ?? [];
+        foreach ($tags as $tag) {
+            if (isset($tag['internal_name']) && in_array($tag['internal_name'], $excludeTypes)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

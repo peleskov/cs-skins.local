@@ -114,6 +114,33 @@
                                 </button>
                             </div>
                         </div>
+                        <!-- Float Bar -->
+                        <div v-if="listing.float_value && hasFloatRange()" class="col-12">
+                            <div class="float-bar-container mb-2">
+                                <div class="float-bar">
+                                    <div class="float-min-max-labels">
+                                        <span>{{ parseFloat(listing.float_min).toFixed(2) }}</span>
+                                        <span>{{ parseFloat(listing.float_max).toFixed(2) }}</span>
+                                    </div>
+                                    <div class="wear-marker"
+                                        :style="{ left: 'calc(' + getFloatMarkerPosition() + '% - 1px)' }"></div>
+                                    <div class="wear-value"
+                                        :style="{ left: 'calc(' + getFloatMarkerPosition() + '% - 10px)' }">{{ parseFloat(listing.float_value).toFixed(6) }}</div>
+                                    <div class="float-segments d-flex h-100">
+                                        <div class="h-100 float-segment fn" :style="{ width: getSegmentWidth('fn') + '%' }">
+                                        </div>
+                                        <div class="h-100 float-segment mw" :style="{ width: getSegmentWidth('mw') + '%' }">
+                                        </div>
+                                        <div class="h-100 float-segment ft" :style="{ width: getSegmentWidth('ft') + '%' }">
+                                        </div>
+                                        <div class="h-100 float-segment ww" :style="{ width: getSegmentWidth('ww') + '%' }">
+                                        </div>
+                                        <div class="h-100 float-segment bs" :style="{ width: getSegmentWidth('bs') + '%' }">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- Информация о состоянии -->
                         <div class="product-info-box mb-4">
@@ -131,16 +158,30 @@
                                         <span class="info-value">{{ listing.wear_name }}</span>
                                     </div>
                                 </div>
-                                <div class="col-12">
+                                <!-- Fallback для случаев без полных данных -->
+                                <div v-if="listing.float_value || listing.wear_value" class="col-12">
                                     <div class="info-item">
                                         <span class="info-label">Износ:</span>
-                                        <span class="info-value">{{ listing.wear_value.toFixed(4) }}</span>
+                                        <span class="info-value">{{ parseFloat(listing.float_value ||
+                                            listing.wear_value).toFixed(4) }}</span>
                                     </div>
                                 </div>
                                 <div v-if="listing.pattern_index" class="col-12">
                                     <div class="info-item">
                                         <span class="info-label">Паттерн:</span>
                                         <span class="info-value">#{{ listing.pattern_index }}</span>
+                                    </div>
+                                </div>
+                                <div v-if="listing.paint_index" class="col-12">
+                                    <div class="info-item">
+                                        <span class="info-label">Paint Index:</span>
+                                        <span class="info-value">{{ listing.paint_index }}</span>
+                                    </div>
+                                </div>
+                                <div v-if="listing.def_index" class="col-12">
+                                    <div class="info-item">
+                                        <span class="info-label">Def Index:</span>
+                                        <span class="info-value">{{ listing.def_index }}</span>
                                     </div>
                                 </div>
                                 <div v-if="listing.is_stattrak" class="col-12">
@@ -199,7 +240,12 @@
                             <tr v-for="other in otherListings" :key="other.id">
                                 <td>{{ other.seller.name }}</td>
                                 <td>{{ other.wear_name }}</td>
-                                <td>{{ other.wear_value.toFixed(4) }}</td>
+                                <td>
+                                    <span v-if="other.float_value">{{ parseFloat(other.float_value).toFixed(4) }}</span>
+                                    <span v-else-if="other.wear_value">{{ parseFloat(other.wear_value).toFixed(4)
+                                    }}</span>
+                                    <span v-else class="text-muted">-</span>
+                                </td>
                                 <td><strong>{{ formatPrice(other.price, 'RUB') }}</strong></td>
                                 <td>
                                     <a :href="`/marketplace/${other.id}`" class="btn btn-sm theme-outline">
@@ -256,7 +302,7 @@ export default {
                 return '₽';
             }
         },
-        
+
         chartSeries() {
             if (!this.steamPriceHistory.length) return [];
 
@@ -326,11 +372,11 @@ export default {
                             fontSize: '11px'
                         },
                         datetimeUTC: false,
-                        formatter: function(value, timestamp) {
+                        formatter: function (value, timestamp) {
                             const date = new Date(timestamp);
-                            return date.toLocaleDateString('ru-RU', { 
-                                day: '2-digit', 
-                                month: 'short' 
+                            return date.toLocaleDateString('ru-RU', {
+                                day: '2-digit',
+                                month: 'short'
                             }).replace('.', '');
                         }
                     },
@@ -403,11 +449,11 @@ export default {
     },
     mounted() {
         this.loadListing();
-        
+
         // Слушаем события смены валюты
         window.addEventListener('currency-changed', this.handleCurrencyChange);
     },
-    
+
     beforeUnmount() {
         // Убираем слушатель при размонтировании
         window.removeEventListener('currency-changed', this.handleCurrencyChange);
@@ -553,6 +599,49 @@ export default {
             return this.listing?.screenshots === 1 && this.listing?.screenshot_urls;
         },
 
+        hasFloatRange() {
+            return this.listing?.float_min !== null && this.listing?.float_min !== undefined &&
+                this.listing?.float_max !== null && this.listing?.float_max !== undefined &&
+                this.listing.float_max > this.listing.float_min;
+        },
+
+        // Методы для float bar
+
+        getFloatMarkerPosition() {
+            if (!this.listing?.float_value || !this.hasFloatRange()) return 0;
+            const floatValue = parseFloat(this.listing.float_value);
+            const min = parseFloat(this.listing.float_min);
+            const max = parseFloat(this.listing.float_max);
+            return ((floatValue - min) / (max - min)) * 100;
+        },
+
+        getSegmentWidth(segment) {
+            if (!this.hasFloatRange()) return 0;
+            const min = parseFloat(this.listing.float_min);
+            const max = parseFloat(this.listing.float_max);
+            const rangeWidth = max - min;
+
+            // Диапазоны износа CS2
+            const ranges = {
+                fn: [0.00, 0.07],    // Factory New
+                mw: [0.07, 0.15],    // Minimal Wear
+                ft: [0.15, 0.38],    // Field-Tested
+                ww: [0.38, 0.45],    // Well-Worn
+                bs: [0.45, 1.00]     // Battle-Scarred
+            };
+
+            const [segmentMin, segmentMax] = ranges[segment];
+
+            // Находим пересечение диапазона скина с диапазоном состояния
+            const overlapMin = Math.max(min, segmentMin);
+            const overlapMax = Math.min(max, segmentMax);
+
+            if (overlapMin >= overlapMax) return 0;
+
+            const overlapWidth = overlapMax - overlapMin;
+            return (overlapWidth / rangeWidth) * 100;
+        },
+
         showScreenshots() {
             if (!this.hasScreenshots()) return;
 
@@ -584,13 +673,13 @@ export default {
         handleCurrencyChange() {
             // Принудительно обновляем данные для пересчета цен
             if (this.steamPriceStats) {
-                this.steamPriceStats = {...this.steamPriceStats};
+                this.steamPriceStats = { ...this.steamPriceStats };
             }
             if (this.steamPriceHistory.length > 0) {
                 this.steamPriceHistory = [...this.steamPriceHistory];
             }
             if (this.listing) {
-                this.listing = {...this.listing};
+                this.listing = { ...this.listing };
             }
             if (this.otherListings.length > 0) {
                 this.otherListings = [...this.otherListings];
@@ -604,7 +693,7 @@ export default {
                 if (!selectedCurrency || selectedCurrency.code === 'USD') {
                     return usdPrice;
                 }
-                
+
                 // Если выбранная валюта RUB
                 if (selectedCurrency.code === 'RUB') {
                     const usdCurrency = window.currencyRatesCache?.find(c => c.code === 'USD');
@@ -612,14 +701,14 @@ export default {
                         return usdPrice * usdCurrency.exchange_rate;
                     }
                 }
-                
+
                 // Для других валют: USD -> RUB -> целевая валюта
                 const usdCurrency = window.currencyRatesCache?.find(c => c.code === 'USD');
                 if (usdCurrency) {
                     const rubleAmount = usdPrice * usdCurrency.exchange_rate;
                     return rubleAmount / selectedCurrency.exchange_rate;
                 }
-                
+
                 return usdPrice;
             } catch (error) {
                 return usdPrice;

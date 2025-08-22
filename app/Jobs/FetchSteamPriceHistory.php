@@ -199,6 +199,7 @@ class FetchSteamPriceHistory implements ShouldQueue
                     'volume' => $totalVolume
                 ]
             );
+            */
         }
     }
 

@@ -224,6 +224,15 @@ return [
                 'timeout' => 120, // 2 минуты таймаут
                 'nice' => 10, // низкий приоритет
             ],
+            'float-values' => [
+                'connection' => 'redis',
+                'queue' => ['float-values'],
+                'balance' => 'simple',
+                'maxProcesses' => 1, // один процесс для соблюдения rate limit
+                'tries' => 3,
+                'timeout' => 60,
+                'nice' => 5, // средний приоритет
+            ],
         ],
 
         'local' => [
@@ -251,6 +260,15 @@ return [
                 'tries' => 3,
                 'timeout' => 120,
                 'nice' => 10,
+            ],
+            'float-values' => [
+                'connection' => 'redis',
+                'queue' => ['float-values'],
+                'balance' => 'simple',
+                'maxProcesses' => 1, // один процесс для соблюдения rate limit
+                'tries' => 3,
+                'timeout' => 60,
+                'nice' => 5,
             ],
         ],
     ],

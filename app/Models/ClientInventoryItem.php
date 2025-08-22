@@ -33,7 +33,6 @@ class ClientInventoryItem extends Model
         'stickers',
         'inspect_url',
         'descriptions',
-        'item_id',
         'cached_at',
         'float_fetched_at',
         'type_id',

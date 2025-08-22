@@ -3,7 +3,6 @@
 namespace App\Services\Steam;
 
 use App\Models\Client;
-use App\Models\Item;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -128,30 +127,11 @@ class InventoryService
         // Убираем состояние из названия для поиска базового предмета
         $baseMarketHashName = $this->removeWearFromMarketHashName($marketHashName);
         
-        // Находим предмет в нашей базе данных (опционально)
-        $item = Item::where('steam_market_hash_name', $baseMarketHashName)->first();
-        
-        // Логируем информацию о ненайденных предметах
-        /*
-        if (!$item) {
-            Log::info("Item not found in database - saving anyway", [
-                'original_market_hash_name' => $marketHashName,
-                'base_market_hash_name' => $baseMarketHashName,
-                'classid' => $asset['classid'],
-                'instanceid' => $asset['instanceid'],
-                'description_name' => $description['name'] ?? null,
-                'description_type' => $description['type'] ?? null,
-                'appid' => $description['appid'] ?? null,
-                'tags' => $description['tags'] ?? []
-            ]);
-        }
-        */
         return [
             'asset_id' => $asset['assetid'],
             'class_id' => $asset['classid'],
             'instance_id' => $asset['instanceid'],
             'amount' => (int) $asset['amount'],
-            'item_id' => $item?->id, // Может быть null
             'item_name' => $baseMarketHashName,
             'market_hash_name' => $marketHashName,
             'name' => $description['name'] ?? $marketHashName,
@@ -241,13 +221,8 @@ class InventoryService
                 $stats['marketable_items']++;
             }
             
-            // Добавляем примерную стоимость на основе данных из нашей базы
-            if ($item['item_id']) {
-                $dbItem = Item::find($item['item_id']);
-                if ($dbItem && $dbItem->min_steam_price) {
-                    $stats['estimated_value'] += $dbItem->min_steam_price;
-                }
-            }
+            // Примерная стоимость теперь берется из SteamMarketItem или других источников
+            // TODO: Использовать SteamMarketItem для получения цены
         }
 
         return $stats;

@@ -5,7 +5,6 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\ListingResource\Pages;
 use App\Filament\Resources\ListingResource\RelationManagers;
 use App\Models\Listing;
-use App\Models\Item;
 use App\Models\Client;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -38,13 +37,6 @@ class ListingResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Основная информация')
                     ->schema([
-                        Forms\Components\Select::make('item_id')
-                            ->label('Предмет')
-                            ->relationship('item', 'name_ru')
-                            ->searchable()
-                            ->preload()
-                            ->required(),
-
                         Forms\Components\Select::make('seller_id')
                             ->label('Продавец')
                             ->relationship('seller', 'name')
@@ -115,17 +107,6 @@ class ListingResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('item.image_url')
-                    ->label('Изображение')
-                    ->size(60)
-                    ->square(),
-
-                Tables\Columns\TextColumn::make('item.name_ru')
-                    ->label('Предмет')
-                    ->searchable()
-                    ->weight(FontWeight::Medium)
-                    ->limit(30),
-
                 Tables\Columns\TextColumn::make('seller.name')
                     ->label('Продавец')
                     ->searchable()
@@ -181,19 +162,6 @@ class ListingResource extends Resource
                     ->sortable()
                     ->since(),
 
-                Tables\Columns\TextColumn::make('item.rarity')
-                    ->label('Редкость')
-                    ->badge()
-                    ->colors([
-                        'gray' => Item::RARITY_CONSUMER,
-                        'blue' => Item::RARITY_INDUSTRIAL,
-                        'indigo' => Item::RARITY_MIL_SPEC,
-                        'purple' => Item::RARITY_RESTRICTED,
-                        'pink' => Item::RARITY_CLASSIFIED,
-                        'red' => Item::RARITY_COVERT,
-                        'yellow' => Item::RARITY_CONTRABAND,
-                    ])
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
@@ -206,19 +174,6 @@ class ListingResource extends Resource
                     ])
                     ->default(Listing::STATUS_ACTIVE),
 
-                Tables\Filters\SelectFilter::make('item.type')
-                    ->label('Тип предмета')
-                    ->relationship('item', 'type')
-                    ->options([
-                        Item::TYPE_KNIFE => 'Ножи',
-                        Item::TYPE_PISTOL => 'Пистолеты',
-                        Item::TYPE_RIFLE => 'Автоматы',
-                        Item::TYPE_SMG => 'Пистолеты-пулемёты',
-                        Item::TYPE_SHOTGUN => 'Дробовики',
-                        Item::TYPE_MACHINEGUN => 'Пулемёты',
-                        Item::TYPE_SNIPER => 'Снайперские винтовки',
-                        Item::TYPE_GLOVES => 'Перчатки',
-                    ]),
 
                 Tables\Filters\Filter::make('price_range')
                     ->form([

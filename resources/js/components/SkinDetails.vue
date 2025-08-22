@@ -152,7 +152,7 @@
                                         <span class="info-value">{{ listing.inventory_type }}</span>
                                     </div>
                                 </div>
-                                <div class="col-12">
+                                <div v-if="listing.wear_name && listing.wear_name !== 'Не указано'" class="col-12">
                                     <div class="info-item">
                                         <span class="info-label">Состояние:</span>
                                         <span class="info-value">{{ listing.wear_name }}</span>
@@ -239,7 +239,10 @@
                         <tbody>
                             <tr v-for="other in otherListings" :key="other.id">
                                 <td>{{ other.seller.name }}</td>
-                                <td>{{ other.wear_name }}</td>
+                                <td>
+                                    <span v-if="other.wear_name && other.wear_name !== 'Не указано'">{{ other.wear_name }}</span>
+                                    <span v-else class="text-muted">-</span>
+                                </td>
                                 <td>
                                     <span v-if="other.float_value">{{ parseFloat(other.float_value).toFixed(4) }}</span>
                                     <span v-else-if="other.wear_value">{{ parseFloat(other.wear_value).toFixed(4)

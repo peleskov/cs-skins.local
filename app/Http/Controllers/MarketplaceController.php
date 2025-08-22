@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Item;
 use App\Models\Listing;
 use App\Models\Tag;
 use App\Models\TagCategory;
@@ -10,6 +9,7 @@ use App\Models\Favorite;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\DB;
 
 class MarketplaceController extends Controller
 {
@@ -18,7 +18,7 @@ class MarketplaceController extends Controller
      */
     public function index(): View
     {
-        $featuredListings = Listing::with(['item', 'seller'])
+        $featuredListings = Listing::with(['seller'])
             ->active()
             ->where('price', '>', 0)
             ->orderBy('listed_at', 'desc')
@@ -55,7 +55,7 @@ class MarketplaceController extends Controller
      */
     public function getListings(Request $request): JsonResponse
     {
-        $query = Listing::with(['item', 'seller'])
+        $query = Listing::with(['seller'])
             ->active()
             ->where('price', '>', 0);
 
@@ -64,12 +64,6 @@ class MarketplaceController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('inventory_item_name', 'LIKE', "%{$search}%")
                   ->orWhere('market_hash_name', 'LIKE', "%{$search}%");
-                  
-                // Fallback на item если есть связь
-                $q->orWhereHas('item', function ($q2) use ($search) {
-                    $q2->where('name_ru', 'LIKE', "%{$search}%")
-                       ->orWhere('name_en', 'LIKE', "%{$search}%");
-                });
             });
         }
 
@@ -96,19 +90,11 @@ class MarketplaceController extends Controller
                 return $typeMapping[$type] ?? $type;
             }, $types);
             
-            $query->where(function ($q) use ($russianTypes, $types) {
+            $query->where(function ($q) use ($russianTypes) {
                 // Ищем в inventory_type по началу строки (до запятой)
                 foreach ($russianTypes as $type) {
                     $q->orWhere('inventory_type', 'LIKE', $type . '%');
                 }
-                
-                // Fallback на item.type если inventory_type пустой
-                $q->orWhere(function ($q2) use ($types) {
-                    $q2->whereNull('inventory_type')
-                       ->whereHas('item', function ($q3) use ($types) {
-                            $q3->whereIn('type', $types);
-                       });
-                });
             });
         }
 
@@ -135,13 +121,6 @@ class MarketplaceController extends Controller
                     $q->orWhereRaw("JSON_SEARCH(inventory_tags, 'one', ?) IS NOT NULL", [$internalName]);
                 }
                 
-                // Fallback на item.rarity если inventory_tags пустой
-                $q->orWhere(function ($q2) use ($rarities) {
-                    $q2->whereNull('inventory_tags')
-                       ->whereHas('item', function ($q3) use ($rarities) {
-                            $q3->whereIn('rarity', $rarities);
-                       });
-                });
             });
         }
 
@@ -262,10 +241,8 @@ class MarketplaceController extends Controller
         }
         
         $items = collect($listings->items())->map(function ($listing) use ($cartItemIds, $favoriteItemIds) {
-            // Добавляем переведённую редкость только если есть связанный item
-            if ($listing->item && $listing->item->rarity) {
-                $listing->item->rarity_translated = __('items.rarities.' . $listing->item->rarity);
-            }
+            // Используем систему тегов для редкости
+            // Редкость хранится в rarity_id
             $listing->wear_name = $listing->wear_name; // Это вызовет геттер из модели
             
             // Добавляем статус корзины (читаем из сессии)
@@ -294,11 +271,11 @@ class MarketplaceController extends Controller
      */
     public function show(Listing $listing): View
     {
-        $listing->load(['item', 'seller']);
+        $listing->load(['seller']);
         
         // Другие предложения этого же предмета
         $otherListings = Listing::with(['seller'])
-            ->where('item_id', $listing->item_id)
+            ->where('market_hash_name', $listing->market_hash_name)
             ->where('id', '!=', $listing->id)
             ->active()
             ->orderBy('price')
@@ -333,7 +310,7 @@ class MarketplaceController extends Controller
     public function getCategories(Request $request): JsonResponse
     {
         // Используем inventory_type из листингов вместо items.type
-        $query = Listing::select('inventory_type as type', \DB::raw('COUNT(*) as items_count'))
+        $query = Listing::select('inventory_type as type', DB::raw('COUNT(*) as items_count'))
             ->where('status', 'active')
             ->where('price', '>', 0)
             ->whereNotNull('inventory_type');
@@ -421,7 +398,7 @@ class MarketplaceController extends Controller
                     })->whereIn('normalized_value', $values)->pluck('id');
                     
                     if ($tagIds->isNotEmpty()) {
-                        $listingIds = \DB::table('item_tags')
+                        $listingIds = DB::table('item_tags')
                             ->whereIn('tag_id', $tagIds)
                             ->where('item_type', 'listing')
                             ->pluck('item_id');
@@ -509,12 +486,6 @@ class MarketplaceController extends Controller
             $activeListings->where(function ($q) use ($search) {
                 $q->where('inventory_item_name', 'LIKE', "%{$search}%")
                   ->orWhere('market_hash_name', 'LIKE', "%{$search}%");
-                  
-                // Fallback на item если есть связь
-                $q->orWhereHas('item', function ($q2) use ($search) {
-                    $q2->where('name_ru', 'LIKE', "%{$search}%")
-                       ->orWhere('name_en', 'LIKE', "%{$search}%");
-                });
             });
         }
 
@@ -547,19 +518,11 @@ class MarketplaceController extends Controller
                 return $typeMapping[$type] ?? $type;
             }, $types);
             
-            $activeListings->where(function ($q) use ($russianTypes, $types) {
+            $activeListings->where(function ($q) use ($russianTypes) {
                 // Ищем в inventory_type по началу строки (до запятой)
                 foreach ($russianTypes as $type) {
                     $q->orWhere('inventory_type', 'LIKE', $type . '%');
                 }
-                
-                // Fallback на item.type если inventory_type пустой
-                $q->orWhere(function ($q2) use ($types) {
-                    $q2->whereNull('inventory_type')
-                       ->whereHas('item', function ($q3) use ($types) {
-                            $q3->whereIn('type', $types);
-                       });
-                });
             });
         }
 
@@ -667,13 +630,13 @@ class MarketplaceController extends Controller
             $fieldName = $category . '_id';
             
             // Подсчитываем теги для данной категории
-            $tagCounts = \DB::table('listings')
+            $tagCounts = DB::table('listings')
                 ->join('tags', 'listings.' . $fieldName, '=', 'tags.id')
                 ->join('tag_categories', 'tags.category_id', '=', 'tag_categories.id')
                 ->whereIn('listings.id', $listingIds)
                 ->whereNotNull('listings.' . $fieldName)
                 ->where('tag_categories.code', $category)
-                ->select('tags.id', 'tags.normalized_value', 'tags.color', \DB::raw('COUNT(*) as count'))
+                ->select('tags.id', 'tags.normalized_value', 'tags.color', DB::raw('COUNT(*) as count'))
                 ->groupBy('tags.id', 'tags.normalized_value', 'tags.color')
                 ->get();
                 
@@ -700,7 +663,7 @@ class MarketplaceController extends Controller
         $listingIds = $activeListings->pluck('id');
         
         // Получаем дополнительные категории (не основные)
-        $additionalTags = \DB::table('item_tags')
+        $additionalTags = DB::table('item_tags')
             ->join('tags', 'item_tags.tag_id', '=', 'tags.id')
             ->join('tag_categories', 'tags.category_id', '=', 'tag_categories.id')
             ->whereIn('item_tags.item_id', $listingIds)
@@ -710,7 +673,7 @@ class MarketplaceController extends Controller
                 'tag_categories.code as category_code',
                 'tags.normalized_value',
                 'tags.color',
-                \DB::raw('COUNT(*) as count')
+                DB::raw('COUNT(*) as count')
             )
             ->groupBy('tag_categories.code', 'tags.normalized_value', 'tags.color')
             ->get();
@@ -823,8 +786,8 @@ class MarketplaceController extends Controller
      */
     public function getSimilarListings(Listing $listing): JsonResponse
     {
-        $similarListings = Listing::with(['item', 'seller'])
-            ->where('item_id', $listing->item_id)
+        $similarListings = Listing::with(['seller'])
+            ->where('market_hash_name', $listing->market_hash_name)
             ->where('id', '!=', $listing->id)
             ->active()
             ->orderBy('price')
@@ -843,10 +806,9 @@ class MarketplaceController extends Controller
                         'name' => $listing->seller->name,
                     ],
                     'item' => [
-                        'id' => $listing->item->id,
-                        'name_ru' => $listing->item->name_ru,
-                        'name_en' => $listing->item->name_en,
-                        'image_url' => $listing->item->image_url,
+                        'name_ru' => $listing->inventory_item_name,
+                        'name_en' => $listing->market_hash_name,
+                        'image_url' => $listing->inventory_icon_url,
                     ],
                 ];
             });
@@ -859,11 +821,11 @@ class MarketplaceController extends Controller
      */
     public function getListingDetails(Listing $listing): JsonResponse
     {
-        $listing->load(['item', 'seller', 'tags', 'inventoryItem.steamMarketItem.priceHistory']);
+        $listing->load(['seller', 'tags', 'inventoryItem.steamMarketItem.priceHistory']);
         
         // Другие предложения этого же предмета
         $otherListings = Listing::with(['seller'])
-            ->where('item_id', $listing->item_id)
+            ->where('market_hash_name', $listing->market_hash_name)
             ->where('id', '!=', $listing->id)
             ->active()
             ->orderBy('price')

@@ -23,14 +23,14 @@ class TradeController extends Controller
         $client = Auth::guard('client')->user();
         
         $listings = Listing::where('seller_id', $client->id)
-            ->with(['item', 'tags'])
+            ->with(['tags'])
             ->orderBy('created_at', 'desc')
             ->get();
         
         // Для каждого листинга получаем минимальную цену (ТОП-1) и цену выкупа
         $listings->each(function ($listing) {
             $listing->min_market_price = $this->calculateMinMarketPrice($listing->market_hash_name);
-            $listing->buyout_price = $listing->item ? $listing->item->buyout_price : null;
+            $listing->buyout_price = null; // Удалено после удаления модели Item
         });
         
         return response()->json([

@@ -44,9 +44,9 @@
 										title="Удалить из избранного"
 										@click.stop>
 									</div>
-									<img class="img-fluid inventory-img h-auto" :src="getIconUrl(favorite.listing.item)"
-										:alt="getItemName(favorite.listing.item)" @error="handleImageError">
-									<h6 class="mt-2">{{ getItemName(favorite.listing.item) }}</h6>
+									<img class="img-fluid inventory-img h-auto" :src="getIconUrl(favorite.listing)"
+										:alt="getItemName(favorite.listing)" @error="handleImageError">
+									<h6 class="mt-2">{{ getItemName(favorite.listing) }}</h6>
 									<small class="text-muted">{{ favorite.listing.inventory_type || 'Unknown' }}</small>
 								</div>
 							</div>
@@ -55,12 +55,12 @@
 				</div>
 				<div class="col-lg-5 col-12" id="favorite-details-section">
 					<div class="item-details sticky-top" v-if="selectedFavorite">
-						<h5 class="item-name">{{ getItemName(selectedFavorite.listing.item) }}</h5>
+						<h5 class="item-name">{{ getItemName(selectedFavorite.listing) }}</h5>
 						<div class="item-type text-muted mb-3">{{ selectedFavorite.listing.inventory_type || 'Unknown' }}</div>
 						
 						<!-- Изображение предмета -->
 						<div class="item-preview mb-3">
-							<img :src="getIconUrl(selectedFavorite.listing.item)" :alt="getItemName(selectedFavorite.listing.item)" 
+							<img :src="getIconUrl(selectedFavorite.listing)" :alt="getItemName(selectedFavorite.listing)" 
 								 class="img-fluid" @error="handleImageError">
 						</div>
 						
@@ -73,7 +73,7 @@
 						<div v-if="selectedFavorite.listing.float_value" class="item-wear mb-3">
 							<div class="wear-info">
 								<strong>Износ:</strong> {{ getWearCondition(selectedFavorite.listing.float_value) }}
-								<div class="float-value">Float: {{ selectedFavorite.listing.float_value.toFixed(6) }}</div>
+								<div class="float-value">Float: {{ parseFloat(selectedFavorite.listing.float_value).toFixed(6) }}</div>
 							</div>
 							<div v-if="selectedFavorite.listing.pattern_index" class="pattern-info mt-2">
 								<strong>Паттерн:</strong> #{{ selectedFavorite.listing.pattern_index }}
@@ -290,14 +290,14 @@ export default {
 			event.target.src = '/images/no-image.png';
 		},
 		
-		getItemName(item) {
-			// Для листингов используем inventory_item_name, для обычных предметов - name_ru
-			return item.inventory_item_name || item.name_ru || item.market_hash_name || item.name || 'Unknown';
+		getItemName(listing) {
+			// Для листингов используем inventory_item_name, market_hash_name или другие доступные поля
+			return listing.inventory_item_name || listing.market_hash_name || listing.name || 'Unknown';
 		},
 		
-		getIconUrl(item) {
-			// Для листингов используем inventory_icon_url, для обычных предметов - icon_url
-			const iconUrl = item.inventory_icon_url || item.icon_url;
+		getIconUrl(listing) {
+			// Для листингов используем inventory_icon_url
+			const iconUrl = listing.inventory_icon_url;
 			
 			if (iconUrl) {
 				// Проверяем, уже ли это полный URL
@@ -307,8 +307,8 @@ export default {
 				// Если нет, добавляем префикс Steam
 				return 'https://community.steamstatic.com/economy/image/' + iconUrl;
 			}
-			if (item.image_url) {
-				return item.image_url;
+			if (listing.image_url) {
+				return listing.image_url;
 			}
 			return '/images/no-image.png';
 		},

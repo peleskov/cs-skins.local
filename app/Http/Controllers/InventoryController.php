@@ -34,7 +34,7 @@ class InventoryController extends Controller
 
         // Получаем кешированный инвентарь
         $inventoryItems = $client->inventoryItems()
-            ->with(['item', 'tags'])
+            ->with(['tags'])
             ->orderBy('cached_at', 'desc')
             ->get();
 
@@ -56,9 +56,7 @@ class InventoryController extends Controller
             'total_items' => $inventoryItems->count(),
             'tradable_items' => $inventoryItems->where('tradable', true)->count(),
             'marketable_items' => $inventoryItems->where('marketable', true)->count(),
-            'estimated_value' => $inventoryItems->sum(function ($item) {
-                return $item->item ? $item->item->min_steam_price ?? 0 : 0;
-            }),
+            'estimated_value' => 0, // Удалено после удаления модели Item
             'last_sync' => $inventoryItems->first()?->cached_at,
         ];
 
@@ -152,7 +150,6 @@ class InventoryController extends Controller
         // Ищем предмет в инвентаре пользователя
         $inventoryItem = ClientInventoryItem::where('client_id', $client->id)
             ->where('steam_asset_id', $steamAssetId)
-            ->with('item')
             ->first();
             
         if (!$inventoryItem) {
@@ -218,7 +215,6 @@ class InventoryController extends Controller
             // Создаем листинг со стандартными параметрами
             $listing = new Listing();
             $listing->seller_id = $client->id;
-            $listing->item_id = $inventoryItem->item_id; // может быть null
             $listing->steam_asset_id = $steamAssetId;
             $listing->steam_class_id = $inventoryItem->steam_class_id;
             $listing->steam_instance_id = $inventoryItem->steam_instance_id;

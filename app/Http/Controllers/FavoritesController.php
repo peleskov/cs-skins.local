@@ -15,8 +15,11 @@ class FavoritesController extends Controller
      */
     public function index(): View
     {
-        $favorites = Favorite::with(['listing.item', 'listing.seller', 'listing.tags'])
+        $favorites = Favorite::with(['listing.seller', 'listing.tags'])
             ->where('client_id', auth('client')->id())
+            ->whereHas('listing', function($query) {
+                $query->where('status', 'active');
+            })
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -80,8 +83,11 @@ class FavoritesController extends Controller
      */
     public function getFavorites(): JsonResponse
     {
-        $favorites = Favorite::with(['listing.item', 'listing.seller', 'listing.tags'])
+        $favorites = Favorite::with(['listing.seller', 'listing.tags'])
             ->where('client_id', auth('client')->id())
+            ->whereHas('listing', function($query) {
+                $query->where('status', 'active');
+            })
             ->orderBy('created_at', 'desc')
             ->get();
 

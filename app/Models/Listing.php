@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Listing extends Model
 {
     protected $fillable = [
-        'item_id',
         'seller_id',
         'buyer_id',
         'steam_asset_id',
@@ -83,10 +82,6 @@ class Listing extends Model
     const STATUS_CANCELLED = 'cancelled';
     const STATUS_EXPIRED = 'expired';
 
-    public function item(): BelongsTo
-    {
-        return $this->belongsTo(Item::class);
-    }
 
     public function seller(): BelongsTo
     {

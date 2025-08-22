@@ -15,7 +15,7 @@ class WebController extends Controller
      */
     public function home()
     {
-        $featuredListings = Listing::with(['item', 'seller'])
+        $featuredListings = Listing::with(['seller'])
             ->active()
             ->where('price', '>', 0)
             ->inRandomOrder()

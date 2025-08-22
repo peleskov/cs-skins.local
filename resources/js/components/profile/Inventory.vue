@@ -85,7 +85,7 @@
 								<!-- Float значение и паттерн -->
 								<div v-if="selectedItem.float_value" class="item-wear mb-3">
 									<div class="wear-info">
-										<strong>Float:</strong> {{ selectedItem.float_value.toFixed(6) }}
+										<strong>Float:</strong> {{ parseFloat(selectedItem.float_value).toFixed(6) }}
 									</div>
 									<div v-if="selectedItem.pattern_index" class="pattern-info mt-2">
 										<strong>Паттерн:</strong> #{{ selectedItem.pattern_index }}
@@ -186,7 +186,7 @@
 								<!-- Float значение и паттерн -->
 								<div v-if="selectedItem.float_value" class="item-wear mb-3">
 									<div class="wear-info">
-										<strong>Float:</strong> {{ selectedItem.float_value.toFixed(6) }}
+										<strong>Float:</strong> {{ parseFloat(selectedItem.float_value).toFixed(6) }}
 									</div>
 									<div v-if="selectedItem.pattern_index" class="pattern-info mt-2">
 										<strong>Паттерн:</strong> #{{ selectedItem.pattern_index }}

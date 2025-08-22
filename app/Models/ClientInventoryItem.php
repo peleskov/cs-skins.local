@@ -69,10 +69,6 @@ class ClientInventoryItem extends Model
         return $this->belongsTo(Client::class);
     }
 
-    public function item(): BelongsTo
-    {
-        return $this->belongsTo(Item::class);
-    }
 
     public function steamMarketItem(): BelongsTo
     {
@@ -130,13 +126,13 @@ class ClientInventoryItem extends Model
 
     public function isFromDatabase(): bool
     {
-        return $this->item_id !== null;
+        return $this->exists;
     }
 
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class, 'item_tags', 'item_id', 'tag_id')
-            ->where('item_type', 'inventory')
+            ->where('item_type', 'client_inventory_item')
             ->join('tag_categories', 'tags.category_id', '=', 'tag_categories.id')
             ->select('tags.*', 'tag_categories.code as category_code', 'tag_categories.steam_category as category_name')
             ->orderBy('tag_categories.sort_order')

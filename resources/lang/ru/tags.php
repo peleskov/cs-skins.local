@@ -88,6 +88,10 @@ return [
         'weapon_mag7' => 'MAG-7',
         'weapon_m249' => 'M249',
         'weapon_negev' => 'Negev',
+        'weapon_galilar' => 'Galil AR',
+
+        // Типы предметов
+        'spray' => 'Граффити',
 
         // Коллекции
         'set_safehouse' => 'Коллекция "Убежище"',
@@ -130,8 +134,12 @@ return [
         'set_recoil' => 'Коллекция "Отдача"',
         'set_revolution' => 'Коллекция "Революция"',
         'set_kilowatt' => 'Коллекция "Киловатт"',
+        'set_community_5' => 'Коллекция "Сообщество 5"',
+        'set_dust_2' => 'Коллекция "Пыль 2"',
+        'set_inferno_2' => 'Коллекция "Инферно 2"',
 
         // Турниры
+        'tournament' => 'Турнир',
         'tournament22' => 'PGL Major Copenhagen 2024',
         'tournament21' => 'PGL Major Stockholm 2021',
         'tournament20' => 'ESL One Cologne 2020',
@@ -205,5 +213,6 @@ return [
         'crate_sticker_pack_cph2024_legends_collection' => 'Наклейки легенд PGL Major Copenhagen 2024',
         'crate_sticker_pack_cph2024_challengers_collection' => 'Наклейки претендентов PGL Major Copenhagen 2024',
         'crate_sticker_pack_cph2024_champions_collection' => 'Наклейки чемпионов PGL Major Copenhagen 2024',
+        'crate_sticker_pack_cph2024_contenders_collection' => 'Наклейки участников PGL Major Copenhagen 2024',
     ],
 ];

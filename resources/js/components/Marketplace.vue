@@ -92,8 +92,8 @@
                   <div id="collapseTwo" class="accordion-collapse collapse show">
                     <div class="accordion-body">
                       <ul class="filter-item-list">
-                        <li v-for="tag in tags" :key="`${tag.type}-${tag.value}`">
-                          <a href="#" @click.prevent="toggleTag(tag)" :class="{ active: isTagActive(tag) }">
+                        <li v-for="tag in tags" :key="`${tag.type}-${tag.value}`" class="text-truncate">
+                          <a href="#" @click.prevent="toggleTag(tag)" :class="{ active: isTagActive(tag) }" :title="`${tag.name} (${tag.count})`">
                             {{ tag.name }} ({{ tag.count }})
                           </a>
                         </li>

@@ -122,9 +122,10 @@
 			padding-top: calc(5px + (15 - 5) * ((100vw - 320px) / (1920 - 320)));
 
 			li {
+				max-width: 125px;
 				position: relative;
 				background-color: rgba(var(--box-bg), 1);
-				padding: 10px;
+				padding: 2px;
 				border-radius: 4px;
 				transition: 0.4s ease;
 
@@ -137,6 +138,7 @@
 				}
 
 				a {
+					font-size: 12px;
 					color: rgba(var(--content-color), 1);
 					transition: 0.4s ease;
 

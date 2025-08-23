@@ -38,9 +38,9 @@ class OrderController extends Controller
     }
 
     /**
-     * Создать заказ из корзины
+     * Покупка товаров из корзины
      */
-    public function createOrder(Request $request): JsonResponse
+    public function cartBuy(Request $request): JsonResponse
     {
         if (!auth('client')->check()) {
             return response()->json([
@@ -50,25 +50,150 @@ class OrderController extends Controller
         }
 
         try {
-            // Валидируем все условия ДО создания заказа
+            // Валидируем корзину
             $this->validateCart();
-            $this->validateBuyerTradeUrl();
+            
+            // Получаем товары из корзины
             $cartItems = $this->cartService->getDetailedItems();
-            $total = $this->cartService->getTotal();
-            $this->validateItemsAvailability($cartItems);
+            
+            // Создаем заказы
+            $result = $this->createOrder($cartItems);
+            
+            if ($result['success']) {
+                // Очищаем корзину после успешной покупки
+                $this->cartService->clear();
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => count($result['orders']) === 1 
+                        ? 'Заказ успешно оплачен!' 
+                        : 'Заказы успешно оплачены!',
+                    'orders' => $result['orders'],
+                    'total_orders' => count($result['orders'])
+                ]);
+            }
+            
+            return response()->json([
+                'success' => false,
+                'message' => $result['message']
+            ], 500);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ошибка при создании заказа: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Быстрая покупка одного товара
+     */
+    public function quickBuy(Request $request): JsonResponse
+    {
+        if (!auth('client')->check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Необходимо авторизоваться для покупки'
+            ], 401);
+        }
+
+        $request->validate([
+            'listing_id' => 'required|integer|exists:listings,id'
+        ]);
+
+        try {
+            // Находим товар
+            $listing = \App\Models\Listing::findOrFail($request->listing_id);
+            
+            // Проверяем доступность товара
+            if (!$listing->isActive()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Товар больше не доступен для покупки'
+                ], 400);
+            }
+
+            // Проверяем что это не свой товар
+            if ($listing->seller_id === auth('client')->id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Нельзя купить свой собственный товар'
+                ], 400);
+            }
+
+            // Создаем коллекцию с одним товаром в том же формате, что и корзина
+            $items = collect([
+                [
+                    'listing_id' => $listing->id,
+                    'item' => [
+                        'name' => $listing->inventory_item_name,
+                        'image_url' => $listing->inventory_icon_url ? 'https://steamcommunity-a.akamaihd.net/economy/image/' . $listing->inventory_icon_url : null,
+                        'type' => $listing->inventory_type,
+                        'market_hash_name' => $listing->market_hash_name,
+                        'steam_asset_id' => $listing->steam_asset_id,
+                    ],
+                    'price' => (float) $listing->price,
+                    'wear_name' => $listing->wear_name,
+                    'wear_value' => (float) $listing->wear_value,
+                    'is_stattrak' => $listing->is_stattrak,
+                    'is_souvenir' => $listing->is_souvenir,
+                    'seller_id' => $listing->seller_id,
+                    'seller' => [
+                        'id' => $listing->seller_id,
+                        'name' => $listing->seller->name ?? 'Неизвестный продавец',
+                    ],
+                ]
+            ]);
+
+            // Создаем заказ
+            $result = $this->createOrder($items);
+            
+            if ($result['success']) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Товар успешно куплен!',
+                    'order' => $result['orders'][0] ?? null
+                ]);
+            }
+            
+            return response()->json([
+                'success' => false,
+                'message' => $result['message']
+            ], 400);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ошибка при покупке: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Создать заказы из переданных товаров
+     */
+    private function createOrder($items): array
+    {
+        try {
+            // Валидируем все условия ДО создания заказа
+            $this->validateBuyerTradeUrl();
+            $this->validateItemsAvailability($items);
+            $total = $items->sum('price');
             $this->validateBalance($total);
 
             DB::beginTransaction();
 
             try {
                 // Группируем товары по продавцам
-                $itemsBySeller = $cartItems->groupBy('seller_id');
+                $itemsBySeller = $items->groupBy('seller_id');
                 $createdOrders = [];
                 
                 foreach ($itemsBySeller as $sellerId => $sellerItems) {
                     $sellerTotal = $sellerItems->sum('price');
                     
                     // Списываем средства с баланса до создания заказа
+                    /** @var \App\Models\Client $client */
                     $client = auth('client')->user();
                     $client->debit($sellerTotal);
                     
@@ -101,19 +226,12 @@ class OrderController extends Controller
                     ];
                 }
 
-                // Очищаем корзину после успешной оплаты всех заказов
-                $this->cartService->clear();
-
                 DB::commit();
 
-                return response()->json([
+                return [
                     'success' => true,
-                    'message' => count($createdOrders) === 1 
-                        ? 'Заказ успешно оплачен!' 
-                        : 'Заказы успешно оплачены!',
-                    'orders' => $createdOrders,
-                    'total_orders' => count($createdOrders)
-                ]);
+                    'orders' => $createdOrders
+                ];
 
             } catch (\Exception $e) {
                 DB::rollBack();
@@ -121,10 +239,10 @@ class OrderController extends Controller
             }
 
         } catch (\Exception $e) {
-            return response()->json([
+            return [
                 'success' => false,
-                'message' => 'Ошибка при создании заказа: ' . $e->getMessage()
-            ], 500);
+                'message' => $e->getMessage()
+            ];
         }
     }
 

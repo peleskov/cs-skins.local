@@ -91,12 +91,11 @@
 											<span class="text-muted small">ТОП-1</span>
 											<span class="text-muted small">Выкуп</span>
 
-											<span class="small">{{ formatPrice(listing.price) }} ₽</span>
+											<span class="small">{{ formatPrice(listing.price) }}</span>
 											<span class="small">{{ listing.min_market_price ?
-												formatPrice(listing.min_market_price)
-												+ ' ₽' : '-' }}</span>
+												formatPrice(listing.min_market_price) : '-' }}</span>
 											<span class="small">{{ listing.buyout_price ?
-												formatPrice(listing.buyout_price) + ' ₽' : 'Не востребован' }}</span>
+												formatPrice(listing.buyout_price) : 'Не востребован' }}</span>
 										</div>
 										<div class="btn-group">
 											<!-- Кнопки для черновиков -->
@@ -280,7 +279,7 @@
 								<h6 class="mb-1">{{ getItemName(itemToActivate) }}</h6>
 								<small class="text-muted">{{ itemToActivate.market_hash_name }}</small>
 								<div class="mt-1">
-									<span class="badge bg-success">{{ formatPrice(itemToActivate.price) }} ₽</span>
+									<span class="badge bg-success">{{ formatPrice(itemToActivate.price) }}</span>
 								</div>
 							</div>
 						</div>

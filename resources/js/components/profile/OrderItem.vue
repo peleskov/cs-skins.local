@@ -36,7 +36,7 @@
 				</div>
 				<div class="order-meta text-end">
 					<div class="order-amount mb-1">
-						<strong class="fs-5 text-primary">{{ formatPrice(order.total_amount) }} ₽</strong>
+						<strong class="fs-5 text-primary">{{ formatPrice(order.total_amount) }}</strong>
 					</div>
 					<small class="text-muted">{{ formatDate(order.created_at) }}</small>
 				</div>
@@ -72,7 +72,7 @@
 						</div>
 						<!-- Item Price -->
 						<div class="item-price text-end">
-							<strong class="fs-6 text-success">{{ formatPrice(item.price) }} ₽</strong>
+							<strong class="fs-6 text-success">{{ formatPrice(item.price) }}</strong>
 						</div>
 					</div>
 				</div>

@@ -95,7 +95,7 @@
 						<i class="ri-wallet-3-line"></i>
 						<span>Баланс :</span>
 					</div>
-					<h6>{{ formatPrice(client.balance) }} ₽</h6>
+					<h6>{{ formatPrice(client.balance) }}</h6>
 				</div>
 				<a href="#balance-refill" class="btn theme-outline mt-0" data-bs-toggle="modal">Пополнить</a>
 			</li>

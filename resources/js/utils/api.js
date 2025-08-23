@@ -101,6 +101,20 @@ class OrderAPI {
     }
 
     /**
+     * Быстрая покупка товара
+     */
+    async quickBuy(listingId) {
+        try {
+            const response = await axios.post(`${this.baseUrl}/quick-buy`, {
+                listing_id: listingId
+            });
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
      * Оплатить заказ
      */
     async payOrder(orderId) {

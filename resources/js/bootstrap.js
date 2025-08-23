@@ -34,7 +34,13 @@ axios.interceptors.response.use(
         
         // Централизованная обработка других ошибок
         if (error.response && window.toast) {
-            const errorMessage = handleApiError(error);
+            let errorMessage = handleApiError(error);
+            
+            // Специальная обработка для 401 - более понятное сообщение
+            if (error.response.status === 401) {
+                errorMessage = 'Для выполнения этого действия необходимо войти через Steam';
+            }
+            
             window.toast.error(errorMessage);
         }
         

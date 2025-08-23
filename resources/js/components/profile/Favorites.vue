@@ -108,7 +108,7 @@
 						<div class="item-price mb-3">
 							<div class="d-flex justify-content-between align-items-center">
 								<strong>Цена:</strong>
-								<span class="fw-bold fs-5">{{ formatPrice(selectedFavorite.listing.price) }} ₽</span>
+								<span class="fw-bold fs-5">{{ formatPrice(selectedFavorite.listing.price) }}</span>
 							</div>
 						</div>
 						

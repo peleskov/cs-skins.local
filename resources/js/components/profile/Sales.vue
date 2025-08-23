@@ -139,8 +139,7 @@
 									}}</small>
 								</div>
 								<div class="text-end">
-									<strong class="text-primary">{{ formatPrice(orderToCancel.total_amount) }}
-										₽</strong>
+									<strong class="text-primary">{{ formatPrice(orderToCancel.total_amount) }}</strong>
 								</div>
 							</div>
 						</div>

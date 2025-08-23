@@ -12,7 +12,7 @@
 					<div class="card-body text-center">
 						<i class="ri-wallet-3-line display-4 text-primary mb-3"></i>
 						<h5 class="card-title">Текущий баланс</h5>
-						<h2 class="text-primary">{{ formatNumber(client.balance, 2) }} ₽</h2>
+						<h2 class="text-primary">{{ formatPrice(client.balance) }}</h2>
 						<p class="text-muted mb-0">Доступно для покупок</p>
 					</div>
 				</div>

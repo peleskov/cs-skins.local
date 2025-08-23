@@ -75,15 +75,13 @@ Route::prefix('api')->name('api.')->group(function () {
     
     // Маршруты для заказов
     Route::prefix('orders')->name('orders.')->controller(OrderController::class)->group(function () {
-        Route::post('/create', 'createOrder')->name('create')->middleware(['auth:client', 'throttle:10,1']);
+        Route::post('/create', 'cartBuy')->name('create')->middleware(['auth:client', 'throttle:10,1']);
+        Route::post('/quick-buy', 'quickBuy')->name('quick-buy')->middleware(['auth:client', 'throttle:10,1']);
         Route::get('/purchases', 'getMyOrders')->name('purchases')->middleware(['auth:client', 'throttle:60,1']);
         Route::get('/sales', 'getMySales')->name('sales')->middleware(['auth:client', 'throttle:60,1']);
         Route::post('/{order}/cancel', 'cancel')->name('cancel')->middleware(['auth:client', 'throttle:10,1']);
     });
     
-    Route::post('/marketplace/quick-buy', function () {
-        return response()->json(['message' => 'Функция быстрой покупки будет реализована позже'], 501);
-    })->name('marketplace.quick-buy');
     
     
     // API маршруты для торговли (требуют авторизации)

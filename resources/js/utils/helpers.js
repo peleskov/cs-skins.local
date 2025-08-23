@@ -6,17 +6,24 @@
  * Форматирование цены с разделителями тысяч и конвертацией валюты
  * @param {number|string} price - Цена для форматирования
  * @param {string} sourceCurrency - Валюта исходной цены (по умолчанию RUB)
- * @returns {string} Отформатированная цена с символом валюты
+ * @param {boolean} returnNumber - Если true, возвращает число вместо форматированной строки
+ * @returns {string|number} Отформатированная цена с символом валюты или число
  */
-export function formatPrice(price, sourceCurrency = 'RUB') {
+export function formatPrice(price, sourceCurrency = 'RUB', returnNumber = false) {
     const selectedCurrency = getSelectedCurrency();
     
     if (!selectedCurrency) {
+        if (returnNumber) {
+            return Number(price);
+        }
         return Number(price).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     }
     
     // Если исходная валюта совпадает с выбранной, возвращаем как есть
     if (selectedCurrency.code === sourceCurrency) {
+        if (returnNumber) {
+            return Number(price);
+        }
         return Number(price).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ' + selectedCurrency.symbol;
     }
     
@@ -49,6 +56,10 @@ export function formatPrice(price, sourceCurrency = 'RUB') {
         } else {
             console.warn(`Currency ${sourceCurrency} not found in cache for conversion`);
         }
+    }
+    
+    if (returnNumber) {
+        return Number(convertedPrice);
     }
     
     return Number(convertedPrice).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ' + selectedCurrency.symbol;

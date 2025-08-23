@@ -309,9 +309,10 @@ export default {
         chartSeries() {
             if (!this.steamPriceHistory.length) return [];
 
+            // Конвертируем цены из USD в выбранную валюту
             const priceData = this.steamPriceHistory.map(item => ({
                 x: new Date(item.date).getTime(),
-                y: parseFloat(item.price)
+                y: this.convertUsdPrice(parseFloat(item.price))
             }));
 
             const volumeData = this.steamPriceHistory.map(item => ({
@@ -393,6 +394,7 @@ export default {
                 yaxis: [
                     {
                         seriesName: 'Объём продаж',
+                        min: 0,
                         axisTicks: { show: false },
                         axisBorder: { show: false },
                         labels: {
@@ -407,14 +409,14 @@ export default {
                     {
                         opposite: true,
                         seriesName: `Цена (${this.currentCurrencySymbol})`,
+                        min: 0,
                         axisTicks: { show: false },
                         axisBorder: { show: false },
                         labels: {
                             style: { colors: '#f2a93e', fontSize: '11px' },
                             formatter: (value) => {
-                                // Конвертируем значение из USD в выбранную валюту
-                                const convertedValue = this.convertPriceForChart(value);
-                                return `${this.currentCurrencySymbol}${convertedValue.toFixed(2)}`;
+                                // Значение уже конвертировано в chartSeries, просто форматируем
+                                return `${this.currentCurrencySymbol}${value.toFixed(2)}`;
                             }
                         },
                         title: {
@@ -436,8 +438,8 @@ export default {
                         {
                             formatter: (value) => {
                                 if (value) {
-                                    const convertedValue = this.convertPriceForChart(value);
-                                    return `${this.currentCurrencySymbol}${convertedValue.toFixed(2)}`;
+                                    // Значение уже конвертировано в chartSeries
+                                    return `${this.currentCurrencySymbol}${value.toFixed(2)}`;
                                 }
                                 return `${this.currentCurrencySymbol}0.00`;
                             }
@@ -462,6 +464,11 @@ export default {
         window.removeEventListener('currency-changed', this.handleCurrencyChange);
     },
     methods: {
+        // Метод для конвертации цен из USD в выбранную валюту
+        convertUsdPrice(usdPrice) {
+            return formatPrice(usdPrice, 'USD', true);
+        },
+
         async loadListing() {
             try {
                 const response = await axios.get(`/api/marketplace/listing/${this.listingId}`);
@@ -546,34 +553,43 @@ export default {
             return `https://steamcommunity.com/market/listings/730/${encodedName}`;
         },
 
-        // Оптимизированная инициализация кнопок корзины и избранного
+        // Инициализация динамических кнопок
         initializeCartButton() {
-            // Инициализируем кнопку корзины
-            const cartButton = document.querySelector('[data-cart-button]:not(.cart-initialized)');
+            if (!this.listing) return;
 
-            if (cartButton && this.listing) {
-                const listingId = parseInt(cartButton.dataset.listingId) || this.listing.id;
-                const size = cartButton.dataset.size || 'large';
-                const variant = cartButton.dataset.variant || 'primary';
-                const initialIsInCart = cartButton.dataset.isInCart === 'true' || this.listing.is_in_cart || false;
+            // Конфигурация для инициализации кнопок
+            const buttonConfigs = [
+                {
+                    selector: '[data-cart-button]:not(.cart-initialized)',
+                    component: CartButton,
+                    className: 'cart-initialized',
+                    getProps: (button) => ({
+                        listingId: parseInt(button.dataset.listingId) || this.listing.id,
+                        size: button.dataset.size || 'large',
+                        variant: button.dataset.variant || 'primary',
+                        initialIsInCart: button.dataset.isInCart === 'true' || this.listing.is_in_cart || false
+                    })
+                },
+                {
+                    selector: '[data-favorite-button]:not(.favorite-initialized)',
+                    component: FavoriteButton,
+                    className: 'favorite-initialized',
+                    getProps: (button) => ({
+                        listingId: parseInt(button.dataset.listingId) || this.listing.id,
+                        initialIsFavorite: button.dataset.isFavorite === 'true' || this.listing.is_favorite || false
+                    })
+                }
+            ];
 
-                const cartApp = createApp(CartButton, { listingId, size, variant, initialIsInCart });
-                cartApp.mount(cartButton);
-                cartButton.classList.add('cart-initialized');
-            }
-
-            // Инициализируем кнопку избранного
-            const favoriteButton = document.querySelector('[data-favorite-button]:not(.favorite-initialized)');
-
-            if (favoriteButton && this.listing) {
-                const listingId = parseInt(favoriteButton.dataset.listingId) || this.listing.id;
-                const initialIsFavorite = favoriteButton.dataset.isFavorite === 'true' || this.listing.is_favorite || false;
-
-
-                const favoriteApp = createApp(FavoriteButton, { listingId, initialIsFavorite });
-                favoriteApp.mount(favoriteButton);
-                favoriteButton.classList.add('favorite-initialized');
-            }
+            // Инициализируем каждую кнопку
+            buttonConfigs.forEach(config => {
+                const button = document.querySelector(config.selector);
+                if (button) {
+                    const app = createApp(config.component, config.getProps(button));
+                    app.mount(button);
+                    button.classList.add(config.className);
+                }
+            });
         },
 
         async quickBuy() {
@@ -649,25 +665,24 @@ export default {
             if (!this.hasScreenshots()) return;
 
             const screenshots = [];
+            const urls = this.listing.screenshot_urls;
+            
+            // Конфигурация скриншотов
+            const screenshotConfig = [
+                { key: 'front', title: 'Передняя сторона' },
+                { key: 'back', title: 'Задняя сторона' }
+            ];
 
-            // Используем screenshot_urls из API
-            if (this.listing.screenshot_urls) {
-                if (this.listing.screenshot_urls.front) {
+            // Добавляем только существующие скриншоты
+            screenshotConfig.forEach(config => {
+                if (urls && urls[config.key]) {
                     screenshots.push({
-                        url: this.listing.screenshot_urls.front,
-                        type: 'front',
-                        title: 'Передняя сторона'
+                        url: urls[config.key],
+                        type: config.key,
+                        title: config.title
                     });
                 }
-
-                if (this.listing.screenshot_urls.back) {
-                    screenshots.push({
-                        url: this.listing.screenshot_urls.back,
-                        type: 'back',
-                        title: 'Задняя сторона'
-                    });
-                }
-            }
+            });
 
             // Создаем модальное окно для показа скриншотов
             this.openScreenshotModal(screenshots);
@@ -686,35 +701,6 @@ export default {
             }
             if (this.otherListings.length > 0) {
                 this.otherListings = [...this.otherListings];
-            }
-        },
-
-        convertPriceForChart(usdPrice) {
-            // Простая конвертация из USD в выбранную валюту для графика
-            try {
-                const selectedCurrency = JSON.parse(localStorage.getItem('selectedCurrency'));
-                if (!selectedCurrency || selectedCurrency.code === 'USD') {
-                    return usdPrice;
-                }
-
-                // Если выбранная валюта RUB
-                if (selectedCurrency.code === 'RUB') {
-                    const usdCurrency = window.currencyRatesCache?.find(c => c.code === 'USD');
-                    if (usdCurrency) {
-                        return usdPrice * usdCurrency.exchange_rate;
-                    }
-                }
-
-                // Для других валют: USD -> RUB -> целевая валюта
-                const usdCurrency = window.currencyRatesCache?.find(c => c.code === 'USD');
-                if (usdCurrency) {
-                    const rubleAmount = usdPrice * usdCurrency.exchange_rate;
-                    return rubleAmount / selectedCurrency.exchange_rate;
-                }
-
-                return usdPrice;
-            } catch (error) {
-                return usdPrice;
             }
         },
 

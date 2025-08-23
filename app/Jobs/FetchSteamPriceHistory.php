@@ -181,14 +181,6 @@ class FetchSteamPriceHistory implements ShouldQueue
         foreach ($filteredData as $dateKey => $data) {
             $avgPrice = array_sum($data['prices']) / count($data['prices']);
             $totalVolume = array_sum($data['volumes']);
-            /*
-            Log::info('Saving to DB', [
-                'date' => $dateKey,
-                'avg_price' => $avgPrice,
-                'total_volume' => $totalVolume,
-                'price_points' => count($data['prices'])
-            ]);
-            /*
             SteamPriceHistory::updateOrCreate(
                 [
                     'steam_market_item_id' => $this->steamMarketItem->id,
@@ -199,7 +191,6 @@ class FetchSteamPriceHistory implements ShouldQueue
                     'volume' => $totalVolume
                 ]
             );
-            */
         }
     }
 

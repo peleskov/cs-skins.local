@@ -146,35 +146,39 @@ document.addEventListener('DOMContentLoaded', () => {
     
     initializeHeader();
     
-    // CartButton компоненты (может быть несколько на странице)
-    const cartButtons = document.querySelectorAll('[data-cart-button]');
-    cartButtons.forEach(button => {
-        const listingId = parseInt(button.dataset.listingId);
-        const size = button.dataset.size || 'normal';
-        const variant = button.dataset.variant || 'primary';
-        const initialIsInCart = button.dataset.isInCart === 'true';
+    // CartButton и FavoriteButton компоненты инициализируются только если это НЕ страница маркетплейса
+    // На странице маркетплейса они инициализируются самим Marketplace.vue компонентом
+    if (!marketplaceElement) {
+        // CartButton компоненты (может быть несколько на странице)
+        const cartButtons = document.querySelectorAll('[data-cart-button]');
+        cartButtons.forEach(button => {
+            const listingId = parseInt(button.dataset.listingId);
+            const size = button.dataset.size || 'normal';
+            const variant = button.dataset.variant || 'primary';
+            const initialIsInCart = button.dataset.isInCart === 'true';
+            
+            if (listingId) {
+                const app = createApp(CartButton, {
+                    listingId: listingId,
+                    size: size,
+                    variant: variant,
+                    initialIsInCart: initialIsInCart
+                });
+                app.mount(button);
+            }
+        });
         
-        if (listingId) {
-            const app = createApp(CartButton, {
-                listingId: listingId,
-                size: size,
-                variant: variant,
-                initialIsInCart: initialIsInCart
-            });
-            app.mount(button);
-        }
-    });
-    
-    // FavoriteButton компоненты (может быть несколько на странице)
-    const favoriteButtons = document.querySelectorAll('[data-favorite-button]');
-    favoriteButtons.forEach(button => {
-        const listingId = parseInt(button.dataset.listingId);
-        
-        if (listingId) {
-            const app = createApp(FavoriteButton, {
-                listingId: listingId
-            });
-            app.mount(button);
-        }
-    });
+        // FavoriteButton компоненты (может быть несколько на странице)
+        const favoriteButtons = document.querySelectorAll('[data-favorite-button]');
+        favoriteButtons.forEach(button => {
+            const listingId = parseInt(button.dataset.listingId);
+            
+            if (listingId) {
+                const app = createApp(FavoriteButton, {
+                    listingId: listingId
+                });
+                app.mount(button);
+            }
+        });
+    }
 });

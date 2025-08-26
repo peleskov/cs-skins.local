@@ -35,8 +35,14 @@ class MarketplaceController extends Controller
                 ->pluck('listing_id');
         }
         
-        $featuredListings->each(function ($listing) use ($cartItemIds, $favoriteItemIds) {
-            $listing->is_in_cart = $cartItemIds->contains($listing->id);
+        $currentUserId = auth('client')->id();
+        
+        $featuredListings->each(function ($listing) use ($cartItemIds, $favoriteItemIds, $currentUserId) {
+            // Проверяем, является ли товар собственным
+            $listing->is_own_item = $currentUserId && $listing->seller_id === $currentUserId;
+            
+            // Добавляем в корзину только если товар не собственный
+            $listing->is_in_cart = !$listing->is_own_item && $cartItemIds->contains($listing->id);
             $listing->is_favorite = $favoriteItemIds->contains($listing->id);
         });
             
@@ -222,13 +228,17 @@ class MarketplaceController extends Controller
                 ->pluck('listing_id');
         }
         
-        $items = collect($listings->items())->map(function ($listing) use ($cartItemIds, $favoriteItemIds) {
+        $currentUserId = auth('client')->id();
+        
+        $items = collect($listings->items())->map(function ($listing) use ($cartItemIds, $favoriteItemIds, $currentUserId) {
             // Используем новую систему тегов для редкости
             // Редкость получается через structured_tags
             $listing->wear_name = $listing->wear_name; // Это вызовет геттер из модели
             
             // Добавляем статус корзины (читаем из сессии)
-            $listing->is_in_cart = $cartItemIds->contains($listing->id);
+            // Но только если товар не собственный
+            $listing->is_own_item = $currentUserId && $listing->seller_id === $currentUserId;
+            $listing->is_in_cart = !$listing->is_own_item && $cartItemIds->contains($listing->id);
             
             // Добавляем статус избранного (читаем из БД)
             $listing->is_favorite = $favoriteItemIds->contains($listing->id);

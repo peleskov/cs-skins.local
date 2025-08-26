@@ -168,6 +168,7 @@
                   </div>
                   <div class="location-distance d-flex align-items-center justify-content-between gap-2 pt-sm-3 pt-2">
                     <div 
+                      v-if="!listing.is_own_item"
                       data-cart-button 
                       :data-listing-id="listing.id" 
                       :data-is-in-cart="listing.is_in_cart"

@@ -552,11 +552,10 @@ export default {
 				return 'Закалённое в боях';
 			}
 
-			// Если есть structured_tags, ищем в них
+			// Если есть structured_tags, ищем в них exterior тег
 			if (listing.structured_tags && listing.structured_tags.length > 0) {
-				// В structured_tags у нас есть category_name, а не category_code
 				const exteriorTag = listing.structured_tags.find(tag =>
-					tag.category_name && tag.category_name.toLowerCase().includes('внешний')
+					tag.category_code === 'exterior'
 				);
 				return exteriorTag ? exteriorTag.display_name : null;
 			}

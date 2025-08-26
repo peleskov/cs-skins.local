@@ -18,7 +18,6 @@ class Listing extends Model
         'steam_owner_id',
         'market_hash_name',
         'inventory_item_name',
-        'inventory_type',
         'inventory_icon_url',
         'inventory_descriptions',
         'tradable',
@@ -46,10 +45,6 @@ class Listing extends Model
         'listed_at',
         'sold_at',
         'expires_at',
-        'type_id',
-        'quality_id',
-        'rarity_id',
-        'exterior_id',
     ];
 
     protected $casts = [
@@ -190,32 +185,30 @@ class Listing extends Model
         }
     }
     
-    public function tags(): BelongsToMany
+    /**
+     * Получить теги через market_hash_name
+     */
+    public function tags()
     {
-        return $this->belongsToMany(Tag::class, 'item_tags', 'item_id', 'tag_id')
-            ->where('item_type', 'listing')
-            ->join('tag_categories', 'tags.category_id', '=', 'tag_categories.id')
-            ->select('tags.*', 'tag_categories.code as category_code', 'tag_categories.steam_category as category_name')
-            ->orderBy('tag_categories.sort_order')
-            ->orderBy('tags.sort_order');
+        return Tag::join('market_item_tags', 'tags.id', '=', 'market_item_tags.tag_id')
+            ->where('market_item_tags.market_hash_name', $this->market_hash_name)
+            ->orderBy('tags.category_code')
+            ->orderBy('tags.sort_order')
+            ->get();
     }
 
     public function getStructuredTagsAttribute()
     {
-        if ($this->relationLoaded('tags') && $this->tags) {
-            return $this->tags->map(function ($tag) {
-                $translatedValue = __('tags.values.' . $tag->normalized_value, [], 'ru');
-                
-                // Если перевод не найден (возвращается ключ), используем Steam название
-                if ($translatedValue === 'tags.values.' . $tag->normalized_value) {
-                    $translatedValue = $tag->steam_localized_name ?? $tag->normalized_value;
-                }
-                
+        $tags = $this->tags();
+        
+        if ($tags && $tags->isNotEmpty()) {
+            return $tags->map(function ($tag) {
                 return [
                     'id' => $tag->id,
-                    'category_name' => __('tags.categories.' . $tag->category_code, [], 'ru'),
-                    'display_name' => $translatedValue,
-                    'color' => $tag->color,
+                    'category_code' => $tag->category_code,
+                    'category_name' => $tag->category_name, // Использует геттер с переводами
+                    'display_name' => $tag->localized_name, // Использует геттер с переводами
+                    'normalized_value' => $tag->normalized_value,
                 ];
             });
         }

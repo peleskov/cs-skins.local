@@ -34,7 +34,6 @@ class InventoryController extends Controller
 
         // Получаем кешированный инвентарь
         $inventoryItems = $client->inventoryItems()
-            ->with(['tags'])
             ->orderBy('cached_at', 'desc')
             ->get();
 
@@ -44,9 +43,10 @@ class InventoryController extends Controller
             ->pluck('steam_asset_id')
             ->toArray();
 
-        // Добавляем флаг is_listed к каждому предмету
+        // Добавляем флаг is_listed и цену выкупа к каждому предмету
         $inventoryItems->each(function ($item) use ($listedAssetIds) {
             $item->is_listed = in_array($item->steam_asset_id, $listedAssetIds);
+            $item->buyout_price = $item->calculateBuyoutPrice();
         });
 
         // Убрали автоматическую синхронизацию - только по кнопке
@@ -223,7 +223,6 @@ class InventoryController extends Controller
             
             // Снимок данных из инвентаря
             $listing->inventory_item_name = $inventoryItem->item_name;
-            $listing->inventory_type = $inventoryItem->type;
             $listing->inventory_icon_url = $inventoryItem->icon_url;
             $listing->inventory_descriptions = $inventoryItem->descriptions;
             $listing->tradable = $inventoryItem->tradable;
@@ -232,7 +231,12 @@ class InventoryController extends Controller
             $listing->price = 0; // пользователь установит цену сам
             $listing->currency = 'RUB';
             $listing->status = 'pending';
-            $listing->type = 'p2p';
+            
+            // Получаем тип предмета из тегов
+            $itemTags = $inventoryItem->tags();
+            $typeTag = $itemTags->where('category_code', 'type')->first();
+            $listing->type = $typeTag ? $typeTag->normalized_value : null;
+            
             $listing->wear_condition = $inventoryItem->wear_condition;
             $listing->float_value = $inventoryItem->float_value;
             $listing->float_min = $inventoryItem->float_min;
@@ -244,37 +248,20 @@ class InventoryController extends Controller
             $listing->stickers = $inventoryItem->stickers;
             $listing->inspect_url = $this->generateInspectUrl($client->steam_id, $steamAssetId);
             
-            // Копируем теги из новой системы
-            $listing->type_id = $inventoryItem->type_id;
-            $listing->quality_id = $inventoryItem->quality_id;
-            $listing->rarity_id = $inventoryItem->rarity_id;
-            $listing->exterior_id = $inventoryItem->exterior_id;
-            
-            // Обновляем флаги на основе тегов
+            // Обновляем флаги на основе тегов из новой системы
             $listing->wear_value = $inventoryItem->float_value;
-            if ($inventoryItem->quality_id) {
-                $quality = Tag::find($inventoryItem->quality_id);
-                if ($quality) {
-                    $listing->is_stattrak = $quality->normalized_value === 'stattrak';
-                    $listing->is_souvenir = $quality->normalized_value === 'souvenir';
-                }
+            $qualityTag = $itemTags->where('category_code', 'quality')->first();
+            if ($qualityTag) {
+                $listing->is_stattrak = $qualityTag->normalized_value === 'stattrak';
+                $listing->is_souvenir = $qualityTag->normalized_value === 'souvenir';
             }
             
             // Скриншоты теперь получаем через BitSkins в SkinScreenshotService
             
             $listing->save();
             
-            // Копируем все теги из инвентаря в листинг используя Eloquent
-            $inventoryItem->load('tags'); // Загружаем теги если еще не загружены
-            
-            if ($inventoryItem->tags->isNotEmpty()) {
-                // Получаем ID всех тегов
-                $tagIds = $inventoryItem->tags->pluck('id')->toArray();
-                
-                // Присоединяем теги к листингу
-                // sync() автоматически добавит item_type через отношение
-                $listing->tags()->sync($tagIds);
-            }
+            // В новой системе теги уже привязаны к market_hash_name через market_item_tags
+            // Дополнительное копирование не нужно
             
             return response()->json([
                 'success' => true,

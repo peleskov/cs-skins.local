@@ -18,7 +18,6 @@ class ClientInventoryItem extends Model
         'steam_instance_id',
         'market_hash_name',
         'item_name',
-        'type',
         'icon_url',
         'tradable',
         'marketable',
@@ -35,10 +34,6 @@ class ClientInventoryItem extends Model
         'descriptions',
         'cached_at',
         'float_fetched_at',
-        'type_id',
-        'quality_id',
-        'rarity_id',
-        'exterior_id',
         'item_nameid',
         'item_nameid_fetched_at',
     ];
@@ -129,36 +124,86 @@ class ClientInventoryItem extends Model
         return $this->exists;
     }
 
-    public function tags(): BelongsToMany
+    /**
+     * Получить теги через market_hash_name
+     */
+    public function tags()
     {
-        return $this->belongsToMany(Tag::class, 'item_tags', 'item_id', 'tag_id')
-            ->where('item_type', 'client_inventory_item')
-            ->join('tag_categories', 'tags.category_id', '=', 'tag_categories.id')
-            ->select('tags.*', 'tag_categories.code as category_code', 'tag_categories.steam_category as category_name')
-            ->orderBy('tag_categories.sort_order')
-            ->orderBy('tags.sort_order');
+        return Tag::join('market_item_tags', 'tags.id', '=', 'market_item_tags.tag_id')
+            ->where('market_item_tags.market_hash_name', $this->market_hash_name)
+            ->orderBy('tags.category_code')
+            ->orderBy('tags.sort_order')
+            ->get();
     }
 
     public function getStructuredTagsAttribute()
     {
-        if ($this->relationLoaded('tags') && $this->tags) {
-            return $this->tags->map(function ($tag) {
-                $translatedValue = __('tags.values.' . $tag->normalized_value, [], 'ru');
-                
-                // Если перевод не найден (возвращается ключ), используем Steam название
-                if ($translatedValue === 'tags.values.' . $tag->normalized_value) {
-                    $translatedValue = $tag->steam_localized_name ?? $tag->normalized_value;
-                }
-                
+        $tags = $this->tags();
+        
+        if ($tags && $tags->isNotEmpty()) {
+            return $tags->map(function ($tag) {
                 return [
                     'id' => $tag->id,
-                    'category_name' => __('tags.categories.' . $tag->category_code, [], 'ru'),
-                    'display_name' => $translatedValue,
-                    'color' => $tag->color,
+                    'category_code' => $tag->category_code,
+                    'category_name' => $tag->category_name, // Использует геттер с переводами
+                    'display_name' => $tag->localized_name, // Использует геттер с переводами
+                    'normalized_value' => $tag->normalized_value,
                 ];
             });
         }
         
         return collect();
+    }
+
+    /**
+     * Рассчитать цену выкупа для быстрой продажи боту
+     * @return float|null Цена выкупа или null если предмет не востребован
+     */
+    public function calculateBuyoutPrice(): ?float
+    {
+        // Проверяем что предмет можно продать
+        if (!$this->tradable || !$this->marketable) {
+            return null;
+        }
+
+        // Находим запись в steam_market_items
+        $steamMarketItem = SteamMarketItem::where('market_hash_name', $this->market_hash_name)->first();
+        if (!$steamMarketItem) {
+            return null;
+        }
+
+        // Получаем последнюю цену из истории
+        $latestPrice = SteamPriceHistory::where('steam_market_item_id', $steamMarketItem->id)
+            ->orderBy('date', 'desc')
+            ->first();
+        
+        // Проверяем наличие данных, цену и объем торгов
+        if (!$latestPrice || $latestPrice->price <= 0 || $latestPrice->volume < 200) {
+            return null;
+        }
+
+        // Получаем теги
+        $tags = $this->tags();
+
+        // Ищем тег редкости
+        $rarityTag = $tags->first(function ($tag) {
+            return $tag->category_code === 'rarity';
+        });
+
+        // Если нет тега редкости - предмет не может быть выкуплен
+        if (!$rarityTag) {
+            return null;
+        }
+
+        // Получаем коэффициент из БД
+        $coefficient = RarityCoefficient::getCoefficientByName($rarityTag->normalized_value);
+        
+        // Если коэффициент не найден - не выкупаем
+        if (!$coefficient) {
+            return null;
+        }
+
+        // Рассчитываем и возвращаем цену выкупа
+        return round($latestPrice->price * $coefficient, 2);
     }
 }

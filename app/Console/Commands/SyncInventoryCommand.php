@@ -8,6 +8,8 @@ use App\Services\Steam\InventoryService;
 use App\Jobs\FetchSteamPriceHistory;
 use App\Jobs\FetchFloatValueJob;
 use App\Models\SteamMarketItem;
+use App\Models\Tag;
+use App\Models\MarketItemTag;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -119,7 +121,6 @@ class SyncInventoryCommand extends Command
                 'steam_instance_id' => $item['instance_id'],
                 'market_hash_name' => $item['market_hash_name'],
                 'item_name' => $item['item_name'] ?? $item['name'] ?? '',
-                'type' => $item['type'] ?? null,
                 'icon_url' => $item['icon_url'],
                 'tradable' => $item['tradable'],
                 'marketable' => $item['marketable'],
@@ -129,7 +130,6 @@ class SyncInventoryCommand extends Command
                 'stickers' => $item['stickers'] ? json_encode($item['stickers']) : null,
                 'inspect_url' => $item['inspect_url'],
                 'descriptions' => $item['descriptions'] ? json_encode($item['descriptions']) : null,
-                'item_id' => $item['item_id'],
                 'cached_at' => now(),
                 'item_nameid' => $itemNameid,
                 'item_nameid_fetched_at' => $itemNameidFetchedAt,
@@ -182,7 +182,7 @@ class SyncInventoryCommand extends Command
     }
 
     /**
-     * Парсит Steam теги и сохраняет в новой системе тегов
+     * Парсит Steam теги и сохраняет в новой системе тегов через market_hash_name
      */
     private function parseAndSaveTags(ClientInventoryItem $inventoryItem, array $steamTags): void
     {
@@ -191,7 +191,6 @@ class SyncInventoryCommand extends Command
         }
 
         $tagIds = [];
-        $primaryTags = [];
 
         foreach ($steamTags as $steamTag) {
             if (!isset($steamTag['internal_name']) || !isset($steamTag['category'])) {
@@ -203,38 +202,17 @@ class SyncInventoryCommand extends Command
                 continue;
             }
 
-            // Получаем или создаем тег
+            // Получаем или создаем тег в новой системе
             $tag = $this->getOrCreateTag($categoryCode, $steamTag);
             
             if ($tag) {
                 $tagIds[] = $tag->id;
-                
-                // Сохраняем основные теги для денормализации
-                if ($this->isPrimaryTag($categoryCode)) {
-                    $primaryTags[$categoryCode] = $tag->id;
-                }
             }
         }
 
-        // Обновляем основные теги (денормализация)
-        $inventoryItem->update([
-            'type_id' => $primaryTags['type'] ?? null,
-            'quality_id' => $primaryTags['quality'] ?? null,
-            'rarity_id' => $primaryTags['rarity'] ?? null,
-            'exterior_id' => $primaryTags['exterior'] ?? null,
-        ]);
-
-        // Сохраняем все теги в нормализованную таблицу
-        if (!empty($tagIds)) {
-            $data = [];
-            foreach ($tagIds as $tagId) {
-                $data[] = [
-                    'item_id' => $inventoryItem->id,
-                    'item_type' => 'inventory',
-                    'tag_id' => $tagId,
-                ];
-            }
-            DB::table('item_tags')->insert($data);
+        // Синхронизируем теги для market_hash_name (только один раз на market_hash_name)
+        if (!empty($tagIds) && $inventoryItem->market_hash_name) {
+            MarketItemTag::syncTagsForMarketItem($inventoryItem->market_hash_name, $tagIds);
         }
     }
 
@@ -258,30 +236,16 @@ class SyncInventoryCommand extends Command
         };
     }
 
-    /**
-     * Проверяет является ли тег основным (для денормализации)
-     */
-    private function isPrimaryTag(string $categoryCode): bool
-    {
-        return in_array($categoryCode, ['type', 'quality', 'rarity', 'exterior']);
-    }
 
     /**
-     * Получает или создает тег
+     * Получает или создает тег в новой системе
      */
-    private function getOrCreateTag(string $categoryCode, array $steamTag): ?object
+    private function getOrCreateTag(string $categoryCode, array $steamTag): ?Tag
     {
-        // Получаем категорию
-        $category = DB::table('tag_categories')->where('code', $categoryCode)->first();
-        if (!$category) {
-            return null;
-        }
-
         $normalizedValue = $this->normalizeTagValue($categoryCode, $steamTag['internal_name']);
         
         // Проверяем существует ли тег
-        $existingTag = DB::table('tags')
-            ->where('category_id', $category->id)
+        $existingTag = Tag::where('category_code', $categoryCode)
             ->where('steam_internal_name', $steamTag['internal_name'])
             ->first();
 
@@ -290,17 +254,12 @@ class SyncInventoryCommand extends Command
         }
 
         // Создаем новый тег
-        $tagId = DB::table('tags')->insertGetId([
-            'category_id' => $category->id,
+        return Tag::create([
+            'category_code' => $categoryCode,
             'steam_internal_name' => $steamTag['internal_name'],
             'normalized_value' => $normalizedValue,
-            'steam_localized_name' => $steamTag['localized_tag_name'] ?? $steamTag['internal_name'],
-            'color' => $steamTag['color'] ?? null,
             'sort_order' => 0,
-            'created_at' => now(),
         ]);
-
-        return DB::table('tags')->where('id', $tagId)->first();
     }
 
     /**

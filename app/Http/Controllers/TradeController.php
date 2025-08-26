@@ -23,7 +23,6 @@ class TradeController extends Controller
         $client = Auth::guard('client')->user();
         
         $listings = Listing::where('seller_id', $client->id)
-            ->with(['tags'])
             ->orderBy('created_at', 'desc')
             ->get();
         

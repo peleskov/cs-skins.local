@@ -55,7 +55,7 @@
 											<img class="img-fluid inventory-img h-auto" :src="getIconUrl(item)"
 												:alt="item.market_hash_name" @error="handleImageError">
 											<h6 class="mt-2">{{ getItemName(item) }}</h6>
-											<small class="text-muted">{{ item.type || 'Unknown' }}</small>
+											<small class="text-muted">{{ getItemType(item) }}</small>
 										</div>
 									</div>
 								</div>
@@ -67,80 +67,13 @@
 							</div>
 						</div>
 						<div class="col-lg-5 col-12" :id="getDetailsSectionId()">
-							<div class="item-details sticky-top" v-if="selectedItem">
-								<h5 class="item-name">{{ getItemName(selectedItem) }}</h5>
-								<div class="item-type text-muted mb-3">{{ selectedItem.type || 'Unknown' }}</div>
-								
-								<!-- Изображение предмета -->
-								<div class="item-preview mb-3">
-									<img :src="getIconUrl(selectedItem)" :alt="selectedItem.market_hash_name" 
-										 class="img-fluid" @error="handleImageError">
-								</div>
-								
-								<!-- Описание предмета -->
-								<div v-if="getItemDescription(selectedItem)" class="item-description mb-3">
-									<div class="description-text text-muted" v-html="getItemDescription(selectedItem)"></div>
-								</div>
-								
-								<!-- Float значение и паттерн -->
-								<div v-if="selectedItem.float_value" class="item-wear mb-3">
-									<div class="wear-info">
-										<strong>Float:</strong> {{ parseFloat(selectedItem.float_value).toFixed(6) }}
-									</div>
-									<div v-if="selectedItem.pattern_index" class="pattern-info mt-2">
-										<strong>Паттерн:</strong> #{{ selectedItem.pattern_index }}
-									</div>
-								</div>
-								
-								<!-- Стикеры -->
-								<div v-if="selectedItem.parsed_stickers && selectedItem.parsed_stickers.length > 0" class="item-stickers mb-3">
-									<strong>Стикеры:</strong>
-									<div class="sticker-list mt-2">
-										<div v-for="(sticker, index) in selectedItem.parsed_stickers" :key="index" class="sticker-item">
-											<img v-if="sticker.img" :src="sticker.img" :alt="sticker.name" class="sticker-img">
-											<span>{{ sticker.name }}</span>
-										</div>
-									</div>
-								</div>
-								
-								<!-- Теги -->
-								<div v-if="selectedItem.structured_tags && selectedItem.structured_tags.length > 0" class="item-tags mb-3">
-									<strong>Информация о предмете:</strong>
-									<div class="tags-list mt-2">
-										<div v-for="tag in selectedItem.structured_tags" :key="tag.id" class="tag-item d-flex justify-content-between mb-1">
-											<span class="tag-category text-muted">{{ tag.category_name }}:</span>
-											<span class="tag-name fw-medium" :style="{ color: tag.color ? '#' + tag.color : '' }">
-												{{ tag.display_name }}
-											</span>
-										</div>
-									</div>
-								</div>
-								
-								<!-- Кнопки действий -->
-								<div class="item-actions mt-4">
-									<div v-if="activeInventoryTab === 'available'">
-										<button v-if="selectedItem.tradable && selectedItem.marketable && hasTradeUrl && !selectedItem.is_listed" 
-											class="btn theme-btn w-100 mb-2"
-											:disabled="isCreatingListing"
-											@click="openSellModal(selectedItem)">
-											<i v-if="isCreatingListing" class="ri-loader-4-line me-2 ri-spin"></i>
-											<i v-else class="ri-price-tag-3-line me-2"></i>
-											{{ isCreatingListing ? 'Создаем листинг...' : 'Продать' }}
-										</button>
-										<div v-else-if="!hasTradeUrl" class="alert alert-light mb-0 small">
-											<i class="ri-information-line me-2"></i>Для того чтобы выставить на продажу нужно добавить Trade URL в настройках <a href="/profile#profile">профиля</a>
-										</div>
-										<div v-else-if="!selectedItem.tradable || !selectedItem.marketable" class="alert alert-secondary mb-0">
-											<i class="ri-lock-line me-2"></i>Данный предмет нельзя продать
-										</div>
-									</div>
-									<div v-if="activeInventoryTab === 'listed'">
-										<div class="alert alert-info mb-0">
-											<i class="ri-information-line me-2"></i>Этот предмет выставлен на продажу
-										</div>
-									</div>
-								</div>
-							</div>
+							<ItemDetails 
+								:item="selectedItem"
+								:active-tab="activeInventoryTab"
+								:has-trade-url="hasTradeUrl"
+								:is-creating-listing="isCreatingListing"
+								@sell="openSellModal"
+							/>
 						</div>
 					</div>
 				</div>
@@ -156,7 +89,7 @@
 											<img class="img-fluid inventory-img h-auto" :src="getIconUrl(item)"
 												:alt="item.market_hash_name" @error="handleImageError">
 											<h6 class="mt-2">{{ getItemName(item) }}</h6>
-											<small class="text-muted">{{ item.type || 'Unknown' }}</small>
+											<small class="text-muted">{{ getItemType(item) }}</small>
 										</div>
 									</div>
 								</div>
@@ -168,80 +101,13 @@
 							</div>
 						</div>
 						<div class="col-lg-5 col-12" :id="getDetailsSectionId()">
-							<div class="item-details sticky-top" v-if="selectedItem">
-								<h5 class="item-name">{{ getItemName(selectedItem) }}</h5>
-								<div class="item-type text-muted mb-3">{{ selectedItem.type || 'Unknown' }}</div>
-								
-								<!-- Изображение предмета -->
-								<div class="item-preview mb-3">
-									<img :src="getIconUrl(selectedItem)" :alt="selectedItem.market_hash_name" 
-										 class="img-fluid" @error="handleImageError">
-								</div>
-								
-								<!-- Описание предмета -->
-								<div v-if="getItemDescription(selectedItem)" class="item-description mb-3">
-									<div class="description-text text-muted" v-html="getItemDescription(selectedItem)"></div>
-								</div>
-								
-								<!-- Float значение и паттерн -->
-								<div v-if="selectedItem.float_value" class="item-wear mb-3">
-									<div class="wear-info">
-										<strong>Float:</strong> {{ parseFloat(selectedItem.float_value).toFixed(6) }}
-									</div>
-									<div v-if="selectedItem.pattern_index" class="pattern-info mt-2">
-										<strong>Паттерн:</strong> #{{ selectedItem.pattern_index }}
-									</div>
-								</div>
-								
-								<!-- Стикеры -->
-								<div v-if="selectedItem.parsed_stickers && selectedItem.parsed_stickers.length > 0" class="item-stickers mb-3">
-									<strong>Стикеры:</strong>
-									<div class="sticker-list mt-2">
-										<div v-for="(sticker, index) in selectedItem.parsed_stickers" :key="index" class="sticker-item">
-											<img v-if="sticker.img" :src="sticker.img" :alt="sticker.name" class="sticker-img">
-											<span>{{ sticker.name }}</span>
-										</div>
-									</div>
-								</div>
-								
-								<!-- Теги -->
-								<div v-if="selectedItem.structured_tags && selectedItem.structured_tags.length > 0" class="item-tags mb-3">
-									<strong>Информация о предмете:</strong>
-									<div class="tags-list mt-2">
-										<div v-for="tag in selectedItem.structured_tags" :key="tag.id" class="tag-item d-flex justify-content-between mb-1">
-											<span class="tag-category text-muted">{{ tag.category_name }}:</span>
-											<span class="tag-name fw-medium" :style="{ color: tag.color ? '#' + tag.color : '' }">
-												{{ tag.display_name }}
-											</span>
-										</div>
-									</div>
-								</div>
-								
-								<!-- Кнопки действий -->
-								<div class="item-actions mt-4">
-									<div v-if="activeInventoryTab === 'available'">
-										<button v-if="selectedItem.tradable && selectedItem.marketable && hasTradeUrl && !selectedItem.is_listed" 
-											class="btn theme-btn w-100 mb-2"
-											:disabled="isCreatingListing"
-											@click="openSellModal(selectedItem)">
-											<i v-if="isCreatingListing" class="ri-loader-4-line me-2 ri-spin"></i>
-											<i v-else class="ri-price-tag-3-line me-2"></i>
-											{{ isCreatingListing ? 'Создаем листинг...' : 'Продать' }}
-										</button>
-										<div v-else-if="!hasTradeUrl" class="alert alert-light mb-0 small">
-											<i class="ri-information-line me-2"></i>Для того чтобы выставить на продажу нужно добавить Trade URL в настройках <a href="/profile#profile">профиля</a>
-										</div>
-										<div v-else-if="!selectedItem.tradable || !selectedItem.marketable" class="alert alert-secondary mb-0">
-											<i class="ri-lock-line me-2"></i>Данный предмет нельзя продать
-										</div>
-									</div>
-									<div v-if="activeInventoryTab === 'listed'">
-										<div class="alert alert-info mb-0">
-											<i class="ri-information-line me-2"></i>Этот предмет выставлен на продажу
-										</div>
-									</div>
-								</div>
-							</div>
+							<ItemDetails 
+								:item="selectedItem"
+								:active-tab="activeInventoryTab"
+								:has-trade-url="hasTradeUrl"
+								:is-creating-listing="isCreatingListing"
+								@sell="openSellModal"
+							/>
 						</div>
 					</div>
 				</div>
@@ -274,7 +140,7 @@
 									 class="me-3" style="width: 64px; height: 64px;" @error="handleImageError">
 								<div>
 									<h6 class="mb-1">{{ getItemName(itemToSell) }}</h6>
-									<small class="text-muted">{{ itemToSell.type || 'Unknown' }}</small>
+									<small class="text-muted">{{ getItemType(itemToSell) }}</small>
 								</div>
 							</div>
 						</div>
@@ -282,19 +148,33 @@
 						<div class="row g-3">
 							<!-- Продать боту -->
 							<div class="col-12">
-								<div class="card h-100 sell-option" @click="sellToBot" style="cursor: pointer;">
+								<div class="card h-100 sell-option" 
+									 @click="itemToSell && itemToSell.buyout_price ? sellToBot() : null" 
+									 :class="{ 'opacity-50': !itemToSell || !itemToSell.buyout_price }"
+									 style="cursor: pointer;">
 									<div class="card-body d-flex align-items-center">
 										<div class="sell-icon me-3">
 											<i class="ri-robot-line text-primary" style="font-size: 2rem;"></i>
 										</div>
 										<div class="flex-grow-1">
-											<h6 class="card-title mb-1">Продать боту</h6>
+											<h6 class="card-title mb-1">
+												Быстрый выкуп
+												<span v-if="itemToSell && itemToSell.buyout_price" class="text-success ms-2">
+													{{ formatPrice(itemToSell.buyout_price) }}₽
+												</span>
+											</h6>
 											<p class="card-text text-muted mb-0">
-												Мгновенный выкуп за 20-50% от рыночной стоимости
+												<span v-if="itemToSell && itemToSell.buyout_price">
+													Мгновенная продажа боту
+												</span>
+												<span v-else class="text-danger">
+													Предмет не востребован
+												</span>
 											</p>
 										</div>
 										<div class="sell-arrow">
-											<i class="ri-arrow-right-line text-muted"></i>
+											<i v-if="itemToSell && itemToSell.buyout_price" class="ri-arrow-right-line text-muted"></i>
+											<i v-else class="ri-close-line text-danger"></i>
 										</div>
 									</div>
 								</div>
@@ -337,9 +217,13 @@
 <script>
 import axios from 'axios';
 import { formatPrice, handleApiError, getTimeRemaining } from '../../utils/helpers';
+import ItemDetails from './ItemDetails.vue';
 
 export default {
 	name: 'ProfileInventory',
+	components: {
+		ItemDetails
+	},
 	setup() {
 		return { formatPrice };
 	},
@@ -524,6 +408,14 @@ export default {
 			return item.item?.name_ru || item.market_hash_name;
 		},
 		
+		getItemType(item) {
+			if (item.structured_tags && item.structured_tags.length > 0) {
+				const typeTag = item.structured_tags.find(tag => tag.category_code === 'type');
+				return typeTag ? typeTag.display_name : 'Предмет';
+			}
+			return 'Предмет';
+		},
+		
 		getIconUrl(item) {
 			if (item.icon_url) {
 				if (item.icon_url.startsWith('http')) {
@@ -557,23 +449,6 @@ export default {
 			});
 		},
 		
-		getParsedDescriptions(item) {
-			if (!item.descriptions) return [];
-			if (typeof item.descriptions === 'string') {
-				try {
-					return JSON.parse(item.descriptions);
-				} catch (e) {
-					return [];
-				}
-			}
-			return item.descriptions;
-		},
-		
-		getItemDescription(item) {
-			const descriptions = this.getParsedDescriptions(item);
-			const descriptionItem = descriptions.find(desc => desc.name === 'description');
-			return descriptionItem ? descriptionItem.value : null;
-		},
 		
 		openSellModal(item) {
 			this.itemToSell = item;

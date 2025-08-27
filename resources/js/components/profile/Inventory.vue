@@ -160,7 +160,7 @@
 											<h6 class="card-title mb-1">
 												Быстрый выкуп
 												<span v-if="itemToSell && itemToSell.buyout_price" class="text-success ms-2">
-													{{ formatPrice(itemToSell.buyout_price) }}₽
+													{{ formatPrice(itemToSell.buyout_price, 'USD') }}
 												</span>
 											</h6>
 											<p class="card-text text-muted mb-0">
@@ -211,6 +211,35 @@
 			</div>
 		</div>
 
+		<!-- Modal успешной продажи -->
+		<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+			<div class="modal-dialog modal-dialog-centered">
+				<div class="modal-content border-0">
+					<div class="modal-header border-0 text-center">
+						<div class="w-100">
+							<div class="text-success mb-3">
+								<i class="ri-check-circle-fill" style="font-size: 3rem;"></i>
+							</div>
+							<h5 class="modal-title text-success" id="successModalLabel">Продажа завершена!</h5>
+						</div>
+					</div>
+					<div class="modal-body text-center">
+						<p class="mb-3">{{ successModalData.message }}</p>
+						<div v-if="successModalData.order" class="alert alert-light">
+							<strong>Номер заказа:</strong> {{ successModalData.order.order_number }}<br>
+							<strong>Сумма:</strong> {{ formatPrice(successModalData.order.total_amount, 'RUB') }}
+						</div>
+					</div>
+					<div class="modal-footer border-0 justify-content-center">
+						<button type="button" class="btn theme-outline btn-sm me-2" data-bs-dismiss="modal">Закрыть</button>
+						<button type="button" class="btn theme-btn btn-sm" @click="goToSales">
+							<i class="ri-eye-line me-1"></i>Посмотреть в продажах
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
 	</div>
 </template>
 
@@ -246,7 +275,11 @@ export default {
 			syncCooldownRemaining: 0,
 			cooldownTimer: null,
 			activeInventoryTab: 'available',
-			isCreatingListing: false
+			isCreatingListing: false,
+			successModalData: {
+				message: '',
+				order: null
+			}
 		}
 	},
 	computed: {
@@ -456,15 +489,80 @@ export default {
 			modal.show();
 		},
 		
-		sellToBot() {
+		async sellToBot() {
+			if (!this.itemToSell) return;
+			
 			// Закрываем модальное окно
 			const modal = bootstrap.Modal.getInstance(document.getElementById('sellTypeModal'));
 			if (modal) {
 				modal.hide();
 			}
 			
-			// Показываем уведомление о разработке
-			window.toast.info('Функция "Продать боту" находится в разработке и будет доступна в ближайшее время.');
+			this.isCreatingListing = true;
+			
+			try {
+				// Показываем уведомление о начале процесса
+				window.toast.info('Продаем предмет боту...', {
+					timeout: 3000
+				});
+				
+				const { orderAPI } = await import('../../utils/api.js');
+				const result = await orderAPI.quickSell(this.itemToSell.steam_asset_id);
+				
+				if (result.success) {
+					// Показываем модальное окно с результатом
+					this.showSuccessModal(result.message, result.order);
+				} else {
+					// Ошибку уже покажет глобальный axios interceptor
+					console.error('Quick sell failed:', result.message);
+				}
+				
+			} catch (error) {
+				console.error('Error selling to bot:', error);
+				// Ошибку уже покажет глобальный axios interceptor
+			} finally {
+				this.isCreatingListing = false;
+				this.itemToSell = null;
+			}
+		},
+		
+		showSuccessModal(message, order) {
+			this.successModalData = {
+				message: message,
+				order: order
+			};
+			
+			// Показываем модальное окно
+			this.$nextTick(() => {
+				const modal = new bootstrap.Modal(document.getElementById('successModal'));
+				modal.show();
+			});
+		},
+		
+		goToSales() {
+			// Закрываем модальное окно
+			const modal = bootstrap.Modal.getInstance(document.getElementById('successModal'));
+			if (modal) {
+				modal.hide();
+			}
+			
+			// Переходим к продажам
+			window.location.hash = 'sales';
+			// Обновляем страницу для отображения продаж
+			window.location.reload();
+		},
+		
+		handleCurrencyChange() {
+			// Принудительно обновляем данные для пересчета цен
+			if (this.itemToSell) {
+				this.itemToSell = { ...this.itemToSell };
+			}
+			if (this.selectedItem) {
+				this.selectedItem = { ...this.selectedItem };
+			}
+			if (this.items.length > 0) {
+				this.items = [...this.items];
+			}
 		},
 		
 		async addToMarketplace() {
@@ -524,6 +622,9 @@ export default {
 	mounted() {
 		// Загружаем данные инвентаря при загрузке компонента
 		this.loadInventoryData();
+		
+		// Слушаем события смены валюты
+		window.addEventListener('currency-changed', this.handleCurrencyChange);
 	},
 
 	beforeUnmount() {
@@ -531,6 +632,9 @@ export default {
 		if (this.cooldownTimer) {
 			clearInterval(this.cooldownTimer);
 		}
+		
+		// Убираем слушатель при размонтировании
+		window.removeEventListener('currency-changed', this.handleCurrencyChange);
 	},
 
 	watch: {

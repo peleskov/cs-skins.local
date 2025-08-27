@@ -161,6 +161,20 @@ class OrderAPI {
             throw error;
         }
     }
+
+    /**
+     * Быстрая продажа предмета боту
+     */
+    async quickSell(assetId) {
+        try {
+            const response = await axios.post(`${this.baseUrl}/quick-sell`, {
+                asset_id: assetId
+            });
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 // Экспортируем singleton instance

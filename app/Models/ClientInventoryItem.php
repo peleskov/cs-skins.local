@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Models\Tag;
+use App\Models\SteamMarketItem;
+use App\Models\SteamPriceHistory;
+use App\Models\RarityCoefficient;
 
 class ClientInventoryItem extends Model
 {
@@ -157,7 +161,7 @@ class ClientInventoryItem extends Model
 
     /**
      * Рассчитать цену выкупа для быстрой продажи боту
-     * @return float|null Цена выкупа или null если предмет не востребован
+     * @return float|null Цена выкупа в USD или null если предмет не востребован
      */
     public function calculateBuyoutPrice(): ?float
     {
@@ -203,7 +207,18 @@ class ClientInventoryItem extends Model
             return null;
         }
 
-        // Рассчитываем и возвращаем цену выкупа
-        return round($latestPrice->price * $coefficient, 2);
+        // Рассчитываем цену выкупа в USD
+        $buyoutPrice = round($latestPrice->price * $coefficient, 2);
+        
+        // Проверяем доступность бота для этой суммы (конвертируем в рубли для проверки)
+        $buyoutPriceRub = Currency::convert($buyoutPrice, 'USD', 'RUB');
+        $botService = new \App\Services\BotRotationService();
+        $availableBot = $botService->getNextAvailableBot($buyoutPriceRub);
+        
+        if (!$availableBot) {
+            return null;
+        }
+        
+        return $buyoutPrice;
     }
 }

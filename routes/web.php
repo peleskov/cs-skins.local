@@ -77,6 +77,7 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::prefix('orders')->name('orders.')->controller(OrderController::class)->group(function () {
         Route::post('/create', 'cartBuy')->name('create')->middleware(['auth:client', 'throttle:10,1']);
         Route::post('/quick-buy', 'quickBuy')->name('quick-buy')->middleware(['auth:client', 'throttle:10,1']);
+        Route::post('/quick-sell', 'quickSell')->name('quick-sell')->middleware(['auth:client', 'throttle:10,1']);
         Route::get('/purchases', 'getMyOrders')->name('purchases')->middleware(['auth:client', 'throttle:60,1']);
         Route::get('/sales', 'getMySales')->name('sales')->middleware(['auth:client', 'throttle:60,1']);
         Route::post('/{order}/cancel', 'cancel')->name('cancel')->middleware(['auth:client', 'throttle:10,1']);

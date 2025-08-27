@@ -9,6 +9,7 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class ProcessSkinScreenshots implements ShouldQueue
 {
@@ -47,19 +48,38 @@ class ProcessSkinScreenshots implements ShouldQueue
         //Log::info('Found listings for screenshot generation', ['count' => $listings->count()]);
 
         foreach ($listings as $listing) {
+            $attemptKey = "screenshot_attempts_{$listing->id}";
+            $attempts = Cache::get($attemptKey, 0);
+            
+            // Если уже было 3 попытки, помечаем как неудачное и пропускаем
+            if ($attempts >= 3) {
+                $listing->screenshots = 0;
+                $listing->save();
+                Cache::forget($attemptKey);
+                continue;
+            }
+            
             try {
+                // Увеличиваем счетчик попыток
+                Cache::put($attemptKey, $attempts + 1, 3600); // храним час
+                
                 $success = $screenshotService->processListing($listing);
                 
                 if ($success) {
-                    /*
-                    Log::info('Screenshot processed successfully', [
-                        'listing_id' => $listing->id
-                    ]);
-                    */
+                    // Успешно - удаляем счетчик
+                    Cache::forget($attemptKey);
                 } else {
                     Log::warning('Failed to process screenshot', [
-                        'listing_id' => $listing->id
+                        'listing_id' => $listing->id,
+                        'attempt' => $attempts + 1
                     ]);
+                    
+                    // Если это была 3-я попытка, помечаем как неудачное
+                    if ($attempts + 1 >= 3) {
+                        $listing->screenshots = 0;
+                        $listing->save();
+                        Cache::forget($attemptKey);
+                    }
                 }
                 
                 // Задержка между запросами (15 секунд)
@@ -69,8 +89,16 @@ class ProcessSkinScreenshots implements ShouldQueue
                 Log::error('Failed to generate screenshot for listing', [
                     'listing_id' => $listing->id,
                     'inspect_url' => $listing->inspect_url,
+                    'attempt' => $attempts + 1,
                     'error' => $e->getMessage()
                 ]);
+                
+                // Если это была 3-я попытка, помечаем как неудачное
+                if ($attempts + 1 >= 3) {
+                    $listing->screenshots = 0;
+                    $listing->save();
+                    Cache::forget($attemptKey);
+                }
             }
         }
 

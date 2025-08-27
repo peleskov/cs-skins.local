@@ -83,6 +83,7 @@ class Currency extends Model
 
     /**
      * Конвертировать сумму из одной валюты в другую
+     * exchange_rate показывает сколько рублей за единицу валюты
      */
     public static function convert($amount, $fromCurrencyCode, $toCurrencyCode)
     {
@@ -97,9 +98,19 @@ class Currency extends Model
             return $amount;
         }
 
-        // Конвертируем через основную валюту
-        $primaryAmount = $amount / $fromCurrency->exchange_rate;
-        return $primaryAmount * $toCurrency->exchange_rate;
+        // Если конвертируем в рубли (основная валюта)
+        if ($toCurrencyCode === 'RUB') {
+            return $amount * $fromCurrency->exchange_rate;
+        }
+        
+        // Если конвертируем из рублей
+        if ($fromCurrencyCode === 'RUB') {
+            return $amount / $toCurrency->exchange_rate;
+        }
+        
+        // Если обе валюты не RUB - конвертируем через рубли
+        $rublesAmount = $amount * $fromCurrency->exchange_rate;
+        return $rublesAmount / $toCurrency->exchange_rate;
     }
 
     /**

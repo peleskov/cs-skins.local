@@ -377,7 +377,6 @@ class TradeController extends Controller
      */
     private function convertDollarsToRubles(float $priceInDollars): float
     {
-        $courseDollar = config('app.course_dollar', 100);
-        return round($priceInDollars * $courseDollar, 2);
+        return round(\App\Models\Currency::convert($priceInDollars, 'USD', 'RUB'), 2);
     }
 }

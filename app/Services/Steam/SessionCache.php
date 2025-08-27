@@ -93,6 +93,14 @@ class SessionCache
         return max(0, $diff);
     }
 
+    /**
+     * Проверка активности сессии
+     */
+    public function isActive(int $clientId): bool
+    {
+        return $this->has($clientId) && $this->getExpiresInSeconds($clientId) > 0;
+    }
+
     public function getAllActiveSessions(): array
     {
         $pattern = $this->getCacheKey('*');

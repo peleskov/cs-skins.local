@@ -34,11 +34,15 @@ axios.interceptors.response.use(
         
         // Централизованная обработка других ошибок
         if (error.response && window.toast) {
-            let errorMessage = handleApiError(error);
+            let errorMessage;
             
             // Специальная обработка для 401 - более понятное сообщение
             if (error.response.status === 401) {
                 errorMessage = 'Для выполнения этого действия необходимо войти через Steam';
+            } else {
+                // Извлекаем сообщение в стандартном Laravel формате
+                errorMessage = error.response.data?.message || 
+                             handleApiError(error);
             }
             
             window.toast.error(errorMessage);

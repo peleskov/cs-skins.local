@@ -11,12 +11,12 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\FavoritesController;
 use App\Http\Controllers\ExtensionController;
+use App\Http\Controllers\AuctionController;
 use App\Models\Currency;
 
 // Публичные маршруты
 Route::controller(WebController::class)->group(function () {
     Route::get('/', 'home')->name('home');
-    Route::get('/item/{id}', 'item')->name('item');
     Route::get('/faq', 'faq')->name('faq');
     Route::get('/contact', 'contact')->name('contact');
     Route::get('/doc/{slug}', 'doc')->name('doc');
@@ -27,42 +27,56 @@ Route::controller(WebController::class)->group(function () {
 Route::get('/cart', [CartController::class, 'index'])->name('cart');
 Route::get('/checkout', [OrderController::class, 'index'])->name('checkout');
 
-// Маршруты маркетплейса
+// Маршруты маркетплейса (фронтенд)
 Route::prefix('marketplace')->name('marketplace.')->controller(MarketplaceController::class)->group(function () {
     Route::get('/', 'index')->name('index');
-    Route::get('/api/listings', 'getListings')->name('api.listings');
-    Route::get('/api/categories', 'getCategories')->name('api.categories');
-    Route::get('/api/tags', 'getTags')->name('api.tags');
-    Route::get('/api/stats', 'getFilterStats')->name('api.stats');
-    Route::get('/api/search', 'search')->name('api.search');
     Route::get('/{listing}', 'show')->name('show');
-    Route::get('/api/listing/{listing}/similar', 'getSimilarListings')->name('api.similar');
+});
+
+// Маршруты аукционов (фронтенд)
+Route::prefix('auctions')->name('auctions.')->controller(AuctionController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/{listing}', 'show')->name('show');
 });
 
 // API маршруты
 Route::prefix('api')->name('api.')->group(function () {
-    // Тестовый маршрут для проверки
-    Route::get('/test', function() {
-        return response()->json(['status' => 'ok', 'path' => request()->path()]);
+
+    // Маркетплейс API
+    Route::prefix('marketplace')->name('marketplace.')->controller(MarketplaceController::class)->group(function () {
+        Route::get('/listings', 'getListings')->name('listings');
+        Route::get('/categories', 'getCategories')->name('categories');
+        Route::get('/tags', 'getTags')->name('tags');
+        Route::get('/stats', 'getFilterStats')->name('stats');
+        Route::get('/search', 'search')->name('search');
+        Route::get('/listing/{listing}', 'getListingDetails')->name('listing');
+        Route::get('/listing/{listing}/similar', 'getSimilarListings')->name('listing.similar');
     });
-    Route::get('/marketplace/listing/{listing}', [MarketplaceController::class, 'getListingDetails'])->name('marketplace.listing');
+
     Route::get('/translations/items', [MarketplaceController::class, 'getTranslations'])->name('translations.items');
-    
+
+    // Публичные аукционы API
+    Route::prefix('auctions')->name('auctions.')->controller(\App\Http\Controllers\AuctionController::class)->group(function () {
+        Route::get('/', 'getAuctions')->name('index');
+        Route::get('/{auction}/bids', 'bidHistory')->name('bids')->middleware('throttle:60,1');
+    });
+
+
     // CSRF токен
     Route::get('/csrf-token', function () {
         return response()->json(['csrf_token' => csrf_token()]);
     })->name('csrf-token');
-    
+
     // Валюты
     Route::get('/currencies', function () {
         $currencies = Currency::where('is_active', true)
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get(['code', 'name', 'symbol', 'is_primary', 'exchange_rate']);
-        
+
         return response()->json($currencies);
     })->name('currencies');
-    
+
     // Маршруты для корзины с rate limiting
     Route::prefix('cart')->name('cart.')->controller(CartController::class)->group(function () {
         Route::get('/', 'getItems')->name('items')->middleware('throttle:60,1');
@@ -72,7 +86,7 @@ Route::prefix('api')->name('api.')->group(function () {
         Route::get('/check/{listingId}', 'check')->name('check')->middleware('throttle:60,1');
         Route::get('/count', 'count')->name('count')->middleware('throttle:60,1');
     });
-    
+
     // Маршруты для заказов
     Route::prefix('orders')->name('orders.')->controller(OrderController::class)->group(function () {
         Route::post('/create', 'cartBuy')->name('create')->middleware(['auth:client', 'throttle:10,1']);
@@ -82,19 +96,75 @@ Route::prefix('api')->name('api.')->group(function () {
         Route::get('/sales', 'getMySales')->name('sales')->middleware(['auth:client', 'throttle:60,1']);
         Route::post('/{order}/cancel', 'cancel')->name('cancel')->middleware(['auth:client', 'throttle:10,1']);
     });
-    
-    
-    
-    // API маршруты для торговли (требуют авторизации)
+
+
+
+    // API маршруты требующие авторизации
     Route::middleware(['auth:client'])->group(function () {
+        // Торговля
         Route::get('/listings/my', [TradeController::class, 'getMyListings'])->name('listings.my');
         Route::post('/listings/update-price', [TradeController::class, 'updateListingPrice'])->name('listings.update-price');
         Route::post('/listings/activate', [TradeController::class, 'activateListing'])->name('listings.activate');
         Route::post('/listings/deactivate', [TradeController::class, 'deactivateListing'])->name('listings.deactivate');
         Route::post('/listings/delete', [TradeController::class, 'deleteListing'])->name('listings.delete');
         Route::post('/listings/min-price', [TradeController::class, 'getMinMarketPrice'])->name('listings.min-price');
+
+        // Аукционы
+        Route::prefix('auctions')->name('auctions.')->controller(AuctionController::class)->group(function () {
+            Route::post('/', 'create')->name('create')->middleware('throttle:10,1');
+            Route::get('/{auction}', 'show')->name('show');
+            Route::patch('/{auction}', 'update')->name('update')->middleware('throttle:10,1');
+            Route::delete('/{auction}', 'destroy')->name('destroy')->middleware('throttle:10,1');
+            Route::patch('/{auction}/activate', 'activate')->name('activate')->middleware('throttle:10,1');
+            Route::patch('/{auction}/deactivate', 'deactivate')->name('deactivate')->middleware('throttle:10,1');
+            Route::post('/{auction}/bid', 'bid')->name('bid')->middleware('throttle:30,1');
+            Route::patch('/{auction}/status', 'updateStatus')->name('update-status')->middleware('throttle:10,1');
+        });
     });
 });
+
+// Требуется авторизации
+Route::middleware(['auth:client'])->group(function () {
+    Route::get('/profile', function () {
+        $view = app(ProfileController::class)->index();
+        return response($view)
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
+    })->name('profile');
+    Route::prefix('profile')->name('profile.')->group(function () {
+        Route::post('/update-email', [ProfileController::class, 'updateEmail'])->name('update.email');
+        Route::post('/update-trade-url', [ProfileController::class, 'updateTradeUrl'])->name('update.trade-url');
+        Route::match(['GET', 'POST'], '/telegram/verify', [ProfileController::class, 'verifyTelegram'])->name('telegram.verify');
+        Route::post('/telegram/unlink', [ProfileController::class, 'unlinkTelegram'])->name('telegram.unlink');
+        Route::post('/extension-token/generate', [ProfileController::class, 'generateExtensionToken'])->name('extension-token.generate');
+        Route::post('/extension-token/regenerate', [ProfileController::class, 'regenerateExtensionToken'])->name('extension-token.regenerate');
+        Route::get('/sales', [ProfileController::class, 'sales'])->name('sales');
+
+        // Аукционы
+        Route::get('/auctions', [AuctionController::class, 'my'])->name('auctions');
+        Route::get('/bids', [AuctionController::class, 'myBids'])->name('bids');
+        Route::get('/won-auctions', [AuctionController::class, 'wonAuctions'])->name('won-auctions');
+    });
+    Route::get('/email/verify/{id}/{hash}', [ProfileController::class, 'verifyEmail'])->name('profile.verify.email');
+    Route::post('/email/resend', [ProfileController::class, 'resendVerification'])->name('profile.resend.verification');
+
+    // Маршруты инвентаря
+    Route::prefix('inventory')->name('inventory.')->controller(InventoryController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/sync', 'sync')->name('sync');
+        Route::post('/create-listing', 'createListing')->name('create-listing');
+        Route::get('/{assetId}/sell', 'sell')->name('sell');
+        Route::get('/{assetId}', 'show')->name('show');
+    });
+
+    // Избранное
+    Route::get('/favorites', [FavoritesController::class, 'index'])->name('favorites');
+    Route::get('/api/favorites', [FavoritesController::class, 'getFavorites'])->name('favorites.list')->middleware('throttle:60,1');
+    Route::post('/api/favorites/toggle', [FavoritesController::class, 'toggle'])->name('favorites.toggle')->middleware('throttle:30,1');
+    Route::get('/api/favorites/check/{listing}', [FavoritesController::class, 'check'])->name('favorites.check')->middleware('throttle:60,1');
+});
+
 
 // Маршруты авторизации
 Route::prefix('auth')->name('auth.')->controller(AuthController::class)->group(function () {
@@ -108,42 +178,6 @@ Route::get('/login', function () {
     return redirect()->route('auth.steam');
 })->name('login');
 
-// Избранное (требует авторизации)
-Route::middleware(['auth:client', 'throttle:60,1'])->group(function () {
-    Route::get('/favorites', [FavoritesController::class, 'index'])->name('favorites');
-    Route::get('/api/favorites', [FavoritesController::class, 'getFavorites'])->name('favorites.list');
-    Route::post('/api/favorites/toggle', [FavoritesController::class, 'toggle'])->name('favorites.toggle')->middleware('throttle:30,1');
-    Route::get('/api/favorites/check/{listing}', [FavoritesController::class, 'check'])->name('favorites.check');
-});
-
-// Профиль пользователя (требует авторизации)
-Route::middleware(['auth:client'])->group(function () {
-    Route::get('/profile', function () {
-        $view = app(ProfileController::class)->index();
-        return response($view)
-            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-            ->header('Pragma', 'no-cache')
-            ->header('Expires', '0');
-    })->name('profile');
-    Route::post('/profile/update-email', [ProfileController::class, 'updateEmail'])->name('profile.update.email');
-    Route::get('/email/verify/{id}/{hash}', [ProfileController::class, 'verifyEmail'])->name('profile.verify.email');
-    Route::post('/email/resend', [ProfileController::class, 'resendVerification'])->name('profile.resend.verification');
-    Route::post('/profile/update-trade-url', [ProfileController::class, 'updateTradeUrl'])->name('profile.update.trade-url');
-    Route::match(['GET', 'POST'], '/profile/telegram/verify', [ProfileController::class, 'verifyTelegram'])->name('profile.telegram.verify');
-    Route::post('/profile/telegram/unlink', [ProfileController::class, 'unlinkTelegram'])->name('profile.telegram.unlink');
-    Route::post('/profile/extension-token/generate', [ProfileController::class, 'generateExtensionToken'])->name('profile.extension-token.generate');
-    Route::post('/profile/extension-token/regenerate', [ProfileController::class, 'regenerateExtensionToken'])->name('profile.extension-token.regenerate');
-    Route::get('/profile/sales', [ProfileController::class, 'sales'])->name('profile.sales');
-
-    // Маршруты инвентаря
-    Route::prefix('inventory')->name('inventory.')->controller(InventoryController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::post('/sync', 'sync')->name('sync');
-        Route::post('/create-listing', 'createListing')->name('create-listing');
-        Route::get('/{assetId}/sell', 'sell')->name('sell');
-        Route::get('/{assetId}', 'show')->name('show');
-    });
-});
 
 // Telegram webhook (не требует авторизации)
 Route::post('/telegram/webhook', [ProfileController::class, 'telegramWebhook'])->name('telegram.webhook');

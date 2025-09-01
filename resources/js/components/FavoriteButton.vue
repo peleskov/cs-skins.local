@@ -79,11 +79,11 @@ export default {
 						}));
 					}
 				} else {
-					window.toast.error(data.message || 'Не удалось обновить избранное');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Favorite toggle error:', error);
-				window.toast.error(handleApiError(error));
+				// Глобальный обработчик покажет toast автоматически
 			} finally {
 				this.isLoading = false;
 				// Убираем анимацию через небольшую задержку

@@ -114,6 +114,10 @@
                                 </button>
                             </div>
                         </div>
+                        
+                        <!-- Компонент аукциона -->
+                        <AuctionDetails :listingId="listing.id" />
+                        
                         <!-- Float Bar -->
                         <div v-if="listing.float_value && hasFloatRange()" class="col-12">
                             <div class="float-bar-container mb-2">
@@ -313,6 +317,7 @@ import { createApp } from 'vue'
 import axios from 'axios'
 import CartButton from './CartButton.vue'
 import FavoriteButton from './FavoriteButton.vue'
+import AuctionDetails from './AuctionDetails.vue'
 import VueApexCharts from 'vue3-apexcharts'
 import { formatPrice, handleApiError } from '../utils/helpers'
 import { orderAPI } from '../utils/api'
@@ -320,7 +325,8 @@ import { orderAPI } from '../utils/api'
 export default {
     name: 'SkinDetails',
     components: {
-        apexchart: VueApexCharts
+        apexchart: VueApexCharts,
+        AuctionDetails
     },
     props: {
         listingId: {

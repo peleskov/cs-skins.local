@@ -54,112 +54,67 @@
 					</div>
 				</div>
 				<div class="col-lg-5 col-12" id="favorite-details-section">
-					<div class="item-details sticky-top" v-if="selectedFavorite">
-						<h5 class="item-name">{{ getItemName(selectedFavorite.listing) }}</h5>
-						<div class="item-type text-muted mb-3">{{ selectedFavorite.listing.inventory_type || 'Unknown' }}</div>
+					<ItemDetails 
+						v-if="selectedFavorite"
+						:item="selectedFavorite.listing"
+						:active-tab="'favorites'">
 						
-						<!-- Изображение предмета -->
-						<div class="item-preview mb-3">
-							<img :src="getIconUrl(selectedFavorite.listing)" :alt="getItemName(selectedFavorite.listing)" 
-								 class="img-fluid" @error="handleImageError">
-						</div>
-						
-						<!-- Описание предмета -->
-						<div v-if="getItemDescription(selectedFavorite.listing)" class="item-description mb-3">
-							<div class="description-text text-muted" v-html="getItemDescription(selectedFavorite.listing)"></div>
-						</div>
-						
-						<!-- Износ и паттерн -->
-						<div v-if="selectedFavorite.listing.float_value" class="item-wear mb-3">
-							<div class="wear-info">
-								<strong>Износ:</strong> {{ getWearCondition(selectedFavorite.listing.float_value) }}
-								<div class="float-value">Float: {{ parseFloat(selectedFavorite.listing.float_value).toFixed(6) }}</div>
-							</div>
-							<div v-if="selectedFavorite.listing.pattern_index" class="pattern-info mt-2">
-								<strong>Паттерн:</strong> #{{ selectedFavorite.listing.pattern_index }}
-							</div>
-						</div>
-						
-						<!-- Стикеры -->
-						<div v-if="selectedFavorite.listing.stickers && selectedFavorite.listing.stickers.length > 0" class="item-stickers mb-3">
-							<strong>Стикеры:</strong>
-							<div class="sticker-list mt-2">
-								<div v-for="(sticker, index) in selectedFavorite.listing.stickers" :key="index" class="sticker-item">
-									<img v-if="sticker.img" :src="sticker.img" :alt="sticker.name" class="sticker-img">
-									<span>{{ sticker.name }}</span>
+						<template #actions="{ item }">
+							<!-- Цена -->
+							<div class="item-price mb-3">
+								<div class="d-flex justify-content-between align-items-center">
+									<strong>Цена:</strong>
+									<span class="fw-bold fs-5">{{ formatPrice(item.price) }}</span>
 								</div>
 							</div>
-						</div>
-						
-						<!-- Теги -->
-						<div v-if="selectedFavorite.listing.structured_tags && selectedFavorite.listing.structured_tags.length > 0" class="item-tags mb-3">
-							<strong>Информация о предмете:</strong>
-							<div class="tags-list mt-2">
-								<div v-for="tag in selectedFavorite.listing.structured_tags" :key="tag.id" class="tag-item d-flex justify-content-between mb-1">
-									<span class="tag-category text-muted">{{ tag.category_name }}:</span>
-									<span class="tag-name fw-medium" :style="{ color: tag.color ? '#' + tag.color : '' }">
-										{{ tag.display_name }}
-									</span>
+							
+							<!-- Статус товара -->
+							<div class="item-status mb-3">
+								<div v-if="item.status === 'active'" class="alert alert-success mb-0 py-2">
+									<i class="ri-check-line me-2"></i>Товар доступен для покупки
+								</div>
+								<div v-else-if="item.status === 'sold'" class="alert alert-secondary mb-0 py-2">
+									<i class="ri-shopping-cart-line me-2"></i>Товар продан
+								</div>
+								<div v-else-if="item.status === 'cancelled'" class="alert alert-warning mb-0 py-2">
+									<i class="ri-pause-line me-2"></i>Товар снят с продажи
+								</div>
+								<div v-else-if="item.status === 'pending'" class="alert alert-info mb-0 py-2">
+									<i class="ri-time-line me-2"></i>Товар ожидает активации
 								</div>
 							</div>
-						</div>
-						
-						<!-- Цена -->
-						<div class="item-price mb-3">
-							<div class="d-flex justify-content-between align-items-center">
-								<strong>Цена:</strong>
-								<span class="fw-bold fs-5">{{ formatPrice(selectedFavorite.listing.price) }}</span>
+							
+							<!-- Дополнительная информация -->
+							<div class="item-info mb-3">
+								<div v-if="isStatTrak(item)" class="mb-2">
+									<i class="ri-star-fill text-warning me-1"></i> StatTrak™
+								</div>
+								<div v-if="isSouvenir(item)" class="mb-2">
+									<i class="ri-trophy-fill text-warning me-1"></i> Souvenir
+								</div>
+								<div class="text-muted">
+									<small>Добавлено в избранное: {{ formatDate(selectedFavorite.created_at) }}</small>
+								</div>
 							</div>
-						</div>
-						
-						<!-- Статус товара -->
-						<div class="item-status mb-3">
-							<div v-if="selectedFavorite.listing.status === 'active'" class="alert alert-success mb-0 py-2">
-								<i class="ri-check-line me-2"></i>Товар доступен для покупки
-							</div>
-							<div v-else-if="selectedFavorite.listing.status === 'sold'" class="alert alert-secondary mb-0 py-2">
-								<i class="ri-shopping-cart-line me-2"></i>Товар продан
-							</div>
-							<div v-else-if="selectedFavorite.listing.status === 'cancelled'" class="alert alert-warning mb-0 py-2">
-								<i class="ri-pause-line me-2"></i>Товар снят с продажи
-							</div>
-							<div v-else-if="selectedFavorite.listing.status === 'pending'" class="alert alert-info mb-0 py-2">
-								<i class="ri-time-line me-2"></i>Товар ожидает активации
-							</div>
-						</div>
-						
-						<!-- Дополнительная информация -->
-						<div class="item-info mb-3">
-							<div v-if="isStatTrak(selectedFavorite.listing)" class="mb-2">
-								<i class="ri-star-fill text-warning me-1"></i> StatTrak™
-							</div>
-							<div v-if="isSouvenir(selectedFavorite.listing)" class="mb-2">
-								<i class="ri-trophy-fill text-warning me-1"></i> Souvenir
-							</div>
-							<div class="text-muted">
-								<small>Добавлено в избранное: {{ formatDate(selectedFavorite.created_at) }}</small>
-							</div>
-						</div>
-						
-						<!-- Кнопки действий -->
-						<div class="item-actions mt-4">
-							<div v-if="selectedFavorite.listing.status === 'active'" class="btn-group w-100">
-								<a :href="`/marketplace/${selectedFavorite.listing.id}`" class="btn theme-outline" title="Посмотреть товар">
+							
+							<!-- Кнопки действий -->
+							<div v-if="item.status === 'active'" class="btn-group w-100">
+								<a :href="`/marketplace/${item.id}`" class="btn theme-outline" title="Посмотреть товар">
 									<i class="ri-eye-line me-1"></i>Посмотреть
 								</a>
 								<CartButton 
-									:key="selectedFavorite.listing.id"
-									:listing-id="selectedFavorite.listing.id" 
+									:key="item.id"
+									:listing-id="item.id" 
 									size="normal" 
 									variant="primary" />
 							</div>
 							<div v-else class="d-grid">
-								<a :href="`/marketplace/${selectedFavorite.listing.id}`" class="btn theme-outline" title="Посмотреть товар">
+								<a :href="`/marketplace/${item.id}`" class="btn theme-outline" title="Посмотреть товар">
 									<i class="ri-eye-line me-1"></i>Посмотреть
 								</a>
 							</div>
-						</div>
-					</div>
+						</template>
+					</ItemDetails>
 				</div>
 			</div>
 		</div>
@@ -182,11 +137,13 @@ import { formatPrice, handleApiError } from '../../utils/helpers';
 import { createApp } from 'vue';
 import FavoriteButton from '../FavoriteButton.vue';
 import CartButton from '../CartButton.vue';
+import ItemDetails from './ItemDetails.vue';
 
 export default {
 	name: 'ProfileFavorites',
 	components: {
-		CartButton
+		CartButton,
+		ItemDetails
 	},
 	setup() {
 		return { formatPrice };
@@ -214,11 +171,11 @@ export default {
 				if (data.success) {
 					this.favorites = data.favorites;
 				} else {
-					window.toast.error(data.message || 'Ошибка загрузки избранного');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Load favorites error:', error);
-				window.toast.error(handleApiError(error));
+				// Глобальный обработчик покажет toast автоматически
 			} finally {
 				this.isLoading = false;
 			}

@@ -53,27 +53,30 @@
 		
 		<!-- Кнопки действий -->
 		<div class="item-actions mt-4">
-			<div v-if="activeTab === 'available'">
-				<button v-if="item.tradable && item.marketable && hasTradeUrl && !item.is_listed" 
-					class="btn theme-btn w-100 mb-2"
-					:disabled="isCreatingListing"
-					@click="$emit('sell', item)">
-					<i v-if="isCreatingListing" class="ri-loader-4-line me-2 ri-spin"></i>
-					<i v-else class="ri-price-tag-3-line me-2"></i>
-					{{ isCreatingListing ? 'Создаем листинг...' : 'Продать' }}
-				</button>
-				<div v-else-if="!hasTradeUrl" class="alert alert-light mb-0 small">
-					<i class="ri-information-line me-2"></i>Для того чтобы выставить на продажу нужно добавить Trade URL в настройках <a href="/profile#profile">профиля</a>
+			<slot name="actions" :item="item">
+				<!-- Кнопки по умолчанию для инвентаря -->
+				<div v-if="activeTab === 'available'">
+					<button v-if="item.tradable && item.marketable && hasTradeUrl && !item.is_listed" 
+						class="btn theme-btn w-100 mb-2"
+						:disabled="isCreatingListing"
+						@click="$emit('sell', item)">
+						<i v-if="isCreatingListing" class="ri-loader-4-line me-2 ri-spin"></i>
+						<i v-else class="ri-price-tag-3-line me-2"></i>
+						{{ isCreatingListing ? 'Создаем листинг...' : 'Продать' }}
+					</button>
+					<div v-else-if="!hasTradeUrl" class="alert alert-light mb-0 small">
+						<i class="ri-information-line me-2"></i>Для того чтобы выставить на продажу нужно добавить Trade URL в настройках <a href="/profile#profile">профиля</a>
+					</div>
+					<div v-else-if="!item.tradable || !item.marketable" class="alert alert-secondary mb-0">
+						<i class="ri-lock-line me-2"></i>Данный предмет нельзя продать
+					</div>
 				</div>
-				<div v-else-if="!item.tradable || !item.marketable" class="alert alert-secondary mb-0">
-					<i class="ri-lock-line me-2"></i>Данный предмет нельзя продать
+				<div v-if="activeTab === 'listed'">
+					<div class="alert alert-info mb-0">
+						<i class="ri-information-line me-2"></i>Этот предмет выставлен на продажу
+					</div>
 				</div>
-			</div>
-			<div v-if="activeTab === 'listed'">
-				<div class="alert alert-info mb-0">
-					<i class="ri-information-line me-2"></i>Этот предмет выставлен на продажу
-				</div>
-			</div>
+			</slot>
 		</div>
 	</div>
 </template>
@@ -114,11 +117,19 @@ export default {
 		},
 		
 		getIconUrl(item) {
-			if (item?.icon_url) {
-				if (item.icon_url.startsWith('http')) {
-					return item.icon_url;
+			// Для листингов используем inventory_icon_url, для предметов инвентаря - icon_url
+			const iconUrl = item?.inventory_icon_url || item?.icon_url;
+			
+			if (iconUrl) {
+				// Проверяем, уже ли это полный URL
+				if (iconUrl.startsWith('http')) {
+					return iconUrl;
 				}
-				return 'https://community.steamstatic.com/economy/image/' + item.icon_url;
+				// Если нет, добавляем префикс Steam
+				return 'https://community.steamstatic.com/economy/image/' + iconUrl;
+			}
+			if (item?.image_url) {
+				return item.image_url;
 			}
 			return '/images/skin_no_image.svg';
 		},

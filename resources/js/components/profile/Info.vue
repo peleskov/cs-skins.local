@@ -408,7 +408,7 @@ export default {
 
 					this.emailForm.email = '';
 				} else {
-					window.toast.error(data.message || 'Ошибка при обновлении Email');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Update email error:', error);
@@ -431,7 +431,7 @@ export default {
 					window.toast.success(data.message || 'Письмо отправлено');
 					this.startResendTimer(60); // 1 минута
 				} else {
-					window.toast.error(data.message || 'Не удалось отправить письмо');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Resend verification error:', error);
@@ -487,7 +487,7 @@ export default {
 
 					this.tradeUrlForm.url = '';
 				} else {
-					window.toast.error(data.message || 'Ошибка при обновлении Trade URL');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Trade URL update error:', error);
@@ -530,7 +530,7 @@ export default {
 					this.extensionToken = data.token;
 					window.toast.success(data.message || 'Токен успешно сгенерирован');
 				} else {
-					window.toast.error(data.message || 'Ошибка при генерации токена');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Generate token error:', error);
@@ -561,7 +561,7 @@ export default {
 					const modal = bootstrap.Modal.getInstance(document.getElementById('regenerate-token'));
 					if (modal) modal.hide();
 				} else {
-					window.toast.error(data.message || 'Ошибка при регенерации токена');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Regenerate token error:', error);
@@ -670,7 +670,7 @@ export default {
 						window.location.reload();
 					}, 1500);
 				} else {
-					window.toast.error(data.message || 'Ошибка при верификации');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Telegram auth error:', error);

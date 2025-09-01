@@ -101,13 +101,36 @@ function getCurrencyByCode(currencyCode) {
         }
     }
     
-    // Логируем доступные валюты для отладки
-    const availableCurrencies = window.currencyRatesCache || currencyRatesCache;
-    if (availableCurrencies && Array.isArray(availableCurrencies)) {
-        console.warn(`Currency ${currencyCode} not found in cache. Available currencies:`, availableCurrencies.map(c => c.code));
-    } else {
-        console.warn('No currency cache available');
+    // Если кэш пуст - принудительно загружаем синхронно
+    if (!window.currencyRatesCache) {
+        try {
+            // Делаем синхронный запрос для экстренной загрузки
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', '/api/currencies', false); // false = синхронно
+            xhr.send();
+            
+            if (xhr.status === 200) {
+                const currencies = JSON.parse(xhr.responseText);
+                window.currencyRatesCache = currencies;
+                
+                // Также обновляем localStorage
+                const primaryCurrency = currencies.find(c => c.is_primary);
+                if (primaryCurrency && !localStorage.getItem('selectedCurrency')) {
+                    localStorage.setItem('selectedCurrency', JSON.stringify(primaryCurrency));
+                }
+                
+                // Теперь ищем нужную валюту
+                const found = currencies.find(c => c.code === currencyCode);
+                if (found) {
+                    return found;
+                }
+            }
+        } catch (error) {
+            // Тихо игнорируем ошибки синхронной загрузки
+        }
     }
+    
+    // Если валюта не найдена даже после принудительной загрузки - возвращаем null
     
     return null;
 }

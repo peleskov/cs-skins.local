@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Listing extends Model
 {
@@ -195,6 +196,32 @@ class Listing extends Model
             ->orderBy('tags.category_code')
             ->orderBy('tags.sort_order')
             ->get();
+    }
+
+    /**
+     * Активный аукцион для листинга
+     */
+    public function activeAuction(): HasOne
+    {
+        return $this->hasOne(Auction::class)->where('status', Auction::STATUS_ACTIVE);
+    }
+
+    /**
+     * Все аукционы для листинга
+     */
+    public function auctions(): HasMany
+    {
+        return $this->hasMany(Auction::class);
+    }
+
+    /**
+     * Проверка, находится ли листинг на аукционе
+     */
+    public function isOnAuction(): bool
+    {
+        return $this->hasOne(Auction::class)
+            ->whereIn('status', [Auction::STATUS_PENDING, Auction::STATUS_ACTIVE])
+            ->exists();
     }
 
     public function getStructuredTagsAttribute()

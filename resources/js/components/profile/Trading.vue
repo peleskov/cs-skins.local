@@ -121,6 +121,10 @@
 													class="btn theme-outline" title="Просмотреть на маркетплейсе">
 													<i class="ri-external-link-line me-1"></i>Смотреть
 												</a>
+												<button class="btn theme-outline" @click="createAuctionForListing(listing)"
+													title="Создать аукцион для этого предмета">
+													<i class="ri-auction-line me-1"></i>Аукцион
+												</button>
 												<button class="btn theme-outline" @click="deactivateListing(listing)"
 													title="Деактивировать">
 													<i class="ri-pause-line me-1"></i>Пауза
@@ -341,6 +345,103 @@
 		</div>
 	</div>
 
+	<!-- Модальное окно создания аукциона -->
+	<div class="modal fade" id="createAuctionModal" tabindex="-1" aria-labelledby="createAuctionModalLabel"
+		aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="createAuctionModalLabel">
+						<i class="ri-auction-line me-2 text-info"></i>Создать аукцион
+					</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<div v-if="itemToAuction" class="mb-3">
+						<div class="d-flex align-items-center">
+							<div class="product-img me-3" :style="{
+								backgroundImage: 'url(' + getItemImage(itemToAuction) + ')',
+								width: '64px',
+								height: '64px',
+								backgroundSize: 'contain',
+								backgroundRepeat: 'no-repeat',
+								backgroundPosition: 'center'
+							}"></div>
+							<div>
+								<h6 class="mb-1">{{ getItemName(itemToAuction) }}</h6>
+								<small class="text-muted">{{ itemToAuction.market_hash_name }}</small>
+								<div class="mt-1">
+									<span class="badge bg-success">{{ formatPrice(itemToAuction.price) }}</span>
+								</div>
+							</div>
+						</div>
+					</div>
+					
+					<div class="alert alert-info">
+						<i class="ri-information-line me-2"></i>
+						<strong>Что такое аукцион?</strong>
+						<ul class="mt-2 mb-0">
+							<li>Покупатели могут делать ставки на ваш предмет</li>
+							<li>Предмет также остается доступным для прямой покупки по указанной цене</li>
+							<li>Аукцион завершится автоматически через заданное время</li>
+							<li>Победитель получит предмет по цене своей ставки</li>
+						</ul>
+					</div>
+					
+					<p class="mb-0">Вы уверены, что хотите создать аукцион для этого предмета?</p>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn theme-outline" data-bs-dismiss="modal" @click="clearAuctionData">Отмена</button>
+					<button type="button" class="btn theme-btn theme-btn-info" @click="confirmCreateAuction">
+						<i class="ri-auction-line me-1"></i>Создать аукцион
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Модальное окно успешного создания аукциона -->
+	<div class="modal fade" id="auctionCreatedModal" tabindex="-1" aria-labelledby="auctionCreatedModalLabel"
+		aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="auctionCreatedModalLabel">
+						<i class="ri-check-double-line me-2 text-success"></i>Аукцион создан
+					</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<div class="text-center py-3">
+						<div class="mb-4">
+							<i class="ri-auction-line display-4 text-success"></i>
+						</div>
+						<h5 class="mb-3">Аукцион успешно создан!</h5>
+						<p class="text-muted mb-4">
+							Ваш аукцион создан с настройками по умолчанию. Вы можете отредактировать параметры и активировать его в разделе "Мои аукционы".
+						</p>
+						<div class="alert alert-info">
+							<i class="ri-information-line me-2"></i>
+							<strong>Настройки по умолчанию:</strong>
+							<ul class="mb-0 mt-2 text-start">
+								<li>Стартовая цена: 50% от цены листинга</li>
+								<li>Длительность: 24 часа</li>
+								<li>Минимальный шаг ставки: 1.00</li>
+								<li>Статус: Pending (требует активации)</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn theme-outline" data-bs-dismiss="modal">Закрыть</button>
+					<button type="button" class="btn theme-btn" @click="goToAuctions">
+						<i class="ri-settings-4-line me-1"></i>Управлять аукционами
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
 	<!-- Модальное окно для ввода Trade URL -->
 	<div class="modal fade" id="tradeUrlRequiredModal" tabindex="-1" aria-labelledby="tradeUrlRequiredModalLabel"
 		aria-hidden="true">
@@ -411,6 +512,7 @@ export default {
 			itemToDelete: null,
 			itemToEdit: null,
 			editPriceValue: null,
+			itemToAuction: null,
 			itemToActivate: null,
 			itemToDeactivate: null,
 			tradeUrlValue: '',
@@ -478,11 +580,11 @@ export default {
 				if (data.success) {
 					this.listings = data.data;
 				} else {
-					window.toast.error(data.message || 'Не удалось загрузить листинги');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Error loading listings:', error);
-				window.toast.error(handleApiError(error));
+				// Глобальный обработчик покажет toast автоматически
 			} finally {
 				this.isLoading = false;
 			}
@@ -606,7 +708,7 @@ export default {
 				} else {
 					// Проверяем, нужен ли Trade URL
 					if (data.require_trade_url) {
-						window.toast.error(data.message || 'Необходимо настроить Trade URL');
+						// Глобальный обработчик покажет toast автоматически
 
 						// Закрываем модальное окно активации
 						const modal = bootstrap.Modal.getInstance(document.getElementById('confirmActivateModal'));
@@ -620,12 +722,12 @@ export default {
 							tradeUrlModal.show();
 						}, 300);
 					} else {
-						window.toast.error(data.message || 'Не удалось активировать листинг');
+						// Глобальный обработчик покажет toast автоматически
 					}
 				}
 			} catch (error) {
 				console.error('Activate listing error:', error);
-				window.toast.error(handleApiError(error));
+				// Глобальный обработчик покажет toast автоматически
 			} finally {
 				this.itemToActivate = null;
 			}
@@ -656,11 +758,11 @@ export default {
 					// Обновляем минимальную цену для этого предмета
 					await this.updateMinMarketPrice(deletedMarketHashName);
 				} else {
-					window.toast.error(data.message || 'Не удалось удалить предмет');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Delete listing error:', error);
-				window.toast.error(handleApiError(error));
+				// Глобальный обработчик покажет toast автоматически
 			} finally {
 				// Закрываем модальное окно
 				const modal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal'));
@@ -709,11 +811,11 @@ export default {
 						modal.hide();
 					}
 				} else {
-					window.toast.error(data.message || 'Не удалось обновить цену');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Update price error:', error);
-				window.toast.error(handleApiError(error));
+				// Глобальный обработчик покажет toast автоматически
 			} finally {
 				this.itemToEdit = null;
 				this.editPriceValue = null;
@@ -750,11 +852,11 @@ export default {
 						modal.hide();
 					}
 				} else {
-					window.toast.error(data.message || 'Не удалось деактивировать листинг');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Deactivate listing error:', error);
-				window.toast.error(handleApiError(error));
+				// Глобальный обработчик покажет toast автоматически
 			} finally {
 				this.itemToDeactivate = null;
 			}
@@ -816,11 +918,11 @@ export default {
 						}, 500);
 					}
 				} else {
-					window.toast.error(data.message || 'Ошибка при сохранении Trade URL');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Trade URL save error:', error);
-				window.toast.error(handleApiError(error));
+				// Глобальный обработчик покажет toast автоматически
 			}
 		},
 
@@ -840,17 +942,89 @@ export default {
 					listing.status = 'pending';
 					window.toast.success('Листинг возвращен в черновики');
 				} else {
-					window.toast.error(data.message || 'Не удалось возобновить листинг');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Reactivate listing error:', error);
-				window.toast.error(handleApiError(error));
+				// Глобальный обработчик покажет toast автоматически
 			}
+		},
+
+		createAuctionForListing(listing) {
+			this.itemToAuction = listing;
+			const modal = new bootstrap.Modal(document.getElementById('createAuctionModal'));
+			modal.show();
+		},
+
+		async confirmCreateAuction() {
+			if (!this.itemToAuction) return;
+
+			try {
+				const response = await axios.post('/api/auctions', {
+					listing_id: this.itemToAuction.id,
+					starting_price: Math.max(1.00, this.itemToAuction.price * 0.5), // Стартовая цена - 50% от цены листинга
+					duration_hours: 24, // 24 часа по умолчанию
+					min_bid_increment: 1.00 // Минимальное увеличение ставки
+				}, {
+					// Отключаем глобальный обработчик ошибок
+					skipErrorHandler: true
+				});
+				const data = response.data;
+
+				if (data.success) {
+					// Очищаем данные только при успехе
+					this.itemToAuction = null;
+					
+					// Закрываем модальное окно создания
+					const modal = bootstrap.Modal.getInstance(document.getElementById('createAuctionModal'));
+					if (modal) {
+						modal.hide();
+					}
+
+					// Показываем модальное окно успеха
+					setTimeout(() => {
+						const successModal = new bootstrap.Modal(document.getElementById('auctionCreatedModal'));
+						successModal.show();
+					}, 300);
+					
+				} else {
+					// Глобальный обработчик покажет toast автоматически
+					// НЕ очищаем itemToAuction, чтобы модальное окно оставалось с данными
+				}
+			} catch (error) {
+				console.error('Create auction error:', error);
+				// Глобальный обработчик покажет toast автоматически
+				// НЕ очищаем itemToAuction, чтобы модальное окно оставалось с данными
+			}
+		},
+
+		clearAuctionData() {
+			// Очищаем данные о предмете для аукциона
+			this.itemToAuction = null;
+		},
+
+		goToAuctions() {
+			// Закрываем модальное окно
+			const modal = bootstrap.Modal.getInstance(document.getElementById('auctionCreatedModal'));
+			if (modal) {
+				modal.hide();
+			}
+			
+			// Переходим на раздел аукционов в профиле
+			window.location.href = '/profile#auctions';
 		}
 	},
 
 	mounted() {
 		this.loadListings();
+		
+		// Добавляем обработчик закрытия модального окна создания аукциона
+		const createAuctionModal = document.getElementById('createAuctionModal');
+		if (createAuctionModal) {
+			createAuctionModal.addEventListener('hidden.bs.modal', () => {
+				this.clearAuctionData();
+			});
+		}
 	}
 }
 </script>

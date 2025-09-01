@@ -7,6 +7,7 @@ import { useToast } from "vue-toastification";
 // Глобальная инициализация валют
 import './utils/currency-init.js';
 import Marketplace from './components/Marketplace.vue';
+import Auctions from './components/Auctions.vue';
 import SkinDetails from './components/SkinDetails.vue';
 import Profile from './components/Profile.vue';
 import Cart from './components/Cart.vue';
@@ -76,6 +77,18 @@ document.addEventListener('DOMContentLoaded', () => {
             initialHasMore: marketplaceElement.dataset.hasMore === 'true'
         });
         app.mount('#marketplace-app');
+    }
+    
+    // Auctions компонент  
+    const auctionsElement = document.getElementById('auctions-app');
+    if (auctionsElement) {
+        const app = createApp(Auctions, {
+            initialAuctions: JSON.parse(auctionsElement.dataset.auctions || '[]'),
+            initialTotal: parseInt(auctionsElement.dataset.total || '0'),
+            initialHasMore: auctionsElement.dataset.hasMore === 'true',
+            currentUser: auctionsElement.dataset.currentUser !== 'null' ? JSON.parse(auctionsElement.dataset.currentUser) : null
+        });
+        app.mount('#auctions-app');
     }
     
     // SkinDetails компонент

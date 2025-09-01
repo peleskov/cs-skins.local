@@ -110,11 +110,11 @@ export default {
 						cartCount: data.cart_count
 					});
 				} else {
-					window.toast.error(data.message || 'Не удалось добавить товар в корзину');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Add to cart error:', error);
-				window.toast.error(handleApiError(error));
+				// Глобальный обработчик покажет toast автоматически
 			} finally {
 				this.isLoading = false;
 			}
@@ -138,11 +138,11 @@ export default {
 						cartCount: data.cart_count
 					});
 				} else {
-					window.toast.error(data.message || 'Не удалось удалить товар из корзины');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Remove from cart error:', error);
-				window.toast.error(handleApiError(error));
+				// Глобальный обработчик покажет toast автоматически
 			} finally {
 				this.isLoading = false;
 			}

@@ -339,7 +339,7 @@ export default {
 					this.inventoryData = { items: [], stats: {} };
 					this.items = [];
 					this.stats = {};
-					window.toast.error(data.message || 'Не удалось загрузить инвентарь');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Error loading inventory:', error);
@@ -347,7 +347,7 @@ export default {
 				this.inventoryData = { items: [], stats: {} };
 				this.items = [];
 				this.stats = {};
-				window.toast.error(handleApiError(error));
+				// Глобальный обработчик покажет toast автоматически
 			} finally {
 				this.isLoading = false;
 			}
@@ -373,7 +373,7 @@ export default {
 					// Запускаем кулдаун на 2 минуты
 					this.startSyncCooldown(120); // 2 минуты = 120 секунд
 				} else {
-					window.toast.error(data.message);
+					// Глобальный обработчик покажет toast автоматически
 
 					// Если есть информация о кулдауне, запускаем его
 					if (data.data && data.data.cooldown_remaining) {
@@ -382,7 +382,7 @@ export default {
 				}
 			} catch (error) {
 				console.error('Sync error:', error);
-				window.toast.error(handleApiError(error));
+				// Глобальный обработчик покажет toast автоматически
 			} finally {
 				this.isSyncing = false;
 			}
@@ -609,11 +609,11 @@ export default {
 					
 					window.toast.success('Предмет добавлен в торговлю!');
 				} else {
-					window.toast.error(data.message || 'Не удалось создать листинг');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Create listing error:', error);
-				window.toast.error(handleApiError(error));
+				// Глобальный обработчик покажет toast автоматически
 			} finally {
 				this.isCreatingListing = false;
 			}

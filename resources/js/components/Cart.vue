@@ -186,11 +186,11 @@ export default {
 						window.toast.warning(data.warnings.message);
 					}
 				} else {
-					window.toast.error(data.message || 'Не удалось загрузить корзину');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Error loading cart:', error);
-				window.toast.error(handleApiError(error));
+				// Глобальный обработчик покажет toast автоматически
 			} finally {
 				this.isLoading = false;
 			}
@@ -222,11 +222,11 @@ export default {
 					// Обновляем счетчик в header
 					this.updateCartCount();
 				} else {
-					window.toast.error(data.message || 'Не удалось удалить товар');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Remove from cart error:', error);
-				window.toast.error(handleApiError(error));
+				// Глобальный обработчик покажет toast автоматически
 			} finally {
 				// Закрываем модальное окно
 				const modal = bootstrap.Modal.getInstance(document.getElementById('confirmRemoveModal'));
@@ -255,11 +255,11 @@ export default {
 					// Обновляем счетчик в header
 					this.updateCartCount();
 				} else {
-					window.toast.error(data.message || 'Не удалось очистить корзину');
+					// Глобальный обработчик покажет toast автоматически
 				}
 			} catch (error) {
 				console.error('Clear cart error:', error);
-				window.toast.error(handleApiError(error))
+				// Глобальный обработчик покажет toast автоматически
 			} finally {
 				// Закрываем модальное окно
 				const modal = bootstrap.Modal.getInstance(document.getElementById('confirmClearModal'));

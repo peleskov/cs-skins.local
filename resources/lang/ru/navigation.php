@@ -4,7 +4,7 @@ return [
     'main' => [
         'marketplace' => 'Маркетплейс',
         'cases' => 'Кейсы',
-        'auction' => 'Аукцион',
+        'auction' => 'Аукционы',
         'faq' => 'FAQ',
         'contact' => 'Контакты'
     ],

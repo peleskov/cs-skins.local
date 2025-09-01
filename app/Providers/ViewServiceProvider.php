@@ -37,7 +37,7 @@ class ViewServiceProvider extends ServiceProvider
                 ],
                 'auction' => [
                     'title' => __('navigation.main.auction'),
-                    'route' => '#',
+                    'route' => 'auctions',
                     'order' => 3
                 ],
                 'faq' => [

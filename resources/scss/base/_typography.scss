@@ -103,6 +103,12 @@ li {
   font-size: 14px;
 }
 
+.alert {
+  li {
+    display: block;
+  }
+}
+
 .scroll-bar {
   & {
     scrollbar-width: auto;

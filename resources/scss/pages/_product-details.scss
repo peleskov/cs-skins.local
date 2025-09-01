@@ -872,6 +872,10 @@
 				.product-box-price {
 					min-width: 320px;
 					grid-template-columns: 1fr 1fr 1fr;
+
+					&.col4{
+						grid-template-columns: repeat(4, 1fr);
+					}
 				}
 
 				.btn-group {
@@ -1359,5 +1363,16 @@
 			}
 		}
 
+	}
+}
+
+.badge{
+	&.bid-time{
+		background: rgba(var(--theme-color), 0.1);
+		color: rgba(var(--dark-text), 1);
+		padding: 2px 6px;
+		font-size: 10px;
+		font-weight: 400;
+		transform: translate(5px, -5px);
 	}
 }

@@ -142,7 +142,6 @@ class AuctionController extends Controller
             'auction' => $auction,
             'can_bid' => Auth::check() ? $auction->canBid(Auth::user()) : false,
             'minimum_bid' => $auction->minimum_bid,
-            'buyout_price' => $auction->buyout_price,
         ]);
     }
 
@@ -290,28 +289,6 @@ class AuctionController extends Controller
         }
     }
 
-    /**
-     * Мгновенный выкуп
-     */
-    public function buyout(Auction $auction): JsonResponse
-    {
-        try {
-            $client = Auth::user();
-            $order = $this->auctionService->buyout($auction, $client);
-
-            return response()->json([
-                'success' => true,
-                'order' => $order,
-                'message' => 'Предмет успешно куплен по цене мгновенного выкупа',
-            ]);
-
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
-    }
 
     /**
      * Отменить аукцион
@@ -404,7 +381,7 @@ class AuctionController extends Controller
         $client = Auth::user();
         
         $auctions = Auction::where('seller_id', $client->id)
-            ->with(['listing', 'lastBidder'])
+            ->with(['listing', 'lastBidder', 'order'])
             ->orderBy('created_at', 'desc')
             ->get();
 

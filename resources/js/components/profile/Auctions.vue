@@ -77,7 +77,8 @@
 										<p class="text-muted mb-0">{{ auction.listing.market_hash_name }}</p>
 									</div>
 									<div class="h-100 d-flex flex-column justify-content-between">
-										<div class="product-box-price col4 d-grid gap-2 mb-4 text-center">
+										<div v-if="auction.status !== 'completed'"
+											class="product-box-price col4 d-grid gap-2 mb-4 text-center">
 											<i class="ri-price-tag-3-line text-muted small" title="Текущая цена"></i>
 											<i class="ri-add-circle-line text-muted small" title="Минимальный шаг"></i>
 											<i class="ri-time-line text-muted small" title="Длительность"></i>
@@ -85,37 +86,72 @@
 
 											<span class="small">{{ formatPrice(auction.current_price) }}</span>
 											<span class="small">{{ formatPrice(auction.min_bid_increment) }}</span>
-											<span class="small">{{ formatDurationFromHours(auction.duration_hours) }}</span>
+											<span class="small">{{ formatDurationFromHours(auction.duration_hours)
+											}}</span>
 											<span class="small">{{ auction.auto_extend ? 'Да' : 'Нет' }}</span>
 										</div>
+										<div v-else class="product-box-price d-flex flex-column gap-1 mb-4">
+											<div class="d-flex justify-content-between">
+												<small class="text-muted">Финальная цена</small><br>
+												<small>{{ formatPrice(auction.current_price) }}</small>
+											</div>
+											<div v-if="auction.last_bidder" class="d-flex justify-content-between">
+												<small class="text-muted">Победитель</small><br>
+												<small>{{ auction.last_bidder.name || 'Неизвестный' }}</small>
+											</div>
+											<div v-if="auction.bid_count > 0" class="d-flex justify-content-between">
+												<small class="text-muted">Всего ставок</small><br>
+												<small>{{ auction.bid_count }}</small>
+											</div>
+											<div class="d-flex justify-content-between">
+												<small class="text-muted">Завершен</small><br>
+												<small>{{ formatDate(auction.updated_at) }}</small>
+											</div>
+											<div v-if="auction.order && auction.order.order_number"
+												class="d-flex justify-content-between">
+												<small class="text-muted">Заказ</small>
+												<small>#{{ auction.order.order_number }}</small>
+											</div>
+											<div v-else-if="auction.bid_count > 0"
+												class="d-flex justify-content-between">
+												<small class="text-muted">Заказ</small>
+												<small>Не создан</small>
+											</div>
+											<div v-else class="d-flex justify-content-between">
+												<small class="text-muted">Заказ</small>
+												<small>Нет ставок</small>
+											</div>
+										</div>
+
 										<div class="btn-group">
 											<!-- Кнопки для черновиков -->
 											<button v-if="auction.status === 'pending'" class="btn btn-sm theme-outline"
-													data-bs-toggle="modal" 
-													data-bs-target="#confirmActivateAuctionModal"
-													@click="setAuctionToActivate(auction)">
+												data-bs-toggle="modal" data-bs-target="#confirmActivateAuctionModal"
+												@click="setAuctionToActivate(auction)">
 												<i class="ri-play-line me-1"></i>Активировать
 											</button>
-											<button v-if="auction.status === 'pending'" class="btn btn-sm theme-outline" 
-													data-bs-toggle="modal" 
-													data-bs-target="#editAuctionModal"
-													@click="setAuctionToEdit(auction)">
+											<button v-if="auction.status === 'pending'" class="btn btn-sm theme-outline"
+												data-bs-toggle="modal" data-bs-target="#editAuctionModal"
+												@click="setAuctionToEdit(auction)">
 												<i class="ri-edit-line me-1"></i>Редактировать
 											</button>
 											<button v-if="auction.status === 'pending'" class="btn btn-sm theme-outline"
-													data-bs-toggle="modal" 
-													data-bs-target="#confirmDeleteAuctionModal"
-													@click="setAuctionToDelete(auction)">
+												data-bs-toggle="modal" data-bs-target="#confirmDeleteAuctionModal"
+												@click="setAuctionToDelete(auction)">
 												<i class="ri-delete-bin-line me-1"></i>Удалить
 											</button>
-											
+
 											<!-- Кнопки для активных аукционов -->
-											<button v-if="auction.status === 'active'" class="btn btn-sm theme-outline" @click="deactivateAuction(auction)">
+											<button v-if="auction.status === 'active'" class="btn btn-sm theme-outline"
+												@click="deactivateAuction(auction)">
 												<i class="ri-pause-line me-1"></i>Пауза
 											</button>
-											<a v-if="auction.status === 'active'" :href="`/marketplace/${auction.listing_id}`" class="btn btn-sm theme-outline">
+											<a v-if="auction.status === 'active'"
+												:href="`/marketplace/${auction.listing_id}`"
+												class="btn btn-sm theme-outline">
 												<i class="ri-eye-line me-1"></i>Смотреть
 											</a>
+
 										</div>
 									</div>
 								</div>
@@ -136,7 +172,8 @@
 		<div v-else class="text-center py-5">
 			<i class="ri-auction-line display-4 text-muted mb-3"></i>
 			<h4>У вас пока нет аукционов</h4>
-			<p class="text-muted mb-4">Создать новый аукцион можно в разделе "Торговля" для любого активного листинга.</p>
+			<p class="text-muted mb-4">Создать новый аукцион можно в разделе "Торговля" для любого активного листинга.
+			</p>
 			<a href="/profile#trading" class="btn theme-btn">
 				<i class="ri-store-2-line me-2"></i>Перейти к торговле
 			</a>
@@ -181,13 +218,9 @@
 								<label for="editStartingPrice" class="form-label">Стартовая цена</label>
 								<div class="input-group">
 									<span class="input-group-text">₽</span>
-									<input type="number" 
-										   class="form-control" 
-										   id="editStartingPrice"
-										   v-model="editForm.starting_price" 
-										   min="0.01" 
-										   step="0.01"
-										   :class="{ 'is-invalid': !isValidStartingPrice }">
+									<input type="number" class="form-control" id="editStartingPrice"
+										v-model="editForm.starting_price" min="0.01" step="0.01"
+										:class="{ 'is-invalid': !isValidStartingPrice }">
 								</div>
 								<div v-if="!isValidStartingPrice" class="invalid-feedback">
 									Цена должна быть от 0.01₽ до 100,000₽
@@ -198,13 +231,9 @@
 								<label for="editMinBidIncrement" class="form-label">Минимальный шаг ставки</label>
 								<div class="input-group">
 									<span class="input-group-text">₽</span>
-									<input type="number" 
-										   class="form-control" 
-										   id="editMinBidIncrement"
-										   v-model="editForm.min_bid_increment" 
-										   min="1" 
-										   step="1"
-										   :class="{ 'is-invalid': !isValidMinBidIncrement }">
+									<input type="number" class="form-control" id="editMinBidIncrement"
+										v-model="editForm.min_bid_increment" min="1" step="1"
+										:class="{ 'is-invalid': !isValidMinBidIncrement }">
 								</div>
 								<div v-if="!isValidMinBidIncrement" class="invalid-feedback">
 									Минимальный шаг должен быть от 1₽
@@ -228,10 +257,8 @@
 							<div class="col-md-6">
 								<label for="editAutoExtend" class="form-label d-block">Настройки</label>
 								<div class="form-check">
-									<input class="form-check-input" 
-										   type="checkbox" 
-										   id="editAutoExtend" 
-										   v-model="editForm.auto_extend">
+									<input class="form-check-input" type="checkbox" id="editAutoExtend"
+										v-model="editForm.auto_extend">
 									<label class="form-check-label" for="editAutoExtend">
 										Автопродление на 5 минут при ставке в последние 5 минут
 									</label>
@@ -241,8 +268,10 @@
 					</div>
 				</div>
 				<div class="modal-footer">
-					<button type="button" class="btn theme-outline" data-bs-dismiss="modal" @click="clearEditForm">Отмена</button>
-					<button type="button" class="btn theme-btn" @click="saveAuctionChanges" :disabled="!isValidEditForm">
+					<button type="button" class="btn theme-outline" data-bs-dismiss="modal"
+						@click="clearEditForm">Отмена</button>
+					<button type="button" class="btn theme-btn" @click="saveAuctionChanges"
+						:disabled="!isValidEditForm">
 						<i class="ri-save-line me-1"></i>Сохранить изменения
 					</button>
 				</div>
@@ -251,8 +280,8 @@
 	</div>
 
 	<!-- Модальное окно подтверждения удаления аукциона -->
-	<div class="modal fade" id="confirmDeleteAuctionModal" tabindex="-1" aria-labelledby="confirmDeleteAuctionModalLabel"
-		aria-hidden="true">
+	<div class="modal fade" id="confirmDeleteAuctionModal" tabindex="-1"
+		aria-labelledby="confirmDeleteAuctionModalLabel" aria-hidden="true">
 		<div class="modal-dialog modal-dialog-centered">
 			<div class="modal-content">
 				<div class="modal-header">
@@ -274,7 +303,8 @@
 							}"></div>
 							<div>
 								<h6 class="mb-1">{{ getItemName(auctionToDelete.listing) }}</h6>
-								<small class="text-muted">Стартовая цена: {{ formatPrice(auctionToDelete.starting_price) }}</small>
+								<small class="text-muted">Стартовая цена: {{ formatPrice(auctionToDelete.starting_price)
+								}}</small>
 								<div class="mt-1">
 									<span class="badge bg-warning">{{ getStatusText(auctionToDelete.status) }}</span>
 								</div>
@@ -298,8 +328,8 @@
 	</div>
 
 	<!-- Модальное окно подтверждения активации аукциона -->
-	<div class="modal fade" id="confirmActivateAuctionModal" tabindex="-1" aria-labelledby="confirmActivateAuctionModalLabel"
-		aria-hidden="true">
+	<div class="modal fade" id="confirmActivateAuctionModal" tabindex="-1"
+		aria-labelledby="confirmActivateAuctionModalLabel" aria-hidden="true">
 		<div class="modal-dialog modal-dialog-centered">
 			<div class="modal-content">
 				<div class="modal-header">
@@ -323,7 +353,8 @@
 								<h6 class="mb-1">{{ getItemName(auctionToActivate.listing) }}</h6>
 								<small class="text-muted">{{ auctionToActivate.listing.market_hash_name }}</small>
 								<div class="mt-1">
-									<span class="badge bg-secondary">{{ getExteriorTag(auctionToActivate.listing) }}</span>
+									<span class="badge bg-secondary">{{ getExteriorTag(auctionToActivate.listing)
+									}}</span>
 								</div>
 							</div>
 						</div>
@@ -358,7 +389,8 @@
 					<p class="mb-3">Вы уверены, что хотите активировать этот аукцион?</p>
 					<div class="alert alert-info">
 						<i class="ri-information-line me-2"></i>
-						<strong>Внимание:</strong> После активации аукцион нельзя будет редактировать. Деактивация возможна только при отсутствии ставок.
+						<strong>Внимание:</strong> После активации аукцион нельзя будет редактировать. Деактивация
+						возможна только при отсутствии ставок.
 					</div>
 				</div>
 				<div class="modal-footer">
@@ -421,17 +453,17 @@ export default {
 				default: return [];
 			}
 		},
-		
+
 		isValidStartingPrice() {
 			const price = parseFloat(this.editForm.starting_price);
 			return !isNaN(price) && price >= 0.01 && price <= 100000;
 		},
-		
+
 		isValidMinBidIncrement() {
 			const increment = parseFloat(this.editForm.min_bid_increment);
 			return !isNaN(increment) && increment >= 1;
 		},
-		
+
 		isValidEditForm() {
 			return this.isValidStartingPrice && this.isValidMinBidIncrement;
 		}
@@ -535,10 +567,10 @@ export default {
 
 		formatDurationFromHours(hours) {
 			if (!hours) return 'Не указано';
-			
+
 			const days = Math.floor(hours / 24);
 			const remainingHours = hours % 24;
-			
+
 			if (days >= 1) {
 				if (remainingHours > 0) {
 					return `${days}д ${remainingHours}ч`;
@@ -614,7 +646,7 @@ export default {
 					if (modal) {
 						modal.hide();
 					}
-					
+
 					this.clearEditForm();
 					window.toast.success('Аукцион успешно обновлен');
 				}
@@ -641,13 +673,13 @@ export default {
 				if (data.success) {
 					// Удаляем аукцион из списка
 					this.auctions = this.auctions.filter(a => a.id !== this.auctionToDelete.id);
-					
+
 					// Закрываем модальное окно
 					const modal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteAuctionModal'));
 					if (modal) {
 						modal.hide();
 					}
-					
+
 					this.auctionToDelete = null;
 					window.toast.success('Аукцион успешно удален');
 				}
@@ -671,13 +703,13 @@ export default {
 				if (index !== -1) {
 					this.auctions[index] = { ...this.auctions[index], ...data.auction };
 				}
-				
+
 				// Закрываем модальное окно
 				const modal = bootstrap.Modal.getInstance(document.getElementById('confirmActivateAuctionModal'));
 				if (modal) {
 					modal.hide();
 				}
-				
+
 				this.auctionToActivate = null;
 				window.toast.success('Аукцион успешно активирован');
 			}
@@ -693,7 +725,7 @@ export default {
 				if (index !== -1) {
 					this.auctions[index] = { ...this.auctions[index], ...data.auction };
 				}
-				
+
 				window.toast.success('Аукцион переведен в черновик');
 			}
 		},

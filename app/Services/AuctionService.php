@@ -15,19 +15,9 @@ use Exception;
 
 class AuctionService
 {
-    protected $orderController;
-
     public function __construct()
     {
-        // OrderController будет создан через service container когда понадобится
-    }
-    
-    protected function getOrderController(): OrderController
-    {
-        if (!$this->orderController) {
-            $this->orderController = app(OrderController::class);
-        }
-        return $this->orderController;
+        // Сервис готов к использованию
     }
 
     /**
@@ -199,76 +189,67 @@ class AuctionService
         });
     }
 
-    /**
-     * Покупка по цене buyout (мгновенный выкуп)
-     */
-    public function buyout(Auction $auction, Client $buyer): Order
-    {
-        if (!$auction->is_active) {
-            throw new Exception('Аукцион не активен.');
-        }
-
-        $buyoutPrice = $auction->buyout_price;
-        if (!$buyoutPrice) {
-            throw new Exception('Для этого аукциона не установлена цена мгновенного выкупа.');
-        }
-
-        return DB::transaction(function () use ($auction, $buyer, $buyoutPrice) {
-            // Возвращаем средства текущему лидеру торгов
-            if ($auction->last_bidder_id) {
-                $currentLeader = Client::find($auction->last_bidder_id);
-                $currentLeader->credit($auction->current_price);
-            }
-
-            // Завершаем аукцион
-            $auction->update([
-                'status' => Auction::STATUS_COMPLETED,
-                'current_price' => $buyoutPrice,
-            ]);
-
-            // Создаем заказ через существующую систему
-            $items = collect([[
-                'listing_id' => $auction->listing_id,
-                'item' => $auction->listing->toArray(),
-                'price' => $buyoutPrice,
-                'seller_id' => $auction->seller_id,
-            ]]);
-
-            return $this->orderController->createOrder($items, $buyer, $auction->seller);
-        });
-    }
 
     /**
      * Завершение аукциона по времени
      */
     public function completeAuction(Auction $auction): ?Order
     {
-        if ($auction->status !== Auction::STATUS_ACTIVE || !$auction->is_ended) {
-            throw new Exception('Аукцион не может быть завершен.');
+        // Проверки входных условий
+        if ($auction->status !== Auction::STATUS_ACTIVE) {
+            throw new Exception('Аукцион не активен');
+        }
+        
+        if ($auction->ends_at > now()) {
+            throw new Exception('Аукцион еще не закончился');
         }
 
         return DB::transaction(function () use ($auction) {
+            // Сценарий 1: Нет ставок
             if ($auction->bid_count === 0) {
-                // Нет ставок - отменяем аукцион
                 $auction->update(['status' => Auction::STATUS_CANCELLED]);
+                // С листингом ничего не делаем - остается активным
                 return null;
             }
 
-            // Есть победитель
+            // Сценарий 2: Есть победитель
             $winner = Client::find($auction->last_bidder_id);
+            $seller = $auction->seller;
             
             // Завершаем аукцион
             $auction->update(['status' => Auction::STATUS_COMPLETED]);
-
-            // Создаем заказ
-            $items = collect([[
-                'listing_id' => $auction->listing_id,
-                'item' => $auction->listing->toArray(),
-                'price' => $auction->current_price,
-                'seller_id' => $auction->seller_id,
-            ]]);
-
-            return $this->orderController->createOrder($items, $winner, $auction->seller);
+            
+            try {
+                // Создаем заказ через метод auctionBuy в OrderController
+                $orderController = app(\App\Http\Controllers\OrderController::class);
+                $order = $orderController->auctionBuy($auction, $winner, $seller);
+                
+                // Связываем аукцион с заказом
+                if ($order && isset($order['id'])) {
+                    $auction->update(['order_id' => $order['id']]);
+                    
+                    // Возвращаем объект Order
+                    return \App\Models\Order::find($order['id']);
+                }
+                
+                throw new Exception('Заказ не был создан');
+                
+            } catch (Exception $e) {
+                // Заказ не создался, но аукцион остается завершенным
+                // Возвращаем средства победителю
+                $winner->credit($auction->current_price);
+                
+                // Логируем проблему
+                Log::error('Failed to create order for completed auction', [
+                    'auction_id' => $auction->id,
+                    'winner_id' => $winner->id,
+                    'amount' => $auction->current_price,
+                    'error' => $e->getMessage()
+                ]);
+                
+                // order_id остается NULL
+                return null;
+            }
         });
     }
 

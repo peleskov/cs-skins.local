@@ -67,3 +67,10 @@ Schedule::command('prices:update')
     ->onOneServer()
     ->withoutOverlapping()
     ->runInBackground();
+
+// Завершение истекших аукционов каждую минуту
+Schedule::command('auctions:complete-expired')
+    ->everyMinute()
+    ->onOneServer()
+    ->withoutOverlapping()
+    ->runInBackground();

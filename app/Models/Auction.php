@@ -24,6 +24,7 @@ class Auction extends Model
         'ends_at',
         'auto_extend',
         'duration_hours',
+        'order_id',
     ];
 
     protected $casts = [
@@ -62,6 +63,11 @@ class Auction extends Model
         return $this->hasMany(AuctionBid::class);
     }
 
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', self::STATUS_ACTIVE)
@@ -87,11 +93,6 @@ class Auction extends Model
     public function getMinimumBidAttribute(): float
     {
         return $this->current_price + $this->min_bid_increment;
-    }
-
-    public function getBuyoutPriceAttribute(): ?float
-    {
-        return $this->listing->price;
     }
 
     public function canBid(Client $client): bool

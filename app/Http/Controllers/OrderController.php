@@ -402,6 +402,76 @@ class OrderController extends Controller
     }
 
     /**
+     * Создание заказа для выигранного аукциона
+     */
+    public function auctionBuy($auction, $winner, $seller)
+    {
+        try {
+            // Валидируем Trade URL победителя
+            $this->validateBuyerTradeUrl($winner);
+            
+            // Проверяем доступность листинга
+            $listing = \App\Models\Listing::find($auction->listing_id);
+            if (!$listing || !$listing->isActive()) {
+                throw new \Exception('Товар больше не доступен');
+            }
+            
+            // Формируем данные для заказа
+            $items = collect([
+                [
+                    'listing_id' => $auction->listing_id,
+                    'item' => [
+                        'name' => $listing->inventory_item_name,
+                        'image_url' => $listing->inventory_icon_url ? 'https://steamcommunity-a.akamaihd.net/economy/image/' . $listing->inventory_icon_url : null,
+                        'type' => $listing->inventory_type,
+                        'market_hash_name' => $listing->market_hash_name,
+                        'steam_asset_id' => $listing->steam_asset_id,
+                    ],
+                    'price' => (float) $auction->current_price,
+                    'wear_name' => $listing->wear_name,
+                    'wear_value' => (float) $listing->wear_value,
+                    'is_stattrak' => $listing->is_stattrak,
+                    'is_souvenir' => $listing->is_souvenir,
+                    'seller_id' => $auction->seller_id,
+                    'seller' => [
+                        'id' => $auction->seller_id,
+                        'name' => $seller->name ?? 'Неизвестный продавец',
+                    ],
+                ]
+            ]);
+            
+            // Используем транзакцию для атомарности операций
+            DB::beginTransaction();
+            
+            try {
+                // Средства уже были списаны при ставке, нужно вернуть их перед созданием заказа
+                // чтобы метод createOrder мог их списать снова (так работает его логика)
+                $winner->credit($auction->current_price);
+                
+                // Теперь создаем заказ через существующий метод
+                $result = $this->createOrder($items, $winner, $seller);
+                
+                if ($result['success']) {
+                    DB::commit();
+                    return $result['orders'][0] ?? null;
+                }
+                
+                // Если заказ не создался, откатываем транзакцию
+                // Это автоматически отменит возврат средств
+                DB::rollBack();
+                throw new \Exception($result['message'] ?? 'Не удалось создать заказ');
+                
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+            
+        } catch (\Exception $e) {
+            throw $e;
+        }
+    }
+
+    /**
      * Быстрая продажа предмета боту
      */
     public function quickSell(Request $request): JsonResponse

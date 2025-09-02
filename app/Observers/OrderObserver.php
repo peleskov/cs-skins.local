@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Listing;  
 use App\Models\TradeOffer;
 use App\Models\Transaction;
+use App\Models\Client;
 use App\Jobs\ReleaseExpiredOrder;
 use Illuminate\Support\Facades\Log;
 
@@ -20,6 +21,12 @@ class OrderObserver
 
     public function updated(Order $order): void
     {
+        Log::info('OrderObserver::updated вызван', [
+            'order_id' => $order->id,
+            'changed_attributes' => $order->getChanges(),
+            'original_attributes' => $order->getOriginal()
+        ]);
+        
         if ($order->wasChanged('status')) {
             Log::info('Order status changed', [
                 'order_id' => $order->id,
@@ -98,6 +105,23 @@ class OrderObserver
             'client_id' => $order->buyer_id,
             'description' => "Возврат средств за заказ #{$order->order_number} ({$order->system_remarks})"
         ]);
+        
+        // Возвращаем средства на баланс покупателя
+        if ($order->buyer_id) {
+            $buyer = Client::find($order->buyer_id);
+            if ($buyer) {
+                Log::info('Возвращаем средства при отмене заказа через Observer', [
+                    'order_id' => $order->id,
+                    'buyer_id' => $order->buyer_id,
+                    'amount' => $order->total_amount,
+                    'old_balance' => $buyer->balance
+                ]);
+                $buyer->credit($order->total_amount);
+                Log::info('Средства возвращены через Observer', [
+                    'new_balance' => $buyer->fresh()->balance
+                ]);
+            }
+        }
     }
 
     private function reserveListings(Order $order): void

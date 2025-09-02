@@ -198,9 +198,20 @@ class Client extends Authenticatable
         $this->increment('balance', $amount);
     }
 
-    public function debit(float $amount): void
+    public function debit(float $amount): bool
     {
-        $this->decrement('balance', $amount);
+        // Атомарная операция: проверка и списание в одном запросе
+        $updated = self::where('id', $this->id)
+            ->where('balance', '>=', $amount)
+            ->decrement('balance', $amount);
+            
+        if ($updated) {
+            // Обновляем локальное значение баланса
+            $this->refresh();
+            return true;
+        }
+        
+        return false;
     }
 
     public function inventoryItems(): HasMany

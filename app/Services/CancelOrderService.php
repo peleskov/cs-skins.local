@@ -23,24 +23,24 @@ class CancelOrderService
 
         $tradeOffer = $order->tradeOffer;
         
-        if (!$tradeOffer) {
+        if (!$tradeOffer || !$tradeOffer->steam_trade_offer_id) {
+            // Трейда нет или не создан в Steam - отменяем заказ напрямую
             $order->cancel($reason);
             return ['success' => true, 'message' => 'Заказ отменен'];
         }
 
-        if (!$tradeOffer->steam_trade_offer_id) {
-            $order->cancel($reason);
-            return ['success' => true, 'message' => 'Заказ отменен'];
-        }
-
+        // Трейд есть в Steam - отменяем только трейд, TradeOfferObserver отменит заказ
+        // Предустанавливаем правильную причину отмены
+        $order->update(['system_remarks' => $reason]);
+        
         $attempts = 0;
         while ($attempts < $maxAttempts) {
             try {
                 $result = $this->tradeService->cancelTradeOffer($tradeOffer);
                 
                 if ($result['success']) {
-                    $order->cancel($reason);
-                    return ['success' => true, 'message' => 'Заказ и трейд успешно отменены'];
+                    // НЕ вызываем $order->cancel() - TradeOfferObserver сам обработает
+                    return ['success' => true, 'message' => 'Трейд отменен, заказ будет отменен автоматически'];
                 }
                 
                 Log::error('Не удалось отменить трейд в Steam', [

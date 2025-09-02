@@ -181,21 +181,24 @@ class OrderController extends Controller
             // Валидируем все условия ДО создания заказа
             $this->validateBuyerTradeUrl($buyerClient);
             $this->validateItemsAvailability($items);
-            $total = $items->sum('price');
-            $this->validateBalance($total, $buyerClient);
+            
+            // Считаем общую сумму всех заказов
+            $totalAmount = $items->sum('price');
 
             DB::beginTransaction();
 
             try {
+                // Сначала списываем общую сумму атомарно
+                if (!$buyerClient->debit($totalAmount)) {
+                    throw new \Exception('Недостаточно средств на балансе для оплаты заказа');
+                }
+                
                 // Группируем товары по продавцам
                 $itemsBySeller = $items->groupBy('seller_id');
                 $createdOrders = [];
 
                 foreach ($itemsBySeller as $sellerId => $sellerItems) {
                     $sellerTotal = $sellerItems->sum('price');
-
-                    // Списываем средства с баланса до создания заказа
-                    $buyerClient->debit($sellerTotal);
 
                     // Создаем заказ сразу оплаченным
                     $order = Order::create([
@@ -356,18 +359,6 @@ class OrderController extends Controller
             }
         }
     }
-
-    /**
-     * Валидация баланса
-     */
-    private function validateBalance(float $total, $client = null): void
-    {
-        $client = $client ?: auth('client')->user();
-        if (!$client->hasEnoughBalance($total)) {
-            throw new \Exception('Недостаточно средств на балансе для оплаты заказа');
-        }
-    }
-
 
     /**
      * Отменить заказ

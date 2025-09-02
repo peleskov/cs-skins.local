@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Http\Controllers\OrderController;
 use App\Events\AuctionBidPlaced;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Exception;
 
 class AuctionService
@@ -155,19 +156,17 @@ class AuctionService
             throw new Exception('Ставка должна быть не менее ' . $auction->minimum_bid . ' руб.');
         }
 
-        if (!$bidder->hasEnoughBalance($amount)) {
-            throw new Exception('Недостаточно средств на балансе.');
-        }
-
         return DB::transaction(function () use ($auction, $bidder, $amount) {
-            // Возвращаем средства предыдущему лидеру
+            // Сначала пытаемся списать средства атомарно
+            if (!$bidder->debit($amount)) {
+                throw new Exception('Недостаточно средств на балансе.');
+            }
+            
+            // Если списание прошло успешно, возвращаем средства предыдущему лидеру
             if ($auction->last_bidder_id) {
                 $previousBidder = Client::find($auction->last_bidder_id);
                 $previousBidder->credit($auction->current_price);
             }
-
-            // Холдируем средства нового участника
-            $bidder->debit($amount);
 
             // Создаем ставку
             $bid = AuctionBid::create([
@@ -193,7 +192,7 @@ class AuctionService
             $auction->load('lastBidder');
 
             // Отправляем событие через WebSocket
-            \Log::info('Broadcasting bid placed event', ['auction_id' => $auction->id, 'bid_id' => $bid->id]);
+            Log::info('Broadcasting bid placed event', ['auction_id' => $auction->id, 'bid_id' => $bid->id]);
             broadcast(new AuctionBidPlaced($auction, $bid));
 
             return $bid;

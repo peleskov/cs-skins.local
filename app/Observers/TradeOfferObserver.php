@@ -22,6 +22,13 @@ class TradeOfferObserver
 
     public function updated(TradeOffer $tradeOffer): void
     {
+        Log::info('TradeOfferObserver::updated вызван', [
+            'trade_offer_id' => $tradeOffer->id,
+            'order_id' => $tradeOffer->order_id,
+            'changed_attributes' => $tradeOffer->getChanges(),
+            'original_attributes' => $tradeOffer->getOriginal()
+        ]);
+        
         if ($tradeOffer->skipBroadcast ?? false) {
             return;
         }

@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use App\Models\Client;
 
 class Order extends Model
 {
@@ -82,10 +85,29 @@ class Order extends Model
 
     public function cancel(string $reason = 'Заказ отменен'): void
     {
-        $this->update([
-            'status' => self::STATUS_CANCELLED,
-            'system_remarks' => $reason
+        Log::info('Order::cancel() вызван', [
+            'order_id' => $this->id,
+            'current_status' => $this->status,
+            'reason' => $reason
         ]);
+        
+        DB::transaction(function () use ($reason) {
+            // Блокируем заказ и перепроверяем статус атомарно
+            $order = self::where('id', $this->id)->lockForUpdate()->first();
+            
+            if (!$order || $order->status === self::STATUS_CANCELLED) {
+                Log::info('Order already cancelled, skipping', ['order_id' => $this->id]);
+                return;
+            }
+            
+            $order->update([
+                'status' => self::STATUS_CANCELLED,
+                'system_remarks' => $order->system_remarks ?: $reason
+            ]);
+            
+            // Обновляем текущий объект
+            $this->refresh();
+        });
     }
 
     public function complete(): void

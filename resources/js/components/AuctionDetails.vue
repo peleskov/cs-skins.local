@@ -235,7 +235,7 @@ export default {
 			const seconds = totalSeconds % 60;
 
 			if (days > 0) {
-				return `${days}д ${hours}ч ${minutes}м`;
+				return `${days}д ${hours}ч ${minutes}м ${seconds}с`;
 			} else if (hours > 0) {
 				return `${hours}ч ${minutes}м ${seconds}с`;
 			} else if (minutes > 0) {

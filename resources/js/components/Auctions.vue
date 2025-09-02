@@ -182,6 +182,7 @@ export default {
 		const channels = ref(new Map())
 		const placingBids = ref(new Set())
 		const currentUser = ref(props.currentUser)
+		const countdownInterval = ref(null)
 
 		const pagination = reactive({
 			total: props.initialTotal,
@@ -228,6 +229,8 @@ export default {
 				nextTick(() => {
 					initializeButtons()
 					initializeWebSocket()
+					// Перезапускаем счетчик после загрузки аукционов
+					startCountdown()
 				})
 
 			} catch (error) {
@@ -324,15 +327,16 @@ export default {
 			const days = Math.floor(totalSeconds / 86400)
 			const hours = Math.floor((totalSeconds % 86400) / 3600)
 			const minutes = Math.floor((totalSeconds % 3600) / 60)
+			const seconds = totalSeconds % 60
 
 			if (days > 0) {
-				return `${days}д ${hours}ч`
+				return `${days}д ${hours}ч ${minutes}м ${seconds}с`
 			} else if (hours > 0) {
-				return `${hours}ч ${minutes}м`
+				return `${hours}ч ${minutes}м ${seconds}с`
 			} else if (minutes > 0) {
-				return `${minutes}м`
+				return `${minutes}м ${seconds}с`
 			} else {
-				return `${totalSeconds}с`
+				return `${seconds}с`
 			}
 		}
 
@@ -421,6 +425,20 @@ export default {
 		}
 
 
+		// Функция запуска счетчика времени
+		const startCountdown = () => {
+			// Останавливаем предыдущий интервал если есть
+			if (countdownInterval.value) {
+				clearInterval(countdownInterval.value)
+			}
+			
+			// Запускаем новый интервал для обновления времени каждую секунду
+			countdownInterval.value = setInterval(() => {
+				// Принудительно обновляем компонент для перерисовки времени
+				auctions.value = [...auctions.value]
+			}, 1000)
+		}
+
 		// Инициализация
 		onMounted(async () => {
 
@@ -443,9 +461,14 @@ export default {
 			// Слушаем события смены валюты
 			window.addEventListener('currency-changed', handleCurrencyChange)
 
+			// Запускаем счетчик времени
+			startCountdown()
+
 			nextTick(() => {
 				initializeButtons()
 				initializeWebSocket()
+				// Перезапускаем счетчик после загрузки аукционов
+				startCountdown()
 			})
 		})
 
@@ -453,6 +476,10 @@ export default {
 		onUnmounted(() => {
 			window.removeEventListener('currency-changed', handleCurrencyChange)
 			cleanupWebSocket()
+			// Останавливаем счетчик времени
+			if (countdownInterval.value) {
+				clearInterval(countdownInterval.value)
+			}
 		})
 
 		return {

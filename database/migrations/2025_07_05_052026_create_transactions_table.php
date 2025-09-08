@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('client_id')->constrained('clients');
-            $table->foreignId('trade_id')->nullable()->constrained('trades');
             $table->enum('type', ['deposit', 'withdrawal', 'purchase', 'sale', 'fee', 'refund']);
             $table->decimal('amount', 10, 2)->unsigned();
             $table->enum('status', ['pending', 'completed', 'failed', 'cancelled'])->default('pending');
@@ -24,7 +23,6 @@ return new class extends Migration
 
             $table->index(['client_id', 'type']);
             $table->index(['status', 'created_at']);
-            $table->index('trade_id');
         });
     }
 

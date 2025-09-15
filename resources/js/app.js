@@ -15,6 +15,8 @@ import Checkout from './components/Checkout.vue';
 import CartButton from './components/CartButton.vue';
 import Header from './components/Header.vue';
 import FavoriteButton from './components/FavoriteButton.vue';
+import Cases from './components/Cases.vue';
+import CaseDetails from './components/CaseDetails.vue';
 
 // Утилиты CSRF уже импортируются в компонентах где нужно
 
@@ -89,6 +91,25 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUser: auctionsElement.dataset.currentUser !== 'null' ? JSON.parse(auctionsElement.dataset.currentUser) : null
         });
         app.mount('#auctions-app');
+    }
+    
+    // Cases компонент
+    const casesElement = document.getElementById('cases-app');
+    if (casesElement) {
+        const app = createApp(Cases, {
+            initialCases: JSON.parse(casesElement.dataset.cases || '[]')
+        });
+        app.mount('#cases-app');
+    }
+    
+    // CaseDetails компонент
+    const caseDetailsElement = document.getElementById('case-details-app');
+    if (caseDetailsElement) {
+        const app = createApp(CaseDetails, {
+            initialCase: JSON.parse(caseDetailsElement.dataset.case || '{}'),
+            caseSlug: caseDetailsElement.dataset.caseSlug || ''
+        });
+        app.mount('#case-details-app');
     }
     
     // SkinDetails компонент

@@ -10,6 +10,7 @@
         'cart' => route('cart'),
         'marketplace' => route('marketplace.index'),
         'auctions' => route('auctions.index'),
+        'cases' => auth('client')->check() ? route('cases.index') : null,
         'profile' => auth('client')->check() ? route('profile') : '#',
         'faq' => route('faq'),
         'contact' => route('contact'),

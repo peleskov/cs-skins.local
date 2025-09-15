@@ -98,7 +98,9 @@
 					<div class="offcanvas-body">
 						<ul class="navbar-nav justify-content-start flex-grow-1">
 							<li v-for="(item, key) in mainNavigation" :key="key" class="nav-item">
-								<a class="nav-link pt-1" :href="getNavigationUrl(item.route)">{{ item.title }}</a>
+								<template v-if="!item.auth_required || user">
+									<a class="nav-link pt-1" :href="getNavigationUrl(item.route)">{{ item.title }}</a>
+								</template>
 							</li>
 						</ul>
 					</div>

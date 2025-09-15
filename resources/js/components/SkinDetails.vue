@@ -119,31 +119,12 @@
                         <AuctionDetails :listingId="listing.id" />
                         
                         <!-- Float Bar -->
-                        <div v-if="listing.float_value && hasFloatRange()" class="col-12">
-                            <div class="float-bar-container mb-2">
-                                <div class="float-bar">
-                                    <div class="float-min-max-labels">
-                                        <span>{{ parseFloat(listing.float_min).toFixed(2) }}</span>
-                                        <span>{{ parseFloat(listing.float_max).toFixed(2) }}</span>
-                                    </div>
-                                    <div class="wear-marker"
-                                        :style="{ left: 'calc(' + getFloatMarkerPosition() + '% - 1px)' }"></div>
-                                    <div class="wear-value"
-                                        :style="{ left: 'calc(' + getFloatMarkerPosition() + '% - 10px)' }">{{ parseFloat(listing.float_value).toFixed(6) }}</div>
-                                    <div class="float-segments d-flex h-100">
-                                        <div class="h-100 float-segment fn" :style="{ width: getSegmentWidth('fn') + '%' }">
-                                        </div>
-                                        <div class="h-100 float-segment mw" :style="{ width: getSegmentWidth('mw') + '%' }">
-                                        </div>
-                                        <div class="h-100 float-segment ft" :style="{ width: getSegmentWidth('ft') + '%' }">
-                                        </div>
-                                        <div class="h-100 float-segment ww" :style="{ width: getSegmentWidth('ww') + '%' }">
-                                        </div>
-                                        <div class="h-100 float-segment bs" :style="{ width: getSegmentWidth('bs') + '%' }">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                        <div v-if="listing.float_value || listing.wear_value" class="col-12">
+                            <FloatBar 
+                                :item="listing" 
+                                :show-value="true" 
+                                :show-min-max="true" 
+                            />
                         </div>
 
                         <!-- Информация о состоянии -->
@@ -318,6 +299,7 @@ import axios from 'axios'
 import CartButton from './CartButton.vue'
 import FavoriteButton from './FavoriteButton.vue'
 import AuctionDetails from './AuctionDetails.vue'
+import FloatBar from './FloatBar.vue'
 import VueApexCharts from 'vue3-apexcharts'
 import { formatPrice, handleApiError } from '../utils/helpers'
 import { orderAPI } from '../utils/api'
@@ -326,7 +308,8 @@ export default {
     name: 'SkinDetails',
     components: {
         apexchart: VueApexCharts,
-        AuctionDetails
+        AuctionDetails,
+        FloatBar
     },
     props: {
         listingId: {
@@ -688,48 +671,6 @@ export default {
             return this.listing?.screenshots === 1 && this.listing?.screenshot_urls;
         },
 
-        hasFloatRange() {
-            return this.listing?.float_min !== null && this.listing?.float_min !== undefined &&
-                this.listing?.float_max !== null && this.listing?.float_max !== undefined &&
-                this.listing.float_max > this.listing.float_min;
-        },
-
-        // Методы для float bar
-
-        getFloatMarkerPosition() {
-            if (!this.listing?.float_value || !this.hasFloatRange()) return 0;
-            const floatValue = parseFloat(this.listing.float_value);
-            const min = parseFloat(this.listing.float_min);
-            const max = parseFloat(this.listing.float_max);
-            return ((floatValue - min) / (max - min)) * 100;
-        },
-
-        getSegmentWidth(segment) {
-            if (!this.hasFloatRange()) return 0;
-            const min = parseFloat(this.listing.float_min);
-            const max = parseFloat(this.listing.float_max);
-            const rangeWidth = max - min;
-
-            // Диапазоны износа CS2
-            const ranges = {
-                fn: [0.00, 0.07],    // Factory New
-                mw: [0.07, 0.15],    // Minimal Wear
-                ft: [0.15, 0.38],    // Field-Tested
-                ww: [0.38, 0.45],    // Well-Worn
-                bs: [0.45, 1.00]     // Battle-Scarred
-            };
-
-            const [segmentMin, segmentMax] = ranges[segment];
-
-            // Находим пересечение диапазона скина с диапазоном состояния
-            const overlapMin = Math.max(min, segmentMin);
-            const overlapMax = Math.min(max, segmentMax);
-
-            if (overlapMin >= overlapMax) return 0;
-
-            const overlapWidth = overlapMax - overlapMin;
-            return (overlapWidth / rangeWidth) * 100;
-        },
 
         showScreenshots() {
             if (!this.hasScreenshots()) return;

@@ -82,6 +82,7 @@ class CaseModelResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->poll('10s') // Обновляем таблицу каждые 10 секунд
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Название')
@@ -91,12 +92,22 @@ class CaseModelResource extends Resource
                     ->money('RUB')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('accumulated_fund')
-                    ->label('Накопленный фонд')
+                    ->label('Фонд')
                     ->money('RUB')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('fund_percent')
                     ->label('% в фонд')
                     ->suffix('%'),
+                Tables\Columns\TextColumn::make('tiers_count')
+                    ->label('Уровни')
+                    ->counts('tiers')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('items_count')
+                    ->label('Предметы')
+                    ->getStateUsing(function ($record) {
+                        return $record->items()->count();
+                    })
+                    ->sortable(),
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Активен')
                     ->boolean(),

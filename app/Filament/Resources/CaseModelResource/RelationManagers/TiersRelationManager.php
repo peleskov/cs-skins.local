@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\CaseModelResource\RelationManagers;
 
 use App\Filament\Resources\CaseModelResource;
+use App\Models\CaseItem;
+use App\Models\ClientInventoryItem;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -10,6 +12,8 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Support\Enums\MaxWidth;
+use Filament\Notifications\Notification;
 
 class TiersRelationManager extends RelationManager
 {
@@ -43,28 +47,34 @@ class TiersRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('name')
+            ->modifyQueryUsing(fn (Builder $query) => $query->orderBy('price', 'asc'))
+            ->poll('5s') // Обновляем таблицу каждые 5 секунд
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Название уровня'),
                 Tables\Columns\TextColumn::make('price')
                     ->label('Цена')
-                    ->money('RUB')
-                    ->sortable(),
+                    ->money('RUB'),
                 Tables\Columns\TextColumn::make('probability')
                     ->label('Вероятность')
-                    ->suffix('%')
-                    ->sortable(),
+                    ->suffix('%'),
                 Tables\Columns\TextColumn::make('items_count')
                     ->label('Предметов')
-                    ->counts('items'),
+                    ->getStateUsing(function ($record) {
+                        return $record->items()->count();
+                    }),
             ])
-            ->defaultSort('price', 'desc')
+            ->defaultSort('price', 'asc')
             ->filters([
                 //
             ])
             ->headerActions([
                 Tables\Actions\CreateAction::make()
-                    ->label('Добавить уровень'),
+                    ->label('Добавить уровень')
+                    ->after(function () {
+                        // Обновляем таблицу после добавления нового уровня
+                        $this->dispatch('refreshTable');
+                    }),
             ])
             ->actions([
                 Tables\Actions\Action::make('manage_items')

@@ -30,7 +30,7 @@ class CaseTier extends Model
         return $this->hasMany(CaseItem::class, 'tier_id');
     }
 
-    public function scopeOrderByPrice($query, $direction = 'desc')
+    public function scopeOrderByPrice($query, $direction = 'asc')
     {
         return $query->orderBy('price', $direction);
     }

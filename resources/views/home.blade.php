@@ -15,7 +15,7 @@
 </section>
 @include('partials.categories-section')
 @auth('client')
-@include('partials.case-section')
+@include('partials.case-preview')
 @endauth
 @include('partials.marketplace-section')
 @include('partials.app-section')

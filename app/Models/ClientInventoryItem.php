@@ -11,6 +11,7 @@ use App\Models\Tag;
 use App\Models\SteamMarketItem;
 use App\Models\SteamPriceHistory;
 use App\Models\RarityCoefficient;
+use App\Models\Currency;
 
 class ClientInventoryItem extends Model
 {
@@ -163,6 +164,31 @@ class ClientInventoryItem extends Model
         }
         
         return collect();
+    }
+
+    /**
+     * Получить текущую рыночную цену предмета
+     * @return float|null Цена в RUB или null если нет данных
+     */
+    public function getCurrentPrice(): ?float
+    {
+        // Находим запись в steam_market_items
+        $steamMarketItem = SteamMarketItem::where('market_hash_name', $this->market_hash_name)->first();
+        if (!$steamMarketItem) {
+            return null;
+        }
+
+        // Получаем последнюю цену из истории
+        $latestPrice = SteamPriceHistory::where('steam_market_item_id', $steamMarketItem->id)
+            ->orderBy('date', 'desc')
+            ->first();
+
+        if (!$latestPrice) {
+            return null;
+        }
+
+        // Конвертируем из USD в RUB (основная валюта проекта)
+        return Currency::convert($latestPrice->price, 'USD', 'RUB');
     }
 
     /**

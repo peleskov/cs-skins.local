@@ -873,7 +873,7 @@
 					min-width: 320px;
 					grid-template-columns: 1fr 1fr 1fr;
 
-					&.col4{
+					&.col4 {
 						grid-template-columns: repeat(4, 1fr);
 					}
 				}
@@ -1364,10 +1364,24 @@
 		}
 
 	}
+
+	&.float-bar-short {
+		.float-bar {
+			height: 5px;
+			padding-bottom: 0;
+		}
+
+		.wear {
+			&-marker {
+				height: 9px;
+			}
+		}
+
+	}
 }
 
-.badge{
-	&.bid-time{
+.badge {
+	&.bid-time {
 		background: rgba(var(--theme-color), 0.1);
 		color: rgba(var(--dark-text), 1);
 		padding: 2px 6px;

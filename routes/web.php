@@ -12,6 +12,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\FavoritesController;
 use App\Http\Controllers\ExtensionController;
 use App\Http\Controllers\AuctionController;
+use App\Http\Controllers\CaseController;
 use App\Models\Currency;
 
 // Публичные маршруты
@@ -59,6 +60,13 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::prefix('auctions')->name('auctions.')->controller(\App\Http\Controllers\AuctionController::class)->group(function () {
         Route::get('/', 'getAuctions')->name('index');
         Route::get('/{auction}/bids', 'bidHistory')->name('bids')->middleware('throttle:60,1');
+    });
+
+    // Кейсы API
+    Route::prefix('cases')->name('cases.')->controller(CaseController::class)->group(function () {
+        Route::get('/', 'list')->name('list')->middleware('throttle:60,1');
+        Route::get('/{slug}', 'detail')->name('detail')->middleware('throttle:60,1');
+        Route::post('/purchase', 'purchaseCase')->name('purchase')->middleware(['auth:client', 'throttle:10,1']);
     });
 
 
@@ -120,11 +128,20 @@ Route::prefix('api')->name('api.')->group(function () {
             Route::post('/{auction}/bid', 'bid')->name('bid')->middleware('throttle:30,1');
             Route::patch('/{auction}/status', 'updateStatus')->name('update-status')->middleware('throttle:10,1');
         });
+
     });
 });
 
 // Требуется авторизации
 Route::middleware(['auth:client'])->group(function () {
+    
+    // Маршруты кейсов (только для авторизованных)
+    Route::prefix('cases')->name('cases.')->controller(CaseController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/{slug}', 'show')->name('show');
+    });
+
+
     Route::get('/profile', function () {
         $view = app(ProfileController::class)->index();
         return response($view)

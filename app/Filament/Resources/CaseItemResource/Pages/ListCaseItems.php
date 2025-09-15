@@ -6,55 +6,57 @@ use App\Filament\Resources\CaseItemResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Support\HtmlString;
+use Filament\Notifications\Notification;
 
 class ListCaseItems extends ListRecords
 {
     protected static string $resource = CaseItemResource::class;
     
+    public ?int $caseId = null;
+    public ?int $tierId = null;
+    public array $selectedItems = [];
 
     public function mount(): void
     {
         parent::mount();
 
         // Проверяем наличие обязательных параметров
-        $caseId = request()->get('case_id') ?? request()->input('tableFilters.case_id.value');
-        $tierId = request()->get('tier_id') ?? request()->input('tableFilters.tier_id.value');
+        $this->caseId = request()->get('case_id') ?? 
+                        request()->input('tableFilters.case_id.value') ?? 
+                        null;
+        $this->tierId = request()->get('tier_id') ?? 
+                        request()->input('tableFilters.tier_id.value') ?? 
+                        null;
 
-        if (!$caseId || !$tierId) {
+        if (!$this->caseId || !$this->tierId) {
             abort(403, 'Нельзя отобразить список предметов без указания кейса и уровня. Доступ к этой странице возможен только через управление уровнями кейса.');
         }
 
         // Применяем фильтры из URL параметров
         $filters = [];
 
-        if (request()->has('case_id')) {
-            $filters['case_id'] = ['value' => request()->get('case_id')];
+        if ($this->caseId) {
+            $filters['case_id'] = ['value' => $this->caseId];
         }
 
-        if (request()->has('tier_id')) {
-            $filters['tier_id'] = ['value' => request()->get('tier_id')];
+        if ($this->tierId) {
+            $filters['tier_id'] = ['value' => $this->tierId];
         }
 
         if (!empty($filters)) {
             $this->tableFilters = $filters;
         }
+        
+        // Загружаем текущие предметы уровня из БД
+        $selectedIds = \App\Models\CaseItem::where([
+            'case_id' => $this->caseId,
+            'tier_id' => $this->tierId,
+        ])->pluck('inventory_item_id')->toArray();
+        
+        $this->selectedItems = $selectedIds;
     }
 
-    protected function getTableQuery(): \Illuminate\Database\Eloquent\Builder
-    {
-        $query = parent::getTableQuery();
-
-        // Применяем дополнительные фильтры из URL если они есть
-        if (request()->has('case_id')) {
-            $query->where('case_id', request()->get('case_id'));
-        }
-
-        if (request()->has('tier_id')) {
-            $query->where('tier_id', request()->get('tier_id'));
-        }
-
-        return $query;
-    }
+    // Убираем getTableQuery так как теперь запрос формируется в самом ресурсе
 
     public function isTableSearchable(): bool
     {
@@ -74,24 +76,16 @@ class ListCaseItems extends ListRecords
     public function getSubheading(): HtmlString|string|null
     {
         $description = '';
-        // Пробуем получить из разных источников
-        $caseId = $this->tableFilters['case_id']['value'] ??
-            request()->input('tableFilters.case_id.value') ??
-            request()->get('case_id');
 
-        if($caseId){
-            $case = \App\Models\CaseModel::find($caseId);
+        if($this->caseId){
+            $case = \App\Models\CaseModel::find($this->caseId);
             if ($case) {
                 $description = '<div class="text-gray-500 dark:text-gray-400" style="margin-bottom: 5px;">Кейс: ' . $case->name . '</div>';
             }
         }
 
-        $tierId = $this->tableFilters['tier_id']['value'] ??
-            request()->input('tableFilters.tier_id.value') ??
-            request()->get('tier_id');
-
-        if($tierId){
-            $tier = \App\Models\CaseTier::find($tierId);
+        if($this->tierId){
+            $tier = \App\Models\CaseTier::find($this->tierId);
             if ($tier) {
                 $description .= '<div class="text-gray-500 dark:text-gray-400" style="margin-bottom: 5px;">Уровень: ' . $tier->name . ' (цена: ' . number_format($tier->price, 2) . ' ₽ • Вероятность: ' . $tier->probability . '%)</div>';
             }
@@ -101,7 +95,7 @@ class ListCaseItems extends ListRecords
 
     public function getHeading(): string
     {
-        return 'Список предметов';
+        return 'Управление предметами уровня';
     }
 
     public function getBreadcrumbs(): array
@@ -114,43 +108,41 @@ class ListCaseItems extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make()
-                ->label('Добавить')
-                ->modalHeading('Добавить предметы')
-                ->createAnother(false)
-                ->modalSubmitActionLabel('Добавить')
-                ->modalCancelActionLabel('Отмена')
-                ->fillForm(function () {
-                    $caseId = $this->tableFilters['case_id']['value'] ??
-                        request()->input('tableFilters.case_id.value') ??
-                        request()->get('case_id');
-
-                    $tierId = $this->tableFilters['tier_id']['value'] ??
-                        request()->input('tableFilters.tier_id.value') ??
-                        request()->get('tier_id');
-
-                    return [
-                        'case_id' => $caseId,
-                        'tier_id' => $tierId,
-                    ];
-                })
-                ->action(function (array $data) {
-                    $caseId = $data['case_id'];
-                    $tierId = $data['tier_id'];
-                    $inventoryItemIds = $data['inventory_item_ids'];
-
-                    foreach ($inventoryItemIds as $inventoryItemId) {
-                        \App\Models\CaseItem::create([
-                            'case_id' => $caseId,
-                            'tier_id' => $tierId,
-                            'inventory_item_id' => $inventoryItemId,
-                        ]);
-                    }
-                })
-                ->after(function () {
-                    // Обновляем список после добавления
-                    $this->dispatch('refreshTable');
-                }),
+            Actions\Action::make('save_items')
+                ->label('Сохранить изменения')
+                ->color('primary')
+                ->action('saveItems'),
         ];
     }
+    
+    public function toggleItem($itemId)
+    {
+        if (in_array($itemId, $this->selectedItems)) {
+            $this->selectedItems = array_filter($this->selectedItems, fn($id) => $id !== $itemId);
+        } else {
+            $this->selectedItems[] = $itemId;
+        }
+    }
+    
+    public function saveItems()
+    {
+        \App\Models\CaseItem::where([
+            'case_id' => $this->caseId,
+            'tier_id' => $this->tierId,
+        ])->delete();
+
+        foreach ($this->selectedItems as $itemId) {
+            \App\Models\CaseItem::create([
+                'case_id' => $this->caseId,
+                'tier_id' => $this->tierId,
+                'inventory_item_id' => $itemId,
+            ]);
+        }
+
+        Notification::make()
+            ->title('Предметы успешно сохранены')
+            ->success()
+            ->send();
+    }
+    
 }

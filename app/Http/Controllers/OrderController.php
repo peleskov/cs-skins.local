@@ -472,6 +472,80 @@ class OrderController extends Controller
     }
 
     /**
+     * Создание заказа для приза из кейса
+     */
+    public function casePrizeBuy($case, $prizeItem, $buyer)
+    {
+        try {
+            // Валидируем Trade URL покупателя
+            $this->validateBuyerTradeUrl($buyer);
+            
+            // Получаем владельца предмета
+            $seller = \App\Models\Client::find($prizeItem->client_id);
+            if (!$seller) {
+                throw new \Exception('Владелец предмета не найден');
+            }
+            
+            // Формируем данные для заказа
+            $items = collect([
+                [
+                    'listing_id' => null, // Для призов кейсов листинга нет
+                    'case_id' => $case->id, // Добавляем ID кейса для отслеживания
+                    'item' => [
+                        'name' => $prizeItem->item_name,
+                        'image_url' => $prizeItem->icon_url ? 'https://steamcommunity-a.akamaihd.net/economy/image/' . $prizeItem->icon_url : null,
+                        'type' => 'case_prize',
+                        'market_hash_name' => $prizeItem->market_hash_name ?? $prizeItem->item_name,
+                        'steam_asset_id' => $prizeItem->steam_asset_id,
+                    ],
+                    'price' => (float) $case->price, // Стоимость кейса
+                    'actual_prize_value' => (float) ($prizeItem->getCurrentPrice() ?: 0), // Реальная стоимость приза
+                    'wear_name' => $prizeItem->getWearConditionAttribute() ?? null,
+                    'wear_value' => (float) $prizeItem->float_value ?? 0,
+                    'is_stattrak' => $prizeItem->is_stattrak ?? false,
+                    'is_souvenir' => $prizeItem->is_souvenir ?? false,
+                    'seller_id' => $prizeItem->client_id, // Владелец предмета (бот)
+                    'seller' => [
+                        'id' => $prizeItem->client_id,
+                        'name' => $seller->name,
+                    ],
+                ]
+            ]);
+            
+            // Используем транзакцию для атомарности операций
+            DB::beginTransaction();
+            
+            try {
+                // Создаем заказ напрямую без списания средств (они уже списаны)
+                $order = Order::create([
+                    'order_number' => Order::generateOrderNumber(),
+                    'buyer_id' => $buyer->id,
+                    'seller_id' => $prizeItem->client_id, // Владелец предмета
+                    'total_amount' => (float) $case->price, // Стоимость кейса
+                    'cart_snapshot' => $items->toArray(),
+                    'status' => Order::STATUS_PROCESSING,
+                    'payment_status' => Order::PAYMENT_STATUS_PAID,
+                    'paid_at' => now(),
+                    'payment_transaction_id' => 'CASE_PRIZE_' . $case->id . '_' . uniqid(),
+                    'payment_method' => 'case_prize',
+                    'notes' => 'Приз из кейса "' . $case->name . '"',
+                ]);
+
+                DB::commit();
+
+                return $order;
+                
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+            
+        } catch (\Exception $e) {
+            throw $e;
+        }
+    }
+
+    /**
      * Быстрая продажа предмета боту
      */
     public function quickSell(Request $request): JsonResponse

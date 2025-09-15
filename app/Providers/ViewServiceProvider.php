@@ -32,8 +32,9 @@ class ViewServiceProvider extends ServiceProvider
                 ],
                 'cases' => [
                     'title' => __('navigation.main.cases'),
-                    'route' => '#',
-                    'order' => 2
+                    'route' => 'cases',
+                    'order' => 2,
+                    'auth_required' => true
                 ],
                 'auction' => [
                     'title' => __('navigation.main.auction'),

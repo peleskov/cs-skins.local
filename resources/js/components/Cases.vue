@@ -21,7 +21,7 @@
 							</a>
 							<div class="offers">
 								<div class="d-flex align-items-center justify-content-between">
-									<h4>{{ formatPrice(case_item.price) }}</h4>
+									<h4 v-html="formatPrice(case_item.price)"></h4>
 								</div>
 							</div>
 						</div>

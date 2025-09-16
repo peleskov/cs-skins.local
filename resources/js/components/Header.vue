@@ -44,7 +44,7 @@
 													{{ item.item?.name }}
 												</div>
 												<div class="cart-item-price text-muted" style="font-size: 11px;">
-													{{ formatPrice(item.price, 'RUB') }}
+													<span v-html="formatPrice(item.price, 'RUB')"></span>
 												</div>
 											</div>
 										</div>
@@ -53,7 +53,7 @@
 										</div>
 									</div>
 									<div class="cart-total text-center border-top pt-2">
-										<strong>Итого: {{ formatPrice(cartTotal, 'RUB') }}</strong>
+										<strong>Итого: <span v-html="formatPrice(cartTotal, 'RUB')"></span></strong>
 									</div>
 									<div class="cart-actions">
 										<a :href="routes.cart" class="btn theme-btn btn-sm w-100">Перейти в корзину</a>

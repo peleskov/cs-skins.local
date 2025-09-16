@@ -32,7 +32,7 @@
 					<div class="cart-summary mb-4 p-3 bg-light rounded">
 						<div class="row align-items-center">
 							<div class="col-md-8 mb-2 mb-md-0">
-								<h5 class="mb-1">Заказ на сумму: <strong class="text-primary">{{ formatPrice(cartTotal) }}</strong></h5>
+								<h5 class="mb-1">Заказ на сумму: <strong class="text-primary" v-html="formatPrice(cartTotal)"></strong></h5>
 								<p class="text-muted mb-0">Товаров: {{ cartItems.length }}</p>
 							</div>
 							<div class="col-md-4 text-end">
@@ -70,7 +70,7 @@
 								</div>
 								<div class="h-100 d-flex flex-column justify-content-center">
 									<div class="product-box-price text-center">
-										<span class="fw-bold fs-5 text-primary">{{ formatPrice(item.price) }}</span>
+										<span class="fw-bold fs-5 text-primary" v-html="formatPrice(item.price)"></span>
 									</div>
 								</div>
 							</div>
@@ -116,7 +116,7 @@
 									<strong>Заказ {{ order.order_number }}</strong>
 									<small class="text-muted d-block">Продавец: {{ order.seller?.name || 'Не указан' }}</small>
 								</span>
-								<strong class="text-primary">{{ formatPrice(order.total_amount) }}</strong>
+								<strong class="text-primary" v-html="formatPrice(order.total_amount)"></strong>
 							</div>
 						</div>
 						
@@ -124,7 +124,7 @@
 						<div v-if="createdOrders.length > 1" class="mt-3 pt-3 border-top">
 							<div class="d-flex justify-content-between align-items-center">
 								<strong>Итого:</strong>
-								<strong class="text-success fs-5">{{ formatPrice(totalAmount) }}</strong>
+								<strong class="text-success fs-5" v-html="formatPrice(totalAmount)"></strong>
 							</div>
 						</div>
 					</div>

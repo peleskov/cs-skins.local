@@ -16,7 +16,7 @@ export function formatPrice(price, sourceCurrency = 'RUB', returnNumber = false)
         if (returnNumber) {
             return Number(price);
         }
-        return Number(price).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+        return Number(price).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '&nbsp;');
     }
     
     // Если исходная валюта совпадает с выбранной, возвращаем как есть
@@ -24,7 +24,7 @@ export function formatPrice(price, sourceCurrency = 'RUB', returnNumber = false)
         if (returnNumber) {
             return Number(price);
         }
-        return Number(price).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ' + selectedCurrency.symbol;
+        return Number(price).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '&nbsp;') + '&nbsp;' + selectedCurrency.symbol;
     }
     
     // Конвертируем цену из исходной валюты в выбранную
@@ -62,7 +62,7 @@ export function formatPrice(price, sourceCurrency = 'RUB', returnNumber = false)
         return Number(convertedPrice);
     }
     
-    return Number(convertedPrice).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ' + selectedCurrency.symbol;
+    return Number(convertedPrice).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '&nbsp;') + '&nbsp;' + selectedCurrency.symbol;
 }
 
 /**

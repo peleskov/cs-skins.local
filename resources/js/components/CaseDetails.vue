@@ -9,7 +9,7 @@
 					<p>{{ caseData.description }}</p>
 				</div>
 				<div class="text-center mt-2">
-					<h4 class="mb-1">{{ formatPrice(caseData.price) }}</h4>
+					<h4 class="mb-1" v-html="formatPrice(caseData.price)"></h4>
 				</div>
 			</div>
 
@@ -60,7 +60,7 @@
 						<div class="alert alert-success">
 							<h4 class="alert-heading">Поздравляем!</h4>
 							<p class="mb-0">Вы выиграли: <strong>{{ wonItem.name }}</strong></p>
-							<p class="mb-3">Стоимость: <strong>{{ formatPrice(wonItem.price) }}</strong></p>
+							<p class="mb-3">Стоимость: <strong v-html="formatPrice(wonItem.price)"></strong></p>
 							<button class="btn theme-btn btn-lg px-5" @click="reloadPage">
 								Еще раз
 							</button>
@@ -85,7 +85,7 @@
 							</div>
 							<div class="offers">
 								<div class="d-flex align-items-center justify-content-between">
-									<h4>{{ formatPrice(item.price) }}</h4>
+									<h4 v-html="formatPrice(item.price)"></h4>
 								</div>
 							</div>
 						</div>
@@ -122,7 +122,7 @@
 					<div class="modal-body">
 						<div class="text-center">
 							<h4 class="mb-3">{{ caseData.name }}</h4>
-							<p class="fs-5">Стоимость: <strong class="text-primary">{{ formatPrice(caseData.price) }}</strong></p>
+							<p class="fs-5">Стоимость: <strong class="text-primary" v-html="formatPrice(caseData.price)"></strong></p>
 							<p class="text-muted">Средства будут списаны с вашего баланса</p>
 						</div>
 					</div>

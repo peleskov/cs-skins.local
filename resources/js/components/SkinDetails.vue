@@ -61,15 +61,15 @@
                             <div class="row text-center" v-if="steamPriceStats">
                                 <div class="col-4">
                                     <small class="text-muted d-block">Средняя цена (30 дней)</small>
-                                    <strong>{{ formatPrice(steamPriceStats.avg_price, 'USD') }}</strong>
+                                    <strong v-html="formatPrice(steamPriceStats.avg_price, 'USD')"></strong>
                                 </div>
                                 <div class="col-4">
                                     <small class="text-muted d-block">Минимальная</small>
-                                    <strong>{{ formatPrice(steamPriceStats.min_price, 'USD') }}</strong>
+                                    <strong v-html="formatPrice(steamPriceStats.min_price, 'USD')"></strong>
                                 </div>
                                 <div class="col-4">
                                     <small class="text-muted d-block">Максимальная</small>
-                                    <strong>{{ formatPrice(steamPriceStats.max_price, 'USD') }}</strong>
+                                    <strong v-html="formatPrice(steamPriceStats.max_price, 'USD')"></strong>
                                 </div>
                             </div>
                         </div>
@@ -95,7 +95,7 @@
                         <div class="price-section mb-4">
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <div>
-                                    <h3 class="price mb-0">{{ formatPrice(listing.price, 'RUB') }}</h3>
+                                    <h3 class="price mb-0" v-html="formatPrice(listing.price, 'RUB')"></h3>
                                 </div>
                                 <div>
                                     <p class="seller-info text-muted mb-0">
@@ -159,13 +159,13 @@
                                 </div>
                                 <div v-if="listing.paint_index" class="col-12">
                                     <div class="info-item">
-                                        <span class="info-label">Paint Index:</span>
+                                        <span class="info-label">Индекс краски:</span>
                                         <span class="info-value">{{ listing.paint_index }}</span>
                                     </div>
                                 </div>
                                 <div v-if="listing.def_index" class="col-12">
                                     <div class="info-item">
-                                        <span class="info-label">Def Index:</span>
+                                        <span class="info-label">Индекс предмета:</span>
                                         <span class="info-value">{{ listing.def_index }}</span>
                                     </div>
                                 </div>
@@ -183,7 +183,7 @@
                                 </div>
                                 <div class="col-12">
                                     <div class="info-item">
-                                        <span class="info-label">Asset ID:</span>
+                                        <span class="info-label">ID предмета:</span>
                                         <span class="info-value">{{ listing.steam_asset_id }}</span>
                                     </div>
                                 </div>
@@ -234,7 +234,7 @@
                                     }}</span>
                                     <span v-else class="text-muted">-</span>
                                 </td>
-                                <td><strong>{{ formatPrice(other.price, 'RUB') }}</strong></td>
+                                <td><strong v-html="formatPrice(other.price, 'RUB')"></strong></td>
                                 <td>
                                     <a :href="`/marketplace/${other.id}`" class="btn btn-sm theme-outline">
                                         Просмотр
@@ -269,7 +269,7 @@
                                         <small class="text-muted d-block">{{ getItemName() }}</small>
                                         <small class="text-muted d-block">Продавец: {{ purchasedOrder.seller?.name || 'Не указан' }}</small>
                                     </span>
-                                    <strong class="text-primary">{{ formatPrice(purchasedOrder.total_amount) }}</strong>
+                                    <strong class="text-primary" v-html="formatPrice(purchasedOrder.total_amount)"></strong>
                                 </div>
                             </div>
                         </div>

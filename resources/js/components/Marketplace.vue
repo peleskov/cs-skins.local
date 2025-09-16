@@ -161,7 +161,7 @@
 									</a>
 									<div class="offers">
 										<div class="d-flex align-items-center justify-content-between">
-											<h4>{{ formatPrice(listing.price, 'RUB') }}</h4>
+											<h4 v-html="formatPrice(listing.price, 'RUB')"></h4>
 										</div>
 									</div>
 								</div>

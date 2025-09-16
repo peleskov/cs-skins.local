@@ -129,6 +129,12 @@ Route::prefix('api')->name('api.')->group(function () {
             Route::patch('/{auction}/status', 'updateStatus')->name('update-status')->middleware('throttle:10,1');
         });
 
+        // Профиль API
+        Route::prefix('profile')->name('profile.')->controller(ProfileController::class)->group(function () {
+            Route::get('/transactions', 'getTransactions')->name('transactions')->middleware('throttle:60,1');
+            Route::get('/sales-stats', 'getSalesStats')->name('sales-stats')->middleware('throttle:60,1');
+        });
+
     });
 });
 
@@ -156,6 +162,7 @@ Route::middleware(['auth:client'])->group(function () {
         Route::post('/telegram/unlink', [ProfileController::class, 'unlinkTelegram'])->name('telegram.unlink');
         Route::post('/extension-token/generate', [ProfileController::class, 'generateExtensionToken'])->name('extension-token.generate');
         Route::post('/extension-token/regenerate', [ProfileController::class, 'regenerateExtensionToken'])->name('extension-token.regenerate');
+        Route::post('/notification-settings', [ProfileController::class, 'updateNotificationSettings'])->name('notification-settings');
         Route::get('/sales', [ProfileController::class, 'sales'])->name('sales');
 
         // Аукционы

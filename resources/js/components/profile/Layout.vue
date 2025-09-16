@@ -62,9 +62,6 @@
 				<ProfileBalance v-else-if="activeTab === 'balance'" 
 					:client="client" />
 
-				<!-- Settings Tab -->
-				<ProfileSettings v-else-if="activeTab === 'settings'" 
-					:client="client" />
 
 				<!-- Other Tabs Placeholder -->
 				<div v-else class="text-center py-5">
@@ -85,7 +82,6 @@ import ProfileOrders from './Orders.vue';
 import ProfileSales from './Sales.vue';
 import ProfileAuctions from './Auctions.vue';
 import ProfileBalance from './Balance.vue';
-import ProfileSettings from './Settings.vue';
 
 export default {
 	name: 'ProfileLayout',
@@ -97,8 +93,7 @@ export default {
 		ProfileOrders,
 		ProfileSales,
 		ProfileAuctions,
-		ProfileBalance,
-		ProfileSettings
+		ProfileBalance
 	},
 	props: {
 		initialClient: {

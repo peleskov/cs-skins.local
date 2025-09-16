@@ -1,0 +1,229 @@
+<?php
+
+namespace App\Filament\Resources;
+
+use App\Filament\Resources\TransactionResource\Pages;
+use App\Filament\Resources\TransactionResource\RelationManagers;
+use App\Models\Transaction;
+use Filament\Forms;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+
+class TransactionResource extends Resource
+{
+    protected static ?string $model = Transaction::class;
+
+    protected static ?string $navigationIcon = 'heroicon-o-banknotes';
+
+    protected static ?string $navigationLabel = 'Транзакции';
+
+    protected static ?string $modelLabel = 'Транзакция';
+
+    protected static ?string $pluralModelLabel = 'Транзакции';
+
+    protected static ?string $navigationGroup = 'Маркетплейс';
+
+    protected static ?int $navigationSort = 5;
+
+    public static function form(Form $form): Form
+    {
+        return $form
+            ->schema([
+                Forms\Components\Select::make('client_id')
+                    ->label('Клиент')
+                    ->relationship('client', 'name')
+                    ->searchable()
+                    ->required(),
+
+                Forms\Components\Select::make('order_id')
+                    ->label('Заказ')
+                    ->relationship('order', 'order_number')
+                    ->searchable(),
+
+                Forms\Components\Select::make('type')
+                    ->label('Тип транзакции')
+                    ->required()
+                    ->options([
+                        Transaction::TYPE_PURCHASE => 'Покупка',
+                        Transaction::TYPE_SALE => 'Продажа',
+                        Transaction::TYPE_FEE => 'Комиссия',
+                        Transaction::TYPE_REFUND => 'Возврат',
+                        Transaction::TYPE_DEPOSIT => 'Пополнение',
+                        Transaction::TYPE_WITHDRAWAL => 'Вывод средств',
+                    ]),
+
+                Forms\Components\TextInput::make('amount')
+                    ->label('Сумма')
+                    ->required()
+                    ->numeric()
+                    ->step(0.01)
+                    ->suffix('₽'),
+
+                Forms\Components\Select::make('status')
+                    ->label('Статус')
+                    ->required()
+                    ->options([
+                        Transaction::STATUS_PENDING => 'В обработке',
+                        Transaction::STATUS_COMPLETED => 'Завершено',
+                        Transaction::STATUS_FAILED => 'Ошибка',
+                        Transaction::STATUS_ON_HOLD => 'На удержании',
+                    ]),
+
+                Forms\Components\Textarea::make('description')
+                    ->label('Описание')
+                    ->maxLength(500),
+
+                Forms\Components\DateTimePicker::make('hold_until')
+                    ->label('Удерживать до')
+                    ->helperText('Дата и время, до которого транзакция заблокирована'),
+
+                Forms\Components\KeyValue::make('metadata')
+                    ->label('Метаданные')
+                    ->helperText('Дополнительные данные в формате JSON'),
+            ]);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('id')
+                    ->label('ID')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('client.name')
+                    ->label('Клиент')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('order.order_number')
+                    ->label('Заказ')
+                    ->searchable()
+                    ->placeholder('—'),
+
+                Tables\Columns\TextColumn::make('type')
+                    ->label('Тип')
+                    ->formatStateUsing(fn (string $state): string => match($state) {
+                        Transaction::TYPE_PURCHASE => 'Покупка',
+                        Transaction::TYPE_SALE => 'Продажа',
+                        Transaction::TYPE_FEE => 'Комиссия',
+                        Transaction::TYPE_REFUND => 'Возврат',
+                        Transaction::TYPE_DEPOSIT => 'Пополнение',
+                        Transaction::TYPE_WITHDRAWAL => 'Вывод средств',
+                        default => $state
+                    })
+                    ->badge()
+                    ->color(fn (string $state): string => match($state) {
+                        Transaction::TYPE_PURCHASE => 'danger',
+                        Transaction::TYPE_SALE => 'success',
+                        Transaction::TYPE_FEE => 'warning',
+                        Transaction::TYPE_REFUND => 'info',
+                        Transaction::TYPE_DEPOSIT => 'success',
+                        Transaction::TYPE_WITHDRAWAL => 'warning',
+                        default => 'gray'
+                    }),
+
+                Tables\Columns\TextColumn::make('amount')
+                    ->label('Сумма')
+                    ->money('RUB')
+                    ->sortable()
+                    ->alignRight(),
+
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Статус')
+                    ->formatStateUsing(fn (string $state): string => match($state) {
+                        Transaction::STATUS_PENDING => 'В обработке',
+                        Transaction::STATUS_COMPLETED => 'Завершено',
+                        Transaction::STATUS_FAILED => 'Ошибка',
+                        Transaction::STATUS_ON_HOLD => 'На удержании',
+                        default => $state
+                    })
+                    ->badge()
+                    ->color(fn (string $state): string => match($state) {
+                        Transaction::STATUS_PENDING => 'warning',
+                        Transaction::STATUS_COMPLETED => 'success',
+                        Transaction::STATUS_FAILED => 'danger',
+                        Transaction::STATUS_ON_HOLD => 'gray',
+                        default => 'gray'
+                    }),
+
+                Tables\Columns\TextColumn::make('description')
+                    ->label('Описание')
+                    ->limit(50)
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('hold_until')
+                    ->label('Удерживать до')
+                    ->dateTime('d.m.Y H:i')
+                    ->placeholder('—')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Создано')
+                    ->dateTime('d.m.Y H:i')
+                    ->sortable(),
+            ])
+            ->defaultSort('created_at', 'desc')
+            ->filters([
+                Tables\Filters\SelectFilter::make('type')
+                    ->label('Тип транзакции')
+                    ->options([
+                        Transaction::TYPE_PURCHASE => 'Покупка',
+                        Transaction::TYPE_SALE => 'Продажа',
+                        Transaction::TYPE_FEE => 'Комиссия',
+                        Transaction::TYPE_REFUND => 'Возврат',
+                        Transaction::TYPE_DEPOSIT => 'Пополнение',
+                        Transaction::TYPE_WITHDRAWAL => 'Вывод средств',
+                    ]),
+
+                Tables\Filters\SelectFilter::make('status')
+                    ->label('Статус')
+                    ->options([
+                        Transaction::STATUS_PENDING => 'В обработке',
+                        Transaction::STATUS_COMPLETED => 'Завершено',
+                        Transaction::STATUS_FAILED => 'Ошибка',
+                        Transaction::STATUS_ON_HOLD => 'На удержании',
+                    ]),
+
+                Tables\Filters\SelectFilter::make('client_id')
+                    ->label('Клиент')
+                    ->relationship('client', 'name')
+                    ->searchable(),
+
+                Tables\Filters\Filter::make('on_hold')
+                    ->label('На удержании')
+                    ->query(fn (Builder $query): Builder => $query->where('hold_until', '>', now()))
+                    ->toggle(),
+
+                Tables\Filters\Filter::make('ready_for_release')
+                    ->label('Готово к освобождению')
+                    ->query(fn (Builder $query): Builder => $query->readyForRelease())
+                    ->toggle(),
+            ])
+            ->actions([
+                Tables\Actions\ViewAction::make(),
+            ])
+            ->bulkActions([
+                //
+            ]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            //
+        ];
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ListTransactions::route('/'),
+        ];
+    }
+}

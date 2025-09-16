@@ -94,11 +94,6 @@ class ViewServiceProvider extends ServiceProvider
                     'title' => __('profile.tabs.balance'),
                     'icon' => 'ri-bank-card-line',
                     'order' => 8
-                ],
-                'settings' => [
-                    'title' => __('profile.tabs.settings'),
-                    'icon' => 'ri-settings-3-line',
-                    'order' => 9
                 ]
             ];
 

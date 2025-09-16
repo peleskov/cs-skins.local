@@ -51,7 +51,7 @@
 									</a>
 									<div class="offers">
 										<div class="d-flex align-items-center justify-content-between">
-											<h4>{{ formatPrice(auction.current_price) }}</h4>
+											<h4 v-html="formatPrice(auction.current_price)"></h4>
 										</div>
 									</div>
 								</div>
@@ -73,7 +73,7 @@
 												class="ri-auction-line me-2 text-primary"></i> <strong>Активный аукцион </strong></p>
 										<div class="d-flex justify-content-between align-items-center">
 											<small class="text-muted">Текущая цена:</small>
-											<small class="text-end">{{ formatPrice(auction.current_price) }}
+											<small class="text-end" v-html="formatPrice(auction.current_price)">
 											</small>
 										</div>
 										<div class="d-flex justify-content-between align-items-center">
@@ -96,7 +96,7 @@
 											class="btn btn-sm theme-btn w-100">
 											<i class="ri-hammer-line me-1"></i>
 											<span v-if="placingBids.has(auction.id)">Размещение...</span>
-											<span v-else>Ставка {{ formatPrice(getMinimumBid(auction)) }}</span>
+											<span v-else>Ставка <span v-html="formatPrice(getMinimumBid(auction))"></span></span>
 										</button>
 									</div>
 

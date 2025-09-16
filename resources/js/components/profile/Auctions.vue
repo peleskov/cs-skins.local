@@ -84,8 +84,8 @@
 											<i class="ri-time-line text-muted small" title="Длительность"></i>
 											<i class="ri-refresh-line text-muted small" title="Автопродление"></i>
 
-											<span class="small">{{ formatPrice(auction.current_price) }}</span>
-											<span class="small">{{ formatPrice(auction.min_bid_increment) }}</span>
+											<span class="small" v-html="formatPrice(auction.current_price)"></span>
+											<span class="small" v-html="formatPrice(auction.min_bid_increment)"></span>
 											<span class="small">{{ formatDurationFromHours(auction.duration_hours)
 											}}</span>
 											<span class="small">{{ auction.auto_extend ? 'Да' : 'Нет' }}</span>
@@ -93,7 +93,7 @@
 										<div v-else class="product-box-price d-flex flex-column gap-1 mb-4">
 											<div class="d-flex justify-content-between">
 												<small class="text-muted">Финальная цена</small><br>
-												<small>{{ formatPrice(auction.current_price) }}</small>
+												<small v-html="formatPrice(auction.current_price)"></small>
 											</div>
 											<div v-if="auction.last_bidder" class="d-flex justify-content-between">
 												<small class="text-muted">Победитель</small><br>
@@ -303,8 +303,7 @@
 							}"></div>
 							<div>
 								<h6 class="mb-1">{{ getItemName(auctionToDelete.listing) }}</h6>
-								<small class="text-muted">Стартовая цена: {{ formatPrice(auctionToDelete.starting_price)
-								}}</small>
+								<small class="text-muted">Стартовая цена: <span v-html="formatPrice(auctionToDelete.starting_price)"></span></small>
 								<div class="mt-1">
 									<span class="badge bg-warning">{{ getStatusText(auctionToDelete.status) }}</span>
 								</div>
@@ -365,11 +364,11 @@
 							<div class="row g-2 small">
 								<div class="col-6">
 									<strong>Стартовая цена:</strong><br>
-									{{ formatPrice(auctionToActivate.starting_price) }}
+									<span v-html="formatPrice(auctionToActivate.starting_price)"></span>
 								</div>
 								<div class="col-6">
 									<strong>Минимальный шаг:</strong><br>
-									{{ formatPrice(auctionToActivate.min_bid_increment) }}
+									<span v-html="formatPrice(auctionToActivate.min_bid_increment)"></span>
 								</div>
 								<div class="col-6">
 									<strong>Длительность:</strong><br>
@@ -381,7 +380,7 @@
 								</div>
 								<div class="col-12 mt-2">
 									<strong>Цена выкупа:</strong><br>
-									{{ formatPrice(auctionToActivate.listing.price) }}
+									<span v-html="formatPrice(auctionToActivate.listing.price)"></span>
 								</div>
 							</div>
 						</div>

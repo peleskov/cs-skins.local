@@ -32,6 +32,18 @@
 							Не подтвержден
 						</span>
 					</h6>
+					<!-- Email Notifications Toggle -->
+					<div v-if="client.email && client.email_verified_at" class="form-check form-switch mt-2">
+						<input class="form-check-input"
+							type="checkbox"
+							role="switch"
+							id="emailNotifications"
+							:checked="isEmailNotificationsEnabled"
+							@change="toggleEmailNotifications">
+						<label class="form-check-label" for="emailNotifications">
+							Отправлять уведомления на email
+						</label>
+					</div>
 				</div>
 				<div class="d-flex gap-2">
 					<a v-if="canResendVerification" href="#email" class="btn theme-outline" data-bs-toggle="modal">
@@ -95,9 +107,9 @@
 						<i class="ri-wallet-3-line"></i>
 						<span>Баланс :</span>
 					</div>
-					<h6>{{ formatPrice(client.balance) }}</h6>
+					<h6 v-html="formatPrice(client.balance)"></h6>
 				</div>
-				<a href="#balance-refill" class="btn theme-outline mt-0" data-bs-toggle="modal">Пополнить</a>
+				<a href="/profile#balance" class="btn theme-outline mt-0">Пополнить</a>
 			</li>
 
 			<!-- Verification -->
@@ -116,6 +128,18 @@
 							<span class="badge bg-warning">Не верифицирован</span>
 						</template>
 					</h6>
+					<!-- Telegram Notifications Toggle -->
+					<div v-if="client.telegram_id && client.is_verified" class="form-check form-switch mt-2">
+						<input class="form-check-input"
+							type="checkbox"
+							role="switch"
+							id="telegramNotifications"
+							:checked="isTelegramNotificationsEnabled"
+							@change="toggleTelegramNotifications">
+						<label class="form-check-label" for="telegramNotifications">
+							Отправлять уведомления в Telegram
+						</label>
+					</div>
 				</div>
 				<div class="d-flex flex-column align-items-end"
 					v-if="showTelegramWidget || (!client.is_verified && !client.telegram_id)">
@@ -249,30 +273,6 @@
 			</div>
 		</div>
 
-		<!-- Balance Modal -->
-		<div class="modal address-details-modal fade" id="balance-refill" tabindex="-1">
-			<div class="modal-dialog modal-dialog-centered">
-				<div class="modal-content">
-					<div class="modal-header">
-						<h1 class="modal-title fs-5">Пополнение баланса</h1>
-						<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-					</div>
-					<div class="modal-body text-center">
-						<div class="py-4">
-							<i class="ri-settings-3-line display-4 text-muted mb-3"></i>
-							<h4>В разработке</h4>
-							<p class="text-muted">
-								Функция пополнения баланса находится в разработке и будет доступна в ближайшее время.
-							</p>
-						</div>
-					</div>
-					<div class="modal-footer">
-						<button type="button" class="btn theme-btn mt-0" data-bs-dismiss="modal">Понятно</button>
-					</div>
-				</div>
-			</div>
-		</div>
-
 		<!-- Telegram Unlink Modal -->
 		<div class="modal address-details-modal fade" id="telegram-unlink" tabindex="-1">
 			<div class="modal-dialog modal-dialog-centered">
@@ -377,6 +377,19 @@ export default {
 	computed: {
 		csrfToken() {
 			return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+		},
+
+		// Notification settings
+		isEmailNotificationsEnabled() {
+			return this.client.notification_settings &&
+				Array.isArray(this.client.notification_settings) &&
+				this.client.notification_settings.includes('email');
+		},
+
+		isTelegramNotificationsEnabled() {
+			return this.client.notification_settings &&
+				Array.isArray(this.client.notification_settings) &&
+				this.client.notification_settings.includes('telegram');
 		}
 	},
 	methods: {
@@ -675,6 +688,56 @@ export default {
 			} catch (error) {
 				console.error('Telegram auth error:', error);
 				window.toast.error('Произошла ошибка при верификации');
+			}
+		},
+
+		// ==================== NOTIFICATION METHODS ====================
+		async toggleEmailNotifications() {
+			await this.updateNotificationSettings('email');
+		},
+
+		async toggleTelegramNotifications() {
+			await this.updateNotificationSettings('telegram');
+		},
+
+		async updateNotificationSettings(type) {
+			try {
+				const currentSettings = Array.isArray(this.client.notification_settings)
+					? this.client.notification_settings
+					: [];
+				let newSettings;
+
+				if (currentSettings.includes(type)) {
+					// Remove notification type
+					newSettings = currentSettings.filter(setting => setting !== type);
+				} else {
+					// Add notification type
+					newSettings = [...currentSettings, type];
+				}
+
+				console.log('Sending notification settings:', { notification_settings: newSettings });
+
+				const response = await axios.post('/profile/notification-settings', {
+					notification_settings: newSettings
+				});
+
+				const data = response.data;
+				if (data.success) {
+					this.$emit('update-client', {
+						notification_settings: newSettings
+					});
+
+					const action = newSettings.includes(type) ? 'включены' : 'отключены';
+					const channel = type === 'email' ? 'email' : 'Telegram';
+					window.toast.success(`Уведомления на ${channel} ${action}`);
+				}
+			} catch (error) {
+				console.error('Update notification settings error:', error);
+				console.error('Error response:', error.response?.data);
+
+				// Показываем более детальную ошибку если есть
+				const errorMessage = error.response?.data?.message || 'Произошла ошибка при обновлении настроек уведомлений';
+				window.toast.error(errorMessage);
 			}
 		},
 

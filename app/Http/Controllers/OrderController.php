@@ -214,6 +214,20 @@ class OrderController extends Controller
                         'payment_method' => 'balance',
                     ]);
 
+                    // Создаем транзакцию покупки
+                    \App\Models\Transaction::create([
+                        'client_id' => $buyerClient->id,
+                        'order_id' => $order->id,
+                        'type' => \App\Models\Transaction::TYPE_PURCHASE,
+                        'amount' => $sellerTotal,
+                        'status' => \App\Models\Transaction::STATUS_COMPLETED,
+                        'description' => "Покупка по заказу #{$order->order_number}",
+                        'metadata' => [
+                            'payment_method' => $order->payment_method,
+                            'items_count' => $sellerItems->count()
+                        ]
+                    ]);
+
                     // Загружаем данные продавца
                     $order->load('seller:id,name');
 

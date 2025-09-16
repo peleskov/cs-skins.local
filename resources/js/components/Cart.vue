@@ -23,7 +23,7 @@
 						<div class="row align-items-center">
 							<div class="col-md-6">
 								<h5 class="mb-1">Товаров в корзине: {{ cartItems.length }}</h5>
-								<p class="text-muted mb-0">Общая стоимость: <strong>{{ formatPrice(cartTotal, 'RUB') }}</strong>
+								<p class="text-muted mb-0">Общая стоимость: <strong v-html="formatPrice(cartTotal, 'RUB')"></strong>
 								</p>
 							</div>
 							<div class="col-md-6 text-end">
@@ -63,7 +63,7 @@
 								</div>
 								<div class="h-100 d-flex flex-column justify-content-between">
 									<div class="product-box-price text-center mb-3">
-										<span class="fw-bold fs-5">{{ formatPrice(item.price, 'RUB') }}</span>
+										<span class="fw-bold fs-5" v-html="formatPrice(item.price, 'RUB')"></span>
 									</div>
 									<div class="btn-group">
 										<button class="btn theme-outline theme-outline-danger"
@@ -133,7 +133,7 @@
 							</div>
 							<div>
 								<h6 class="mb-1">{{ itemToRemove.item?.name }}</h6>
-								<small class="text-muted">{{ formatPrice(itemToRemove.price, 'RUB') }}</small>
+								<small class="text-muted" v-html="formatPrice(itemToRemove.price, 'RUB')"></small>
 							</div>
 						</div>
 					</div>

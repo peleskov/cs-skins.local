@@ -217,6 +217,41 @@ class CaseController extends Controller
                 $fundAmount = $case->price * ($case->fund_percent / 100);
                 $case->increment('accumulated_fund', $fundAmount);
 
+                // Создаем транзакцию покупки кейса (видна покупателю)
+                \App\Models\Transaction::create([
+                    'client_id' => $buyer->id,
+                    'type' => \App\Models\Transaction::TYPE_PURCHASE,
+                    'amount' => $case->price,
+                    'status' => \App\Models\Transaction::STATUS_COMPLETED,
+                    'description' => "Покупка кейса \"{$case->name}\"",
+                    'metadata' => [
+                        'case_id' => $case->id,
+                        'case_name' => $case->name,
+                        'fund_amount' => $fundAmount,
+                        'site_revenue' => $case->price - $fundAmount
+                    ]
+                ]);
+
+                // Создаем транзакцию дохода сайта (скрыта от покупателя, видна только в админке)
+                $siteRevenue = $case->price - $fundAmount;
+                if ($siteRevenue > 0) {
+                    \App\Models\Transaction::create([
+                        'client_id' => null, // Системная транзакция
+                        'type' => \App\Models\Transaction::TYPE_FEE,
+                        'amount' => $siteRevenue,
+                        'status' => \App\Models\Transaction::STATUS_COMPLETED,
+                        'description' => "Доход с продажи кейса \"{$case->name}\"",
+                        'metadata' => [
+                            'case_id' => $case->id,
+                            'case_name' => $case->name,
+                            'buyer_id' => $buyer->id,
+                            'case_price' => $case->price,
+                            'fund_percent' => $case->fund_percent,
+                            'source' => 'case_revenue'
+                        ]
+                    ]);
+                }
+
                 // Открываем кейс и получаем приз
                 $prizeItem = $caseService->openCase($case, $buyer);
 

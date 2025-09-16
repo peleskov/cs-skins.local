@@ -9,7 +9,6 @@ return [
         'orders' => 'Покупки',
         'sales' => 'Продажи',
         'auctions' => 'Мои аукционы',
-        'balance' => 'Баланс',
-        'settings' => 'Настройки'
+        'balance' => 'Баланс'
     ]
 ];

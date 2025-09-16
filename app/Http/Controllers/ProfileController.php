@@ -220,6 +220,68 @@ class ProfileController extends Controller
     }
 
     /**
+     * Получить транзакции клиента
+     */
+    public function getTransactions(Request $request): JsonResponse
+    {
+        $client = $this->getAuthenticatedClient();
+
+        $perPage = min($request->get('per_page', 20), 100); // Максимум 100 на страницу
+
+        $transactions = $client->transactions()
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
+        $data = $transactions->getCollection()->map(function ($transaction) {
+            return [
+                'id' => $transaction->id,
+                'type' => $transaction->type,
+                'amount' => $transaction->amount,
+                'status' => $transaction->status,
+                'description' => $transaction->description,
+                'created_at' => $transaction->created_at->toISOString(),
+                'metadata' => $transaction->metadata,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+            'pagination' => [
+                'current_page' => $transactions->currentPage(),
+                'per_page' => $transactions->perPage(),
+                'total' => $transactions->total(),
+                'last_page' => $transactions->lastPage(),
+                'has_more_pages' => $transactions->hasMorePages(),
+            ]
+        ]);
+    }
+
+    /**
+     * Получить статистику продаж клиента
+     */
+    public function getSalesStats(Request $request): JsonResponse
+    {
+        $client = $this->getAuthenticatedClient();
+
+        // Получаем статистику из завершенных транзакций продаж
+        $salesTransactions = $client->transactions()
+            ->where('type', \App\Models\Transaction::TYPE_SALE)
+            ->where('status', \App\Models\Transaction::STATUS_COMPLETED)
+            ->get();
+
+        $stats = [
+            'total_earned' => $salesTransactions->sum('amount'),
+            'total_sales' => $salesTransactions->count()
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $stats
+        ]);
+    }
+
+    /**
      * Повторная отправка письма с подтверждением
      */
     public function resendVerification(Request $request): JsonResponse|RedirectResponse
@@ -522,6 +584,51 @@ class ProfileController extends Controller
         }
     }
 
+    // ================== NOTIFICATION SETTINGS МЕТОДЫ ==================
+
+    /**
+     * Обновление настроек уведомлений
+     */
+    public function updateNotificationSettings(Request $request): JsonResponse
+    {
+        $client = $this->getAuthenticatedClient();
+
+        $request->validate([
+            'notification_settings' => 'array',
+            'notification_settings.*' => 'in:email,telegram'
+        ]);
+
+        $notificationSettings = $request->notification_settings ?? [];
+
+        // Проверяем, что пользователь может включить email уведомления
+        if (in_array('email', $notificationSettings)) {
+            if (!$client->email || !$client->email_verified_at) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Для включения email уведомлений необходимо подтвердить email адрес'
+                ], 400);
+            }
+        }
+
+        // Проверяем, что пользователь может включить Telegram уведомления
+        if (in_array('telegram', $notificationSettings)) {
+            if (!$client->telegram_id || !$client->is_verified) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Для включения Telegram уведомлений необходимо пройти верификацию через Telegram'
+                ], 400);
+            }
+        }
+
+        $client->notification_settings = $notificationSettings;
+        $client->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Настройки уведомлений обновлены'
+        ]);
+    }
+
     // ================== EXTENSION TOKEN МЕТОДЫ ==================
 
     /**
@@ -597,6 +704,8 @@ class ProfileController extends Controller
             ], 500);
         }
     }
+
+    // ================== BALANCE & TRANSACTIONS МЕТОДЫ ==================
 
 
     // ================== ПРИВАТНЫЕ МЕТОДЫ-ХЕЛПЕРЫ ==================

@@ -11,11 +11,11 @@
 			<div class="row g-3">
 				<div class="col-6 col-md-3">
 					<small class="text-muted d-block">Текущая цена</small>
-					<strong class="h6 mb-0">{{ formatPrice(auction.current_price || 0) }}</strong>
+					<strong class="h6 mb-0" v-html="formatPrice(auction.current_price || 0)"></strong>
 				</div>
 				<div class="col-6 col-md-3">
 					<small class="text-muted d-block">Минимальная ставка</small>
-					<strong class="h6 mb-0">{{ formatPrice(getMinimumBid()) }}</strong>
+					<strong class="h6 mb-0" v-html="formatPrice(getMinimumBid())"></strong>
 				</div>
 				<div class="col-6 col-md-3">
 					<small class="text-muted d-block">Количество ставок</small>
@@ -55,7 +55,7 @@
 				</div>
 			</div>
 			<small v-if="bidAmount && !isValidBid()" class="text-danger">
-				Минимальная ставка: {{ formatPrice(getMinimumBid()) }}
+				Минимальная ставка: <span v-html="formatPrice(getMinimumBid())"></span>
 			</small>
 		</div>
 
@@ -74,7 +74,7 @@
 						<small>{{ bid.bidder.name }}</small>
 						<span class="badge bid-time">{{ formatDate(bid.placed_at) }}</span>
 					</div>
-					<small>{{ formatPrice(bid.amount) }}</small>
+					<small v-html="formatPrice(bid.amount)"></small>
 				</div>
 			</div>
 		</div>

@@ -3,12 +3,13 @@
 namespace App\Observers;
 
 use App\Models\Order;
-use App\Models\Listing;  
+use App\Models\Listing;
 use App\Models\TradeOffer;
 use App\Models\Transaction;
 use App\Models\Client;
 use App\Jobs\ReleaseExpiredOrder;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class OrderObserver
 {
@@ -60,6 +61,9 @@ class OrderObserver
             case Order::STATUS_CANCELLED:
                 $this->handleOrderCancellation($order);
                 break;
+            case Order::STATUS_COMPLETED:
+                $this->handleOrderCompletion($order);
+                break;
         }
     }
 
@@ -102,7 +106,9 @@ class OrderObserver
         Transaction::create([
             'type' => Transaction::TYPE_REFUND,
             'amount' => $order->total_amount,
+            'status' => Transaction::STATUS_COMPLETED,
             'client_id' => $order->buyer_id,
+            'order_id' => $order->id,
             'description' => "Возврат средств за заказ #{$order->order_number} ({$order->system_remarks})"
         ]);
         
@@ -180,5 +186,93 @@ class OrderObserver
         $calculatedTime = $baseTime + ($activeTradesCount * $timePerTrade);
 
         return min($calculatedTime, $maxReserveTime);
+    }
+
+    private function handleOrderCompletion(Order $order): void
+    {
+        // Не создаем транзакции для призов из кейсов
+        if ($order->payment_method === 'case_prize') {
+            return;
+        }
+
+        $fee = $this->calculateOrderFee($order);
+        $holdUntil = now()->addDays($this->getHoldDays());
+
+        // Создаем транзакцию продажи (с холдом)
+        Transaction::create([
+            'client_id' => $order->seller_id,
+            'order_id' => $order->id,
+            'type' => Transaction::TYPE_SALE,
+            'amount' => $order->total_amount - $fee,
+            'status' => Transaction::STATUS_ON_HOLD,
+            'description' => "Продажа по заказу #{$order->order_number}",
+            'hold_until' => $holdUntil,
+            'metadata' => [
+                'original_amount' => $order->total_amount,
+                'fee_amount' => $fee
+            ]
+        ]);
+
+        // Создаем транзакцию комиссии (с холдом)
+        if ($fee > 0) {
+            Transaction::create([
+                'client_id' => $order->seller_id,
+                'order_id' => $order->id,
+                'type' => Transaction::TYPE_FEE,
+                'amount' => $fee,
+                'status' => Transaction::STATUS_ON_HOLD,
+                'description' => "Комиссия с продажи по заказу #{$order->order_number}",
+                'hold_until' => $holdUntil,
+                'metadata' => [
+                    'fee_type' => $this->getOrderType($order),
+                    'fee_percent' => $this->getFeePercent($order)
+                ]
+            ]);
+        }
+    }
+
+    private function calculateOrderFee(Order $order): float
+    {
+        $feePercent = $this->getFeePercent($order);
+        return $order->total_amount * ($feePercent / 100);
+    }
+
+    private function getFeePercent(Order $order): float
+    {
+        // Быстрая продажа боту
+        if ($order->buyer && $order->buyer->is_bot) {
+            return (float) $this->getSetting('bot_purchase_fee_percent', 0);
+        }
+
+        // Аукцион
+        if ($order->auction()->exists()) {
+            return (float) $this->getSetting('auction_fee_percent', 5);
+        }
+
+        // P2P маркетплейс (по умолчанию)
+        return (float) $this->getSetting('marketplace_fee_percent', 5);
+    }
+
+    private function getOrderType(Order $order): string
+    {
+        if ($order->buyer && $order->buyer->is_bot) {
+            return 'bot_purchase';
+        }
+
+        if ($order->auction()->exists()) {
+            return 'auction';
+        }
+
+        return 'marketplace';
+    }
+
+    private function getHoldDays(): int
+    {
+        return (int) $this->getSetting('transaction_hold_days', 7);
+    }
+
+    private function getSetting(string $key, $default = null)
+    {
+        return \App\Models\SiteSetting::get($key, $default);
     }
 }

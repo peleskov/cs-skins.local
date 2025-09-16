@@ -29,6 +29,7 @@ class Client extends Authenticatable
         'telegram_username',
         'extension_token',
         'extension_token_generated_at',
+        'notification_settings',
     ];
 
     protected $hidden = [
@@ -44,6 +45,7 @@ class Client extends Authenticatable
         'email_verified_at' => 'datetime',
         'email_verification_sent_at' => 'datetime',
         'extension_token_generated_at' => 'datetime',
+        'notification_settings' => 'array',
     ];
 
     /**

@@ -160,7 +160,7 @@
 											<h6 class="card-title mb-1">
 												Быстрый выкуп
 												<span v-if="itemToSell && itemToSell.buyout_price" class="text-success ms-2">
-													{{ formatPrice(itemToSell.buyout_price, 'USD') }}
+													<span v-html="formatPrice(itemToSell.buyout_price, 'USD')"></span>
 												</span>
 											</h6>
 											<p class="card-text text-muted mb-0">
@@ -227,7 +227,7 @@
 						<p class="mb-3">{{ successModalData.message }}</p>
 						<div v-if="successModalData.order" class="alert alert-light">
 							<strong>Номер заказа:</strong> {{ successModalData.order.order_number }}<br>
-							<strong>Сумма:</strong> {{ formatPrice(successModalData.order.total_amount, 'RUB') }}
+							<strong>Сумма:</strong> <span v-html="formatPrice(successModalData.order.total_amount, 'RUB')"></span>
 						</div>
 					</div>
 					<div class="modal-footer border-0 justify-content-center">

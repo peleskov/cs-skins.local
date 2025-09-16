@@ -9,17 +9,19 @@ class Transaction extends Model
 {
     protected $fillable = [
         'client_id',
-        'trade_id',
+        'order_id',
         'type',
         'amount',
         'status',
         'description',
         'metadata',
+        'hold_until',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'metadata' => 'array',
+        'hold_until' => 'datetime',
     ];
 
     const TYPE_DEPOSIT = 'deposit';
@@ -33,10 +35,16 @@ class Transaction extends Model
     const STATUS_COMPLETED = 'completed';
     const STATUS_FAILED = 'failed';
     const STATUS_CANCELLED = 'cancelled';
+    const STATUS_ON_HOLD = 'on_hold';
 
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 
 
@@ -103,5 +111,12 @@ class Transaction extends Model
     public function cancel(): void
     {
         $this->update(['status' => self::STATUS_CANCELLED]);
+    }
+
+    public function scopeReadyForRelease($query)
+    {
+        return $query->where('status', self::STATUS_ON_HOLD)
+                    ->whereNotNull('hold_until')
+                    ->where('hold_until', '<=', now());
     }
 }

@@ -13,14 +13,6 @@
 						<i class="ri-wallet-3-line display-4 text-primary mb-3"></i>
 						<h5 class="card-title">Текущий баланс</h5>
 						<h2 class="text-primary" v-html="formatPrice(client.balance)"></h2>
-						<span class="badge bg-success me-2">
-							<i class="ri-arrow-up-line me-1"></i>
-							{{ formatNumber(salesStats.total_earned) }} ₽ заработано
-						</span>
-						<span class="badge bg-info">
-							<i class="ri-shopping-bag-2-line me-1"></i>
-							{{ salesStats.total_sales }} продаж
-						</span>
 						<div class="d-flex justify-content-center gap-3 mt-3">
 							<button class="btn theme-btn" data-bs-toggle="modal"
 								data-bs-target="#balance-refill">
@@ -235,16 +227,18 @@ export default {
 				'fee': 'Комиссия',
 				'refund': 'Возврат',
 				'withdrawal': 'Списание',
-				'deposit': 'Пополнение'
+				'deposit': 'Пополнение',
+				'auction_bid': 'Ставка на аукционе',
+				'auction_refund': 'Возврат со ставки'
 			};
 			return types[type] || type;
 		},
 
 		getTransactionSign(type) {
 			// Операции, которые уменьшают баланс (-)
-			const negativeTypes = ['purchase', 'withdrawal', 'fee'];
+			const negativeTypes = ['purchase', 'withdrawal', 'fee', 'auction_bid'];
 			// Операции, которые увеличивают баланс (+)
-			const positiveTypes = ['sale', 'deposit', 'refund'];
+			const positiveTypes = ['sale', 'deposit', 'refund', 'auction_refund'];
 
 			if (negativeTypes.includes(type)) return '−&nbsp;';
 			if (positiveTypes.includes(type)) return '+&nbsp;';

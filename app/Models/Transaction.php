@@ -30,6 +30,8 @@ class Transaction extends Model
     const TYPE_SALE = 'sale';
     const TYPE_FEE = 'fee';
     const TYPE_REFUND = 'refund';
+    const TYPE_AUCTION_BID = 'auction_bid';
+    const TYPE_AUCTION_REFUND = 'auction_refund';
 
     const STATUS_PENDING = 'pending';
     const STATUS_COMPLETED = 'completed';

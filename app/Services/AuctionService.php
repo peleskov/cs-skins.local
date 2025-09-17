@@ -7,6 +7,7 @@ use App\Models\AuctionBid;
 use App\Models\Client;
 use App\Models\Listing;
 use App\Models\Order;
+use App\Models\Transaction;
 use App\Http\Controllers\OrderController;
 use App\Events\AuctionBidPlaced;
 use Illuminate\Support\Facades\DB;
@@ -151,11 +152,40 @@ class AuctionService
             if (!$bidder->debit($amount)) {
                 throw new Exception('Недостаточно средств на балансе.');
             }
-            
+
+            // Создаем транзакцию для ставки
+            Transaction::create([
+                'client_id' => $bidder->id,
+                'order_id' => null,
+                'type' => Transaction::TYPE_AUCTION_BID,
+                'amount' => $amount, // Положительная сумма, направление определяется по типу
+                'status' => Transaction::STATUS_COMPLETED,
+                'description' => 'Ставка на аукцион #' . $auction->id . ' - ' . $auction->listing->market_hash_name,
+                'metadata' => [
+                    'auction_id' => $auction->id,
+                    'listing_id' => $auction->listing_id,
+                ],
+            ]);
+
             // Если списание прошло успешно, возвращаем средства предыдущему лидеру
             if ($auction->last_bidder_id) {
                 $previousBidder = Client::find($auction->last_bidder_id);
                 $previousBidder->credit($auction->current_price);
+
+                // Создаем транзакцию для возврата средств предыдущему лидеру
+                Transaction::create([
+                    'client_id' => $previousBidder->id,
+                    'order_id' => null,
+                    'type' => Transaction::TYPE_AUCTION_REFUND,
+                    'amount' => $auction->current_price,
+                    'status' => Transaction::STATUS_COMPLETED,
+                    'description' => 'Возврат средств за перебитую ставку в аукционе #' . $auction->id,
+                    'metadata' => [
+                        'auction_id' => $auction->id,
+                        'listing_id' => $auction->listing_id,
+                        'reason' => 'outbid',
+                    ],
+                ]);
             }
 
             // Создаем ставку
@@ -238,7 +268,23 @@ class AuctionService
                 // Заказ не создался, но аукцион остается завершенным
                 // Возвращаем средства победителю
                 $winner->credit($auction->current_price);
-                
+
+                // Создаем транзакцию для возврата средств при ошибке создания заказа
+                Transaction::create([
+                    'client_id' => $winner->id,
+                    'order_id' => null,
+                    'type' => Transaction::TYPE_AUCTION_REFUND,
+                    'amount' => $auction->current_price,
+                    'status' => Transaction::STATUS_COMPLETED,
+                    'description' => 'Возврат средств из-за ошибки создания заказа для аукциона #' . $auction->id,
+                    'metadata' => [
+                        'auction_id' => $auction->id,
+                        'listing_id' => $auction->listing_id,
+                        'reason' => 'order_creation_failed',
+                        'error' => $e->getMessage(),
+                    ],
+                ]);
+
                 // Логируем проблему
                 Log::error('Failed to create order for completed auction', [
                     'auction_id' => $auction->id,
@@ -246,7 +292,7 @@ class AuctionService
                     'amount' => $auction->current_price,
                     'error' => $e->getMessage()
                 ]);
-                
+
                 // order_id остается NULL
                 return null;
             }
@@ -271,6 +317,21 @@ class AuctionService
             if ($auction->last_bidder_id && $auction->bid_count > 0) {
                 $bidder = Client::find($auction->last_bidder_id);
                 $bidder->credit($auction->current_price);
+
+                // Создаем транзакцию для возврата средств при отмене аукциона
+                Transaction::create([
+                    'client_id' => $bidder->id,
+                    'order_id' => null,
+                    'type' => Transaction::TYPE_AUCTION_REFUND,
+                    'amount' => $auction->current_price,
+                    'status' => Transaction::STATUS_COMPLETED,
+                    'description' => 'Возврат средств за отмененный аукцион #' . $auction->id,
+                    'metadata' => [
+                        'auction_id' => $auction->id,
+                        'listing_id' => $auction->listing_id,
+                        'reason' => 'cancelled',
+                    ],
+                ]);
             }
 
             $auction->update(['status' => Auction::STATUS_CANCELLED]);

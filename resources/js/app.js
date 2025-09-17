@@ -17,6 +17,7 @@ import Header from './components/Header.vue';
 import FavoriteButton from './components/FavoriteButton.vue';
 import Cases from './components/Cases.vue';
 import CaseDetails from './components/CaseDetails.vue';
+import Chat from './components/Chat.vue';
 
 // Утилиты CSRF уже импортируются в компонентах где нужно
 
@@ -214,5 +215,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 app.mount(button);
             }
         });
+    }
+
+    // Chat компонент - инициализируем для авторизованных пользователей
+    const chatElement = document.getElementById('chat-app');
+    if (chatElement) {
+        const app = createApp(Chat);
+        app.use(Toast, toastOptions);
+        app.mount('#chat-app');
     }
 });

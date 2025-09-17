@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Broadcast;
 use App\Http\Controllers\WebController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AuthController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\FavoritesController;
 use App\Http\Controllers\ExtensionController;
 use App\Http\Controllers\AuctionController;
 use App\Http\Controllers\CaseController;
+use App\Http\Controllers\ChatController;
 use App\Models\Currency;
 
 // Публичные маршруты
@@ -135,6 +137,13 @@ Route::prefix('api')->name('api.')->group(function () {
             Route::get('/sales-stats', 'getSalesStats')->name('sales-stats')->middleware('throttle:60,1');
         });
 
+        // Чат API
+        Route::prefix('chat')->name('chat.')->controller(ChatController::class)->group(function () {
+            Route::get('/messages', 'getMessages')->name('messages')->middleware('throttle:60,1');
+            Route::post('/send', 'sendMessage')->name('send')->middleware('throttle:30,1');
+            Route::get('/ban-status', 'checkBanStatus')->name('ban-status')->middleware('throttle:60,1');
+        });
+
     });
 });
 
@@ -205,3 +214,11 @@ Route::get('/login', function () {
 
 // Telegram webhook (не требует авторизации)
 Route::post('/telegram/webhook', [ProfileController::class, 'telegramWebhook'])->name('telegram.webhook');
+
+
+// Chat API routes
+Route::middleware(['auth:client'])->prefix('api/chat')->name('api.chat.')->controller(\App\Http\Controllers\ChatController::class)->group(function () {
+    Route::get('/messages', 'getMessages')->name('messages');
+    Route::post('/send', 'sendMessage')->name('send')->middleware('throttle:30,1');
+    Route::get('/ban-status', 'checkBanStatus')->name('ban-status');
+});

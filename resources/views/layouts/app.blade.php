@@ -58,6 +58,11 @@
         <i class="ri-arrow-up-s-line arrow"></i>
     </button>
 
+    <!-- Chat widget for authenticated users -->
+    @auth('client')
+        <div id="chat-app"></div>
+    @endauth
+
     <!-- Navigation data for JavaScript -->
     <script>
         window.profileTabs = @json($profileTabs);

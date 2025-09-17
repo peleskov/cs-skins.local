@@ -54,7 +54,7 @@
                             <i class="ri-line-chart-line me-2"></i>История цен
                         </h5>
                         <div class="price-chart-container">
-                            <apexchart type="line" height="300" :options="chartOptions" :series="chartSeries">
+                            <apexchart type="line" height="300" :options="chartOptions" :series="chartSeries" :key="currentCurrencySymbol">
                             </apexchart>
                         </div>
                         <div class="price-stats mt-3">
@@ -329,17 +329,13 @@ export default {
             steamPriceHistory: [],
             steamPriceStats: null,
             showSuccessModal: false,
-            purchasedOrder: null
+            purchasedOrder: null,
+            currencySymbol: '₽' // Реактивная переменная для символа валюты
         };
     },
     computed: {
         currentCurrencySymbol() {
-            try {
-                const saved = localStorage.getItem('selectedCurrency');
-                return saved ? JSON.parse(saved).symbol : '₽';
-            } catch (error) {
-                return '₽';
-            }
+            return this.currencySymbol;
         },
 
         chartSeries() {
@@ -489,6 +485,14 @@ export default {
         }
     },
     mounted() {
+        // Инициализируем символ валюты
+        try {
+            const saved = localStorage.getItem('selectedCurrency');
+            this.currencySymbol = saved ? JSON.parse(saved).symbol : '₽';
+        } catch (error) {
+            this.currencySymbol = '₽';
+        }
+
         this.loadListing();
 
         // Слушаем события смены валюты
@@ -700,6 +704,14 @@ export default {
         },
 
         handleCurrencyChange() {
+            // Обновляем символ валюты из localStorage
+            try {
+                const saved = localStorage.getItem('selectedCurrency');
+                this.currencySymbol = saved ? JSON.parse(saved).symbol : '₽';
+            } catch (error) {
+                this.currencySymbol = '₽';
+            }
+
             // Принудительно обновляем данные для пересчета цен
             if (this.steamPriceStats) {
                 this.steamPriceStats = { ...this.steamPriceStats };

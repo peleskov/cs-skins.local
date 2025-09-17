@@ -78,7 +78,7 @@ class ClientInventoryItem extends Model
 
     public function steamMarketItem(): BelongsTo
     {
-        return $this->belongsTo(SteamMarketItem::class, 'item_nameid', 'item_nameid');
+        return $this->belongsTo(SteamMarketItem::class, 'market_hash_name', 'market_hash_name');
     }
 
     public function scopeTradable($query)

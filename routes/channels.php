@@ -15,3 +15,19 @@ Broadcast::channel('extension-orders', function () {
 Broadcast::channel('seller-{sellerId}-{hash}', function () {
     return true;
 });
+
+// Presence канал для чата с кастомным guard
+Broadcast::channel('presence-chat', function () {
+    // Используем client guard
+    $client = auth()->guard('client')->user();
+
+    if ($client) {
+        return [
+            'id' => $client->id,
+            'name' => $client->name,
+            'avatar' => $client->steam_avatar
+        ];
+    }
+
+    return false;
+}, ['guards' => ['client']]); // Указываем guard явно

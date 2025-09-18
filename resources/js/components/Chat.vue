@@ -41,18 +41,15 @@
 
                 <div v-else>
                     <div v-for="(message, index) in messages" :key="index" class="mb-2">
-                        <div class="d-flex align-items-start">
+                        <div class="message-wrap d-flex align-items-start">
                             <img :src="message.client_avatar || '/images/default-avatar.png'"
                                 class="rounded-circle me-2" style="width: 30px; height: 30px; object-fit: cover;"
                                 :alt="message.client_name">
                             <div class="flex-grow-1">
-                                <div class="d-flex align-items-baseline">
-                                    <strong class="me-2 text-truncate" style="max-width: 150px;">
-                                        {{ message.client_name }}
-                                    </strong>
-                                    <small class="text-muted">{{ formatTime(message.created_at) }}</small>
-                                </div>
-                                <div class="text-break">{{ message.message }}</div>
+                                <strong class="client-name me-2 text-truncate d-block" style="max-width: 250px;">
+                                    {{ message.client_name }}
+                                </strong>
+                                <div class="message-text text-break" v-html="message.message"></div>
                             </div>
                         </div>
                     </div>
@@ -72,17 +69,43 @@
                     Подождите {{ throttleSeconds }} сек
                 </div>
 
-                <form v-else @submit.prevent="sendMessage" class="d-flex gap-2">
-                    <input v-model="newMessage" type="text" class="form-control form-control-sm"
-                        placeholder="Введите сообщение..." maxlength="500" :disabled="sending">
-                    <button type="submit" class="btn theme-btn py-1" :disabled="!newMessage.trim() || sending">
-                        <i v-if="sending" class="spinner-border spinner-border-sm"></i>
-                        <i v-else class="ri-send-plane-line fs-5 text-white"></i>
-                    </button>
-                </form>
+                <div v-else>
+                    <div class="position-relative">
+                        <textarea
+                            v-model="newMessage"
+                            class="form-control form-control-sm"
+                            placeholder="Введите сообщение..."
+                            maxlength="500"
+                            :disabled="sending"
+                            rows="3"
+                            @keydown.enter.exact.prevent="sendMessage"
+                            style="padding-bottom: 20px; resize: none;">
+                        </textarea>
+                        <small class="message-count text-muted position-absolute" style="bottom: 5px; right: 10px;">
+                            {{ newMessage.length }}/500
+                        </small>
+                    </div>
 
-                <div class="d-flex justify-content-between mt-1">
-                    <small class="text-muted">{{ newMessage.length }}/500</small>
+                    <div class="d-flex flex-wrap justify-content-between gap-2 mt-2">
+                        <button
+                            @click="insertMarketplaceLink"
+                            class="btn theme-outline"
+                            type="button">
+                            <i class="ri-link me-1"></i>
+                            Вставить ссылку
+                        </button>
+                        <button
+                            @click="sendMessage"
+                            class="btn theme-btn"
+                            :disabled="!newMessage.trim() || sending"
+                            type="button">
+                            <i v-if="sending" class="spinner-border spinner-border-sm"></i>
+                            <i v-else class="ri-send-plane-line me-1"></i>
+                            <span>
+                                Отправить
+                            </span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -205,7 +228,14 @@ export default {
             if (!this.newMessage.trim() || this.sending) return;
 
             this.sending = true;
-            const message = this.newMessage;
+            let message = this.newMessage;
+
+            // Заменяем эмодзи 🔗 на HTML ссылку на профиль
+            if (message.includes('🔗') && window.clientId) {
+                const profileLink = `<a href="/marketplace?seller_id=${window.clientId}" target="_blank">Мой профиль</a>`;
+                message = message.replace(/🔗/g, profileLink);
+            }
+
             this.newMessage = '';
 
             try {
@@ -228,6 +258,22 @@ export default {
             } finally {
                 this.sending = false;
             }
+        },
+        insertMarketplaceLink() {
+            // Вставляем эмодзи ссылки 🔗 в место курсора
+            const textarea = this.$el.querySelector('textarea');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = this.newMessage;
+
+            // Вставляем символ 🔗 в позицию курсора
+            this.newMessage = text.substring(0, start) + '🔗' + text.substring(end);
+
+            // Устанавливаем курсор после вставленного символа (эмодзи занимает 2 позиции)
+            this.$nextTick(() => {
+                textarea.selectionStart = textarea.selectionEnd = start + 2;
+                textarea.focus();
+            });
         },
         async checkBanStatus() {
             try {
@@ -279,3 +325,7 @@ export default {
     }
 };
 </script>
+
+<style lang="scss" scoped>
+@import '../../scss/components/chat-widget';
+</style>

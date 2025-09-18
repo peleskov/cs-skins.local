@@ -21,14 +21,18 @@ class WebController extends Controller
             ->inRandomOrder()
             ->limit(12)
             ->get();
-            
+
         $totalListings = Listing::active()
             ->where('price', '>', 0)
             ->count();
-            
+
         $hasMorePages = $totalListings > 12;
-            
-        return view('home', compact('featuredListings', 'totalListings', 'hasMorePages'));
+
+        // Инициализируем переменные для marketplace-section
+        $seller = null;
+        $sellerStats = null;
+
+        return view('home', compact('featuredListings', 'totalListings', 'hasMorePages', 'seller', 'sellerStats'));
     }
 
     /**

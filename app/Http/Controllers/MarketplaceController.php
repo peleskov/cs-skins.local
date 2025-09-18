@@ -17,9 +17,40 @@ class MarketplaceController extends Controller
      */
     public function index(): View
     {
-        $featuredListings = Listing::with(['seller'])
+        // Инициализируем переменные
+        $seller = null;
+        $sellerStats = null;
+
+        $query = Listing::with(['seller'])
             ->active()
-            ->where('price', '>', 0)
+            ->where('price', '>', 0);
+
+        // Фильтр по продавцу
+        $sellerId = request()->get('seller_id');
+
+        if ($sellerId) {
+            $query->where('seller_id', $sellerId);
+
+            // Получаем информацию о продавце
+            $seller = \App\Models\Client::find($sellerId);
+
+            if ($seller) {
+                // Получаем статистику продавца
+                $sellerStats = [
+                    'total_listings' => Listing::where('seller_id', $sellerId)
+                        ->active()
+                        ->count(),
+                    'total_sales' => \App\Models\Order::where('seller_id', $sellerId)
+                        ->where('status', \App\Models\Order::STATUS_COMPLETED)
+                        ->count(),
+                    'total_purchases' => \App\Models\Order::where('buyer_id', $sellerId)
+                        ->where('status', \App\Models\Order::STATUS_COMPLETED)
+                        ->count(),
+                ];
+            }
+        }
+
+        $featuredListings = $query
             ->orderBy('listed_at', 'desc')
             ->limit(24)
             ->get();
@@ -51,8 +82,16 @@ class MarketplaceController extends Controller
             ->count();
             
         $hasMorePages = $totalListings > 24;
-            
-        return view('marketplace.index', compact('featuredListings', 'totalListings', 'hasMorePages'));
+
+        // Обновляем счетчик если есть фильтр по продавцу
+        if ($sellerId) {
+            $totalListings = Listing::where('seller_id', $sellerId)
+                ->active()
+                ->where('price', '>', 0)
+                ->count();
+        }
+
+        return view('marketplace.index', compact('featuredListings', 'totalListings', 'hasMorePages', 'seller', 'sellerStats'));
     }
 
     /**
@@ -63,6 +102,11 @@ class MarketplaceController extends Controller
         $query = Listing::with(['seller'])
             ->active()
             ->where('price', '>', 0);
+
+        // Фильтр по продавцу
+        if ($sellerId = $request->get('seller_id')) {
+            $query->where('seller_id', $sellerId);
+        }
 
         // Поиск по названию
         if ($search = $request->get('search')) {

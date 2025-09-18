@@ -14,8 +14,47 @@
 				<div class="col-md-4 col-lg-3 col-xl-2">
 					<div class="left-box wow fadeInUp">
 						<div class="shop-left-sidebar">
+							<!-- Карточка продавца -->
+							<div v-if="seller && sellerStats" class="mb-3">
+								<div class="accordion-body" style="background: var(--bs-light); border-radius: 8px; padding: 1rem;">
+										<div class="text-center mb-3">
+											<img :src="seller.steam_avatar || '/images/default-avatar.png'"
+												 :alt="seller.name"
+												 class="rounded-circle mb-2"
+												 style="width: 50px; height: 50px; object-fit: cover;">
+											<h6 class="mb-0">{{ seller.name }}</h6>
+										</div>
+										<ul class="category-list custom-padding">
+											<li>
+												<div class="d-flex justify-content-between">
+													<span class="name">Предложений</span>
+													<span class="number">({{ sellerStats.total_listings }})</span>
+												</div>
+											</li>
+											<li>
+												<div class="d-flex justify-content-between">
+													<span class="name">Продаж</span>
+													<span class="number">({{ sellerStats.total_sales }})</span>
+												</div>
+											</li>
+											<li>
+												<div class="d-flex justify-content-between">
+													<span class="name">Покупок</span>
+													<span class="number">({{ sellerStats.total_purchases }})</span>
+												</div>
+											</li>
+										</ul>
+										<div class="mt-3">
+											<a href="/marketplace" class="btn theme-outline w-100">
+												<i class="ri-store-line"></i>
+												Маркетплейс
+											</a>
+										</div>
+								</div>
+							</div>
+
 							<!-- Поиск -->
-							<div class="search-box">
+							<div v-if="!seller" class="search-box">
 								<div class="form-input position-relative">
 									<input type="search" class="form-control search" placeholder="Поиск по скинам..."
 										v-model="filters.search" @input="debouncedSearch">
@@ -23,7 +62,7 @@
 								</div>
 							</div>
 
-							<div class="accordion sidebar-accordion" id="accordionPanelsStayOpenExample">
+							<div v-if="!seller" class="accordion sidebar-accordion" id="accordionPanelsStayOpenExample">
 								<!-- Фильтр цены -->
 								<div class="accordion-item">
 									<h2 class="accordion-header">
@@ -109,7 +148,7 @@
 							</div>
 
 							<!-- Кнопка очистки фильтров -->
-							<div class="mt-4 pt-3 border-top">
+							<div v-if="!seller" class="mt-4 pt-3 border-top">
 								<button class="btn theme-outline cart-btn w-100" @click="clearAllFilters"
 									:disabled="!hasActiveFilters">
 									<i class="ri-refresh-line me-2"></i>
@@ -248,12 +287,22 @@ export default {
 		initialHasMore: {
 			type: Boolean,
 			default: false
+		},
+		initialSeller: {
+			type: Object,
+			default: null
+		},
+		initialSellerStats: {
+			type: Object,
+			default: null
 		}
 	},
 	setup(props) {
 		// Состояние данных
 		const listings = ref([...props.initialListings])
 		const categories = ref([])
+		const seller = ref(props.initialSeller)
+		const sellerStats = ref(props.initialSellerStats)
 		const tags = ref([])
 		const isLoading = ref(false)
 		const currentPage = ref(2)
@@ -632,6 +681,8 @@ export default {
 			listings,
 			categories,
 			tags,
+			seller,
+			sellerStats,
 			isLoading,
 			pagination,
 			filters,

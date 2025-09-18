@@ -68,6 +68,9 @@
         window.profileTabs = @json($profileTabs);
         window.mainNavigation = @json($mainNavigation);
         window.footerData = @json($footerData);
+        @auth('client')
+            window.clientId = {{ auth('client')->id() }};
+        @endauth
     </script>
 
     <!-- Scripts -->

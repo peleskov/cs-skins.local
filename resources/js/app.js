@@ -77,7 +77,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const app = createApp(Marketplace, {
             initialListings: JSON.parse(marketplaceElement.dataset.listings || '[]'),
             initialTotal: parseInt(marketplaceElement.dataset.total || '0'),
-            initialHasMore: marketplaceElement.dataset.hasMore === 'true'
+            initialHasMore: marketplaceElement.dataset.hasMore === 'true',
+            initialSeller: marketplaceElement.dataset.seller !== 'null' ? JSON.parse(marketplaceElement.dataset.seller) : null,
+            initialSellerStats: marketplaceElement.dataset.sellerStats !== 'null' ? JSON.parse(marketplaceElement.dataset.sellerStats) : null
         });
         app.mount('#marketplace-app');
     }

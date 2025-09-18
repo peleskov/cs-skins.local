@@ -14,7 +14,8 @@
         "laravel/socialite": "^5.21",
         "laravel/tinker": "^2.10.1",
         "pusher/pusher-php-server": "*",
-        "socialiteproviders/steam": "^4.3"
+        "socialiteproviders/steam": "^4.3",
+        "telegram-bot/api": "^2.5"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

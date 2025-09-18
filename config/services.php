@@ -51,4 +51,9 @@ return [
         'image_base_url' => env('BITSKINS_IMAGE_BASE_URL', 'https://ss.bitskins.com'),
     ],
 
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'bot_name' => env('TELEGRAM_BOT_NAME'),
+    ],
+
 ];

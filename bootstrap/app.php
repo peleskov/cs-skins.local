@@ -22,10 +22,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'extension.cors' => \App\Http\Middleware\ExtensionCors::class,
         ]);
         
-        // Отключаем CSRF для API расширения
+        // Отключаем CSRF для API расширения и Telegram webhook
         $middleware->validateCsrfTokens(except: [
             'api/extension/*',
-            'api/ext-api/*'
+            'api/ext-api/*',
+            'api/telegram/webhook'
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

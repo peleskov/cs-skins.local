@@ -233,6 +233,15 @@ return [
                 'timeout' => 60,
                 'nice' => 5, // средний приоритет
             ],
+            'notifications' => [
+                'connection' => 'redis',
+                'queue' => ['notifications'],
+                'balance' => 'simple',
+                'maxProcesses' => 3, // 3 процесса для уведомлений
+                'tries' => 3,
+                'timeout' => 60,
+                'nice' => 0, // высокий приоритет для уведомлений
+            ],
         ],
 
         'local' => [
@@ -269,6 +278,15 @@ return [
                 'tries' => 3,
                 'timeout' => 60,
                 'nice' => 5,
+            ],
+            'notifications' => [
+                'connection' => 'redis',
+                'queue' => ['notifications'],
+                'balance' => 'simple',
+                'maxProcesses' => 2, // 2 процесса для local окружения
+                'tries' => 3,
+                'timeout' => 60,
+                'nice' => 0, // высокий приоритет для уведомлений
             ],
         ],
     ],

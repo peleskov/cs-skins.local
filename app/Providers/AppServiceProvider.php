@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Support\Facades\RateLimiter;
 use App\Models\Order;
 use App\Models\TradeOffer;
 use App\Observers\OrderObserver;
@@ -31,14 +33,33 @@ class AppServiceProvider extends ServiceProvider
         // Регистрируем Observer'ы
         Order::observe(OrderObserver::class);
         TradeOffer::observe(TradeOfferObserver::class);
-        
+
+        // Настройка Rate Limiting для уведомлений
+        $this->configureRateLimiting();
+
         // Принудительно используем HTTPS для всех URL
         \URL::forceScheme('https');
-        
+
         $socialite = $this->app->make('Laravel\Socialite\Contracts\Factory');
         $socialite->extend('steam', function ($app) use ($socialite) {
             $config = $app['config']['services.steam'];
             return $socialite->buildProvider(\SocialiteProviders\Steam\Provider::class, $config);
+        });
+    }
+
+    /**
+     * Настройка лимитов для очередей уведомлений
+     */
+    protected function configureRateLimiting(): void
+    {
+        // Telegram API лимиты: 30 сообщений в секунду, но ограничиваем до 25 для безопасности
+        RateLimiter::for('telegram-notifications', function () {
+            return Limit::perSecond(25)->by('telegram');
+        });
+
+        // Email лимиты: 100 писем в минуту (можно настроить под ваш SMTP)
+        RateLimiter::for('email-notifications', function () {
+            return Limit::perMinute(100)->by('email');
         });
     }
 }

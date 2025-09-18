@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ExtensionController;
+use App\Http\Controllers\TelegramWebhookController;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,10 +15,14 @@ use App\Http\Controllers\ExtensionController;
 |
 */
 
+// Telegram webhook (без CSRF защиты)
+Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle'])
+    ->name('telegram.webhook');
+
 // API для браузерного расширения (без web middleware)
 Route::prefix('ext-api')->name('extension.')->middleware('extension.cors')->controller(ExtensionController::class)->group(function () {
     Route::post('/auth', 'authenticateExtension')->name('auth');
-    
+
     // Эндпоинты требующие авторизации (через Bearer token)
     Route::middleware(['throttle:60,1'])->group(function () {
         Route::get('/user', 'getUserInfo')->name('user');

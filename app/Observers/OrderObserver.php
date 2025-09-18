@@ -8,6 +8,7 @@ use App\Models\TradeOffer;
 use App\Models\Transaction;
 use App\Models\Client;
 use App\Jobs\ReleaseExpiredOrder;
+use App\Services\OrderNotificationService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
@@ -15,8 +16,19 @@ class OrderObserver
 {
     public function created(Order $order): void
     {
+        Log::info('OrderObserver::created вызван', [
+            'order_id' => $order->id,
+            'order_number' => $order->order_number,
+            'payment_status' => $order->payment_status,
+            'buyer_id' => $order->buyer_id,
+            'seller_id' => $order->seller_id
+        ]);
+
         if ($order->payment_status === Order::PAYMENT_STATUS_PAID) {
             $this->handleOrderPayment($order);
+
+            // Отправляем уведомления о создании оплаченного заказа
+            app(OrderNotificationService::class)->sendOrderCreatedNotifications($order);
         }
     }
 
@@ -29,14 +41,20 @@ class OrderObserver
         ]);
         
         if ($order->wasChanged('status')) {
+            $oldStatus = $order->getOriginal('status');
+            $newStatus = $order->status;
+
             Log::info('Order status changed', [
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
-                'old_status' => $order->getOriginal('status'),
-                'new_status' => $order->status,
+                'old_status' => $oldStatus,
+                'new_status' => $newStatus,
                 'buyer_id' => $order->buyer_id,
                 'seller_id' => $order->seller_id
             ]);
+
+            // Отправляем уведомления о смене статуса
+            app(OrderNotificationService::class)->sendStatusChangeNotifications($order, $oldStatus, $newStatus);
 
             // Бизнес-логика при смене статуса
             $this->handleStatusChange($order);
@@ -275,4 +293,5 @@ class OrderObserver
     {
         return \App\Models\SiteSetting::get($key, $default);
     }
+
 }

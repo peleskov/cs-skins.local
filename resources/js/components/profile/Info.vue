@@ -141,20 +141,19 @@
 						</label>
 					</div>
 				</div>
-				<div class="d-flex flex-column align-items-end"
-					v-if="showTelegramWidget || (!client.is_verified && !client.telegram_id)">
-					<div id="telegram-login-widget-inline"></div>
-					<small class="text-end text-muted d-block mt-2">
-						Что бы выбрать другой аккаунт, <br> зайдите в Telegram → Настройки → Конфиденциальность →
-						Авторизованные сайты
-						<br> и удалите cs-skins
-					</small>
+				<div v-if="!client.is_verified && !client.telegram_id" class="mt-2">
+					<button class="btn theme-outline mt-0" @click="startTelegramVerification" :disabled="isGeneratingVerificationCode">
+						<span v-if="isGeneratingVerificationCode">
+							<span class="spinner-border spinner-border-sm me-1" role="status"></span>
+							Генерируем код...
+						</span>
+						<span v-else>
+							<i class="ri-telegram-fill me-1"></i>
+							Подключить Telegram
+						</span>
+					</button>
 				</div>
 
-				<!-- Кнопки управления Telegram -->
-				<div v-if="!showTelegramWidget && client.telegram_id && client.is_verified" class="mt-2">
-					<a href="#telegram-unlink" class="btn theme-outline mt-0" data-bs-toggle="modal">Отвязать</a>
-				</div>
 			</li>
 
 			<!-- Extension Token -->
@@ -273,26 +272,44 @@
 			</div>
 		</div>
 
-		<!-- Telegram Unlink Modal -->
-		<div class="modal address-details-modal fade" id="telegram-unlink" tabindex="-1">
+
+		<!-- Telegram Verification Modal -->
+		<div class="modal address-details-modal fade" id="telegram-verification" tabindex="-1">
 			<div class="modal-dialog modal-dialog-centered">
 				<div class="modal-content">
 					<div class="modal-header">
-						<h1 class="modal-title fs-5">Отвязать Telegram</h1>
+						<h1 class="modal-title fs-5">Подключить Telegram</h1>
 						<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 					</div>
 					<div class="modal-body">
-						<p>Вы уверены, что хотите отвязать Telegram аккаунт?</p>
-						<small class="text-warning">
-							<i class="ri-information-line"></i> При отвязке Telegram статус верификации будет сброшен.
-						</small>
-					</div>
-					<div class="modal-footer">
-						<button type="button" class="btn gray-btn mt-0" data-bs-dismiss="modal">Отмена</button>
-						<form action="/profile/telegram/unlink" method="POST" class="d-inline">
-							<input type="hidden" name="_token" :value="csrfToken">
-							<button type="submit" class="btn btn-danger mt-0">Отвязать</button>
-						</form>
+						<div v-if="verificationCode" class="text-center">
+							<h5 class="mb-3">Ваш код верификации:</h5>
+							<div class="d-flex justify-content-center align-items-center gap-2 mb-3">
+								<code class="fs-2 user-select-all">{{ verificationCode }}</code>
+								<button class="btn btn-sm" @click="copyVerificationCode">
+									<i class="ri-file-copy-line"></i>
+								</button>
+							</div>
+							<p class="mb-3">Время действия кода: <strong>{{ verificationCodeTimeRemaining }}</strong></p>
+							<div class="alert alert-info">
+								<i class="ri-information-line"></i>
+								<strong>Инструкция:</strong>
+								<ol class="text-start mt-2 mb-0">
+									<li>Перейдите к боту по кнопке ниже</li>
+									<li>Нажмите кнопку "Начать" или "Start" в боте</li>
+									<li>Бот запросит код верификации</li>
+									<li>Отправьте код: <strong>{{ verificationCode }}</strong></li>
+								</ol>
+							</div>
+							<a :href="telegramBotUrl" target="_blank" class="btn theme-btn mt-3">
+								<i class="ri-telegram-fill me-1"></i>
+								Перейти к боту
+							</a>
+						</div>
+						<div v-else class="text-center">
+							<span class="spinner-border" role="status"></span>
+							<p class="mt-2">Генерируем код...</p>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -370,8 +387,12 @@ export default {
 			isRegeneratingToken: false,
 
 			// Telegram
-			telegramWidgetLoaded: false,
-			showTelegramWidget: false
+			isGeneratingVerificationCode: false,
+			verificationCode: null,
+			verificationCodeExpiresAt: null,
+			verificationCodeTimer: null,
+			verificationCodeTimeRemaining: '',
+			telegramBotUrl: ''
 		}
 	},
 	computed: {
@@ -601,94 +622,127 @@ export default {
 			);
 		},
 
-		clearAndReloadTelegramWidget() {
-			// Очищаем контейнер виджета
-			const widgetContainer = document.getElementById('telegram-login-widget-inline');
-			if (widgetContainer) {
-				widgetContainer.innerHTML = '';
-			}
+		// ==================== TELEGRAM METHODS ====================
+		async startTelegramVerification() {
+			if (this.isGeneratingVerificationCode) return;
 
-			// Очищаем все возможные Telegram данные
+			this.isGeneratingVerificationCode = true;
+			this.verificationCode = null;
+
 			try {
-				// Очищаем localStorage и sessionStorage
-				['telegram-auth-data', 'tgAuthResult', 'tgAuthData'].forEach(key => {
-					localStorage.removeItem(key);
-					sessionStorage.removeItem(key);
-				});
-
-				// Очищаем cookies связанные с Telegram
-				document.cookie.split(";").forEach(cookie => {
-					const eqPos = cookie.indexOf("=");
-					const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-					if (name.toLowerCase().includes('telegram') || name.toLowerCase().includes('tg')) {
-						document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.telegram.org";
-						document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-					}
-				});
-			} catch (e) {
-				console.log('Storage cleanup failed:', e);
-			}
-
-			// Сбрасываем флаги
-			this.telegramWidgetLoaded = false;
-
-			// Перезагружаем виджет с небольшой задержкой
-			setTimeout(() => {
-				this.loadTelegramWidget();
-			}, 500);
-		},
-
-		loadTelegramWidget() {
-			if (this.telegramWidgetLoaded) return;
-
-			this.$nextTick(() => {
-				const widgetContainer = document.getElementById('telegram-login-widget-inline');
-				if (!widgetContainer || widgetContainer.hasChildNodes()) return;
-
-				const script = document.createElement('script');
-				script.async = true;
-				script.src = 'https://telegram.org/js/telegram-widget.js?' + Date.now();
-				script.setAttribute('data-telegram-login', this.telegramBotName || 'cs_skins_bot');
-				script.setAttribute('data-size', 'medium');
-				script.setAttribute('data-userpic', 'false');
-				script.setAttribute('data-onauth', 'onTelegramAuth(user)');
-				script.setAttribute('data-request-access', 'write');
-
-				// Добавляем параметр для принудительного выхода из текущего аккаунта
-				if (this.showTelegramWidget) {
-					script.setAttribute('data-auth-url', window.location.origin + '/profile/telegram/logout-and-auth');
-				}
-
-				widgetContainer.appendChild(script);
-				this.telegramWidgetLoaded = true;
-			});
-		},
-
-		async onTelegramAuth(user) {
-			try {
-				const response = await axios.post('/profile/telegram/verify', user);
+				const response = await axios.post('/profile/telegram/generate-code');
 				const data = response.data;
 
 				if (data.success) {
-					this.$emit('update-client', {
-						telegram_id: user.id,
-						telegram_username: user.username,
-						is_verified: true
-					});
+					this.verificationCode = data.code;
+					// Не передаем код в URL, так как бот запросит его отдельно
+					this.telegramBotUrl = `https://t.me/${this.telegramBotName}`;
+					this.verificationCodeExpiresAt = new Date(Date.now() + data.expires_in * 1000);
 
-					window.toast.success(data.message || 'Telegram верификация успешно завершена!');
+					// Запускаем таймер обратного отсчета
+					this.startVerificationCodeTimer();
 
-					// Reload page after 1.5 seconds
-					setTimeout(() => {
-						window.location.reload();
-					}, 1500);
+					// Открываем модальное окно
+					const modal = new bootstrap.Modal(document.getElementById('telegram-verification'));
+					modal.show();
+
+					// Проверяем статус каждые 5 секунд
+					this.startVerificationStatusCheck();
 				} else {
-					// Глобальный обработчик покажет toast автоматически
+					window.toast.error(data.message || 'Не удалось сгенерировать код верификации');
 				}
 			} catch (error) {
-				console.error('Telegram auth error:', error);
-				window.toast.error('Произошла ошибка при верификации');
+				console.error('Generate verification code error:', error);
+				window.toast.error('Ошибка при генерации кода');
+			} finally {
+				this.isGeneratingVerificationCode = false;
 			}
+		},
+
+		startVerificationCodeTimer() {
+			if (this.verificationCodeTimer) {
+				clearInterval(this.verificationCodeTimer);
+			}
+
+			const updateTimer = () => {
+				if (!this.verificationCodeExpiresAt) {
+					clearInterval(this.verificationCodeTimer);
+					return;
+				}
+
+				const now = new Date();
+				const diff = this.verificationCodeExpiresAt - now;
+
+				if (diff <= 0) {
+					this.verificationCodeTimeRemaining = 'Истек';
+					clearInterval(this.verificationCodeTimer);
+					this.verificationCode = null;
+				} else {
+					const minutes = Math.floor(diff / 60000);
+					const seconds = Math.floor((diff % 60000) / 1000);
+					this.verificationCodeTimeRemaining = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+				}
+			};
+
+			updateTimer();
+			this.verificationCodeTimer = setInterval(updateTimer, 1000);
+		},
+
+		startVerificationStatusCheck() {
+			let checkCount = 0;
+			const maxChecks = 120; // 10 минут / 5 секунд = 120 проверок
+
+			const checkStatus = async () => {
+				if (!this.verificationCode || this.client.is_verified) {
+					return;
+				}
+
+				try {
+					// Запрашиваем данные пользователя
+					const response = await axios.get('/api/profile/me');
+
+					if (response.data && response.data.is_verified && response.data.telegram_id) {
+						// Обновляем данные клиента
+						this.$emit('update-client', {
+							telegram_id: response.data.telegram_id,
+							telegram_username: response.data.telegram_username,
+							is_verified: true
+						});
+
+						// Закрываем модальное окно
+						const modal = bootstrap.Modal.getInstance(document.getElementById('telegram-verification'));
+						if (modal) modal.hide();
+
+						window.toast.success('Telegram успешно подключен!');
+
+						// Перезагружаем страницу через 1.5 секунды
+						setTimeout(() => {
+							window.location.reload();
+						}, 1500);
+						return;
+					}
+				} catch (error) {
+					// Игнорируем ошибки, продолжаем проверять
+				}
+
+				checkCount++;
+				if (checkCount < maxChecks && this.verificationCode) {
+					setTimeout(checkStatus, 5000); // Проверяем через 5 секунд
+				}
+			};
+
+			// Начинаем проверку через 5 секунд
+			setTimeout(checkStatus, 5000);
+		},
+
+		async copyVerificationCode() {
+			if (!this.verificationCode) return;
+
+			await copyToClipboard(
+				this.verificationCode,
+				'Код скопирован в буфер обмена',
+				'Не удалось скопировать код'
+			);
 		},
 
 		// ==================== NOTIFICATION METHODS ====================
@@ -757,14 +811,6 @@ export default {
 	},
 
 	mounted() {
-		// Load Telegram widget if needed
-		if (!this.client.is_verified && !this.client.telegram_id) {
-			this.loadTelegramWidget();
-		}
-
-		// Set global Telegram callback
-		window.onTelegramAuth = this.onTelegramAuth;
-
 		// Initialize email resend timer if needed
 		if (this.client.email && !this.client.email_verified_at && this.client.email_verification_sent_at) {
 			const sentAt = new Date(this.client.email_verification_sent_at);
@@ -783,14 +829,12 @@ export default {
 	},
 
 	beforeUnmount() {
-		// Clear timer
+		// Clear timers
 		if (this.resendTimer) {
 			clearInterval(this.resendTimer);
 		}
-
-		// Remove global callback
-		if (window.onTelegramAuth === this.onTelegramAuth) {
-			window.onTelegramAuth = null;
+		if (this.verificationCodeTimer) {
+			clearInterval(this.verificationCodeTimer);
 		}
 	}
 }

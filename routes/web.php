@@ -133,6 +133,7 @@ Route::prefix('api')->name('api.')->group(function () {
 
         // Профиль API
         Route::prefix('profile')->name('profile.')->controller(ProfileController::class)->group(function () {
+            Route::get('/me', 'getCurrentUser')->name('me')->middleware('throttle:60,1');
             Route::get('/transactions', 'getTransactions')->name('transactions')->middleware('throttle:60,1');
             Route::get('/sales-stats', 'getSalesStats')->name('sales-stats')->middleware('throttle:60,1');
         });
@@ -167,8 +168,7 @@ Route::middleware(['auth:client'])->group(function () {
     Route::prefix('profile')->name('profile.')->group(function () {
         Route::post('/update-email', [ProfileController::class, 'updateEmail'])->name('update.email');
         Route::post('/update-trade-url', [ProfileController::class, 'updateTradeUrl'])->name('update.trade-url');
-        Route::match(['GET', 'POST'], '/telegram/verify', [ProfileController::class, 'verifyTelegram'])->name('telegram.verify');
-        Route::post('/telegram/unlink', [ProfileController::class, 'unlinkTelegram'])->name('telegram.unlink');
+        Route::post('/telegram/generate-code', [ProfileController::class, 'generateTelegramVerificationCode'])->name('telegram.generate-code');
         Route::post('/extension-token/generate', [ProfileController::class, 'generateExtensionToken'])->name('extension-token.generate');
         Route::post('/extension-token/regenerate', [ProfileController::class, 'regenerateExtensionToken'])->name('extension-token.regenerate');
         Route::post('/notification-settings', [ProfileController::class, 'updateNotificationSettings'])->name('notification-settings');
@@ -211,10 +211,8 @@ Route::get('/login', function () {
     return redirect()->route('auth.steam');
 })->name('login');
 
-
-// Telegram webhook (не требует авторизации)
-Route::post('/telegram/webhook', [ProfileController::class, 'telegramWebhook'])->name('telegram.webhook');
-
+// Telegram bot webhook (не требует авторизации)
+Route::post('/api/telegram/webhook', [\App\Http\Controllers\TelegramWebhookController::class, 'handle'])->name('telegram.webhook');
 
 // Chat API routes
 Route::middleware(['auth:client'])->prefix('api/chat')->name('api.chat.')->controller(\App\Http\Controllers\ChatController::class)->group(function () {

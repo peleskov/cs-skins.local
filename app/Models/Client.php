@@ -27,6 +27,8 @@ class Client extends Authenticatable
         'email_verification_sent_at',
         'telegram_id',
         'telegram_username',
+        'verification_code',
+        'verification_expires_at',
         'extension_token',
         'extension_token_generated_at',
         'notification_settings',
@@ -44,6 +46,7 @@ class Client extends Authenticatable
         'is_bot' => 'boolean',
         'email_verified_at' => 'datetime',
         'email_verification_sent_at' => 'datetime',
+        'verification_expires_at' => 'datetime',
         'extension_token_generated_at' => 'datetime',
         'notification_settings' => 'array',
     ];
@@ -283,7 +286,43 @@ class Client extends Authenticatable
         if (!$this->steam_id) {
             return '';
         }
-        
+
         return (string)((int)$this->steam_id - 76561197960265728);
+    }
+
+    /**
+     * Генерирует код верификации для Telegram
+     */
+    public function generateTelegramVerificationCode(): string
+    {
+        $code = 'CODE_' . Str::upper(Str::random(8));
+
+        $this->update([
+            'verification_code' => $code,
+            'verification_expires_at' => now()->addMinutes(10),
+        ]);
+
+        return $code;
+    }
+
+    /**
+     * Проверяет, активен ли код верификации
+     */
+    public function hasActiveVerificationCode(): bool
+    {
+        return $this->verification_code
+            && $this->verification_expires_at
+            && $this->verification_expires_at->isFuture();
+    }
+
+    /**
+     * Очищает код верификации
+     */
+    public function clearVerificationCode(): void
+    {
+        $this->update([
+            'verification_code' => null,
+            'verification_expires_at' => null,
+        ]);
     }
 }

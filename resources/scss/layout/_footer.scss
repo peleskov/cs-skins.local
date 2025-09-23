@@ -181,7 +181,7 @@
 	}
 
 	.main-footer {
-		padding: calc(20px + (80 - 20) * ((100vw - 320px) / (1920 - 320))) 0;
+		padding: 20px 0;
 
 		.footer-logo-part {
 			.logo {
@@ -341,7 +341,7 @@
 	}
 
 	.bottom-footer-part {
-		padding: calc(15px + (30 - 15) * ((100vw - 320px) / (1920 - 320))) 0;
+		padding: 10px 0;
 		border-top: 1px solid rgba(255, 255, 255, 0.2);
 
 		h6 {

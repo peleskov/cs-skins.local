@@ -2,10 +2,10 @@
 	<section class="popular-restaurant banner-section section-b-space ratio3_2 overflow-hidden bg-white">
 		<div class="container-fluid">
 			<div class="title text-center">
-				<h2>Магазин скинов</h2>
+				<h2>{{ translate('marketplace.title') }}</h2>
 				<div class="loader-line" style="left: calc(50% - 40px);"></div>
 				<div class="sub-title">
-					<p>Найдите популярные скины рядом.</p>
+					<p>{{ translate('marketplace.subtitle') }}</p>
 				</div>
 			</div>
 
@@ -27,19 +27,19 @@
 										<ul class="category-list custom-padding">
 											<li>
 												<div class="d-flex justify-content-between">
-													<span class="name">Предложений</span>
+													<span class="name">{{ translate('marketplace.seller_listings') }}</span>
 													<span class="number">({{ sellerStats.total_listings }})</span>
 												</div>
 											</li>
 											<li>
 												<div class="d-flex justify-content-between">
-													<span class="name">Продаж</span>
+													<span class="name">{{ translate('marketplace.seller_sales') }}</span>
 													<span class="number">({{ sellerStats.total_sales }})</span>
 												</div>
 											</li>
 											<li>
 												<div class="d-flex justify-content-between">
-													<span class="name">Покупок</span>
+													<span class="name">{{ translate('marketplace.seller_purchases') }}</span>
 													<span class="number">({{ sellerStats.total_purchases }})</span>
 												</div>
 											</li>
@@ -47,7 +47,7 @@
 										<div class="mt-3">
 											<a href="/marketplace" class="btn theme-outline w-100">
 												<i class="ri-store-line"></i>
-												Маркетплейс
+												{{ translate('marketplace.marketplace_link') }}
 											</a>
 										</div>
 								</div>
@@ -56,7 +56,7 @@
 							<!-- Поиск -->
 							<div v-if="!seller" class="search-box">
 								<div class="form-input position-relative">
-									<input type="search" class="form-control search" placeholder="Поиск по скинам..."
+									<input type="text" class="form-control search" :placeholder="translate('marketplace.search_placeholder')"
 										v-model="filters.search" @input="debouncedSearch">
 									<i class="ri-search-line search-icon"></i>
 								</div>
@@ -68,7 +68,7 @@
 									<h2 class="accordion-header">
 										<button class="accordion-button" type="button" data-bs-toggle="collapse"
 											data-bs-target="#collapsePrice">
-											<span class="dark-text">Цена</span>
+											<span class="dark-text">{{ translate('marketplace.price') }}</span>
 										</button>
 									</h2>
 									<div id="collapsePrice" class="accordion-collapse collapse show">
@@ -77,14 +77,14 @@
 												<div class="row g-2">
 													<div class="col-6">
 														<div class="form-input">
-															<input type="number" class="form-control" placeholder="Мин"
+															<input type="number" class="form-control" :placeholder="translate('marketplace.price_min')"
 																min="0" v-model="filters.minPrice"
 																@change="applyFilters">
 														</div>
 													</div>
 													<div class="col-6">
 														<div class="form-input">
-															<input type="number" class="form-control" placeholder="Макс"
+															<input type="number" class="form-control" :placeholder="translate('marketplace.price_max')"
 																min="0" v-model="filters.maxPrice"
 																@change="applyFilters">
 														</div>
@@ -100,7 +100,7 @@
 									<h2 class="accordion-header">
 										<button class="accordion-button" type="button" data-bs-toggle="collapse"
 											data-bs-target="#collapseOne">
-											<span class="dark-text">Категории</span>
+											<span class="dark-text">{{ translate('marketplace.categories') }}</span>
 										</button>
 									</h2>
 									<div id="collapseOne" class="accordion-collapse collapse show">
@@ -127,7 +127,7 @@
 									<h2 class="accordion-header">
 										<button class="accordion-button" type="button" data-bs-toggle="collapse"
 											data-bs-target="#collapseTwo">
-											<span class="dark-text">Теги</span>
+											<span class="dark-text">{{ translate('marketplace.tags') }}</span>
 										</button>
 									</h2>
 									<div id="collapseTwo" class="accordion-collapse collapse show">
@@ -137,8 +137,8 @@
 													class="text-truncate">
 													<a href="#" @click.prevent="toggleTag(tag)"
 														:class="{ active: isTagActive(tag) }"
-														:title="`${tag.name} (${tag.count})`">
-														{{ tag.name }} ({{ tag.count }})
+														:title="`${translate('tags.values.' + tag.name)} (${tag.count})`">
+														{{ translate('tags.values.' + tag.name) }} ({{ tag.count }})
 													</a>
 												</li>
 											</ul>
@@ -152,7 +152,7 @@
 								<button class="btn theme-outline cart-btn w-100" @click="clearAllFilters"
 									:disabled="!hasActiveFilters">
 									<i class="ri-refresh-line me-2"></i>
-									Очистить все
+									{{ translate('ui.clear_all') }}
 								</button>
 							</div>
 						</div>
@@ -162,29 +162,29 @@
 				<!-- Основной контент -->
 				<div class="col-md-8 col-lg-9 col-xl-10 ratio3_2">
 					<!-- Сортировка и количество -->
-					<div class="row mb-4">
-						<div class="col-md-6">
-							<p class="small text-muted mb-0">
-								Всего предложений {{ pagination.total }}, показано {{ shownCount }}
-							</p>
-						</div>
-						<div class="col-md-6">
+					<div class="row mb-4 justify-content-between align-items-center">
+						<div class="col-auto">
 							<div class="d-flex align-items-center justify-content-end">
-								<label class="me-2">Сортировка:</label>
+								<label class="me-2">{{ translate('ui.sort') }}</label>
 								<select class="form-select form-select-sm" style="width: auto;" v-model="sortValue"
 									@change="handleSortChange">
-									<option value="listed_at-desc">Новые</option>
-									<option value="price-asc">Цена: дешевые</option>
-									<option value="price-desc">Цена: дорогие</option>
-									<option value="wear_value-asc">Износ: лучшие</option>
+									<option value="listed_at-desc">{{ translate('ui.sort_newest') }}</option>
+									<option value="price-asc">{{ translate('ui.sort_price_low') }}</option>
+									<option value="price-desc">{{ translate('ui.sort_price_high') }}</option>
+									<option value="wear_value-asc">{{ translate('ui.sort_wear_best') }}</option>
 								</select>
 							</div>
+						</div>
+						<div class="col-auto">
+							<p class="small text-muted mb-0">
+								{{ translate('ui.total_listings').replace(':total', pagination.total).replace(':shown', shownCount) }}
+							</p>
 						</div>
 					</div>
 
 					<!-- Контейнер для товаров -->
 					<div class="row g-4">
-						<div v-for="listing in listings" :key="listing.id" class="col-lg-2 col-md-4">
+						<div v-for="listing in listings" :key="listing.id" class="col-xxl-2 col-xl-3 col-lg-4 col-md-5">
 							<div class="vertical-product-box" :class="getRarityClass(listing)">
 								<div v-if="listing.is_stattrak" class="seller-badge new-badge">
 									<img class="img-fluid badge"
@@ -210,7 +210,7 @@
 											<h4 class="vertical-product-title">{{ listing.item?.name_ru ||
 												listing.inventory_item_name || 'Неизвестный предмет' }}</h4>
 										</a>
-										<h5 class="product-items mb-2">{{ listing.wear_name }} {{
+										<h5 class="product-items mb-2">{{ translate('tags.values.' + listing.wear_name) }} {{
 											listing.item?.rarity_translated || '' }}</h5>
 										<FloatBar 
 											:item="listing" 
@@ -672,6 +672,22 @@ export default {
 			})
 		})
 
+		// Функция перевода
+		const translate = (key) => {
+			const keys = key.split('.');
+			let translation = window.translations;
+
+			for (const k of keys) {
+				if (translation && typeof translation === 'object' && translation[k]) {
+					translation = translation[k];
+				} else {
+					return key;
+				}
+			}
+
+			return translation || key;
+		}
+
 		// Очистка слушателя при размонтировании
 		onUnmounted(() => {
 			window.removeEventListener('currency-changed', handleCurrencyChange)
@@ -700,7 +716,8 @@ export default {
 			clearAllFilters,
 			handleImageError,
 			getListingImageUrl,
-			getRarityClass
+			getRarityClass,
+			translate
 		}
 	}
 }

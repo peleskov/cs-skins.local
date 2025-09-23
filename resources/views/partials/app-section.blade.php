@@ -1,16 +1,22 @@
+@if($adBanner)
 <section class="app-section section-b-space">
     <div class="container">
         <div class="d-flex align-items-center">
             <div class="app-img">
-                <img class="img-fluid phone" src="{{ asset('images/CSGO_skins.png') }}" alt="">
+                @if($adBanner->image)
+                    <img class="img-fluid phone" src="{{ Storage::url($adBanner->image) }}" alt="{{ $adBanner->title }}">
+                @endif
             </div>
             <div class="app-content">
-                <h2 class="dark-text">CS-SKINS Marketplace</h2>
-                <h5 class="dark-text">
-                    Торгуйте скинами где угодно! Мгновенные уведомления о выгодных предложениях, 
-                    быстрый доступ к инвентарю и безопасные сделки.
-                </h5>
+                @if($adBanner->title)
+                    <h2 class="dark-text">{{ $adBanner->title }}</h2>
+                @endif
+
+                @if($adBanner->text)
+                    <h5 class="dark-text">{{ $adBanner->text }}</h5>
+                @endif
             </div>
         </div>
     </div>
 </section>
+@endif

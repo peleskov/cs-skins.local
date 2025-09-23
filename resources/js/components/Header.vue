@@ -12,6 +12,9 @@
 					<img class="img-fluid logo" :src="logoUrl" alt="logo">
 				</a>
 				<div class="nav-option order-md-2">
+					<!-- Language Selector -->
+					<LanguageSelector />
+
 					<!-- Currency Selector -->
 					<CurrencySelector />
 					
@@ -24,12 +27,12 @@
 							<div class="cart-dropdown-content">
 								<!-- Пустая корзина -->
 								<p v-if="cartCount === 0" class="cart-empty-message">
-									Корзина пуста
+									{{ translate('cart.empty') }}
 								</p>
-								
+
 								<!-- Загрузка -->
 								<p v-else-if="isLoading" class="cart-empty-message">
-									Загружаем корзину...
+									{{ translate('cart.loading') }}
 								</p>
 								
 								<!-- Товары в корзине -->
@@ -37,7 +40,7 @@
 									<div class="cart-items">
 										<div v-for="item in displayItems" :key="item.listing_id" 
 											class="cart-item-preview d-flex align-items-center mb-2">
-											<img :src="item.item?.image_url || '/images/skin_no_image.svg'" :alt="item.item?.name || 'Неизвестный предмет'" 
+											<img :src="item.item?.image_url || '/images/skin_no_image.svg'" :alt="item.item?.name || translate('cart.unknown_item')"
 												style="width: 40px; height: 30px; object-fit: contain;" class="me-2">
 											<div class="flex-grow-1">
 												<div class="cart-item-name text-truncate" style="font-size: 12px;">
@@ -49,14 +52,14 @@
 											</div>
 										</div>
 										<div v-if="cartItems.length > 3" class="text-muted text-center" style="font-size: 11px;">
-											И еще {{ cartItems.length - 3 }} товар(ов)
+											{{ translate('cart.items_more').replace(':count', cartItems.length - 3) }}
 										</div>
 									</div>
 									<div class="cart-total text-center border-top pt-2">
-										<strong>Итого: <span v-html="formatPrice(cartTotal, 'RUB')"></span></strong>
+										<strong>{{ translate('cart.total') }} <span v-html="formatPrice(cartTotal, 'RUB')"></span></strong>
 									</div>
 									<div class="cart-actions">
-										<a :href="routes.cart" class="btn theme-btn btn-sm w-100">Перейти в корзину</a>
+										<a :href="routes.cart" class="btn theme-btn btn-sm w-100">{{ translate('cart.go_to_cart') }}</a>
 									</div>
 								</div>
 							</div>
@@ -68,7 +71,7 @@
 						<img class="img-fluid profile-pic" :src="user.steam_avatar" alt="profile" 
 							style="width: 40px; height: 40px; border-radius: 50%;">
 						<div>
-							<h6 class="fw-normal">Привет,</h6>
+							<h6 class="fw-normal">{{ translate('auth.hello') }}</h6>
 							<h5 class="fw-medium">{{ user.name }}</h5>
 						</div>
 						<div class="onhover-box onhover-sm">
@@ -81,18 +84,18 @@
 							</ul>
 							<div class="bottom-btn">
 								<a :href="routes.logout" class="theme-color fw-medium d-flex">
-									<i class="ri-logout-box-r-line me-2"></i>Выйти
+									<i class="ri-logout-box-r-line me-2"></i>{{ translate('auth.logout') }}
 								</a>
 							</div>
 						</div>
 					</div>
 					<a v-else :href="routes.login" class="btn btn-sm theme-btn">
-						<i class="ri-steam-fill me-1"></i>Войти через Steam
+						<i class="ri-steam-fill me-1"></i>{{ translate('auth.login_steam') }}
 					</a>
 				</div>
 				<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar">
 					<div class="offcanvas-header">
-						<h5 class="offcanvas-title" id="offcanvasNavbarLabel">Menu</h5>
+						<h5 class="offcanvas-title" id="offcanvasNavbarLabel">{{ translate('ui.menu') }}</h5>
 						<button class="navbar-toggler btn-close" id="offcanvas-close"></button>
 					</div>
 					<div class="offcanvas-body">
@@ -114,11 +117,13 @@
 import { formatPrice } from '../utils/helpers';
 import { cartAPI } from '../utils/api';
 import CurrencySelector from './CurrencySelector.vue';
+import LanguageSelector from './LanguageSelector.vue';
 
 export default {
 	name: 'Header',
 	components: {
-		CurrencySelector
+		CurrencySelector,
+		LanguageSelector
 	},
 	setup() {
 		return { formatPrice };
@@ -158,6 +163,22 @@ export default {
 		}
 	},
 	methods: {
+		translate(key) {
+			// Разбираем ключ вида 'cart.empty' на ['cart', 'empty']
+			const keys = key.split('.');
+			let translation = window.translations;
+
+			// Проходим по всем уровням вложенности
+			for (const k of keys) {
+				if (translation && typeof translation === 'object' && translation[k]) {
+					translation = translation[k];
+				} else {
+					return key; // Возвращаем исходный ключ если перевод не найден
+				}
+			}
+
+			return translation || key;
+		},
 
 		async loadCartPreview() {
 			if (this.isLoading || this.cartLoaded) return; // Не загружаем повторно, если уже загружено

@@ -277,7 +277,9 @@ class MarketplaceController extends Controller
         $items = collect($listings->items())->map(function ($listing) use ($cartItemIds, $favoriteItemIds, $currentUserId) {
             // Используем новую систему тегов для редкости
             // Редкость получается через structured_tags
-            $listing->wear_name = $listing->wear_name; // Это вызовет геттер из модели
+            // Убеждаемся что wear_name вычислен
+            $wearName = $listing->getWearNameAttribute();
+            $listing->wear_name = $wearName ?: 'unknown';
             
             // Добавляем статус корзины (читаем из сессии)
             // Но только если товар не собственный
@@ -663,10 +665,10 @@ class MarketplaceController extends Controller
             foreach ($tagCounts as $tagCount) {
                 $tags[] = [
                     'type' => $category,
-                    'name' => __("tags.values.{$tagCount->normalized_value}"),
+                    'name' => $tagCount->normalized_value,
                     'count' => $tagCount->count,
                     'value' => $tagCount->normalized_value,
-                    'color' => null // В новой системе нет цветов
+                    'color' => null
                 ];
             }
         }
@@ -706,10 +708,10 @@ class MarketplaceController extends Controller
         foreach ($additionalTags as $tag) {
             $tags[] = [
                 'type' => $tag->category_code,
-                'name' => __("tags.values.{$tag->normalized_value}"),
+                'name' => $tag->normalized_value,
                 'count' => $tag->count,
                 'value' => $tag->normalized_value,
-                'color' => null // В новой системе нет цветов
+                'color' => null
             ];
         }
         
@@ -745,26 +747,6 @@ class MarketplaceController extends Controller
             ];
         }
 
-        // Состояния износа
-        $wearStates = [
-            ['min' => 0, 'max' => 0.07, 'name' => 'Прямо с завода', 'value' => '0.07'],
-            ['min' => 0.07, 'max' => 0.15, 'name' => 'Немного поношенное', 'value' => '0.15'],
-            ['min' => 0.15, 'max' => 0.38, 'name' => 'После полевых испытаний', 'value' => '0.38'],
-            ['min' => 0.38, 'max' => 0.45, 'name' => 'Поношенное', 'value' => '0.45'],
-            ['min' => 0.45, 'max' => 1.0, 'name' => 'Закалённое в боях', 'value' => '1.0'],
-        ];
-
-        foreach ($wearStates as $wear) {
-            $wearCount = (clone $activeListings)->whereBetween('wear_value', [$wear['min'], $wear['max']])->count();
-            if ($wearCount > 0) {
-                $tags[] = [
-                    'type' => 'wear',
-                    'name' => $wear['name'],
-                    'count' => $wearCount,
-                    'value' => $wear['value']
-                ];
-            }
-        }
 
         return $tags;
     }

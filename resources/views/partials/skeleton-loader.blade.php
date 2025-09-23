@@ -6,7 +6,7 @@
                 <div class="radar-ring"></div>
                 <img src="{{ asset('images/logo_ico.svg') }}" alt="food-gif" class="img-fluid">
             </div>
-            <h2>Сканируем локальный рынок скинов...</h2>
+            <h2>{{ __('app.scanning_market') }}</h2>
         </div>
     </section>
 </div>

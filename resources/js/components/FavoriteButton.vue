@@ -42,12 +42,26 @@ export default {
 	computed: {
 		buttonTitle() {
 			if (this.isLoading) {
-				return 'Обновляем...';
+				return this.translate('ui.updating');
 			}
-			return this.isFavorite ? 'Удалить из избранного' : 'Добавить в избранное';
+			return this.isFavorite ? this.translate('ui.remove_from_favorites') : this.translate('ui.add_to_favorites');
 		}
 	},
 	methods: {
+		translate(key) {
+			const keys = key.split('.');
+			let translation = window.translations;
+
+			for (const k of keys) {
+				if (translation && typeof translation === 'object' && translation[k]) {
+					translation = translation[k];
+				} else {
+					return key;
+				}
+			}
+
+			return translation || key;
+		},
 		async toggleFavorite() {
 			if (this.isLoading) return;
 

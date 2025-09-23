@@ -7,6 +7,8 @@ use App\Models\Faq;
 use App\Models\FaqCategory;
 use App\Models\Doc;
 use App\Models\Listing;
+use App\Models\AdBanner;
+use App\Models\CaseModel;
 
 class WebController extends Controller
 {
@@ -32,7 +34,13 @@ class WebController extends Controller
         $seller = null;
         $sellerStats = null;
 
-        return view('home', compact('featuredListings', 'totalListings', 'hasMorePages', 'seller', 'sellerStats'));
+        // Получаем активный баннер
+        $adBanner = AdBanner::where('active', true)->first();
+
+        // Получаем активные кейсы
+        $cases = CaseModel::active()->limit(5)->get();
+
+        return view('home', compact('featuredListings', 'totalListings', 'hasMorePages', 'seller', 'sellerStats', 'adBanner', 'cases'));
     }
 
     /**

@@ -8,6 +8,11 @@ return [
         'faq' => 'FAQ',
         'contact' => 'Контакты'
     ],
+
+    'docs' => [
+        'polzovatelskoe-soglasenie' => 'Пользовательское соглашение',
+        'publicnaia-oferta' => 'Публичная оферта'
+    ],
     
     'footer' => [
         'documents' => 'Документы',

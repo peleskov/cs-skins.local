@@ -10,15 +10,6 @@
                         <p>{{ $footerData['company']['inn'] }}</p>
                         <p>{{ $footerData['company']['address'] }}</p>
                         <p>Email: <a href="mailto:{{ $footerData['company']['email'] }}" class="footer-link">{{ $footerData['company']['email'] }}</a></p>
-                        <div class="social-media-part">
-                            <ul class="social-icon">
-                                <li>
-                                    <a href="https://www.facebook.com/login/">
-                                        <i class="ri-vk-fill icon"></i>
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
                     </div>
                 </div>
                 <div class="col-xl-8">
@@ -29,7 +20,7 @@
                                 <ul class="content">
                                     @foreach(\App\Models\Doc::all() as $doc)
                                         <li>
-                                            <a class="nav-links" href="{{ route('doc', $doc->slug) }}"><h6>{{ $doc->title }}</h6></a>
+                                            <a class="nav-links" href="{{ route('doc', $doc->slug) }}"><h6>{{ __('navigation.docs.' . $doc->slug) }}</h6></a>
                                         </li>
                                     @endforeach
                                 </ul>

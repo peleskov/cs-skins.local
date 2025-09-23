@@ -73,15 +73,29 @@ export default {
 		},
 		buttonText() {
 			if (this.isLoading) {
-				return this.isInCart ? 'Удаляем...' : 'Добавляем...';
+				return this.isInCart ? this.translate('ui.removing') : this.translate('ui.adding');
 			}
-			return this.isInCart ? 'В корзине' : 'В корзину';
+			return this.isInCart ? this.translate('ui.in_cart') : this.translate('ui.add_to_cart');
 		},
 		buttonTitle() {
-			return this.isInCart ? 'Удалить из корзины' : 'Добавить в корзину';
+			return this.isInCart ? this.translate('ui.remove_from_cart_title') : this.translate('ui.add_to_cart_title');
 		}
 	},
 	methods: {
+		translate(key) {
+			const keys = key.split('.');
+			let translation = window.translations;
+
+			for (const k of keys) {
+				if (translation && typeof translation === 'object' && translation[k]) {
+					translation = translation[k];
+				} else {
+					return key;
+				}
+			}
+
+			return translation || key;
+		},
 		async toggleCart() {
 			if (this.isLoading) return;
 

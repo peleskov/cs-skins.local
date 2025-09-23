@@ -69,7 +69,7 @@ class Listing extends Model
         'expires_at' => 'datetime',
     ];
     
-    protected $appends = ['structured_tags'];
+    protected $appends = ['structured_tags', 'wear_name'];
 
     const STATUS_PENDING = 'pending';
     const STATUS_ACTIVE = 'active';
@@ -166,23 +166,26 @@ class Listing extends Model
 
     public function getWearNameAttribute(): string
     {
-        // Приоритет: float_value -> wear_value -> "Не указано"
+        // Приоритет: float_value -> wear_value -> "unknown"
         $floatValue = $this->float_value ?? $this->wear_value;
-        
+
         if ($floatValue === null) {
-            return 'Не указано';
+            return 'unknown';
         }
 
+        // Преобразуем в число для корректного сравнения
+        $floatValue = (float) $floatValue;
+
         if ($floatValue <= 0.07) {
-            return 'Прямо с завода';
+            return 'fn';
         } elseif ($floatValue <= 0.15) {
-            return 'Немного поношенное';
+            return 'mw';
         } elseif ($floatValue <= 0.38) {
-            return 'После полевых испытаний';
+            return 'ft';
         } elseif ($floatValue <= 0.45) {
-            return 'Поношенное';
+            return 'ww';
         } else {
-            return 'Закалённое в боях';
+            return 'bs';
         }
     }
     

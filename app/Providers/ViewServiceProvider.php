@@ -110,14 +110,28 @@ class ViewServiceProvider extends ServiceProvider
                 'useful_links_title' => __('navigation.footer.useful_links')
             ];
 
+            // Все переводы для JavaScript
+            $translations = [
+                'cart' => trans('cart'),
+                'auth' => trans('auth'),
+                'ui' => trans('ui'),
+                'app' => trans('app'),
+                'navigation' => trans('navigation'),
+                'profile' => trans('profile'),
+                'home' => trans('home'),
+                'marketplace' => trans('marketplace'),
+                'tags' => trans('tags'),
+            ];
+
             // Сортируем по order и передаем в шаблон
             uasort($mainNavigation, fn($a, $b) => $a['order'] <=> $b['order']);
             uasort($profileTabs, fn($a, $b) => $a['order'] <=> $b['order']);
-            
+
             $view->with([
                 'mainNavigation' => $mainNavigation,
                 'profileTabs' => $profileTabs,
-                'footerData' => $footerData
+                'footerData' => $footerData,
+                'translations' => $translations
             ]);
         });
     }

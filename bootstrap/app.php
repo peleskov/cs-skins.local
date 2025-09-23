@@ -15,13 +15,18 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Настраиваем доверенные прокси для Cloudflare
         $middleware->trustProxies(at: '*');
-        
+
+        // Добавляем middleware для установки локали
+        $middleware->web(append: [
+            \App\Http\Middleware\SetLocale::class,
+        ]);
+
         $middleware->alias([
             'auth.client' => \App\Http\Middleware\AuthenticateClient::class,
             'is.bot' => \App\Http\Middleware\IsBot::class,
             'extension.cors' => \App\Http\Middleware\ExtensionCors::class,
         ]);
-        
+
         // Отключаем CSRF для API расширения и Telegram webhook
         $middleware->validateCsrfTokens(except: [
             'api/extension/*',

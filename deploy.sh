@@ -80,7 +80,7 @@ if [ $? -eq 0 ]; then
     echo -e "  • Reverb перезапущен"
     echo -e "  • Scheduler проверен"
     echo ""
-    echo -e "${GREEN}🚀 Сайт доступен по адресу: https://cs-skins.s1temaker.ru${NC}"
+    echo -e "${GREEN}🚀 Сайт доступен по адресу: https://cs-skins.pro${NC}"
 else
     echo ""
     echo -e "${RED}==========================================${NC}"

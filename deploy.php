@@ -43,6 +43,9 @@ host('production')
 // Задача копирования .env.prod в .env
 desc('Copy production environment file');
 task('deploy:env', function () {
+    // Загружаем локальный .env.prod на сервер
+    upload('.env.prod', '{{release_path}}/.env.prod');
+    // Копируем в .env
     run('cd {{release_path}} && cp .env.prod .env');
     writeln('✅ Скопирован .env.prod в .env');
 });

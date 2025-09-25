@@ -59,7 +59,8 @@ echo ""
 echo -e "${BLUE}Выполняется команда: vendor/bin/dep deploy production -vvv${NC}"
 echo ""
 
-vendor/bin/dep deploy production -vvv
+# vendor/bin/dep deploy production -vvv
+vendor/bin/dep deploy production
 
 # Проверка результата
 if [ $? -eq 0 ]; then

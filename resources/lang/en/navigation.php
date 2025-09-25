@@ -11,6 +11,7 @@ return [
 
     'docs' => [
         'polzovatelskoe-soglasenie' => 'User Agreement',
+        'pravila-servisa-cs-skins' => 'Terms of Service for Cs-Skins',
         'publicnaia-oferta' => 'Public Offer'
     ],
 

@@ -11,6 +11,7 @@ return [
 
     'docs' => [
         'polzovatelskoe-soglasenie' => 'Пользовательское соглашение',
+        'pravila-servisa-cs-skins' => 'Правила сервиса Cs-Skins',
         'publicnaia-oferta' => 'Публичная оферта'
     ],
     

@@ -143,6 +143,7 @@ task('deploy', [
     'artisan:key:generate',  // Проверяем APP_KEY
     'artisan:storage:link',
     'artisan:migrate',  // Миграции ПЕРЕД очисткой кэша
+    'artisan:db:seed',  // Запускаем сидеры для создания админа
     'artisan:cache:clear',  // Очищаем старые кэши
     'npm:install',
     'npm:run:prod',

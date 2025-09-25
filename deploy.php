@@ -149,7 +149,6 @@ task('deploy', [
     'npm:run:prod',
     'artisan:optimize',  // Оптимизируем приложение
     'deploy:publish',
-    'deploy:symlink',  // Создаем симлинк current
 ]);
 
 // Задачи после успешного деплоя

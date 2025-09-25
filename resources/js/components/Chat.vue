@@ -166,7 +166,7 @@ export default {
             this.echo = new Echo({
                 broadcaster: 'reverb',
                 key: import.meta.env.VITE_REVERB_APP_KEY,
-                wsHost: 'cs-skins.s1temaker.ru',
+                wsHost: import.meta.env.VITE_REVERB_HOST,
                 wsPort: 80,
                 wssPort: 443,
                 forceTLS: true,

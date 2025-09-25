@@ -39,7 +39,7 @@
 							<div class="vertical-product-box">
 								<div v-if="auction.listing?.is_stattrak" class="seller-badge new-badge">
 									<img class="img-fluid badge"
-										src="https://cs-skins.s1temaker.ru/images/svg/star-white.svg" alt="medal">
+										src="/images/svg/star-white.svg" alt="medal">
 									<h6>ST</h6>
 								</div>
 								<div class="vertical-product-box-img">

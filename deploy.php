@@ -149,6 +149,7 @@ task('deploy', [
     'npm:run:prod',
     'artisan:optimize',  // Оптимизируем приложение
     'deploy:supervisor',  // Копируем конфиги supervisor
+    'deploy:extension_domains',  // Обновляем домены в browser extension
     'deploy:publish',
 ]);
 
@@ -185,6 +186,14 @@ task('deploy:supervisor_install', function () {
     } else {
         writeln('ℹ️  Supervisor конфиги уже установлены');
     }
+});
+
+// Задача замены доменов в browser extension
+desc('Update browser extension domains');
+task('deploy:extension_domains', function () {
+    // Заменяем домены в browser extension для прода
+    run('find {{release_path}}/browser-extension -type f \( -name "*.html" -o -name "*.js" -o -name "*.json" \) -exec sed -i "s/cs-skins\.s1temaker\.ru/cs-skins.pro/g" {} \;');
+    writeln('✅ Домены в browser extension обновлены для прода');
 });
 
 // Задачи после успешного деплоя

@@ -18,7 +18,7 @@
                         <div class="product-main-image position-relative">
                             <div v-if="listing.is_stattrak" class="seller-badge new-badge">
                                 <img class="img-fluid badge"
-                                    src="https://cs-skins.s1temaker.ru/images/svg/star-white.svg" alt="medal">
+                                    src="/images/svg/star-white.svg" alt="medal">
                                 <h6>ST</h6>
                             </div>
                             <div v-if="listing.is_souvenir" class="seller-badge souvenir-badge">

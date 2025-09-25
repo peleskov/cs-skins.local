@@ -148,10 +148,47 @@ task('deploy', [
     'npm:install',
     'npm:run:prod',
     'artisan:optimize',  // Оптимизируем приложение
+    'deploy:supervisor',  // Копируем конфиги supervisor
     'deploy:publish',
 ]);
 
+// Задача копирования конфигов supervisor
+desc('Copy supervisor configs');
+task('deploy:supervisor', function () {
+    // Создаем папку для конфигов если её нет
+    run('mkdir -p {{deploy_path}}/shared/supervisor');
+
+    // Копируем конфиги
+    upload('supervisor/scheduler.conf', '{{deploy_path}}/shared/supervisor/scheduler.conf');
+    upload('supervisor/horizon.conf', '{{deploy_path}}/shared/supervisor/horizon.conf');
+    upload('supervisor/reverb.conf', '{{deploy_path}}/shared/supervisor/reverb.conf');
+
+    // Обновляем пути в конфигах на продакшн пути
+    run('sed -i "s|/mnt/nvme/www/html/cs-skins.local|{{deploy_path}}/current|g" {{deploy_path}}/shared/supervisor/*.conf');
+
+    writeln('✅ Конфиги supervisor скопированы');
+});
+
+// Задача установки конфигов в систему
+desc('Install supervisor configs');
+task('deploy:supervisor_install', function () {
+    // Копируем в системную папку (требует sudo прав)
+    $schedulerExists = test('[ -f /etc/supervisor/conf.d/cs_skins_scheduler.conf ]');
+    $horizonExists = test('[ -f /etc/supervisor/conf.d/cs_skins_horizon.conf ]');
+    $reverbExists = test('[ -f /etc/supervisor/conf.d/cs_skins_reverb.conf ]');
+
+    if (!$schedulerExists || !$horizonExists || !$reverbExists) {
+        writeln('⚠️  Необходимо установить supervisor конфиги:');
+        writeln('sudo cp {{deploy_path}}/shared/supervisor/*.conf /etc/supervisor/conf.d/');
+        writeln('sudo supervisorctl reread && sudo supervisorctl update');
+        writeln('sudo supervisorctl start cs_skins_scheduler cs_skins_horizon cs_skins_reverb');
+    } else {
+        writeln('ℹ️  Supervisor конфиги уже установлены');
+    }
+});
+
 // Задачи после успешного деплоя
+after('deploy:success', 'deploy:supervisor_install');
 after('deploy:success', 'horizon:restart');
 after('deploy:success', 'reverb:restart');
 after('deploy:success', 'scheduler:ensure');

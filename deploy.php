@@ -196,6 +196,16 @@ task('deploy:extension_domains', function () {
     writeln('✅ Домены в browser extension обновлены для прода');
 });
 
+// Переопределяем artisan:storage:link для корректной работы с shared структурой
+desc('Creates the symbolic links configured for the application');
+task('artisan:storage:link', function () {
+    // Удаляем существующий симлинк если есть
+    run('rm -f {{release_path}}/public/storage');
+    // Создаем правильный симлинк на shared/storage/app/public
+    run('ln -s ../../../shared/storage/app/public {{release_path}}/public/storage');
+    writeln('✅ Storage симлинк создан');
+});
+
 // Задачи после успешного деплоя
 after('deploy:success', 'deploy:supervisor_install');
 after('deploy:success', 'horizon:restart');

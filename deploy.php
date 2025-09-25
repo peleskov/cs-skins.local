@@ -151,16 +151,7 @@ task('deploy', [
     'deploy:publish',
 ]);
 
-// Исправление прав доступа
-desc('Fix storage permissions');
-task('deploy:fix_permissions', function () {
-    run('sudo chown -R www-data:www-data {{deploy_path}}/shared/storage');
-    run('sudo chmod -R 775 {{deploy_path}}/shared/storage');
-    writeln('✅ Права доступа исправлены');
-});
-
 // Задачи после успешного деплоя
-after('deploy:success', 'deploy:fix_permissions');
 after('deploy:success', 'horizon:restart');
 after('deploy:success', 'reverb:restart');
 after('deploy:success', 'scheduler:ensure');

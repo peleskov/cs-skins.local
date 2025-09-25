@@ -143,8 +143,8 @@ task('deploy', [
     'deploy:env',  // Копируем .env.prod в .env
     'artisan:key:generate',  // Проверяем APP_KEY
     'artisan:storage:link',
+    'artisan:migrate',  // Миграции ПЕРЕД очисткой кэша
     'artisan:cache:clear',  // Очищаем старые кэши
-    'artisan:migrate',  // Миграции
     'npm:install',
     'npm:run:prod',
     'artisan:optimize',  // Оптимизируем приложение

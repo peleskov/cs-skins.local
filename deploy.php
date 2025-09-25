@@ -37,8 +37,8 @@ host('production')
     ->set('deploy_path', '/var/www/cs-skins.pro')  // Путь на сервере
     ->set('branch', 'main')
     ->set('http_user', 'www-data')  // Пользователь веб-сервера
-    ->set('writable_mode', 'chgrp')
-    ->set('writable_use_sudo', true);
+    ->set('writable_mode', 'chmod')
+    ->set('writable_use_sudo', false);
 
 // Задача копирования .env.prod в .env
 desc('Copy production environment file');

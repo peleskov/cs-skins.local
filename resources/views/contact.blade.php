@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@use(App\Models\SiteSetting)
+
 @section('title', 'Контакты - Связаться с нами')
 
 @section('content')
@@ -28,10 +30,10 @@
                         </div>
                         <div>
                             <div class="contact-detail-title">
-                                <h4>ООО "Скинс"</h4>
+                                <h4>{{ __('navigation.footer.company_info.name') }}</h4>
                             </div>
                             <div class="contact-detail-contain">
-                                <p>ИНН: 1234567890</p>
+                                <p>{{ __('navigation.footer.company_info.inn') }}</p>
                             </div>
                         </div>
                     </div>
@@ -42,11 +44,8 @@
                             <i class="ri-map-pin-fill"></i>
                         </div>
                         <div>
-                            <div class="contact-detail-title">
-                                <h4>Адрес</h4>
-                            </div>
                             <div class="contact-detail-contain">
-                                <p>г. Москва, ул. Примерная, д. 1</p>
+                                <p>{{ __('navigation.footer.company_info.address') }}</p>
                             </div>
                         </div>
                     </div>
@@ -61,7 +60,7 @@
                                 <h4>Email</h4>
                             </div>
                             <div class="contact-detail-contain">
-                                <p>info@cs-skins.pro</p>
+                                <p>{{ __('navigation.footer.company_info.email') }}</p>
                             </div>
                         </div>
                     </div>
@@ -103,7 +102,7 @@
             </div>
             <div class="col-xl-4">
                 <iframe
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d288661.61602282553!2d37.055623203146695!3d55.581668257562164!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x46b54afc73d4b0c9%3A0x3d44d6cc5757cf4c!2z0JzQvtGB0LrQstCwLCDQoNC-0YHRgdC40Y8!5e0!3m2!1sru!2ses!4v1751614563127!5m2!1sru!2ses"
+                    src="{{ SiteSetting::get('iframe_map') }}"
                     width="600" height="450" class="contact-map border-0 w-100 h-100" allowfullscreen=""
                     loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
             </div>

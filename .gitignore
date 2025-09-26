@@ -25,3 +25,4 @@
 tmp
 .gitignore
 .env.prod
+resources/lang

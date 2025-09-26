@@ -102,13 +102,13 @@ class Translation
             $result .= $indent;
 
             if ($isAssoc) {
-                $result .= "'" . addslashes($key) . "' => ";
+                $result .= "'" . str_replace("'", "\\'", $key) . "' => ";
             }
 
             if (is_array($value)) {
                 $result .= $this->arrayToPhpString($value, $depth + 1);
             } else {
-                $result .= "'" . addslashes($value) . "'";
+                $result .= "'" . str_replace("'", "\\'", $value) . "'";
             }
 
             $result .= ",\n";

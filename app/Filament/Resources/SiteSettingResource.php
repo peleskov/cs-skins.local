@@ -62,23 +62,24 @@ class SiteSettingResource extends Resource
                     ->columnSpanFull(),
 
                 Forms\Components\Group::make([
+                    Textarea::make('value')
+                        ->label('Значение')
+                        ->required()
+                        ->visible(fn ($get) => in_array($get('type'), [SiteSetting::TYPE_STRING, SiteSetting::TYPE_JSON]))
+                        ->rows(4)
+                        ->helperText('Введите значение'),
+
                     TextInput::make('value')
                         ->label('Значение')
                         ->required()
-                        ->visible(fn ($get) => in_array($get('type'), [SiteSetting::TYPE_STRING, SiteSetting::TYPE_NUMBER]))
-                        ->helperText(fn ($get) => $get('type') === SiteSetting::TYPE_NUMBER ? 'Введите число' : 'Введите текст'),
+                        ->visible(fn ($get) => $get('type') === SiteSetting::TYPE_NUMBER)
+                        ->numeric()
+                        ->helperText('Введите число'),
 
-                    Toggle::make('value')
+                    Toggle::make('boolean_value')
                         ->label('Значение')
                         ->visible(fn ($get) => $get('type') === SiteSetting::TYPE_BOOLEAN)
                         ->helperText('Включить/выключить настройку'),
-
-                    Textarea::make('value')
-                        ->label('JSON значение')
-                        ->rows(4)
-                        ->visible(fn ($get) => $get('type') === SiteSetting::TYPE_JSON)
-                        ->helperText('Введите валидный JSON')
-                        ->rules(['json']),
                 ])
                 ->columnSpanFull(),
             ])
@@ -124,7 +125,7 @@ class SiteSettingResource extends Resource
                     ->label('Значение')
                     ->formatStateUsing(function ($state, $record) {
                         return match($record->type) {
-                            SiteSetting::TYPE_BOOLEAN => $state ? 'Да' : 'Нет',
+                            SiteSetting::TYPE_BOOLEAN => in_array($state, ['1', 1, true, 'true'], true) ? 'Да' : 'Нет',
                             SiteSetting::TYPE_JSON => json_encode(json_decode($state), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
                             default => $state
                         };

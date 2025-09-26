@@ -18,10 +18,10 @@ return [
         'useful_links' => 'Useful Links',
         'copyright' => '© Copyright 2025 CS-SCINS.PRO. All rights reserved.',
         'company_info' => [
-            'name' => 'CS-Skins LLC',
-            'inn' => 'Tax ID: 1234567890',
-            'address' => 'Address: Moscow, Example Street, 1',
-            'email' => 'info@cs-skins.pro',
+            'name' => 'LLC "Kulchoro"',
+            'inn' => 'Tax ID: 01104202510167',
+            'address' => 'Address: Bishkek, Leninsky district, Kyzyl-Adyr (Archa-Beshik residential complex) kochosu, no. 172a',
+            'email' => 'info@kyulchoro.kg',
         ],
     ],
 ];

@@ -6,24 +6,22 @@ return [
         'cases' => 'Кейсы',
         'auction' => 'Аукционы',
         'faq' => 'FAQ',
-        'contact' => 'Контакты'
+        'contact' => 'Контакты',
     ],
-
     'docs' => [
         'polzovatelskoe-soglasenie' => 'Пользовательское соглашение',
         'pravila-servisa-cs-skins' => 'Правила сервиса Cs-Skins',
-        'publicnaia-oferta' => 'Публичная оферта'
+        'publicnaia-oferta' => 'Публичная оферта',
     ],
-    
     'footer' => [
         'documents' => 'Документы',
         'useful_links' => 'Полезные ссылки',
         'copyright' => '© Copyright 2025 CS-SCINS.PRO. Все права защищены.',
         'company_info' => [
-            'name' => 'ООО "Скинс"',
+            'name' => 'ООО \\\\\"Скинс\\\\\"',
             'inn' => 'ИНН: 1234567890',
             'address' => 'Адрес: г. Москва, ул. Примерная, д. 1',
-            'email' => 'info@cs-skins.pro'
-        ]
-    ]
+            'email' => 'info@cs-skins.pro',
+        ],
+    ],
 ];

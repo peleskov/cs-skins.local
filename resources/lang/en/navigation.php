@@ -6,15 +6,13 @@ return [
         'cases' => 'Cases',
         'auction' => 'Auctions',
         'faq' => 'FAQ',
-        'contact' => 'Contact'
+        'contact' => 'Contact',
     ],
-
     'docs' => [
         'polzovatelskoe-soglasenie' => 'User Agreement',
         'pravila-servisa-cs-skins' => 'Terms of Service for Cs-Skins',
-        'publicnaia-oferta' => 'Public Offer'
+        'publicnaia-oferta' => 'Public Offer',
     ],
-
     'footer' => [
         'documents' => 'Documents',
         'useful_links' => 'Useful Links',
@@ -23,7 +21,7 @@ return [
             'name' => 'CS-Skins LLC',
             'inn' => 'Tax ID: 1234567890',
             'address' => 'Address: Moscow, Example Street, 1',
-            'email' => 'info@cs-skins.pro'
-        ]
-    ]
+            'email' => 'info@cs-skins.pro',
+        ],
+    ],
 ];

@@ -13,4 +13,8 @@ return [
     'seller_sales' => 'Продаж',
     'seller_purchases' => 'Покупок',
     'marketplace_link' => 'Маркетплейс',
+    'quality' => 'Качество',
+    'rarity' => 'Раритетность',
+    'phases' => 'Фазы',
+    'float_range' => 'Диапазон Float',
 ];

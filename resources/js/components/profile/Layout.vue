@@ -160,6 +160,9 @@ export default {
 				window.history.replaceState(null, null, '#' + tab);
 			}
 
+			// Прокручиваем страницу к верху
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+
 		},
 
 		updateClient(updatedClient) {

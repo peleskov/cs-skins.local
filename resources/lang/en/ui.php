@@ -15,7 +15,8 @@ return [
     'sort_newest' => 'Newest',
     'sort_price_low' => 'Price: Low to High',
     'sort_price_high' => 'Price: High to Low',
-    'sort_wear_best' => 'Wear: Best First',
+    'sort_wear_best' => 'Wear: Best to Worst',
+    'sort_wear_worst' => 'Wear: Worst to Best',
     'total_listings' => 'Total :total listings, showing :shown',
     'add_to_cart' => 'Add to Cart',
     'in_cart' => 'In Cart',
@@ -26,4 +27,5 @@ return [
     'updating' => 'Updating...',
     'add_to_favorites' => 'Add to favorites',
     'remove_from_favorites' => 'Remove from favorites',
+    'balance' => 'Balance',
 ];

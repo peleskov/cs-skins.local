@@ -13,4 +13,8 @@ return [
     'seller_sales' => 'Sales',
     'seller_purchases' => 'Purchases',
     'marketplace_link' => 'Marketplace',
+    'quality' => 'Quality',
+    'rarity' => 'Rarity',
+    'phases' => 'Phases',
+    'float_range' => 'Float Range',
 ];

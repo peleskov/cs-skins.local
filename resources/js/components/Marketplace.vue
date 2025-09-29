@@ -122,6 +122,116 @@
 									</div>
 								</div>
 
+								<!-- Качество (Износ) -->
+								<div class="accordion-item">
+									<h2 class="accordion-header">
+										<button class="accordion-button" type="button" data-bs-toggle="collapse"
+											data-bs-target="#collapseQuality">
+											<span class="dark-text">{{ translate('marketplace.quality') }}</span>
+										</button>
+									</h2>
+									<div id="collapseQuality" class="accordion-collapse collapse show">
+										<div class="accordion-body">
+											<ul class="category-list custom-padding custom-height scroll-bar">
+												<li v-for="quality in qualityOptions" :key="quality.value">
+													<a href="#" @click.prevent="toggleQuality(quality.value)"
+														:class="{ active: filters.wearConditions[quality.value] }">
+														<div class="form-check ps-0 m-0 category-list-box">
+															<div class="form-check-label">
+																<span class="name">{{ translate('tags.values.' + quality.value) }}</span>
+															</div>
+														</div>
+													</a>
+												</li>
+											</ul>
+										</div>
+									</div>
+								</div>
+
+								<!-- Раритетность -->
+								<div class="accordion-item">
+									<h2 class="accordion-header">
+										<button class="accordion-button" type="button" data-bs-toggle="collapse"
+											data-bs-target="#collapseRarity">
+											<span class="dark-text">{{ translate('marketplace.rarity') }}</span>
+										</button>
+									</h2>
+									<div id="collapseRarity" class="accordion-collapse collapse show">
+										<div class="accordion-body">
+											<ul class="category-list custom-padding custom-height scroll-bar">
+												<li v-for="rarity in rarityOptions" :key="rarity.value">
+													<a href="#" @click.prevent="toggleRarity(rarity.value)"
+														:class="{ active: filters.rarities[rarity.value] }">
+														<div class="form-check ps-0 m-0 category-list-box">
+															<div class="form-check-label">
+																<span class="name">{{ translate('tags.values.' + rarity.value) }}</span>
+															</div>
+														</div>
+													</a>
+												</li>
+											</ul>
+										</div>
+									</div>
+								</div>
+
+								<!-- Float Range -->
+								<div class="accordion-item">
+									<h2 class="accordion-header">
+										<button class="accordion-button" type="button" data-bs-toggle="collapse"
+											data-bs-target="#collapseFloat">
+											<span class="dark-text">{{ translate('marketplace.float_range') }}</span>
+										</button>
+									</h2>
+									<div id="collapseFloat" class="accordion-collapse collapse show">
+										<div class="accordion-body">
+											<div class="float-range">
+												<div class="row g-2">
+													<div class="col-6">
+														<div class="form-input">
+															<input type="number" class="form-control" :placeholder="translate('marketplace.price_min')"
+																min="0" max="1" step="0.001" v-model="filters.minFloat"
+																@change="applyFilters">
+														</div>
+													</div>
+													<div class="col-6">
+														<div class="form-input">
+															<input type="number" class="form-control" :placeholder="translate('marketplace.price_max')"
+																min="0" max="1" step="0.001" v-model="filters.maxFloat"
+																@change="applyFilters">
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+
+								<!-- Фазы (для ножей/перчаток) -->
+								<div class="accordion-item">
+									<h2 class="accordion-header">
+										<button class="accordion-button" type="button" data-bs-toggle="collapse"
+											data-bs-target="#collapsePhases">
+											<span class="dark-text">{{ translate('marketplace.phases') }}</span>
+										</button>
+									</h2>
+									<div id="collapsePhases" class="accordion-collapse collapse show">
+										<div class="accordion-body">
+											<ul class="category-list custom-padding custom-height scroll-bar">
+												<li v-for="phase in phaseOptions" :key="phase.value">
+													<a href="#" @click.prevent="togglePhase(phase.value)"
+														:class="{ active: filters.phases[phase.value] }">
+														<div class="form-check ps-0 m-0 category-list-box">
+															<div class="form-check-label">
+																<span class="name">{{ phase.label }}</span>
+															</div>
+														</div>
+													</a>
+												</li>
+											</ul>
+										</div>
+									</div>
+								</div>
+
 								<!-- Теги -->
 								<div class="accordion-item">
 									<h2 class="accordion-header">
@@ -172,6 +282,7 @@
 									<option value="price-asc">{{ translate('ui.sort_price_low') }}</option>
 									<option value="price-desc">{{ translate('ui.sort_price_high') }}</option>
 									<option value="wear_value-asc">{{ translate('ui.sort_wear_best') }}</option>
+									<option value="wear_value-desc">{{ translate('ui.sort_wear_worst') }}</option>
 								</select>
 							</div>
 						</div>
@@ -321,6 +432,34 @@ export default {
 			stattrak: false,
 			souvenir: false,
 			wearRange: '',
+			wearConditions: {
+				fn: false,
+				mw: false,
+				ft: false,
+				ww: false,
+				bs: false
+			},
+			rarities: {
+				consumer: false,
+				industrial: false,
+				milspec: false,
+				restricted: false,
+				classified: false,
+				covert: false,
+				contraband: false
+			},
+			phases: {
+				phase1: false,
+				phase2: false,
+				phase3: false,
+				phase4: false,
+				ruby: false,
+				sapphire: false,
+				blackpearl: false,
+				emerald: false
+			},
+			minFloat: '',
+			maxFloat: '',
 			tags: [],
 			sortBy: 'listed_at',
 			sortOrder: 'desc'
@@ -332,6 +471,10 @@ export default {
 		const shownCount = computed(() => listings.value.length)
 
 		const hasActiveFilters = computed(() => {
+			const hasWearConditions = Object.values(filters.wearConditions).some(v => v)
+			const hasRarities = Object.values(filters.rarities).some(v => v)
+			const hasPhases = Object.values(filters.phases).some(v => v)
+
 			return !!(
 				filters.search ||
 				filters.minPrice ||
@@ -340,6 +483,11 @@ export default {
 				filters.stattrak ||
 				filters.souvenir ||
 				filters.wearRange ||
+				hasWearConditions ||
+				hasRarities ||
+				hasPhases ||
+				filters.minFloat ||
+				filters.maxFloat ||
 				(filters.tags && filters.tags.length > 0) ||
 				sortValue.value !== 'listed_at-desc'
 			)
@@ -364,6 +512,34 @@ export default {
 					params.append('wear_range', filters.wearRange)
 				}
 			}
+
+			// Добавляем фильтры качества (износа)
+			const activeWearConditions = Object.entries(filters.wearConditions)
+				.filter(([_, active]) => active)
+				.map(([condition, _]) => condition)
+			if (activeWearConditions.length > 0) {
+				activeWearConditions.forEach(wear => params.append('wear_conditions[]', wear))
+			}
+
+			// Добавляем фильтры раритетности
+			const activeRarities = Object.entries(filters.rarities)
+				.filter(([_, active]) => active)
+				.map(([rarity, _]) => rarity)
+			if (activeRarities.length > 0) {
+				params.append('rarities', activeRarities.join(','))
+			}
+
+			// Добавляем фильтры фаз
+			const activePhases = Object.entries(filters.phases)
+				.filter(([_, active]) => active)
+				.map(([phase, _]) => phase)
+			if (activePhases.length > 0) {
+				activePhases.forEach(phase => params.append('phases[]', phase))
+			}
+
+			// Добавляем фильтры float
+			if (filters.minFloat) params.append('min_float', filters.minFloat)
+			if (filters.maxFloat) params.append('max_float', filters.maxFloat)
 
 			if (!excludeTags && filters.tags && filters.tags.length > 0) {
 				params.append('tags', filters.tags.join(','))
@@ -499,6 +675,22 @@ export default {
 			}
 		}
 
+		// Методы toggle для новых фильтров
+		const toggleQuality = (quality) => {
+			filters.wearConditions[quality] = !filters.wearConditions[quality]
+			applyFilters()
+		}
+
+		const toggleRarity = (rarity) => {
+			filters.rarities[rarity] = !filters.rarities[rarity]
+			applyFilters()
+		}
+
+		const togglePhase = (phase) => {
+			filters.phases[phase] = !filters.phases[phase]
+			applyFilters()
+		}
+
 		// Функции сортировки
 		const handleSortChange = () => {
 			const [sortBy, sortOrder] = sortValue.value.split('-')
@@ -517,6 +709,34 @@ export default {
 			filters.stattrak = false
 			filters.souvenir = false
 			filters.wearRange = ''
+			filters.wearConditions = {
+				fn: false,
+				mw: false,
+				ft: false,
+				ww: false,
+				bs: false
+			}
+			filters.rarities = {
+				consumer: false,
+				industrial: false,
+				milspec: false,
+				restricted: false,
+				classified: false,
+				covert: false,
+				contraband: false
+			}
+			filters.phases = {
+				phase1: false,
+				phase2: false,
+				phase3: false,
+				phase4: false,
+				ruby: false,
+				sapphire: false,
+				blackpearl: false,
+				emerald: false
+			}
+			filters.minFloat = ''
+			filters.maxFloat = ''
 			filters.tags = []
 			filters.sortBy = 'listed_at'
 			filters.sortOrder = 'desc'
@@ -545,6 +765,11 @@ export default {
 				stattrak: filters.stattrak,
 				souvenir: filters.souvenir,
 				wearRange: filters.wearRange,
+				wearConditions: filters.wearConditions,
+				rarities: filters.rarities,
+				phases: filters.phases,
+				minFloat: filters.minFloat,
+				maxFloat: filters.maxFloat,
 				tags: filters.tags
 			}
 			localStorage.setItem('marketplace_filters', JSON.stringify(filtersToSave))
@@ -688,6 +913,36 @@ export default {
 			return translation || key;
 		}
 
+		// Опции для фильтров
+		const qualityOptions = [
+			{ value: 'fn' },
+			{ value: 'mw' },
+			{ value: 'ft' },
+			{ value: 'ww' },
+			{ value: 'bs' }
+		]
+
+		const rarityOptions = [
+			{ value: 'consumer' },
+			{ value: 'industrial' },
+			{ value: 'milspec' },
+			{ value: 'restricted' },
+			{ value: 'classified' },
+			{ value: 'covert' },
+			{ value: 'contraband' }
+		]
+
+		const phaseOptions = [
+			{ value: 'phase1', label: 'Phase 1' },
+			{ value: 'phase2', label: 'Phase 2' },
+			{ value: 'phase3', label: 'Phase 3' },
+			{ value: 'phase4', label: 'Phase 4' },
+			{ value: 'ruby', label: 'Ruby' },
+			{ value: 'sapphire', label: 'Sapphire' },
+			{ value: 'blackpearl', label: 'Black Pearl' },
+			{ value: 'emerald', label: 'Emerald' }
+		]
+
 		// Очистка слушателя при размонтировании
 		onUnmounted(() => {
 			window.removeEventListener('currency-changed', handleCurrencyChange)
@@ -703,12 +958,18 @@ export default {
 			pagination,
 			filters,
 			sortValue,
+			qualityOptions,
+			rarityOptions,
+			phaseOptions,
 			shownCount,
 			hasActiveFilters,
 			debouncedSearch,
 			applyFilters,
 			toggleCategory,
 			toggleTag,
+			toggleQuality,
+			toggleRarity,
+			togglePhase,
 			isTagActive,
 			handleSortChange,
 			loadMore,

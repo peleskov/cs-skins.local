@@ -79,6 +79,9 @@
 											<div class="d-flex align-items-center gap-2">
 												<span v-if="getExteriorTag(listing)" class="badge bg-secondary">
 													{{ getExteriorTag(listing) }}
+													<span v-if="listing.wear_value !== null && listing.wear_value !== undefined" class="ms-1">
+														({{ listing.wear_value.toFixed(4) }})
+													</span>
 												</span>
 												<small class="text-muted">{{ formatDate(listing.created_at) }}</small>
 											</div>
@@ -236,12 +239,12 @@
 						<label for="priceInput" class="form-label">Цена в рублях</label>
 						<div class="input-group">
 							<input type="number" class="form-control" id="priceInput" v-model="editPriceValue"
-								:placeholder="itemToEdit ? itemToEdit.price : '0'" min="0.01" max="100000" step="0.01"
+								:placeholder="itemToEdit ? itemToEdit.price : '0'" min="0.01" max="10000000" step="0.01"
 								@keyup.enter="confirmEditPrice">
 							<span class="input-group-text">₽</span>
 						</div>
 						<div class="form-text">
-							Минимальная цена: 0.01 ₽, максимальная: 100,000 ₽
+							Минимальная цена: 0.01 ₽
 						</div>
 					</div>
 				</div>
@@ -522,7 +525,7 @@ export default {
 	computed: {
 		isValidPrice() {
 			const price = parseFloat(this.editPriceValue);
-			return !isNaN(price) && price >= 0.01 && price <= 100000;
+			return !isNaN(price) && price >= 0.01 && price <= 10000000;
 		},
 		pendingListings() {
 			return this.listings.filter(listing => listing.status === 'pending');

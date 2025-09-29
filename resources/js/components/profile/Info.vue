@@ -34,12 +34,8 @@
 					</h6>
 					<!-- Email Notifications Toggle -->
 					<div v-if="client.email && client.email_verified_at" class="form-check form-switch mt-2">
-						<input class="form-check-input"
-							type="checkbox"
-							role="switch"
-							id="emailNotifications"
-							:checked="isEmailNotificationsEnabled"
-							@change="toggleEmailNotifications">
+						<input class="form-check-input" type="checkbox" role="switch" id="emailNotifications"
+							:checked="isEmailNotificationsEnabled" @change="toggleEmailNotifications">
 						<label class="form-check-label" for="emailNotifications">
 							Отправлять уведомления на email
 						</label>
@@ -130,19 +126,16 @@
 					</h6>
 					<!-- Telegram Notifications Toggle -->
 					<div v-if="client.telegram_id && client.is_verified" class="form-check form-switch mt-2">
-						<input class="form-check-input"
-							type="checkbox"
-							role="switch"
-							id="telegramNotifications"
-							:checked="isTelegramNotificationsEnabled"
-							@change="toggleTelegramNotifications">
+						<input class="form-check-input" type="checkbox" role="switch" id="telegramNotifications"
+							:checked="isTelegramNotificationsEnabled" @change="toggleTelegramNotifications">
 						<label class="form-check-label" for="telegramNotifications">
 							Отправлять уведомления в Telegram
 						</label>
 					</div>
 				</div>
 				<div v-if="!client.is_verified && !client.telegram_id" class="mt-2">
-					<button class="btn theme-outline mt-0" @click="startTelegramVerification" :disabled="isGeneratingVerificationCode">
+					<button class="btn theme-outline mt-0" @click="startTelegramVerification"
+						:disabled="isGeneratingVerificationCode">
 						<span v-if="isGeneratingVerificationCode">
 							<span class="spinner-border spinner-border-sm me-1" role="status"></span>
 							Генерируем код...
@@ -170,8 +163,11 @@
 								<i class="ri-file-copy-line"></i>
 							</button>
 						</span>
-						<span v-else class="badge bg-secondary">Не сгенерирован</span>
+						<span v-else class="badge bg-secondary text-bg-danger">Не сгенерирован</span>
 					</h6>
+					<div class="text-muted">
+						Не передавайте третьим лицам! Используется для подключения браузерного расширения.
+					</div>
 				</div>
 				<div class="d-flex gap-2">
 					<button v-if="!extensionToken" class="btn theme-outline mt-0" @click="generateExtensionToken"
@@ -252,8 +248,7 @@
 									placeholder="https://steamcommunity.com/tradeoffer/new/?partner=123456&token=abcdef"
 									required>
 								<small class="text-muted">
-									Найдите Trade URL в настройках Steam: Настройки → Конфиденциальность → Торговые
-									предложения
+									Найдите Trade URL в своем Steam: Мой профиль → Инвентарь → Предложения обмена → <a :href="`https://steamcommunity.com/profiles/${client.steam_id}/tradeoffers/privacy`" target="_blank">Кто может отправлять мне предложения обмена?</a>
 								</small>
 							</div>
 						</div>
@@ -290,7 +285,8 @@
 									<i class="ri-file-copy-line"></i>
 								</button>
 							</div>
-							<p class="mb-3">Время действия кода: <strong>{{ verificationCodeTimeRemaining }}</strong></p>
+							<p class="mb-3">Время действия кода: <strong>{{ verificationCodeTimeRemaining }}</strong>
+							</p>
 							<div class="alert alert-info">
 								<i class="ri-information-line"></i>
 								<strong>Инструкция:</strong>
@@ -533,17 +529,17 @@ export default {
 
 		async copyTradeUrl(event) {
 			const url = this.client.steam_trade_url;
-			
+
 			if (!url) {
 				window.toast.error('Trade URL не найден');
 				return;
 			}
-			
+
 			// Сохраняем ссылку на иконку до асинхронной операции
 			const icon = event?.currentTarget?.querySelector('i');
-			
+
 			await copyToClipboard(
-				url, 
+				url,
 				'Trade URL скопирован в буфер обмена',
 				'Не удалось скопировать Trade URL',
 				icon
@@ -610,10 +606,10 @@ export default {
 				window.toast.error('Токен не найден');
 				return;
 			}
-			
+
 			// Сохраняем ссылку на иконку до асинхронной операции
 			const icon = event?.currentTarget?.querySelector('i');
-			
+
 			await copyToClipboard(
 				this.extensionToken,
 				'Токен скопирован в буфер обмена',

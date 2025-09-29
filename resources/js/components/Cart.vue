@@ -82,9 +82,10 @@
 					<i class="ri-shopping-cart-line display-4 text-muted mb-3"></i>
 					<h4>Корзина пуста</h4>
 					<p class="text-muted mb-4">Добавьте товары из маркетплейса для покупки</p>
-					<a href="/marketplace" class="btn theme-btn">
+					<a href="/marketplace" class="btn theme-outline me-sm-2 mb-2 mb-sm-0">
 						<i class="ri-store-2-line me-2"></i>Перейти в маркетплейс
 					</a>
+					<a href="https://cs-skins.s1temaker.ru/auth/steam" class="btn theme-btn"><i class="ri-steam-fill me-1"></i>Войти через Steam</a>
 				</div>
 			</div>
 		</div>

@@ -47,7 +47,7 @@ class TradeController extends Controller
         
         $request->validate([
             'listing_id' => 'required|integer',
-            'price' => 'required|numeric|min:0.01|max:100000'
+            'price' => 'required|numeric|min:0.01|max:10000000'
         ]);
         
         $listingId = $request->listing_id;

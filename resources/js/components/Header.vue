@@ -17,7 +17,15 @@
 
 					<!-- Currency Selector -->
 					<CurrencySelector />
-					
+
+					<!-- Favorites Button -->
+					<div v-if="user" class="dropdown-button">
+						<a :href="routes.profile + '#favorites'" class="cart-button favorites-button">
+							<i class="ri-heart-line text-white cart-bag"></i>
+						</a>
+					</div>
+
+					<!-- Cart Button -->
 					<div class="dropdown-button">
 						<a :href="routes.cart" class="cart-button">
 							<span v-if="cartCount > 0" class="cart-count">{{ cartCount }}</span>
@@ -64,6 +72,14 @@
 								</div>
 							</div>
 						</div>
+					</div>
+
+					<!-- User Balance -->
+					<div v-if="user && user.balance !== undefined" class="user-balance d-none d-md-block">
+						<a :href="routes.profile + '#balance'" class="text-white text-decoration-none">
+							<i class="ri-wallet-line me-1"></i>
+							<span class="balance-amount" v-html="formatPrice(user.balance, 'RUB')"></span>
+						</a>
 					</div>
 					
 					<!-- Профиль или вход -->

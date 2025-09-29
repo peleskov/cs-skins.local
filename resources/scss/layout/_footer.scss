@@ -252,23 +252,6 @@
 				padding-right: 10px;
 			}
 
-			@media (max-width: 576px) {
-				&:after {
-					content: "\ea4e";
-					font-family: remixicon !important;
-					font-style: normal;
-					position: absolute;
-					right: 0;
-					top: 50%;
-					transform: translate(-50%, -50%);
-					transition: all 0.5s ease;
-
-					[dir="rtl"] & {
-						right: unset;
-						left: 0;
-					}
-				}
-			}
 
 			&::before {
 				content: "";
@@ -295,12 +278,6 @@
 				display: block;
 			}
 
-			.footer-title {
-				&::after {
-					content: "\ea78";
-					transition: all 0.5s ease;
-				}
-			}
 		}
 
 		.content {

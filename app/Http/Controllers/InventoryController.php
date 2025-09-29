@@ -246,7 +246,15 @@ class InventoryController extends Controller
             $listing->csfloat_id = $inventoryItem->csfloat_id;
             $listing->pattern_index = $inventoryItem->pattern_index;
             $listing->stickers = $inventoryItem->stickers;
-            $listing->inspect_url = $this->generateInspectUrl($client->steam_id, $steamAssetId);
+            $inventoryItem = ClientInventoryItem::where('client_id', $client->id)
+                ->where('steam_asset_id', $steamAssetId)
+                ->first();
+
+            if ($inventoryItem && $inventoryItem->inspect_url) {
+                $listing->inspect_url = $inventoryItem->inspect_url;
+            } else {
+                $listing->inspect_url = $this->generateInspectUrl($client->steam_id, $steamAssetId);
+            }
             
             // Обновляем флаги на основе тегов из новой системы
             $listing->wear_value = $inventoryItem->float_value;
@@ -312,7 +320,7 @@ class InventoryController extends Controller
     {
         // Конвертируем Steam ID64 в Steam ID32 для inspect URL
         $steamId32 = (string)((int)$steamId - 76561197960265728);
-        
-        return "steam://rungame/730/76561202255233023/+csgo_econ_action_preview S{$steamId}A{$assetId}D{$steamId32}";
+
+        return "steam://rungame/730/76561202255233023/+csgo_econ_action_preview%20S{$steamId}A{$assetId}D{$steamId32}";
     }
 }

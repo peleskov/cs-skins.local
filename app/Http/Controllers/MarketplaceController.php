@@ -134,7 +134,7 @@ class MarketplaceController extends Controller
             // Маппинг фронтенд значений в нормализованные значения тегов
             $rarityMapping = [
                 'common' => 'consumer',
-                'uncommon' => 'industrial', 
+                'uncommon' => 'industrial',
                 'rare' => 'milspec',
                 'mythical' => 'restricted',
                 'legendary' => 'classified',
@@ -203,6 +203,88 @@ class MarketplaceController extends Controller
             });
         }
 
+        // Фильтр по качеству (wear conditions)
+        if ($wearConditions = $request->get('wear_conditions')) {
+            if (!is_array($wearConditions)) {
+                $wearConditions = [$wearConditions];
+            }
+
+            $query->where(function ($q) use ($wearConditions) {
+                foreach ($wearConditions as $condition) {
+                    switch($condition) {
+                        case 'fn':
+                            $q->orWhere(function($subQ) {
+                                $subQ->whereRaw('COALESCE(float_value, wear_value) <= ?', [0.07]);
+                            });
+                            break;
+                        case 'mw':
+                            $q->orWhere(function($subQ) {
+                                $subQ->whereRaw('COALESCE(float_value, wear_value) > ? AND COALESCE(float_value, wear_value) <= ?', [0.07, 0.15]);
+                            });
+                            break;
+                        case 'ft':
+                            $q->orWhere(function($subQ) {
+                                $subQ->whereRaw('COALESCE(float_value, wear_value) > ? AND COALESCE(float_value, wear_value) <= ?', [0.15, 0.38]);
+                            });
+                            break;
+                        case 'ww':
+                            $q->orWhere(function($subQ) {
+                                $subQ->whereRaw('COALESCE(float_value, wear_value) > ? AND COALESCE(float_value, wear_value) <= ?', [0.38, 0.45]);
+                            });
+                            break;
+                        case 'bs':
+                            $q->orWhere(function($subQ) {
+                                $subQ->whereRaw('COALESCE(float_value, wear_value) > ?', [0.45]);
+                            });
+                            break;
+                    }
+                }
+            });
+        }
+
+        // Фильтр по диапазону Float
+        if ($minFloat = $request->get('min_float')) {
+            $query->whereRaw('COALESCE(float_value, wear_value) >= ?', [(float)$minFloat]);
+        }
+        if ($maxFloat = $request->get('max_float')) {
+            $query->whereRaw('COALESCE(float_value, wear_value) <= ?', [(float)$maxFloat]);
+        }
+
+        // Фильтр по фазам (для ножей и перчаток с фазами)
+        if ($phases = $request->get('phases')) {
+            if (!is_array($phases)) {
+                $phases = [$phases];
+            }
+
+            $phaseMapping = [
+                'phase1' => 'Phase 1',
+                'phase2' => 'Phase 2',
+                'phase3' => 'Phase 3',
+                'phase4' => 'Phase 4',
+                'ruby' => 'Ruby',
+                'sapphire' => 'Sapphire',
+                'blackpearl' => 'Black Pearl',
+                'emerald' => 'Emerald'
+            ];
+
+            $phaseNames = array_map(function($phase) use ($phaseMapping) {
+                return $phaseMapping[$phase] ?? $phase;
+            }, $phases);
+
+            $phaseTagIds = Tag::where('category_code', 'phase')
+                ->whereIn('display_name', $phaseNames)
+                ->pluck('id');
+
+            if ($phaseTagIds->isNotEmpty()) {
+                $query->whereExists(function ($subQuery) use ($phaseTagIds) {
+                    $subQuery->select(DB::raw(1))
+                        ->from('market_item_tags')
+                        ->whereColumn('market_item_tags.market_hash_name', 'listings.market_hash_name')
+                        ->whereIn('market_item_tags.tag_id', $phaseTagIds);
+                });
+            }
+        }
+
         // Фильтр по тегам через новую систему market_item_tags
         if ($tags = $request->get('tags')) {
             if (is_string($tags)) {
@@ -249,6 +331,10 @@ class MarketplaceController extends Controller
             if ($sortBy === 'price') {
                 // Явно преобразуем price в число для правильной сортировки
                 $query->orderByRaw('CAST(price AS DECIMAL(10,2)) ' . $sortOrder);
+            } elseif ($sortBy === 'wear_value') {
+                // Сортировка по износу с учетом обоих полей (float_value имеет приоритет)
+                // COALESCE выберет первое не NULL значение
+                $query->orderByRaw('COALESCE(float_value, wear_value) ' . $sortOrder);
             } else {
                 $query->orderBy($sortBy, $sortOrder);
             }

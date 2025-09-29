@@ -40,7 +40,7 @@
 							v-model="bidAmount" 
 							:min="getMinimumBid()"
 							:step="auction.min_bid_increment"
-							:placeholder="`От ${formatPrice(getMinimumBid())}`"
+							:placeholder="`От ${formatPrice(getMinimumBid(), 'RUB', true)} ₽`"
 							:disabled="placingBid">
 					</div>
 				</div>

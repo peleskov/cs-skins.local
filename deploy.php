@@ -15,7 +15,7 @@ set('repository', 'git@github.com:peleskov/cs-skins.local.git');
 set('git_tty', false);
 
 // НЕ используем shared файл .env, так как будем копировать .env.prod при каждом деплое
-add('shared_dirs', ['storage', 'public/storage']);
+add('shared_dirs', ['storage', 'public/storage', 'resources/lang']);
 
 // Writable dirs by web server
 add('writable_dirs', [

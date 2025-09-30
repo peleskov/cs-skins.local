@@ -116,11 +116,11 @@
 					</div>
 					<div class="offcanvas-body">
 						<ul class="navbar-nav justify-content-start flex-grow-1">
-							<li v-for="(item, key) in mainNavigation" :key="key" class="nav-item">
-								<template v-if="!item.auth_required || user">
+							<template v-for="(item, key) in mainNavigation" :key="key">
+								<li v-if="!item.auth_required || user" class="nav-item">
 									<a class="nav-link pt-1" :href="getNavigationUrl(item.route)">{{ item.title }}</a>
-								</template>
-							</li>
+								</li>
+							</template>
 						</ul>
 					</div>
 				</div>

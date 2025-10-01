@@ -241,6 +241,7 @@ class TradeController extends Controller
         try {
             // Деактивируем листинг
             $listing->status = 'pending';
+            $listing->listed_at = null;
             $listing->save();
             
             return response()->json([

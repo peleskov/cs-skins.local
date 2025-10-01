@@ -1,25 +1,23 @@
 <template>
-	<div class="dropdown-button currency-selector">
-		<div class="currency-display">
+	<div class="dropdown currency-selector">
+		<button class="currency-display dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
 			<span class="currency-symbol flag-icon" :class="`flag-${selectedLanguage?.code || 'ru'}`"></span>
 			<span class="currency-code">{{ selectedLanguage?.name || 'RU' }}</span>
 			<i class="ri-arrow-down-s-line"></i>
-		</div>
-		<div class="onhover-box onhover-sm currency-dropdown">
-			<ul class="menu-list">
-				<li v-for="language in languages" :key="language.code">
-					<a
-						href="#"
-						@click.prevent="selectLanguage(language)"
-						class="dropdown-item currency-item"
-						:class="{ 'active': selectedLanguage?.code === language.code }"
-					>
-						<span class="currency-symbol me-2 flag-icon" :class="`flag-${language.code}`"></span>
-						<span class="currency-code">{{ language.fullName }}</span>
-					</a>
-				</li>
-			</ul>
-		</div>
+		</button>
+		<ul class="dropdown-menu currency-dropdown">
+			<li v-for="language in languages" :key="language.code">
+				<a
+					href="#"
+					@click.prevent="selectLanguage(language)"
+					class="dropdown-item currency-item"
+					:class="{ 'active': selectedLanguage?.code === language.code }"
+				>
+					<span class="currency-symbol me-2 flag-icon" :class="`flag-${language.code}`"></span>
+					<span class="currency-code">{{ language.fullName }}</span>
+				</a>
+			</li>
+		</ul>
 	</div>
 </template>
 

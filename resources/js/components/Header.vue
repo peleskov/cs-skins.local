@@ -2,8 +2,8 @@
 	<header>
 		<div class="container-fluid">
 			<nav class="navbar navbar-expand-lg p-0">
-				<button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-					data-bs-target="#offcanvasNavbar">
+				<button class="navbar-toggler" type="button" data-bs-toggle="offcanvas"
+					data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar">
 					<span class="navbar-toggler-icon">
 						<i class="ri-menu-line"></i>
 					</span>
@@ -42,13 +42,14 @@
 								<p v-else-if="isLoading" class="cart-empty-message">
 									{{ translate('cart.loading') }}
 								</p>
-								
+
 								<!-- Товары в корзине -->
 								<div v-else-if="cartItems.length > 0">
 									<div class="cart-items">
-										<div v-for="item in displayItems" :key="item.listing_id" 
+										<div v-for="item in displayItems" :key="item.listing_id"
 											class="cart-item-preview d-flex align-items-center mb-2">
-											<img :src="item.item?.image_url || '/images/skin_no_image.svg'" :alt="item.item?.name || translate('cart.unknown_item')"
+											<img :src="item.item?.image_url || '/images/skin_no_image.svg'"
+												:alt="item.item?.name || translate('cart.unknown_item')"
 												style="width: 40px; height: 30px; object-fit: contain;" class="me-2">
 											<div class="flex-grow-1">
 												<div class="cart-item-name text-truncate" style="font-size: 12px;">
@@ -59,15 +60,18 @@
 												</div>
 											</div>
 										</div>
-										<div v-if="cartItems.length > 3" class="text-muted text-center" style="font-size: 11px;">
+										<div v-if="cartItems.length > 3" class="text-muted text-center"
+											style="font-size: 11px;">
 											{{ translate('cart.items_more').replace(':count', cartItems.length - 3) }}
 										</div>
 									</div>
 									<div class="cart-total text-center border-top pt-2">
-										<strong>{{ translate('cart.total') }} <span v-html="formatPrice(cartTotal, 'RUB')"></span></strong>
+										<strong>{{ translate('cart.total') }} <span
+												v-html="formatPrice(cartTotal, 'RUB')"></span></strong>
 									</div>
 									<div class="cart-actions">
-										<a :href="routes.cart" class="btn theme-btn btn-sm w-100">{{ translate('cart.go_to_cart') }}</a>
+										<a :href="routes.cart" class="btn theme-btn btn-sm w-100">{{
+											translate('cart.go_to_cart') }}</a>
 									</div>
 								</div>
 							</div>
@@ -81,10 +85,10 @@
 							<span class="balance-amount" v-html="formatPrice(user.balance, 'RUB')"></span>
 						</a>
 					</div>
-					
+
 					<!-- Профиль или вход -->
 					<div v-if="user" class="profile-part dropdown-button order-md-2">
-						<img class="img-fluid profile-pic" :src="user.steam_avatar" alt="profile" 
+						<img class="img-fluid profile-pic" :src="user.steam_avatar" alt="profile"
 							style="width: 40px; height: 40px; border-radius: 50%;">
 						<div>
 							<h6 class="fw-normal">{{ translate('auth.hello') }}</h6>
@@ -109,24 +113,89 @@
 						<i class="ri-steam-fill me-1"></i>{{ translate('auth.login_steam') }}
 					</a>
 				</div>
-				<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar">
-					<div class="offcanvas-header">
-						<h5 class="offcanvas-title" id="offcanvasNavbarLabel">{{ translate('ui.menu') }}</h5>
-						<button class="navbar-toggler btn-close" id="offcanvas-close"></button>
-					</div>
-					<div class="offcanvas-body">
-						<ul class="navbar-nav justify-content-start flex-grow-1">
-							<template v-for="(item, key) in mainNavigation" :key="key">
-								<li v-if="!item.auth_required || user" class="nav-item">
-									<a class="nav-link pt-1" :href="getNavigationUrl(item.route)">{{ item.title }}</a>
-								</li>
-							</template>
-						</ul>
-					</div>
-				</div>
 			</nav>
 		</div>
 	</header>
+	<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar">
+		<div class="offcanvas-header">
+			<h5 class="offcanvas-title" id="offcanvasNavbarLabel">{{ translate('ui.menu') }}</h5>
+			<button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+		</div>
+		<div class="offcanvas-body d-flex flex-column">
+			<!-- Профиль пользователя -->
+			<div v-if="user" class="mb-3 pb-3 border-bottom">
+				<div class="d-flex align-items-center mb-3">
+					<img class="rounded-circle me-2" :src="user.steam_avatar" alt="profile"
+						style="width: 50px; height: 50px;">
+					<div class="flex-grow-1">
+						<div class="fw-medium">{{ user.name }}</div>
+						<small class="text-muted">{{ user.email || 'Email не указан' }}</small>
+					</div>
+				</div>
+				<!-- Баланс -->
+				<a :href="routes.profile + '#balance'" class="btn theme-outline btn-sm w-100 text-decoration-none"
+					@click="closeOffcanvas">
+					<i class="ri-wallet-line me-1"></i>
+					<span v-html="formatPrice(user.balance, 'RUB')"></span>
+				</a>
+			</div>
+
+			<!-- Корзина -->
+			<ul class="w-100 navbar-nav mb-3 pb-3 border-bottom">
+				<li class="nav-item mb-1">
+					<a class="nav-link mb-0 p-0 " :href="routes.cart" data-bs-dismiss="offcanvas">
+						<span>
+							<i class="ri-shopping-cart-line me-2"></i>
+							Корзина
+						</span>
+						<span v-if="cartCount > 0" class="badge bg-primary ms-2">{{ cartCount }}</span>
+					</a>
+				</li>
+			</ul>
+
+
+			<!-- Язык и валюта -->
+			<div class="mb-3 pb-3 border-bottom">
+				<div class="row g-2">
+					<div class="col-6">
+						<LanguageSelector />
+					</div>
+					<div class="col-6">
+						<CurrencySelector />
+					</div>
+				</div>
+			</div>
+
+			<!-- Основное меню -->
+			<ul class="navbar-nav mb-3 pb-3 border-bottom">
+				<template v-for="(item, key) in mainNavigation" :key="key">
+					<li v-if="!item.auth_required || user" class="nav-item mb-1">
+						<a class="nav-link  mb-0 p-0" :href="getNavigationUrl(item.route)"
+							data-bs-dismiss="offcanvas">{{ item.title }}</a>
+					</li>
+				</template>
+			</ul>
+
+			<!-- Меню профиля -->
+			<ul v-if="user" class="navbar-nav mb-3 pb-3 border-bottom">
+				<li v-for="(tab, key) in profileTabs" :key="key" class="mb-1">
+					<a :href="routes.profile + '#' + key" class="nav-link  mb-0 p-0" @click="closeOffcanvas">
+						{{ tab.title }}
+					</a>
+				</li>
+			</ul>
+
+			<!-- Вход/Выход -->
+			<div class="mt-auto pt-3">
+				<a v-if="user" :href="routes.logout" class="btn theme-outline w-100">
+					<i class="ri-logout-box-r-line me-2"></i>{{ translate('auth.logout') }}
+				</a>
+				<a v-else :href="routes.login" class="btn theme-btn w-100">
+					<i class="ri-steam-fill me-1"></i>{{ translate('auth.login_steam') }}
+				</a>
+			</div>
+		</div>
+	</div>
 </template>
 
 <script>
@@ -198,7 +267,7 @@ export default {
 
 		async loadCartPreview() {
 			if (this.isLoading || this.cartLoaded) return; // Не загружаем повторно, если уже загружено
-			
+
 			this.isLoading = true;
 			try {
 				const data = await cartAPI.getItems();
@@ -238,6 +307,19 @@ export default {
 			if (this.cartItems.length > 0) {
 				this.cartItems = [...this.cartItems];
 			}
+		},
+
+		closeOffcanvas() {
+			// Даем время браузеру обработать переход по ссылке, затем закрываем offcanvas
+			setTimeout(() => {
+				const offcanvasElement = document.getElementById('offcanvasNavbar');
+				if (offcanvasElement) {
+					const offcanvasInstance = window.bootstrap.Offcanvas.getInstance(offcanvasElement);
+					if (offcanvasInstance) {
+						offcanvasInstance.hide();
+					}
+				}
+			}, 100);
 		}
 
 	},
@@ -251,7 +333,7 @@ export default {
 
 		// Слушаем события обновления корзины
 		window.addEventListener('cart-updated', this.updateCartFromEvent);
-		
+
 		// Слушаем события смены валюты
 		window.addEventListener('currency-changed', this.handleCurrencyChange);
 	},

@@ -1,30 +1,28 @@
 <template>
-	<div class="dropdown-button currency-selector">
-		<div class="currency-display">
+	<div class="dropdown currency-selector">
+		<button class="currency-display dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
 			<span class="currency-symbol">{{ selectedCurrency?.symbol || '₽' }}</span>
 			<span class="currency-code">{{ selectedCurrency?.code || 'RUB' }}</span>
 			<i class="ri-arrow-down-s-line"></i>
-		</div>
-		<div class="onhover-box onhover-sm currency-dropdown">
-			<div v-if="isLoading" class="loading-message">
+		</button>
+		<ul class="dropdown-menu currency-dropdown">
+			<li v-if="isLoading" class="px-3 py-2 text-muted">
 				Загружаем валюты...
-			</div>
-			<div v-else>
-				<ul class="menu-list">
-					<li v-for="currency in currencies" :key="currency.code">
-						<a 
-							href="#" 
-							@click.prevent="selectCurrency(currency)"
-							class="dropdown-item currency-item"
-							:class="{ 'active': selectedCurrency?.code === currency.code }"
-						>
-							<span class="currency-symbol me-2">{{ currency.symbol }}</span>
-							<span class="currency-code">{{ currency.code }}</span>
-						</a>
-					</li>
-				</ul>
-			</div>
-		</div>
+			</li>
+			<template v-else>
+				<li v-for="currency in currencies" :key="currency.code">
+					<a
+						href="#"
+						@click.prevent="selectCurrency(currency)"
+						class="dropdown-item currency-item"
+						:class="{ 'active': selectedCurrency?.code === currency.code }"
+					>
+						<span class="currency-symbol me-2">{{ currency.symbol }}</span>
+						<span class="currency-code">{{ currency.code }}</span>
+					</a>
+				</li>
+			</template>
+		</ul>
 	</div>
 </template>
 

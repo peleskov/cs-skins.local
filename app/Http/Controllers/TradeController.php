@@ -268,6 +268,87 @@ class TradeController extends Controller
     }
 
     /**
+     * Реактивировать отмененный листинг
+     */
+    public function reactivateListing(Request $request)
+    {
+        $client = Auth::guard('client')->user();
+
+        $request->validate([
+            'listing_id' => 'required|integer'
+        ]);
+
+        $listingId = $request->listing_id;
+
+        // Находим листинг пользователя
+        $listing = Listing::where('id', $listingId)
+            ->where('seller_id', $client->id)
+            ->first();
+
+        if (!$listing) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Листинг не найден'
+            ], 404);
+        }
+
+        // Проверяем, что листинг в статусе cancelled
+        if ($listing->status !== 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Можно реактивировать только отмененные листинги'
+            ], 400);
+        }
+
+        // Проверяем что предмет все еще в инвентаре пользователя (по БД)
+        $inventoryItem = \App\Models\ClientInventoryItem::where('client_id', $client->id)
+            ->where('steam_asset_id', $listing->steam_asset_id)
+            ->first();
+
+        if (!$inventoryItem) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Предмет не найден в вашем инвентаре. Обновите инвентарь.'
+            ], 404);
+        }
+
+        // Проверяем что предмет торгуемый
+        if (!$inventoryItem->tradable || !$inventoryItem->marketable) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Данный предмет больше нельзя продать'
+            ], 400);
+        }
+
+        try {
+            // Реактивируем листинг - переводим в pending
+            $listing->status = 'pending';
+            $listing->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Листинг возвращен в черновики',
+                'data' => [
+                    'listing_id' => $listing->id,
+                    'status' => $listing->status
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to reactivate listing', [
+                'client_id' => $client->id,
+                'listing_id' => $listingId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Произошла ошибка при реактивации листинга'
+            ], 500);
+        }
+    }
+
+    /**
      * Удалить листинг
      */
     public function deleteListing(Request $request)

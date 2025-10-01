@@ -215,14 +215,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 /*====================
-  09. Menu sidebar 
+  09. Menu sidebar
 ======================*/
-const offcanvasClose = document.getElementById("offcanvas-close");
-if (offcanvasClose) {
-  offcanvasClose.addEventListener("click", function () {
-    var offcanvasSide = document.getElementById("offcanvasNavbar");
-    if (offcanvasSide) {
-      offcanvasSide.classList.remove("show");
-    }
-  });
-}
+// Bootstrap 5 offcanvas работает автоматически через data-bs-toggle и data-bs-dismiss атрибуты

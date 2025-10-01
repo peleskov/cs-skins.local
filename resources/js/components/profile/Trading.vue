@@ -65,13 +65,13 @@
 						class="product-box-section section-b-space">
 						<div class="product-details-box-list">
 							<div v-for="listing in currentTabListings" :key="listing.id"
-								class="product-details-box gap-2">
+								class="product-details-box flex-column flex-md-row gap-2">
 								<div class="product-img"
 									:style="{ backgroundImage: 'url(' + getItemImage(listing) + ')' }">
 								</div>
 								<div
-									class="description d-flex align-items-center justify-content-between flex-grow-1 gap-3">
-									<div>
+									class="description d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between flex-grow-1 gap-3">
+									<div class="w-100 w-md-auto">
 										<div class="d-flex align-items-center gap-2">
 											<h6 class="product-name">{{ getItemName(listing) }}</h6>
 										</div>

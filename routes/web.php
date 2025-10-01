@@ -116,6 +116,7 @@ Route::prefix('api')->name('api.')->group(function () {
         Route::post('/listings/update-price', [TradeController::class, 'updateListingPrice'])->name('listings.update-price');
         Route::post('/listings/activate', [TradeController::class, 'activateListing'])->name('listings.activate');
         Route::post('/listings/deactivate', [TradeController::class, 'deactivateListing'])->name('listings.deactivate');
+        Route::post('/listings/reactivate', [TradeController::class, 'reactivateListing'])->name('listings.reactivate');
         Route::post('/listings/delete', [TradeController::class, 'deleteListing'])->name('listings.delete');
         Route::post('/listings/min-price', [TradeController::class, 'getMinMarketPrice'])->name('listings.min-price');
 

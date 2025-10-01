@@ -140,7 +140,7 @@ export default {
             return {
                 right: '70px',
                 bottom: '20px',
-                zIndex: 9999
+                zIndex: 1040 // Ниже чем offcanvas (1045), но выше обычного контента
             };
         }
     },

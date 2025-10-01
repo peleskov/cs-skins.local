@@ -325,3 +325,56 @@
     }
   }
 }
+
+// Стили для offcanvas меню
+.offcanvas {
+  // Ограничиваем ширину offcanvas на мобильных
+  &.offcanvas-end {
+    max-width: 300px;
+    width: 85vw;
+  }
+
+  .currency-selector {
+    width: 100%;
+
+    .currency-display {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: rgba(var(--box-bg), 1);
+      border: 1px solid rgba(var(--dashed-line), 1);
+      border-radius: 6px;
+      width: 100%;
+
+      &::after {
+        display: none; // Скрываем стандартную стрелку Bootstrap
+      }
+
+      .currency-symbol {
+        flex-shrink: 0;
+        color: rgba(var(--dark-text), 1);
+      }
+
+      .currency-code {
+        flex-grow: 1;
+        margin: 0 8px;
+        color: rgba(var(--dark-text), 1);
+      }
+
+      i {
+        flex-shrink: 0;
+        color: rgba(var(--dark-text), 1);
+      }
+    }
+
+    .dropdown-menu {
+      width: 100%;
+      margin-top: 4px;
+      border-radius: 6px;
+      border: 1px solid rgba(var(--dashed-line), 1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      background: rgba(var(--white), 1);
+    }
+  }
+}

@@ -36,6 +36,10 @@
 										:style="{ backgroundImage: `url('${getItemImageUrl(item)}')` }">
 										<div class="case-banner-text">
 											<p class="fw-semibold dark-text">{{ item.name }}</p>
+											<p v-if="item.float_value !== null && item.float_value !== undefined"
+												class="text-muted small">
+												{{ item.float_value.toFixed(4) }}
+											</p>
 										</div>
 									</div>
 								</div>
@@ -45,10 +49,8 @@
 
 					<!-- Кнопка открытия кейса -->
 					<div class="text-center mt-4" v-if="!wonItem">
-						<button class="btn theme-btn btn-lg px-5" 
-							data-bs-toggle="modal" 
-							data-bs-target="#confirmPurchaseModal"
-							:disabled="isProcessing || isSpinning">
+						<button class="btn theme-btn btn-lg px-5" data-bs-toggle="modal"
+							data-bs-target="#confirmPurchaseModal" :disabled="isProcessing || isSpinning">
 							<span v-if="isProcessing || isSpinning"
 								class="spinner-border spinner-border-sm me-2"></span>
 							{{ isProcessing || isSpinning ? 'Открываем...' : 'Открыть кейс' }}
@@ -91,14 +93,15 @@
 						</div>
 						<div class="vertical-product-body">
 							<div class="d-flex flex-column mt-sm-3 mt-2">
-								<FloatBar 
-									:item="item" 
-									:show-value="false" 
-									:show-min-max="false" 
-								/>
+								<FloatBar :item="item" :show-value="false" :show-min-max="false" />
 								<h4 class="vertical-product-title">{{ item.name }}</h4>
+								<div v-if="item.float_value !== null && item.float_value !== undefined"
+									class="text-muted small">
+									{{ item.float_value.toFixed(4) }}
+								</div>
 							</div>
 						</div>
+
 					</div>
 				</div>
 			</div>
@@ -110,7 +113,7 @@
 				<p class="text-muted">В этом кейсе пока нет предметов.</p>
 			</div>
 		</div>
-		
+
 		<!-- Модальное окно подтверждения покупки -->
 		<div class="modal fade" id="confirmPurchaseModal" tabindex="-1" data-bs-backdrop="static">
 			<div class="modal-dialog modal-dialog-centered">
@@ -122,7 +125,8 @@
 					<div class="modal-body">
 						<div class="text-center">
 							<h4 class="mb-3">{{ caseData.name }}</h4>
-							<p class="fs-5">Стоимость: <strong class="text-primary" v-html="formatPrice(caseData.price)"></strong></p>
+							<p class="fs-5">Стоимость: <strong class="text-primary"
+									v-html="formatPrice(caseData.price)"></strong></p>
 							<p class="text-muted">Средства будут списаны с вашего баланса</p>
 						</div>
 					</div>
@@ -163,7 +167,7 @@ const ANIMATION_CONFIG = {
 
 export default {
 	name: 'CaseDetails',
-	
+
 	components: {
 		FloatBar
 	},
@@ -475,19 +479,19 @@ export default {
 
 		async confirmPurchase() {
 			this.isProcessing = true;
-			
+
 			try {
 				// Закрываем модальное окно подтверждения
 				const modal = bootstrap.Modal.getInstance(document.getElementById('confirmPurchaseModal'));
 				if (modal) {
 					modal.hide();
 				}
-				
+
 				// Отправляем запрос на покупку кейса
 				const response = await axios.post(`/api/cases/purchase`, {
 					case_id: this.caseData.id
 				});
-				
+
 				if (response.data.success) {
 					// Получили приз - запускаем анимацию
 					const winningItem = response.data.prize;
@@ -499,7 +503,7 @@ export default {
 				// Ошибки будут обрабатываться централизованно через систему нотификаций
 			}
 		},
-		
+
 		reloadPage() {
 			// Перезагружаем страницу для получения актуального состояния кейса
 			window.location.reload();

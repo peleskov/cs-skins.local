@@ -34,7 +34,7 @@ const toastOptions = {
     closeOnClick: true,
     pauseOnFocusLoss: true,
     pauseOnHover: true,
-    draggable: true,
+    draggable: false,
     draggablePercent: 0.6,
     showCloseButtonOnHover: false,
     hideProgressBar: false,

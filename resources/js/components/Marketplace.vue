@@ -321,6 +321,9 @@
 											<h4 class="vertical-product-title">{{ listing.item?.name_ru ||
 												listing.inventory_item_name || 'Неизвестный предмет' }}</h4>
 										</a>
+										<div v-if="listing.wear_value !== null && listing.wear_value !== undefined" class="text-muted small mb-1">
+											{{ listing.wear_value.toFixed(4) }}
+										</div>
 										<h5 class="product-items mb-2">{{ translate('tags.values.' + listing.wear_name) }} {{
 											listing.item?.rarity_translated || '' }}</h5>
 										<FloatBar 

@@ -4,7 +4,11 @@
 			<div class="loader-line"></div>
 			<div class="d-flex justify-content-between align-items-center">
 				<h3>Steam Инвентарь</h3>
-				<button v-if="inventoryData" class="btn theme-outline btn-sm" @click="syncInventory"
+				<a v-if="inventoryData && !hasTradeUrl" href="/profile#profile" class="btn theme-btn btn-sm">
+					<i class="ri-link me-1"></i>
+					<span>Установить TradeUrl</span>
+				</a>
+				<button v-else-if="inventoryData" class="btn theme-outline btn-sm" @click="syncInventory"
 					:disabled="isSyncing || syncCooldownRemaining > 0">
 					<i :class="['ri-refresh-line', 'me-1', { 'ri-spin': isSyncing }]"></i>
 					<span v-if="isSyncing">Обновление...</span>

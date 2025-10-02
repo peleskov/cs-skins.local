@@ -11,6 +11,14 @@
 				<a class="me-lg-3 me-xl-5" :href="routes.home">
 					<img class="img-fluid logo" :src="logoUrl" alt="logo">
 				</a>
+				<!-- Main Navigation Menu (Desktop) -->
+				<ul class="navbar-nav d-none d-lg-flex mt-2">
+					<template v-for="(item, key) in mainNavigation" :key="key">
+						<li v-if="!item.auth_required || user" class="nav-item">
+							<a class="nav-link" :href="getNavigationUrl(item.route)">{{ item.title }}</a>
+						</li>
+					</template>
+				</ul>
 				<div class="nav-option order-md-2">
 					<!-- Language Selector -->
 					<LanguageSelector />
@@ -170,8 +178,7 @@
 			<ul class="navbar-nav mb-3 pb-3 border-bottom">
 				<template v-for="(item, key) in mainNavigation" :key="key">
 					<li v-if="!item.auth_required || user" class="nav-item mb-1">
-						<a class="nav-link  mb-0 p-0" :href="getNavigationUrl(item.route)"
-							data-bs-dismiss="offcanvas">{{ item.title }}</a>
+						<a class="nav-link  mb-0 p-0" :href="getNavigationUrl(item.route)">{{ item.title }}</a>
 					</li>
 				</template>
 			</ul>

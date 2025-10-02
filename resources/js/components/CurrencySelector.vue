@@ -3,7 +3,6 @@
 		<button class="currency-display dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
 			<span class="currency-symbol">{{ selectedCurrency?.symbol || '₽' }}</span>
 			<span class="currency-code">{{ selectedCurrency?.code || 'RUB' }}</span>
-			<i class="ri-arrow-down-s-line"></i>
 		</button>
 		<ul class="dropdown-menu currency-dropdown">
 			<li v-if="isLoading" class="px-3 py-2 text-muted">

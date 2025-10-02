@@ -3,7 +3,6 @@
 		<button class="currency-display dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
 			<span class="currency-symbol flag-icon" :class="`flag-${selectedLanguage?.code || 'ru'}`"></span>
 			<span class="currency-code">{{ selectedLanguage?.name || 'RU' }}</span>
-			<i class="ri-arrow-down-s-line"></i>
 		</button>
 		<ul class="dropdown-menu currency-dropdown">
 			<li v-for="language in languages" :key="language.code">

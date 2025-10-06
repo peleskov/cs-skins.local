@@ -111,6 +111,11 @@
 								</li>
 							</ul>
 							<div class="bottom-btn">
+								<a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#extensionModal">
+									<i class="ri-download-2-line me-2"></i>Расширение
+								</a>
+							</div>
+							<div class="bottom-btn">
 								<a :href="routes.logout" class="theme-color fw-medium d-flex">
 									<i class="ri-logout-box-r-line me-2"></i>{{ translate('auth.logout') }}
 								</a>
@@ -190,6 +195,11 @@
 						{{ tab.title }}
 					</a>
 				</li>
+				<li class="mb-1">
+					<a href="#" data-bs-toggle="modal" data-bs-target="#extensionModal" class="nav-link  mb-0 p-0">
+						<i class="ri-download-2-line me-2"></i>Расширение
+					</a>
+				</li>
 			</ul>
 
 			<!-- Вход/Выход -->
@@ -200,6 +210,41 @@
 				<a v-else :href="routes.login" class="btn theme-btn w-100">
 					<i class="ri-steam-fill me-1"></i>{{ translate('auth.login_steam') }}
 				</a>
+			</div>
+		</div>
+	</div>
+
+	<!-- Extension Installation Modal -->
+	<div class="modal fade" id="extensionModal" tabindex="-1" aria-labelledby="extensionModalLabel" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="extensionModalLabel">
+						<i class="ri-chrome-line me-2"></i>Расширение для браузера
+					</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<p class="mb-3">Установите расширение для удобной работы с CS-SKINS прямо из Steam Community.</p>
+
+					<div class="alert alert-info mb-3">
+						<strong>Инструкция по установке:</strong>
+						<ol class="mb-0 mt-2 ps-3">
+							<li>Скачайте файл расширения</li>
+							<li>Распакуйте архив в любую папку</li>
+							<li>Скопируйте и вставьте в адресную строку: <code>chrome://extensions/</code></li>
+							<li>Включите "Режим разработчика" (Developer mode)</li>
+							<li>Нажмите "Загрузить распакованное расширение"</li>
+							<li>Выберите папку с распакованным расширением</li>
+						</ol>
+					</div>
+
+					<div class="text-center">
+						<a href="/downloads/extension/cs-skins-extension.zip" download class="btn theme-btn">
+							<i class="ri-download-2-line me-2"></i>Скачать расширение
+						</a>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>

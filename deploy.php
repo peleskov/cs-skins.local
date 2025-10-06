@@ -134,6 +134,13 @@ task('npm:run:prod', function () {
     writeln('✅ Фронтенд собран');
 });
 
+// Build browser extension
+desc('Build browser extension for production');
+task('extension:build', function () {
+    run('cd {{release_path}} && {{bin/php}} build-extension.php');
+    writeln('✅ Расширение собрано');
+});
+
 // Основная задача деплоя
 desc('Deploy the application');
 task('deploy', [
@@ -147,9 +154,9 @@ task('deploy', [
     'artisan:cache:clear',  // Очищаем старые кэши
     'npm:install',
     'npm:run:prod',
+    'extension:build',  // Собираем browser extension
     'artisan:optimize',  // Оптимизируем приложение
     'deploy:supervisor',  // Копируем конфиги supervisor
-    'deploy:extension_domains',  // Обновляем домены в browser extension
     'deploy:publish',
 ]);
 

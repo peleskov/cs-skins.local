@@ -28,15 +28,15 @@ class ProfileController extends Controller
     public function index(): View
     {
         $client = $this->getAuthenticatedClient();
-        $telegramBotName = env('TELEGRAM_BOT_NAME');
-        
-        
+        $telegramBotName = config('services.telegram.bot_name');
+
+
         // Делаем extension_token видимым для владельца профиля
         $client->makeVisible(['extension_token']);
-        
+
         // Переводы для табов профиля
         $profileTabs = __('profile.tabs');
-        
+
         return view('profile.index', compact('client', 'telegramBotName', 'profileTabs'));
     }
 

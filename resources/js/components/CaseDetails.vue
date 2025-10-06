@@ -125,9 +125,8 @@
 					<div class="modal-body">
 						<div class="text-center">
 							<h4 class="mb-3">{{ caseData.name }}</h4>
-							<p class="fs-5">Стоимость: <strong class="text-primary"
+							<p class="fs-5">Открыть кейс за: <strong class="text-primary"
 									v-html="formatPrice(caseData.price)"></strong></p>
-							<p class="text-muted">Средства будут списаны с вашего баланса</p>
 						</div>
 					</div>
 					<div class="modal-footer">

@@ -235,8 +235,11 @@ class CaseController extends Controller
                 // Создаем транзакцию дохода сайта (скрыта от покупателя, видна только в админке)
                 $siteRevenue = $case->price - $fundAmount;
                 if ($siteRevenue > 0) {
+                    // Получаем системного клиента
+                    $systemClient = Client::where('email', 'system@cs-skins.local')->first();
+
                     \App\Models\Transaction::create([
-                        'client_id' => null, // Системная транзакция
+                        'client_id' => $systemClient?->id, // Системная транзакция
                         'type' => \App\Models\Transaction::TYPE_FEE,
                         'amount' => $siteRevenue,
                         'status' => \App\Models\Transaction::STATUS_COMPLETED,

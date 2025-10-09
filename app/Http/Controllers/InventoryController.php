@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\ClientInventoryItem;
 use App\Models\Listing;
+use App\Models\SiteSetting;
 use App\Models\Tag;
 use App\Services\Steam\InventoryService;
 use Illuminate\Http\Request;
@@ -60,12 +61,15 @@ class InventoryController extends Controller
             'last_sync' => $inventoryItems->first()?->cached_at,
         ];
 
+        $cooldownMinutes = SiteSetting::get('inventory_sync_cooldown_minutes', 2);
+
         return response()->json([
             'success' => true,
             'data' => [
                 'items' => $inventoryItems,
                 'stats' => $stats,
-                'has_trade_url' => !empty($client->steam_trade_url)
+                'has_trade_url' => !empty($client->steam_trade_url),
+                'sync_cooldown_minutes' => $cooldownMinutes
             ]
         ]);
     }
@@ -82,21 +86,22 @@ class InventoryController extends Controller
             ]);
         }
 
-        // Проверяем, прошло ли 2 минуты с последней синхронизации
+        $cooldownMinutes = SiteSetting::get('inventory_sync_cooldown_minutes', 2);
+
         $lastSync = $client->inventoryItems()
             ->orderBy('cached_at', 'desc')
             ->first();
-            
-        if ($lastSync && $lastSync->cached_at->addMinutes(2)->isFuture()) {
-            $remainingTime = $lastSync->cached_at->addMinutes(2)->diffInSeconds(now());
+
+        if ($lastSync && $lastSync->cached_at->addMinutes($cooldownMinutes)->isFuture()) {
+            $remainingTime = $lastSync->cached_at->addMinutes($cooldownMinutes)->diffInSeconds(now());
             $remainingMinutes = ceil($remainingTime / 60);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => "Следующее обновление инвентаря будет доступно через {$remainingMinutes} мин",
                 'data' => [
                     'cooldown_remaining' => $remainingTime,
-                    'next_sync_at' => $lastSync->cached_at->addMinutes(2)->toISOString()
+                    'next_sync_at' => $lastSync->cached_at->addMinutes($cooldownMinutes)->toISOString()
                 ]
             ]);
         }

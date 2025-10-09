@@ -277,6 +277,7 @@ export default {
 			inventoryData: null,
 			isSyncing: false,
 			syncCooldownRemaining: 0,
+			syncCooldownMinutes: 2,
 			cooldownTimer: null,
 			activeInventoryTab: 'available',
 			isCreatingListing: false,
@@ -310,21 +311,23 @@ export default {
 					this.stats = data.data.stats;
 					this.hasTradeUrl = data.data.has_trade_url;
 
-					// Проверяем, нужно ли запустить кулдаун для синхронизации
-					// Сначала проверяем localStorage, затем данные с сервера
+					if (data.data.sync_cooldown_minutes) {
+						this.syncCooldownMinutes = data.data.sync_cooldown_minutes;
+					}
+
 					const storedSyncTime = localStorage.getItem('inventory_last_sync');
 					let lastSyncTime = null;
-					
+
 					if (storedSyncTime) {
 						lastSyncTime = new Date(storedSyncTime);
 					} else if (data.data.stats && data.data.stats.last_sync) {
 						lastSyncTime = new Date(data.data.stats.last_sync);
 					}
-					
+
 					if (lastSyncTime) {
 						const now = new Date();
 						const timeDiff = now - lastSyncTime;
-						const cooldownTime = 2 * 60 * 1000; // 2 минуты в мс
+						const cooldownTime = this.syncCooldownMinutes * 60 * 1000;
 
 						if (timeDiff < cooldownTime) {
 							const remainingSeconds = Math.ceil((cooldownTime - timeDiff) / 1000);
@@ -332,7 +335,6 @@ export default {
 						}
 					}
 
-					// Если инвентарь пустой, показываем сообщение
 					if (data.data.items.length === 0) {
 						window.toast.info('Ваш Steam инвентарь пуст или приватный. Убедитесь, что инвентарь публичный в настройках Steam. После изменения настроек инвентаря в Steam попробуйте еще раз через 10-15 минут.', {
 							timeout: 10000
@@ -367,19 +369,13 @@ export default {
 				if (data.success) {
 					window.toast.success(`Инвентарь обновлен! Загружено предметов: ${data.data.items_count}`);
 
-					// Сохраняем время синхронизации в localStorage
 					const syncTime = new Date().toISOString();
 					localStorage.setItem('inventory_last_sync', syncTime);
 
-					// Обновляем данные без перезагрузки страницы
 					await this.loadInventoryData();
 
-					// Запускаем кулдаун на 2 минуты
-					this.startSyncCooldown(120); // 2 минуты = 120 секунд
+					this.startSyncCooldown(this.syncCooldownMinutes * 60);
 				} else {
-					// Глобальный обработчик покажет toast автоматически
-
-					// Если есть информация о кулдауне, запускаем его
 					if (data.data && data.data.cooldown_remaining) {
 						this.startSyncCooldown(data.data.cooldown_remaining);
 					}

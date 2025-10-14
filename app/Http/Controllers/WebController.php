@@ -9,6 +9,8 @@ use App\Models\Doc;
 use App\Models\Listing;
 use App\Models\AdBanner;
 use App\Models\CaseModel;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
 
 class WebController extends Controller
 {
@@ -91,6 +93,61 @@ class WebController extends Controller
     public function contact()
     {
         return view('contact');
+    }
+
+    /**
+     * Отправка формы контактов
+     */
+    public function contactSend(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'phone' => 'nullable|string|max:20',
+            'message' => 'required|string|max:2000',
+        ], [
+            'first_name.required' => 'Поле "Имя" обязательно для заполнения',
+            'first_name.max' => 'Имя не должно превышать 255 символов',
+            'last_name.required' => 'Поле "Фамилия" обязательно для заполнения',
+            'last_name.max' => 'Фамилия не должна превышать 255 символов',
+            'email.required' => 'Поле "Email" обязательно для заполнения',
+            'email.email' => 'Введите корректный email адрес',
+            'email.max' => 'Email не должен превышать 255 символов',
+            'phone.max' => 'Номер телефона не должен превышать 20 символов',
+            'message.required' => 'Поле "Сообщение" обязательно для заполнения',
+            'message.max' => 'Сообщение не должно превышать 2000 символов',
+        ]);
+
+        if ($validator->fails()) {
+            return back()
+                ->withErrors($validator)
+                ->withInput()
+                ->with('error', 'Пожалуйста, исправьте ошибки в форме');
+        }
+
+        try {
+            // Отправка email администратору
+            Mail::send('emails.contact', [
+                'firstName' => $request->first_name,
+                'lastName' => $request->last_name,
+                'userEmail' => $request->email,
+                'phone' => $request->phone,
+                'userMessage' => $request->message,
+            ], function ($message) use ($request) {
+                $message->to(config('mail.admin_email'))
+                        ->subject('Новое сообщение с сайта - от ' . $request->first_name . ' ' . $request->last_name)
+                        ->replyTo($request->email, $request->first_name . ' ' . $request->last_name);
+            });
+
+            return back()->with('success', 'Ваше сообщение успешно отправлено! Мы свяжемся с вами в ближайшее время.');
+
+        } catch (\Exception $e) {
+            \Log::error('Contact form error: ' . $e->getMessage());
+            return back()
+                ->withInput()
+                ->with('error', 'Произошла ошибка при отправке сообщения. Пожалуйста, попробуйте позже.');
+        }
     }
 
     /**

@@ -61,6 +61,11 @@ return [
             // ],
         ],
 
+
+        'mailgun' => [
+            'transport' => 'mailgun',
+        ],
+
         'resend' => [
             'transport' => 'resend',
         ],
@@ -114,5 +119,16 @@ return [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Admin Email Address
+    |--------------------------------------------------------------------------
+    |
+    | This email address will receive contact form submissions.
+    |
+    */
+
+    'admin_email' => env('MAIL_ADMIN_EMAIL'),
 
 ];

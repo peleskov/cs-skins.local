@@ -22,6 +22,7 @@ Route::controller(WebController::class)->group(function () {
     Route::get('/', 'home')->name('home');
     Route::get('/faq', 'faq')->name('faq');
     Route::get('/contact', 'contact')->name('contact');
+    Route::post('/contact', 'contactSend')->name('contact.send');
     Route::get('/doc/{slug}', 'doc')->name('doc');
     Route::get('/locale/{locale}', 'setLocale')->name('locale');
 });

@@ -79,13 +79,18 @@ export default {
 				if (data.success) {
 					this.isFavorite = data.is_favorite;
 					window.toast.success(data.message);
-					
+
 					// Эмитим событие для родительского компонента
 					this.$emit('favorite-updated', {
 						listingId: this.listingId,
 						isFavorite: this.isFavorite
 					});
-					
+
+					// Отправляем событие для обновления счетчика в header
+					window.dispatchEvent(new CustomEvent('favorites-updated', {
+						detail: { count: data.favorites_count || 0 }
+					}));
+
 					// Если товар был удален из избранного, отправляем глобальное событие
 					if (!this.isFavorite) {
 						window.dispatchEvent(new CustomEvent('favoriteRemoved', {

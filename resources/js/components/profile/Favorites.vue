@@ -47,7 +47,7 @@
 									<img class="img-fluid inventory-img h-auto" :src="getIconUrl(favorite.listing)"
 										:alt="getItemName(favorite.listing)" @error="handleImageError">
 									<h6 class="mt-2">{{ getItemName(favorite.listing) }}</h6>
-									<small class="text-muted">{{ favorite.listing.inventory_type || 'Unknown' }}</small>
+									<small class="text-muted">{{ getWearCondition(favorite.listing.wear_value) || favorite.listing.wear_name || 'Состояние неизвестно' }}</small>
 								</div>
 							</div>
 						</div>
@@ -248,8 +248,8 @@ export default {
 		},
 		
 		getItemName(listing) {
-			// Для листингов используем inventory_item_name, market_hash_name или другие доступные поля
-			return listing.inventory_item_name || listing.market_hash_name || listing.name || 'Unknown';
+			// Используем ту же логику что и в маркетплейсе
+			return listing.item?.name_ru || listing.inventory_item_name || listing.market_hash_name || listing.name || 'Неизвестный предмет';
 		},
 		
 		getIconUrl(listing) {

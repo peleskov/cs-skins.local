@@ -29,6 +29,7 @@
 					<!-- Favorites Button -->
 					<div v-if="user" class="dropdown-button">
 						<a :href="routes.profile + '#favorites'" class="cart-button favorites-button">
+							<span v-if="favoritesCount > 0" class="cart-count">{{ favoritesCount }}</span>
 							<i class="ri-heart-line text-white cart-bag"></i>
 						</a>
 					</div>
@@ -281,11 +282,16 @@ export default {
 		initialCartCount: {
 			type: Number,
 			default: 0
+		},
+		initialFavoritesCount: {
+			type: Number,
+			default: 0
 		}
 	},
 	data() {
 		return {
 			cartCount: this.initialCartCount,
+			favoritesCount: this.initialFavoritesCount,
 			cartItems: [],
 			cartTotal: 0,
 			isLoading: false,
@@ -345,6 +351,10 @@ export default {
 			this.loadCartPreview();
 		},
 
+		updateFavoritesFromEvent(event) {
+			this.favoritesCount = event.detail.count;
+		},
+
 		getNavigationUrl(route) {
 			// Если маршрут начинается с #, возвращаем как есть
 			if (route.startsWith('#')) {
@@ -386,6 +396,9 @@ export default {
 		// Слушаем события обновления корзины
 		window.addEventListener('cart-updated', this.updateCartFromEvent);
 
+		// Слушаем события обновления избранного
+		window.addEventListener('favorites-updated', this.updateFavoritesFromEvent);
+
 		// Слушаем события смены валюты
 		window.addEventListener('currency-changed', this.handleCurrencyChange);
 	},
@@ -393,6 +406,7 @@ export default {
 	beforeUnmount() {
 		// Убираем слушатели при размонтировании
 		window.removeEventListener('cart-updated', this.updateCartFromEvent);
+		window.removeEventListener('favorites-updated', this.updateFavoritesFromEvent);
 		window.removeEventListener('currency-changed', this.handleCurrencyChange);
 	}
 }

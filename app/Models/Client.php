@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
+use App\Models\Favorite;
 
 class Client extends Authenticatable
 {
@@ -217,6 +218,11 @@ class Client extends Authenticatable
         }
         
         return false;
+    }
+
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(Favorite::class, 'client_id');
     }
 
     public function inventoryItems(): HasMany

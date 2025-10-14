@@ -163,12 +163,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const routes = JSON.parse(headerElement.dataset.routes);
                 const logoUrl = headerElement.dataset.logoUrl;
                 const cartCount = parseInt(headerElement.dataset.cartCount || '0');
-                
+                const favoritesCount = parseInt(headerElement.dataset.favoritesCount || '0');
+
                 const app = createApp(Header, {
                     user: user,
                     routes: routes,
                     logoUrl: logoUrl,
-                    initialCartCount: cartCount
+                    initialCartCount: cartCount,
+                    initialFavoritesCount: favoritesCount
                 });
                 app.mount('#header-app');
                 

@@ -41,13 +41,15 @@
 					<!-- Cart items list -->
 					<div class="product-details-box-list">
 						<div v-for="item in cartItems" :key="item.listing_id" class="product-details-box gap-2">
-							<div class="product-img" :style="{ backgroundImage: 'url(' + (item.item?.image_url || '/images/skin_no_image.svg') + ')' }">
-							</div>
+							<a :href="`/marketplace/${item.listing_id}`" class="product-img" :style="{ backgroundImage: 'url(' + (item.item?.image_url || '/images/skin_no_image.svg') + ')' }" title="Перейти к товару">
+							</a>
 							<div
 								class="description d-flex align-items-center justify-content-between flex-grow-1 gap-3">
 								<div>
 									<div class="d-flex align-items-center gap-2">
-										<h6 class="product-name">{{ item.item?.name }}</h6>
+										<a :href="`/marketplace/${item.listing_id}`" class="product-name-link" title="Перейти к товару">
+											<h6 class="product-name">{{ item.item?.name }}</h6>
+										</a>
 										<span v-if="item.is_stattrak" class="badge bg-warning">StatTrak™</span>
 										<span v-if="item.is_souvenir" class="badge bg-info">Souvenir</span>
 									</div>

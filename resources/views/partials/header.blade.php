@@ -20,6 +20,7 @@
         ]) 
     }}"
     data-logo-url="{{ asset('images/logo_white.svg') }}"
-    data-cart-count="{{ app('App\Services\CartService')->getCount() }}">
+    data-cart-count="{{ app('App\Services\CartService')->getCount() }}"
+    data-favorites-count="{{ auth('client')->check() ? auth('client')->user()->favorites()->whereHas('listing', function($query) { $query->where('status', 'active'); })->count() : 0 }}">
 </div>
 <!-- Header Section end -->

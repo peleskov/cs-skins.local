@@ -71,10 +71,18 @@ class FavoritesController extends Controller
             $message = 'Товар добавлен в избранное';
         }
 
+        // Получаем общее количество избранного для счетчика (только активные товары)
+        $favoritesCount = Favorite::where('client_id', $clientId)
+            ->whereHas('listing', function($query) {
+                $query->where('status', 'active');
+            })
+            ->count();
+
         return response()->json([
             'success' => true,
             'is_favorite' => $isFavorite,
             'message' => $message,
+            'favorites_count' => $favoritesCount,
         ]);
     }
 

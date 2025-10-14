@@ -296,7 +296,7 @@
 					<!-- Контейнер для товаров -->
 					<div class="row g-4">
 						<div v-for="listing in listings" :key="listing.id" class="col-xxl-2 col-xl-3 col-lg-4 col-md-5">
-							<div class="vertical-product-box" :class="getRarityClass(listing)">
+							<div class="vertical-product-box h-100 d-flex flex-column" :class="getRarityClass(listing)">
 								<div v-if="listing.is_stattrak" class="seller-badge new-badge">
 									<img class="img-fluid badge"
 										src="/images/svg/star-white.svg" alt="medal">
@@ -315,8 +315,8 @@
 										</div>
 									</div>
 								</div>
-								<div class="vertical-product-body">
-									<div class="d-flex flex-column mt-sm-3 mt-2 mb-2">
+								<div class="vertical-product-body d-flex flex-column flex-grow-1">
+									<div class="d-flex flex-column flex-grow-1 mt-sm-3 mt-2 mb-2">
 										<a :href="`/marketplace/${listing.id}`">
 											<h4 class="vertical-product-title">{{ listing.item?.name_ru ||
 												listing.inventory_item_name || 'Неизвестный предмет' }}</h4>

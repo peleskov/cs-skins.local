@@ -25,3 +25,4 @@
 tmp
 .gitignore
 .env.prod
+public/images/skins

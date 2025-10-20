@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Exception;
 use App\Models\Client;
 use App\Models\Order;
 use App\Models\Trade;
@@ -27,7 +28,7 @@ class ExtensionController extends Controller
                 if (isset($json['token'])) {
                     $token = $json['token'];
                 }
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('Failed to parse JSON from request body', ['error' => $e->getMessage()]);
             }
         }
@@ -92,7 +93,7 @@ class ExtensionController extends Controller
                     'steam_id' => $client->steam_id
                 ]
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Extension authorization error', [
                 'error' => $e->getMessage(),
                 'ip' => $request->ip()
@@ -142,7 +143,7 @@ class ExtensionController extends Controller
                     'created_at' => $client->created_at->toISOString()
                 ]
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Error getting user info', [
                 'error' => $e->getMessage(),
                 'client_id' => $this->getClientFromToken($request)
@@ -234,7 +235,7 @@ class ExtensionController extends Controller
                 'message' => 'Error logged successfully'
             ]);
             
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to log extension error', [
                 'error' => $e->getMessage(),
                 'request' => $request->all()

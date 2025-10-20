@@ -18,7 +18,6 @@ return [
         'agent' => 'Агенты',
         'pass' => 'Пропуски',
     ],
-    
     'rarities' => [
         'consumer' => 'Ширпотреб',
         'industrial' => 'Промышленное качество',
@@ -28,7 +27,6 @@ return [
         'covert' => 'Тайное',
         'contraband' => 'Контрабанда',
     ],
-    
     'wear_conditions' => [
         'factory_new' => 'Прямо с завода',
         'minimal_wear' => 'Немного поношенное',

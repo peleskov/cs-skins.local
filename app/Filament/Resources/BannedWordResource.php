@@ -2,11 +2,20 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\TextInput;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\BannedWordResource\Pages\ListBannedWords;
+use App\Filament\Resources\BannedWordResource\Pages\CreateBannedWord;
+use App\Filament\Resources\BannedWordResource\Pages\EditBannedWord;
 use App\Filament\Resources\BannedWordResource\Pages;
 use App\Filament\Resources\BannedWordResource\RelationManagers;
 use App\Models\BannedWord;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -17,7 +26,7 @@ class BannedWordResource extends Resource
 {
     protected static ?string $model = BannedWord::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-exclamation-triangle';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-exclamation-triangle';
 
     protected static ?string $navigationLabel = 'Запрещенные слова';
 
@@ -25,13 +34,13 @@ class BannedWordResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Запрещенные слова';
 
-    protected static ?string $navigationGroup = 'Чат';
+    protected static string | \UnitEnum | null $navigationGroup = 'Чат';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('word')
+        return $schema
+            ->components([
+                TextInput::make('word')
                     ->label('Слово')
                     ->required()
                     ->maxLength(100)
@@ -44,12 +53,12 @@ class BannedWordResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('word')
+                TextColumn::make('word')
                     ->label('Слово')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('Добавлено')
                     ->dateTime('d.m.Y H:i')
                     ->sortable(),
@@ -57,13 +66,13 @@ class BannedWordResource extends Resource
             ->filters([
                 //
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+            ->recordActions([
+                EditAction::make(),
+                DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
@@ -79,9 +88,9 @@ class BannedWordResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListBannedWords::route('/'),
-            'create' => Pages\CreateBannedWord::route('/create'),
-            'edit' => Pages\EditBannedWord::route('/{record}/edit'),
+            'index' => ListBannedWords::route('/'),
+            'create' => CreateBannedWord::route('/create'),
+            'edit' => EditBannedWord::route('/{record}/edit'),
         ];
     }
 }

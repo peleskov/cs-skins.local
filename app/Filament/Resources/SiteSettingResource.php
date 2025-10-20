@@ -2,10 +2,18 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Group;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\SiteSettingResource\Pages\ListSiteSettings;
+use App\Filament\Resources\SiteSettingResource\Pages\CreateSiteSetting;
+use App\Filament\Resources\SiteSettingResource\Pages\EditSiteSetting;
 use App\Filament\Resources\SiteSettingResource\Pages;
 use App\Models\SiteSetting;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -19,7 +27,7 @@ class SiteSettingResource extends Resource
 {
     protected static ?string $model = SiteSetting::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cog-6-tooth';
 
     protected static ?string $navigationLabel = 'Настройки сайта';
 
@@ -27,14 +35,14 @@ class SiteSettingResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Настройки сайта';
 
-    protected static ?string $navigationGroup = 'Настройки';
+    protected static string | \UnitEnum | null $navigationGroup = 'Настройки';
 
     protected static ?int $navigationSort = 1;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 TextInput::make('key')
                     ->label('Ключ')
                     ->required()
@@ -61,7 +69,7 @@ class SiteSettingResource extends Resource
                     ->helperText('Описание для чего нужна эта настройка')
                     ->columnSpanFull(),
 
-                Forms\Components\Group::make([
+                Group::make([
                     Textarea::make('value')
                         ->label('Значение')
                         ->required()
@@ -140,7 +148,7 @@ class SiteSettingResource extends Resource
                     ->since(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('type')
+                SelectFilter::make('type')
                     ->label('Тип')
                     ->options([
                         SiteSetting::TYPE_STRING => 'Строка',
@@ -149,13 +157,13 @@ class SiteSettingResource extends Resource
                         SiteSetting::TYPE_JSON => 'JSON',
                     ]),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make()
+            ->recordActions([
+                EditAction::make(),
+                DeleteAction::make()
                     ->requiresConfirmation(),
             ])
-            ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make()
+            ->toolbarActions([
+                DeleteBulkAction::make()
                     ->requiresConfirmation(),
             ])
             ->defaultSort('key');
@@ -164,9 +172,9 @@ class SiteSettingResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSiteSettings::route('/'),
-            'create' => Pages\CreateSiteSetting::route('/create'),
-            'edit' => Pages\EditSiteSetting::route('/{record}/edit'),
+            'index' => ListSiteSettings::route('/'),
+            'create' => CreateSiteSetting::route('/create'),
+            'edit' => EditSiteSetting::route('/{record}/edit'),
         ];
     }
 }

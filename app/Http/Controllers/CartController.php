@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Exception;
 use App\Services\CartService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -53,7 +54,7 @@ class CartController extends Controller
             }
 
             return response()->json($response);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Ошибка при получении корзины: ' . $e->getMessage(),
@@ -80,7 +81,7 @@ class CartController extends Controller
                 'data' => $cartItem,
                 'cart_count' => $this->cartService->getCount(),
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -109,7 +110,7 @@ class CartController extends Controller
                 'cart_count' => $this->cartService->getCount(),
                 'cart_total' => $this->cartService->getTotal(),
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Ошибка при удалении товара: ' . $e->getMessage(),
@@ -129,7 +130,7 @@ class CartController extends Controller
                 'success' => true,
                 'message' => 'Корзина очищена',
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Ошибка при очистке корзины: ' . $e->getMessage(),
@@ -149,7 +150,7 @@ class CartController extends Controller
                 'success' => true,
                 'in_cart' => $inCart,
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Ошибка при проверке корзины: ' . $e->getMessage(),
@@ -167,7 +168,7 @@ class CartController extends Controller
                 'success' => true,
                 'count' => $this->cartService->getCount(),
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Ошибка при получении счетчика: ' . $e->getMessage(),

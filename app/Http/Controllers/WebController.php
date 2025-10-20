@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Exception;
+use Log;
 use Illuminate\Http\Request;
 use App\Models\Faq;
 use App\Models\FaqCategory;
@@ -142,8 +144,8 @@ class WebController extends Controller
 
             return back()->with('success', 'Ваше сообщение успешно отправлено! Мы свяжемся с вами в ближайшее время.');
 
-        } catch (\Exception $e) {
-            \Log::error('Contact form error: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('Contact form error: ' . $e->getMessage());
             return back()
                 ->withInput()
                 ->with('error', 'Произошла ошибка при отправке сообщения. Пожалуйста, попробуйте позже.');

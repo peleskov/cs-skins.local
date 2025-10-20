@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\AdBannerResource\Pages;
 
+use Filament\Actions\CreateAction;
 use App\Filament\Resources\AdBannerResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
@@ -13,7 +14,7 @@ class ListAdBanners extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            CreateAction::make(),
         ];
     }
 }

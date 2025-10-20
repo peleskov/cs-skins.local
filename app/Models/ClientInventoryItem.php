@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\BotRotationService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -244,7 +245,7 @@ class ClientInventoryItem extends Model
         
         // Проверяем доступность бота для этой суммы (конвертируем в рубли для проверки)
         $buyoutPriceRub = Currency::convert($buyoutPrice, 'USD', 'RUB');
-        $botService = new \App\Services\BotRotationService();
+        $botService = new BotRotationService();
         $availableBot = $botService->getNextAvailableBot($buyoutPriceRub);
         
         if (!$availableBot) {

@@ -9,6 +9,6 @@ return [
         'orders' => 'Orders',
         'sales' => 'Sales',
         'auctions' => 'My Auctions',
-        'balance' => 'Balance'
-    ]
+        'balance' => 'Balance',
+    ],
 ];

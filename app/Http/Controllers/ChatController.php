@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use Exception;
+use Log;
+use Redis;
+use App\Events\ChatUserCountUpdated;
 use App\Events\ChatMessageSent;
 use App\Services\ChatService;
 use Illuminate\Http\JsonResponse;
@@ -145,8 +149,8 @@ class ChatController extends Controller
             } else {
                 $onlineCount = 0;
             }
-        } catch (\Exception $e) {
-            \Log::error('Failed to get online count: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('Failed to get online count: ' . $e->getMessage());
             $onlineCount = 0;
         }
 
@@ -168,18 +172,18 @@ class ChatController extends Controller
         $activeUsersKey = 'chat:active_users';
 
         // Добавляем пользователя с timestamp
-        \Redis::zadd($activeUsersKey, time(), $userId);
-        \Redis::expire($activeUsersKey, 120);
+        Redis::zadd($activeUsersKey, time(), $userId);
+        Redis::expire($activeUsersKey, 120);
 
         // Удаляем неактивных пользователей (более 60 секунд назад)
         $cutoffTime = time() - 60;
-        \Redis::zremrangebyscore($activeUsersKey, 0, $cutoffTime);
+        Redis::zremrangebyscore($activeUsersKey, 0, $cutoffTime);
 
         // Получаем актуальное количество
-        $newCount = \Redis::zcard($activeUsersKey);
+        $newCount = Redis::zcard($activeUsersKey);
 
         // Отправляем обновление счетчика всем
-        broadcast(new \App\Events\ChatUserCountUpdated($newCount));
+        broadcast(new ChatUserCountUpdated($newCount));
 
         return response()->json(['success' => true, 'count' => $newCount]);
     }
@@ -194,17 +198,17 @@ class ChatController extends Controller
 
         // Удаляем пользователя из активных
         $activeUsersKey = 'chat:active_users';
-        \Redis::zrem($activeUsersKey, $userId);
+        Redis::zrem($activeUsersKey, $userId);
 
         // Удаляем неактивных пользователей (более 60 секунд назад)
         $cutoffTime = time() - 60;
-        \Redis::zremrangebyscore($activeUsersKey, 0, $cutoffTime);
+        Redis::zremrangebyscore($activeUsersKey, 0, $cutoffTime);
 
         // Получаем актуальное количество
-        $newCount = \Redis::zcard($activeUsersKey);
+        $newCount = Redis::zcard($activeUsersKey);
 
         // Отправляем обновление счетчика всем
-        broadcast(new \App\Events\ChatUserCountUpdated($newCount));
+        broadcast(new ChatUserCountUpdated($newCount));
 
         return response()->json(['success' => true, 'count' => $newCount]);
     }

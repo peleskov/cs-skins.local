@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use Exception;
 use App\Models\Client;
 use App\Services\NotificationService;
 use Illuminate\Console\Command;
@@ -79,7 +80,7 @@ class TestNotifications extends Command
 
             $this->info('✅ Test notifications sent! Check logs: storage/logs/notifications-' . date('Y-m-d') . '.log');
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->error('❌ Error sending notifications: ' . $e->getMessage());
             return 1;
         }

@@ -18,7 +18,6 @@ return [
         'agent' => 'Agents',
         'pass' => 'Passes',
     ],
-    
     'rarities' => [
         'consumer' => 'Consumer Grade',
         'industrial' => 'Industrial Grade',
@@ -28,7 +27,6 @@ return [
         'covert' => 'Covert',
         'contraband' => 'Contraband',
     ],
-    
     'wear_conditions' => [
         'factory_new' => 'Factory New',
         'minimal_wear' => 'Minimal Wear',

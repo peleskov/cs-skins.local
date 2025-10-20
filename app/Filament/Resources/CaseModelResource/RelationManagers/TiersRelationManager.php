@@ -2,11 +2,19 @@
 
 namespace App\Filament\Resources\CaseModelResource\RelationManagers;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\TextInput;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Actions\CreateAction;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use App\Filament\Resources\CaseModelResource;
 use App\Models\CaseItem;
 use App\Models\ClientInventoryItem;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -21,20 +29,20 @@ class TiersRelationManager extends RelationManager
     
     protected static ?string $title = 'Уровни призов';
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('name')
+        return $schema
+            ->components([
+                TextInput::make('name')
                     ->label('Название уровня')
                     ->required()
                     ->maxLength(255),
-                Forms\Components\TextInput::make('price')
+                TextInput::make('price')
                     ->label('Цена уровня')
                     ->required()
                     ->numeric()
                     ->prefix('₽'),
-                Forms\Components\TextInput::make('probability')
+                TextInput::make('probability')
                     ->label('Вероятность выпадения')
                     ->required()
                     ->numeric()
@@ -50,15 +58,15 @@ class TiersRelationManager extends RelationManager
             ->modifyQueryUsing(fn (Builder $query) => $query->orderBy('price', 'asc'))
             ->poll('5s') // Обновляем таблицу каждые 5 секунд
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label('Название уровня'),
-                Tables\Columns\TextColumn::make('price')
+                TextColumn::make('price')
                     ->label('Цена')
                     ->money('RUB'),
-                Tables\Columns\TextColumn::make('probability')
+                TextColumn::make('probability')
                     ->label('Вероятность')
                     ->suffix('%'),
-                Tables\Columns\TextColumn::make('items_count')
+                TextColumn::make('items_count')
                     ->label('Предметов')
                     ->getStateUsing(function ($record) {
                         return $record->items()->count();
@@ -69,15 +77,15 @@ class TiersRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make()
+                CreateAction::make()
                     ->label('Добавить уровень')
                     ->after(function () {
                         // Обновляем таблицу после добавления нового уровня
                         $this->dispatch('refreshTable');
                     }),
             ])
-            ->actions([
-                Tables\Actions\Action::make('manage_items')
+            ->recordActions([
+                Action::make('manage_items')
                     ->label('Управление предметами')
                     ->icon('heroicon-m-cube')
                     ->url(fn ($record) => '/admin/case-items?' . http_build_query([
@@ -87,12 +95,12 @@ class TiersRelationManager extends RelationManager
                         ]
                     ]))
                     ->openUrlInNewTab(true),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }

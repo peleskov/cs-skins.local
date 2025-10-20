@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use TelegramBot\Api\Types\Update;
+use Exception;
 use App\Models\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -16,7 +18,7 @@ class TelegramWebhookController extends Controller
 
             // Получаем JSON данные webhook
             $webhookData = $request->getContent();
-            $update = \TelegramBot\Api\Types\Update::fromResponse(json_decode($webhookData, true));
+            $update = Update::fromResponse(json_decode($webhookData, true));
 
             if (!$update->getMessage()) {
                 return response('OK');
@@ -52,7 +54,7 @@ class TelegramWebhookController extends Controller
 
             return response('OK');
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::channel('notifications')->error('TELEGRAM_WEBHOOK_ERROR', [
                 'error' => $e->getMessage(),
                 'request' => $request->all()

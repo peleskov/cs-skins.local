@@ -1,7 +1,6 @@
 <?php
 
 return [
-    // Tag categories
     'categories' => [
         'type' => 'Type',
         'quality' => 'Quality',
@@ -14,10 +13,7 @@ return [
         'sticker_category' => 'Sticker Type',
         'sticker_capsule' => 'Sticker Capsule',
     ],
-
-    // Tag values
     'values' => [
-        // Types
         'unknown' => 'Not specified',
         'rifle' => 'Rifle',
         'pistol' => 'Pistol',
@@ -32,13 +28,9 @@ return [
         'key' => 'Key',
         'graffiti' => 'Graffiti',
         'collectible' => 'Collectible',
-
-        // Quality
         'normal' => 'Normal',
         'stattrak' => 'StatTrak™',
         'souvenir' => 'Souvenir',
-
-        // Rarity
         'consumer' => 'Consumer Grade',
         'industrial' => 'Industrial Grade',
         'milspec' => 'Mil-Spec Grade',
@@ -46,15 +38,11 @@ return [
         'classified' => 'Classified',
         'covert' => 'Covert',
         'contraband' => 'Contraband',
-
-        // Exterior
         'fn' => 'Factory New',
         'mw' => 'Minimal Wear',
         'ft' => 'Field-Tested',
         'ww' => 'Well-Worn',
         'bs' => 'Battle-Scarred',
-
-        // Weapons
         'weapon_ak47' => 'AK-47',
         'weapon_m4a1' => 'M4A4',
         'weapon_m4a1_silencer' => 'M4A1-S',
@@ -90,11 +78,7 @@ return [
         'weapon_m249' => 'M249',
         'weapon_negev' => 'Negev',
         'weapon_galilar' => 'Galil AR',
-
-        // Item types
         'spray' => 'Graffiti',
-
-        // Collections
         'set_safehouse' => 'Safehouse Collection',
         'set_dust' => 'Dust Collection',
         'set_italy' => 'Italy Collection',
@@ -138,8 +122,6 @@ return [
         'set_community_5' => 'Community 5 Collection',
         'set_dust_2' => 'Dust 2 Collection',
         'set_inferno_2' => 'Inferno 2 Collection',
-
-        // Tournaments
         'tournament' => 'Tournament',
         'tournament22' => 'PGL Major Copenhagen 2024',
         'tournament21' => 'PGL Major Stockholm 2021',
@@ -157,8 +139,6 @@ return [
         'tournament9' => 'DreamHack Winter 2014',
         'tournament8' => 'ESL One Cologne 2014',
         'tournament7' => 'EMS One Katowice 2014',
-
-        // Teams
         'team61' => 'FaZe Clan',
         'team60' => 'G2 Esports',
         'team59' => 'Natus Vincere',
@@ -201,16 +181,12 @@ return [
         'team64' => 'Eternal Fire',
         'team63' => 'IHC',
         'team62' => 'Renegades',
-
-        // Sticker types
         'teamlogo' => 'Team Logo',
         'playerautograph' => 'Player Autograph',
         'holographic' => 'Holographic',
         'foil' => 'Foil',
         'glitter' => 'Glitter',
         'gold' => 'Gold',
-
-        // Sticker capsules
         'crate_sticker_pack_cph2024_legends_collection' => 'PGL Major Copenhagen 2024 Legends Stickers',
         'crate_sticker_pack_cph2024_challengers_collection' => 'PGL Major Copenhagen 2024 Challengers Stickers',
         'crate_sticker_pack_cph2024_champions_collection' => 'PGL Major Copenhagen 2024 Champions Stickers',

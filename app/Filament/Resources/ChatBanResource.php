@@ -2,12 +2,25 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Hidden;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\ChatBanResource\Pages\ListChatBans;
+use App\Filament\Resources\ChatBanResource\Pages\CreateChatBan;
+use App\Filament\Resources\ChatBanResource\Pages\EditChatBan;
 use App\Filament\Resources\ChatBanResource\Pages;
 use App\Filament\Resources\ChatBanResource\RelationManagers;
 use App\Models\ChatBan;
 use App\Models\Client;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -20,7 +33,7 @@ class ChatBanResource extends Resource
 {
     protected static ?string $model = ChatBan::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-chat-bubble-left-ellipsis';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-chat-bubble-left-ellipsis';
 
     protected static ?string $navigationLabel = 'Баны чата';
 
@@ -28,13 +41,13 @@ class ChatBanResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Баны чата';
 
-    protected static ?string $navigationGroup = 'Чат';
+    protected static string | \UnitEnum | null $navigationGroup = 'Чат';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Select::make('client_id')
+        return $schema
+            ->components([
+                Select::make('client_id')
                     ->label('Пользователь')
                     ->relationship('client', 'name')
                     ->searchable()
@@ -42,17 +55,17 @@ class ChatBanResource extends Resource
                     ->required()
                     ->getOptionLabelFromRecordUsing(fn (Client $record): string => "{$record->name} (ID: {$record->id})"),
 
-                Forms\Components\DateTimePicker::make('banned_until')
+                DateTimePicker::make('banned_until')
                     ->label('Забанен до')
                     ->helperText('Оставьте пустым для постоянного бана')
                     ->native(false),
 
-                Forms\Components\Textarea::make('reason')
+                Textarea::make('reason')
                     ->label('Причина бана')
                     ->maxLength(255)
                     ->rows(3),
 
-                Forms\Components\Hidden::make('banned_by')
+                Hidden::make('banned_by')
                     ->default(fn () => auth()->id()),
             ]);
     }
@@ -61,32 +74,32 @@ class ChatBanResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('client.name')
+                TextColumn::make('client.name')
                     ->label('Пользователь')
                     ->sortable()
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('banned_until')
+                TextColumn::make('banned_until')
                     ->label('Забанен до')
                     ->dateTime('d.m.Y H:i')
                     ->placeholder('Постоянный бан')
                     ->sortable(),
 
-                Tables\Columns\IconColumn::make('is_active')
+                IconColumn::make('is_active')
                     ->label('Активен')
                     ->boolean()
                     ->getStateUsing(fn (ChatBan $record): bool => $record->isActive()),
 
-                Tables\Columns\TextColumn::make('reason')
+                TextColumn::make('reason')
                     ->label('Причина')
                     ->limit(50)
                     ->wrap(),
 
-                Tables\Columns\TextColumn::make('bannedBy.name')
+                TextColumn::make('bannedBy.name')
                     ->label('Забанил')
                     ->default('Система'),
 
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('Создан')
                     ->dateTime('d.m.Y H:i')
                     ->sortable(),
@@ -110,17 +123,17 @@ class ChatBanResource extends Resource
                         return $query;
                     }),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make()
+            ->recordActions([
+                EditAction::make(),
+                DeleteAction::make()
                     ->label('Разбанить')
                     ->modalHeading('Разбанить пользователя')
                     ->modalDescription('Вы уверены, что хотите разбанить этого пользователя?')
                     ->modalSubmitActionLabel('Разбанить'),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make()
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make()
                         ->label('Разбанить выбранных')
                         ->modalHeading('Разбанить выбранных пользователей')
                         ->modalSubmitActionLabel('Разбанить'),
@@ -139,9 +152,9 @@ class ChatBanResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListChatBans::route('/'),
-            'create' => Pages\CreateChatBan::route('/create'),
-            'edit' => Pages\EditChatBan::route('/{record}/edit'),
+            'index' => ListChatBans::route('/'),
+            'create' => CreateChatBan::route('/create'),
+            'edit' => EditChatBan::route('/{record}/edit'),
         ];
     }
 }

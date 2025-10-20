@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use RecursiveIteratorIterator;
+use RecursiveDirectoryIterator;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use ZipArchive;
@@ -313,9 +315,9 @@ JS;
     private function getEmptyDirectories(string $path): array
     {
         $directories = [];
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($path),
-            \RecursiveIteratorIterator::SELF_FIRST
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($path),
+            RecursiveIteratorIterator::SELF_FIRST
         );
 
         foreach ($iterator as $file) {

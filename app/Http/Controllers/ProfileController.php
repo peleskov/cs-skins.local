@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Transaction;
+use Exception;
+use App\Events\ExtensionEvents;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -188,7 +191,7 @@ class ProfileController extends Controller
         $tradeUrl = $request->trade_url;
         
         // Валидация Trade URL (формат + соответствие Steam ID)
-        $validation = \App\Models\Client::validateTradeUrl($tradeUrl, $client->steam_id);
+        $validation = Client::validateTradeUrl($tradeUrl, $client->steam_id);
         
         if (!$validation['valid']) {
             if ($request->expectsJson()) {
@@ -254,8 +257,8 @@ class ProfileController extends Controller
 
         // Получаем статистику из завершенных транзакций продаж
         $salesTransactions = $client->transactions()
-            ->where('type', \App\Models\Transaction::TYPE_SALE)
-            ->where('status', \App\Models\Transaction::STATUS_COMPLETED)
+            ->where('type', Transaction::TYPE_SALE)
+            ->where('status', Transaction::STATUS_COMPLETED)
             ->get();
 
         $stats = [
@@ -413,7 +416,7 @@ class ProfileController extends Controller
                 'message' => 'Токен расширения сгенерирован успешно'
             ]);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Error generating extension token: ' . $e->getMessage());
             
             return response()->json([
@@ -442,12 +445,12 @@ class ProfileController extends Controller
                 $oldChannel = $this->generateChannel($client->id, $oldToken);
                 
                 try {
-                    broadcast(\App\Events\ExtensionEvents::forceLogout($oldChannel, 'Токен изменен. Требуется переавторизация.'));
+                    broadcast(ExtensionEvents::forceLogout($oldChannel, 'Токен изменен. Требуется переавторизация.'));
                     Log::info('Force logout sent to old channel', [
                         'client_id' => $client->id,
                         'old_channel' => $oldChannel
                     ]);
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     Log::warning('Failed to send force logout', [
                         'client_id' => $client->id,
                         'old_channel' => $oldChannel,
@@ -462,7 +465,7 @@ class ProfileController extends Controller
                 'message' => 'Токен расширения перегенерирован успешно'
             ]);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Error regenerating extension token: ' . $e->getMessage());
             
             return response()->json([

@@ -2,6 +2,14 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\CheckboxColumn;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use App\Models\Client;
+use Filament\Tables\Filters\TernaryFilter;
+use App\Filament\Resources\CaseItemResource\Pages\ListCaseItems;
 use App\Filament\Resources\CaseItemResource\Pages;
 use App\Models\CaseItem;
 use App\Models\CaseModel;
@@ -9,7 +17,6 @@ use App\Models\CaseTier;
 use App\Models\ClientInventoryItem;
 use Illuminate\Support\HtmlString;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -21,7 +28,7 @@ class CaseItemResource extends Resource
 {
     protected static ?string $model = CaseItem::class;
 
-    protected static ?string $navigationIcon = 'heroicon-m-cube';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-m-cube';
     
     protected static ?string $navigationLabel = 'Предметы кейсов';
     
@@ -29,16 +36,16 @@ class CaseItemResource extends Resource
     
     protected static ?string $pluralModelLabel = 'Предметы кейсов';
     
-    protected static ?string $navigationGroup = 'Маркетплейс';
+    protected static string | \UnitEnum | null $navigationGroup = 'Маркетплейс';
     
     protected static ?int $navigationSort = 4;
     
     protected static bool $shouldRegisterNavigation = false;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
         // Форма больше не нужна, так как мы используем чекбоксы в таблице
-        return $form->schema([]);
+        return $schema->components([]);
     }
 
     public static function table(Table $table): Table
@@ -50,7 +57,7 @@ class CaseItemResource extends Resource
         return $table
             ->query(function () use ($currentCaseId, $currentTierId) {
                 // Показываем предметы ботов, которые не используются в других кейсах
-                return \App\Models\ClientInventoryItem::query()
+                return ClientInventoryItem::query()
                     ->whereHas('client', function ($query) {
                         $query->where('is_bot', true);
                     })
@@ -87,7 +94,7 @@ class CaseItemResource extends Resource
                 });
             })
             ->columns([
-                Tables\Columns\CheckboxColumn::make('is_in_tier')
+                CheckboxColumn::make('is_in_tier')
                     ->label('В уровне')
                     ->getStateUsing(function ($record, $livewire) {
                         return in_array($record->id, $livewire->selectedItems ?? []);
@@ -96,7 +103,7 @@ class CaseItemResource extends Resource
                         $livewire->toggleItem($record->id);
                         return false;
                     }),
-                Tables\Columns\ImageColumn::make('icon_url')
+                ImageColumn::make('icon_url')
                     ->label('Изображение')
                     ->size(50)
                     ->square()
@@ -107,20 +114,20 @@ class CaseItemResource extends Resource
                         return 'https://community.steamstatic.com/economy/image/' . $record->icon_url;
                     })
                     ->extraImgAttributes(['class' => 'object-contain']),
-                Tables\Columns\TextColumn::make('item_name')
+                TextColumn::make('item_name')
                     ->label('Предмет')
                     ->searchable()
                     ->sortable()
                     ->wrap(),
-                Tables\Columns\TextColumn::make('client.name')
+                TextColumn::make('client.name')
                     ->label('Владелец')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('float_value')
+                TextColumn::make('float_value')
                     ->label('Float')
                     ->formatStateUsing(fn ($state) => number_format($state ?? 0, 4))
                     ->sortable(),
-                Tables\Columns\TextColumn::make('current_price')
+                TextColumn::make('current_price')
                     ->label('Цена')
                     ->getStateUsing(function ($record) {
                         $price = $record->getCurrentPrice();
@@ -139,14 +146,14 @@ class CaseItemResource extends Resource
             ])
             ->defaultSort('current_price', 'asc')
             ->filters([
-                Tables\Filters\SelectFilter::make('client_id')
+                SelectFilter::make('client_id')
                     ->label('Владелец')
                     ->options(function () {
-                        return \App\Models\Client::where('is_bot', true)
+                        return Client::where('is_bot', true)
                             ->pluck('name', 'id');
                     })
                     ->searchable(),
-                Tables\Filters\TernaryFilter::make('selected')
+                TernaryFilter::make('selected')
                     ->label('Выбранные')
                     ->placeholder('Все')
                     ->trueLabel('Только выбранные')
@@ -167,8 +174,8 @@ class CaseItemResource extends Resource
                         blank: fn (Builder $query) => $query,
                     ),
             ])
-            ->actions([])
-            ->bulkActions([])
+            ->recordActions([])
+            ->toolbarActions([])
             ->selectCurrentPageOnly();
     }
 
@@ -182,7 +189,7 @@ class CaseItemResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListCaseItems::route('/'),
+            'index' => ListCaseItems::route('/'),
         ];
     }
 }

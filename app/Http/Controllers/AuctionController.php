@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Favorite;
 use App\Models\Auction;
 use App\Models\Listing;
 use App\Services\AuctionService;
@@ -37,7 +38,7 @@ class AuctionController extends Controller
         $favoriteItemIds = collect();
         if (auth('client')->check()) {
             $listingIds = $featuredAuctions->pluck('listing_id');
-            $favoriteItemIds = \App\Models\Favorite::where('client_id', auth('client')->id())
+            $favoriteItemIds = Favorite::where('client_id', auth('client')->id())
                 ->whereIn('listing_id', $listingIds)
                 ->pluck('listing_id');
         }
@@ -91,7 +92,7 @@ class AuctionController extends Controller
         $favoriteItemIds = collect();
         if (auth('client')->check()) {
             $listingIds = collect($auctions->items())->pluck('listing_id');
-            $favoriteItemIds = \App\Models\Favorite::where('client_id', auth('client')->id())
+            $favoriteItemIds = Favorite::where('client_id', auth('client')->id())
                 ->whereIn('listing_id', $listingIds)
                 ->pluck('listing_id');
         }

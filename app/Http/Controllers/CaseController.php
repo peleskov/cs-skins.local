@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Transaction;
 use App\Models\CaseModel;
 use App\Models\CaseTier;
 use App\Models\Client;
@@ -222,11 +223,11 @@ class CaseController extends Controller
                 $case->increment('accumulated_fund', $fundAmount);
 
                 // Создаем транзакцию покупки кейса (видна покупателю)
-                \App\Models\Transaction::create([
+                Transaction::create([
                     'client_id' => $buyer->id,
-                    'type' => \App\Models\Transaction::TYPE_PURCHASE,
+                    'type' => Transaction::TYPE_PURCHASE,
                     'amount' => $case->price,
-                    'status' => \App\Models\Transaction::STATUS_COMPLETED,
+                    'status' => Transaction::STATUS_COMPLETED,
                     'description' => "Покупка кейса \"{$case->name}\"",
                     'metadata' => [
                         'case_id' => $case->id,
@@ -242,11 +243,11 @@ class CaseController extends Controller
                     // Получаем системного клиента
                     $systemClient = Client::where('email', 'system@cs-skins.local')->first();
 
-                    \App\Models\Transaction::create([
+                    Transaction::create([
                         'client_id' => $systemClient?->id, // Системная транзакция
-                        'type' => \App\Models\Transaction::TYPE_FEE,
+                        'type' => Transaction::TYPE_FEE,
                         'amount' => $siteRevenue,
-                        'status' => \App\Models\Transaction::STATUS_COMPLETED,
+                        'status' => Transaction::STATUS_COMPLETED,
                         'description' => "Доход с продажи кейса \"{$case->name}\"",
                         'metadata' => [
                             'case_id' => $case->id,

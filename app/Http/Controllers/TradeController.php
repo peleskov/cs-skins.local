@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use Exception;
+use App\Models\ClientInventoryItem;
+use App\Models\Currency;
 use App\Models\Client;
 use App\Models\Listing;
 use Illuminate\Http\Request;
@@ -95,7 +98,7 @@ class TradeController extends Controller
                 ]
             ]);
             
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to update listing price', [
                 'client_id' => $client->id,
                 'listing_id' => $listingId,
@@ -183,7 +186,7 @@ class TradeController extends Controller
                 ]
             ]);
             
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to activate listing', [
                 'client_id' => $client->id,
                 'listing_id' => $listingId,
@@ -253,7 +256,7 @@ class TradeController extends Controller
                 ]
             ]);
             
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to deactivate listing', [
                 'client_id' => $client->id,
                 'listing_id' => $listingId,
@@ -301,7 +304,7 @@ class TradeController extends Controller
         }
 
         // Проверяем что предмет все еще в инвентаре пользователя (по БД)
-        $inventoryItem = \App\Models\ClientInventoryItem::where('client_id', $client->id)
+        $inventoryItem = ClientInventoryItem::where('client_id', $client->id)
             ->where('steam_asset_id', $listing->steam_asset_id)
             ->first();
 
@@ -334,7 +337,7 @@ class TradeController extends Controller
                 ]
             ]);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to reactivate listing', [
                 'client_id' => $client->id,
                 'listing_id' => $listingId,
@@ -405,7 +408,7 @@ class TradeController extends Controller
                 'message' => 'Предмет удален из торговли'
             ]);
             
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to delete listing', [
                 'client_id' => $client->id,
                 'listing_id' => $listingId,
@@ -458,6 +461,6 @@ class TradeController extends Controller
      */
     private function convertDollarsToRubles(float $priceInDollars): float
     {
-        return round(\App\Models\Currency::convert($priceInDollars, 'USD', 'RUB'), 2);
+        return round(Currency::convert($priceInDollars, 'USD', 'RUB'), 2);
     }
 }

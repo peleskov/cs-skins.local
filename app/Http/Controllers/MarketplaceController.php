@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Client;
+use App\Models\Order;
+use App\Services\SkinScreenshotService;
 use App\Models\Listing;
 use App\Models\Tag;
 use App\Models\Favorite;
@@ -32,7 +35,7 @@ class MarketplaceController extends Controller
             $query->where('seller_id', $sellerId);
 
             // Получаем информацию о продавце
-            $seller = \App\Models\Client::find($sellerId);
+            $seller = Client::find($sellerId);
 
             if ($seller) {
                 // Получаем статистику продавца
@@ -40,11 +43,11 @@ class MarketplaceController extends Controller
                     'total_listings' => Listing::where('seller_id', $sellerId)
                         ->active()
                         ->count(),
-                    'total_sales' => \App\Models\Order::where('seller_id', $sellerId)
-                        ->where('status', \App\Models\Order::STATUS_COMPLETED)
+                    'total_sales' => Order::where('seller_id', $sellerId)
+                        ->where('status', Order::STATUS_COMPLETED)
                         ->count(),
-                    'total_purchases' => \App\Models\Order::where('buyer_id', $sellerId)
-                        ->where('status', \App\Models\Order::STATUS_COMPLETED)
+                    'total_purchases' => Order::where('buyer_id', $sellerId)
+                        ->where('status', Order::STATUS_COMPLETED)
                         ->count(),
                 ];
             }
@@ -997,7 +1000,7 @@ class MarketplaceController extends Controller
                 'inspect_url' => $listing->inspect_url,
                 'steam_asset_id' => $listing->steam_asset_id,
                 'screenshots' => $listing->screenshots,
-                'screenshot_urls' => $listing->steam_asset_id ? \App\Services\SkinScreenshotService::generateScreenshotUrls($listing->steam_asset_id) : null,
+                'screenshot_urls' => $listing->steam_asset_id ? SkinScreenshotService::generateScreenshotUrls($listing->steam_asset_id) : null,
                 'tags' => $listing->structured_tags,
                 'is_in_cart' => $listing->is_in_cart,
                 'is_favorite' => $listing->is_favorite,

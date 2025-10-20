@@ -2,11 +2,20 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Utilities\Set;
+use Illuminate\Support\Str;
+use Filament\Actions\ViewAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\FaqCategoryResource\Pages\ListFaqCategories;
+use App\Filament\Resources\FaqCategoryResource\Pages\CreateFaqCategory;
+use App\Filament\Resources\FaqCategoryResource\Pages\EditFaqCategory;
 use App\Filament\Resources\FaqCategoryResource\Pages;
 use App\Filament\Resources\FaqCategoryResource\RelationManagers;
 use App\Models\FaqCategory;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -19,7 +28,7 @@ class FaqCategoryResource extends Resource
 {
     protected static ?string $model = FaqCategory::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-folder-open';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-folder-open';
     
     protected static ?string $navigationLabel = 'Категории FAQ';
     
@@ -27,20 +36,20 @@ class FaqCategoryResource extends Resource
     
     protected static ?string $pluralModelLabel = 'Категории FAQ';
     
-    protected static ?string $navigationGroup = 'Контент';
+    protected static string | \UnitEnum | null $navigationGroup = 'Контент';
     
     protected static ?int $navigationSort = 1;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 TextInput::make('name')
                     ->label('Название')
                     ->required()
                     ->maxLength(255)
                     ->live(onBlur: true)
-                    ->afterStateUpdated(fn (string $operation, $state, Forms\Set $set) => $operation === 'create' ? $set('slug', \Illuminate\Support\Str::slug($state)) : null),
+                    ->afterStateUpdated(fn (string $operation, $state, Set $set) => $operation === 'create' ? $set('slug', Str::slug($state)) : null),
                     
                 TextInput::make('slug')
                     ->label('Slug')
@@ -91,13 +100,13 @@ class FaqCategoryResource extends Resource
             ->filters([
                 //
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
+            ->recordActions([
+                ViewAction::make(),
+                EditAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('sort_order');
@@ -113,9 +122,9 @@ class FaqCategoryResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListFaqCategories::route('/'),
-            'create' => Pages\CreateFaqCategory::route('/create'),
-            'edit' => Pages\EditFaqCategory::route('/{record}/edit'),
+            'index' => ListFaqCategories::route('/'),
+            'create' => CreateFaqCategory::route('/create'),
+            'edit' => EditFaqCategory::route('/{record}/edit'),
         ];
     }
 }

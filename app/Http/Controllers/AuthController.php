@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Log;
+use Exception;
 use App\Models\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,7 +21,7 @@ class AuthController extends Controller
         try {
             $steamUser = Socialite::driver('steam')->user();
             
-            \Log::info('Steam user data:', [
+            Log::info('Steam user data:', [
                 'id' => $steamUser->id,
                 'nickname' => $steamUser->nickname,
                 'avatar' => $steamUser->avatar
@@ -35,14 +37,14 @@ class AuthController extends Controller
 
             Auth::guard('client')->login($client, true);
             
-            \Log::info('Client logged in:', [
+            Log::info('Client logged in:', [
                 'client_id' => $client->id,
                 'is_logged_in' => Auth::guard('client')->check()
             ]);
 
             return redirect()->route('profile')->with('success', 'Вы успешно вошли через Steam!');
-        } catch (\Exception $e) {
-            \Log::error('Steam auth error: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('Steam auth error: ' . $e->getMessage());
             return redirect()->route('home')->with('error', 'Ошибка авторизации через Steam. Попробуйте снова.');
         }
     }

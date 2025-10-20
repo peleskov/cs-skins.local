@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
@@ -48,7 +49,7 @@ class ReleaseExpiredOrder implements ShouldQueue
         $result = $cancelService->cancelOrder($order, 'Время резерва истекло', $this->tries);
         
         if (!$result['success'] && !isset($result['requires_manual'])) {
-            throw new \Exception($result['message']);
+            throw new Exception($result['message']);
         }
     }
 

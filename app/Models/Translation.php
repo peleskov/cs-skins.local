@@ -2,98 +2,116 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Cache;
 
-class Translation
+class Translation extends Model
 {
-    protected string $locale;
-    protected string $group;
-    protected array $translations = [];
+    protected $fillable = [
+        'group',
+        'key',
+        'locale',
+        'value'
+    ];
 
-    public function __construct(string $locale = 'en', string $group = 'app')
+    protected $casts = [
+        'group' => 'string',
+        'key' => 'string',
+        'locale' => 'string',
+        'value' => 'string'
+    ];
+
+    /**
+     * События модели для синхронизации с файлами
+     */
+    protected static function boot()
     {
-        $this->locale = $locale;
-        $this->group = $group;
-        $this->loadTranslations();
+        parent::boot();
+
+        // При создании/обновлении записи - синхронизируем с файлом
+        static::created(function ($translation) {
+            $translation->syncToFile();
+        });
+
+        static::updated(function ($translation) {
+            $translation->syncToFile();
+        });
+
+        // При удалении записи - удаляем из файла
+        static::deleted(function ($translation) {
+            $translation->removeFromFile();
+        });
     }
 
     /**
-     * Загрузить переводы из файла
+     * Синхронизировать запись в файл перевода
      */
-    protected function loadTranslations(): void
+    public function syncToFile(): void
     {
-        $path = $this->getFilePath();
-
-        if (File::exists($path)) {
-            $this->translations = include $path;
-        }
-    }
-
-    /**
-     * Получить путь к файлу переводов
-     */
-    protected function getFilePath(): string
-    {
-        return resource_path("lang/{$this->locale}/{$this->group}.php");
-    }
-
-    /**
-     * Получить все переводы
-     */
-    public function getTranslations(): array
-    {
-        return $this->translations;
-    }
-
-    /**
-     * Получить все переводы как плоский массив с точечной нотацией
-     */
-    public function getFlatTranslations(): array
-    {
-        return Arr::dot($this->translations);
-    }
-
-    /**
-     * Установить значение перевода
-     */
-    public function setTranslation(string $key, string $value): void
-    {
-        Arr::set($this->translations, $key, $value);
-    }
-
-    /**
-     * Удалить перевод
-     */
-    public function removeTranslation(string $key): void
-    {
-        Arr::forget($this->translations, $key);
-    }
-
-    /**
-     * Сохранить переводы в файл
-     */
-    public function save(): bool
-    {
-        $path = $this->getFilePath();
+        $filePath = resource_path("lang/{$this->locale}/{$this->group}.php");
 
         // Создаем директорию если не существует
-        $dir = dirname($path);
+        $dir = dirname($filePath);
         if (!File::exists($dir)) {
             File::makeDirectory($dir, 0755, true);
         }
 
-        // Формируем PHP код
-        $content = "<?php\n\nreturn " . $this->arrayToPhpString($this->translations) . ";\n";
+        // Загружаем существующие переводы
+        $translations = [];
+        if (File::exists($filePath)) {
+            $translations = include $filePath;
+        }
 
-        return File::put($path, $content) !== false;
+        // Устанавливаем новое значение
+        data_set($translations, $this->key, $this->value);
+
+        // Сохраняем файл
+        $content = "<?php\n\nreturn " . $this->arrayToPhpString($translations) . ";\n";
+        File::put($filePath, $content);
+
+        // Очищаем кеш переводов Laravel
+        Cache::forget("translation.{$this->locale}.{$this->group}");
     }
 
     /**
-     * Конвертировать массив в PHP строку
+     * Удалить запись из файла перевода
+     */
+    public function removeFromFile(): void
+    {
+        $filePath = resource_path("lang/{$this->locale}/{$this->group}.php");
+
+        if (!File::exists($filePath)) {
+            return;
+        }
+
+        // Загружаем переводы
+        $translations = include $filePath;
+
+        // Удаляем ключ
+        data_forget($translations, $this->key);
+
+        // Если файл стал пустым - удаляем его, иначе сохраняем
+        if (empty($translations)) {
+            File::delete($filePath);
+        } else {
+            $content = "<?php\n\nreturn " . $this->arrayToPhpString($translations) . ";\n";
+            File::put($filePath, $content);
+        }
+
+        // Очищаем кеш
+        Cache::forget("translation.{$this->locale}.{$this->group}");
+    }
+
+    /**
+     * Преобразовать массив в строку PHP кода
      */
     protected function arrayToPhpString(array $array, int $depth = 1): string
     {
+        if (empty($array)) {
+            return '[]';
+        }
+
         $isAssoc = array_keys($array) !== range(0, count($array) - 1);
         $indent = str_repeat('    ', $depth);
         $result = "[\n";
@@ -102,30 +120,34 @@ class Translation
             $result .= $indent;
 
             if ($isAssoc) {
-                $result .= "'" . str_replace("'", "\\'", $key) . "' => ";
+                $result .= "'" . addslashes($key) . "' => ";
             }
 
             if (is_array($value)) {
                 $result .= $this->arrayToPhpString($value, $depth + 1);
             } else {
-                $result .= "'" . str_replace("'", "\\'", $value) . "'";
+                $result .= "'" . addslashes($value) . "'";
             }
 
             $result .= ",\n";
         }
 
         $result .= str_repeat('    ', $depth - 1) . "]";
-
         return $result;
     }
 
     /**
-     * Получить все доступные языки
+     * Получить все доступные языки из файловой структуры
      */
     public static function getAvailableLocales(): array
     {
-        $path = resource_path('lang');
-        $directories = File::directories($path);
+        $langPath = resource_path('lang');
+
+        if (!File::exists($langPath)) {
+            return [];
+        }
+
+        $directories = File::directories($langPath);
 
         return array_map(function($dir) {
             return basename($dir);
@@ -133,91 +155,131 @@ class Translation
     }
 
     /**
-     * Получить все доступные группы переводов
+     * Получить все доступные группы для определенного языка
      */
     public static function getAvailableGroups(string $locale = 'en'): array
     {
-        $path = resource_path("lang/{$locale}");
+        $langPath = resource_path("lang/{$locale}");
 
-        if (!File::exists($path)) {
+        if (!File::exists($langPath)) {
             return [];
         }
 
-        $files = File::files($path);
+        $files = File::files($langPath);
 
         return array_map(function($file) {
-            return pathinfo($file, PATHINFO_FILENAME);
+            return pathinfo($file->getFilename(), PATHINFO_FILENAME);
         }, $files);
     }
 
     /**
-     * Получить все переводы для всех языков по ключу
+     * Синхронизировать все переводы из файлов в БД
      */
-    public static function getTranslationsByKey(string $group, string $key): array
+    public static function syncFromFiles(): int
     {
-        $locales = self::getAvailableLocales();
-        $translations = [];
+        $locales = static::getAvailableLocales();
+        $synced = 0;
 
         foreach ($locales as $locale) {
-            $model = new self($locale, $group);
-            $flat = $model->getFlatTranslations();
-            $translations[$locale] = $flat[$key] ?? '';
-        }
+            $groups = static::getAvailableGroups($locale);
 
-        return $translations;
-    }
-
-    /**
-     * Сохранить переводы для всех языков по ключу
-     */
-    public static function saveTranslationsByKey(string $group, string $key, array $translations): void
-    {
-        foreach ($translations as $locale => $value) {
-            $model = new self($locale, $group);
-            $model->setTranslation($key, $value);
-            $model->save();
-        }
-    }
-
-    /**
-     * Получить все переводы для таблицы
-     */
-    public static function getAllTranslationsForTable(): array
-    {
-        $locales = self::getAvailableLocales();
-        $groups = self::getAvailableGroups($locales[0] ?? 'en');
-        $result = [];
-
-        foreach ($groups as $group) {
-            $translations = [];
-
-            // Собираем все ключи из всех языков
-            $allKeys = [];
-            foreach ($locales as $locale) {
-                $model = new self($locale, $group);
-                $flat = $model->getFlatTranslations();
-                $allKeys = array_merge($allKeys, array_keys($flat));
+            foreach ($groups as $group) {
+                $synced += static::syncGroupFromFile($locale, $group);
             }
-            $allKeys = array_unique($allKeys);
+        }
 
-            // Формируем данные для каждого ключа
-            foreach ($allKeys as $key) {
-                $row = [
-                    'id' => $group . '.' . $key,
+        // Удаляем записи из БД, которых нет в файлах
+        static::cleanupDeletedTranslations();
+
+        return $synced;
+    }
+
+    /**
+     * Синхронизировать группу переводов из файла
+     */
+    protected static function syncGroupFromFile(string $locale, string $group): int
+    {
+        $filePath = resource_path("lang/{$locale}/{$group}.php");
+
+        if (!File::exists($filePath)) {
+            return 0;
+        }
+
+        $translations = include $filePath;
+        $synced = 0;
+
+        static::syncNestedArray($translations, '', $locale, $group, $synced);
+
+        return $synced;
+    }
+
+    /**
+     * Рекурсивно синхронизировать вложенный массив переводов
+     */
+    protected static function syncNestedArray(array $array, string $prefix, string $locale, string $group, int &$synced): void
+    {
+        foreach ($array as $key => $value) {
+            $fullKey = $prefix ? $prefix . '.' . $key : $key;
+
+            if (is_array($value)) {
+                static::syncNestedArray($value, $fullKey, $locale, $group, $synced);
+            } else {
+                static::updateOrCreate([
                     'group' => $group,
-                    'key' => $key,
-                ];
+                    'key' => $fullKey,
+                    'locale' => $locale,
+                ], [
+                    'value' => $value,
+                ]);
 
-                foreach ($locales as $locale) {
-                    $model = new self($locale, $group);
-                    $flat = $model->getFlatTranslations();
-                    $row[$locale] = $flat[$key] ?? '';
+                $synced++;
+            }
+        }
+    }
+
+    /**
+     * Удалить записи из БД, которых нет в файлах
+     */
+    protected static function cleanupDeletedTranslations(): void
+    {
+        $locales = static::getAvailableLocales();
+        $existingKeys = collect();
+
+        // Собираем все существующие ключи из файлов
+        foreach ($locales as $locale) {
+            $groups = static::getAvailableGroups($locale);
+
+            foreach ($groups as $group) {
+                $filePath = resource_path("lang/{$locale}/{$group}.php");
+
+                if (File::exists($filePath)) {
+                    $translations = include $filePath;
+                    static::collectKeys($translations, '', $locale, $group, $existingKeys);
                 }
-
-                $result[] = $row;
             }
         }
 
-        return $result;
+        // Удаляем записи из БД, которых нет в файлах
+        static::whereNotIn('id', function($query) use ($existingKeys) {
+            $query->select('id')
+                  ->from('translations')
+                  ->whereIn(\DB::raw("CONCAT(locale, ':', `group`, ':', `key`)"), $existingKeys->toArray());
+        })->delete();
+    }
+
+    /**
+     * Собрать все ключи из массива переводов
+     */
+    protected static function collectKeys(array $array, string $prefix, string $locale, string $group, &$existingKeys): void
+    {
+        foreach ($array as $key => $value) {
+            $fullKey = $prefix ? $prefix . '.' . $key : $key;
+
+            if (is_array($value)) {
+                static::collectKeys($value, $fullKey, $locale, $group, $existingKeys);
+            } else {
+                $existingKeys->push("{$locale}:{$group}:{$fullKey}");
+            }
+        }
     }
 }

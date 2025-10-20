@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Exception;
+use App\Services\Steam\SessionCache;
 use App\Models\Client;
 use App\Models\ClientInventoryItem;
 use App\Models\Listing;
@@ -118,7 +120,7 @@ class InventoryController extends Controller
                 ]
             ]);
             
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Inventory sync failed', [
                 'client_id' => $client->id,
                 'steam_id' => $client->steam_id,
@@ -154,7 +156,7 @@ class InventoryController extends Controller
         }
 
         // Проверяем активность расширения (Steam сессия)
-        $sessionCache = app(\App\Services\Steam\SessionCache::class);
+        $sessionCache = app(SessionCache::class);
         if (!$sessionCache->isActive($client->id)) {
             return response()->json([
                 'success' => false,
@@ -210,7 +212,7 @@ class InventoryController extends Controller
                             'new_price' => $request->price
                         ]
                     ]);
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     return response()->json([
                         'success' => false,
                         'message' => 'Ошибка при обновлении цены'
@@ -223,7 +225,7 @@ class InventoryController extends Controller
                     $existingListing->price = $request->price; // устанавливаем новую цену
                     $existingListing->listed_at = null;
                     $existingListing->save();
-                    
+
                     return response()->json([
                         'success' => true,
                         'message' => 'Предмет возвращен в торговлю с установленной ценой',
@@ -232,13 +234,13 @@ class InventoryController extends Controller
                             'redirect_url' => '/profile#trading'
                         ]
                     ]);
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     Log::error('Failed to reactivate listing', [
                         'client_id' => $client->id,
                         'listing_id' => $existingListing->id,
                         'error' => $e->getMessage()
                     ]);
-                    
+
                     return response()->json([
                         'success' => false,
                         'message' => 'Произошла ошибка при реактивации листинга'
@@ -317,7 +319,7 @@ class InventoryController extends Controller
                 ]
             ]);
             
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to create listing', [
                 'client_id' => $client->id,
                 'steam_asset_id' => $steamAssetId,
@@ -361,7 +363,7 @@ class InventoryController extends Controller
         /** @var Client $client */
         $client = Auth::guard('client')->user();
 
-        $sessionCache = app(\App\Services\Steam\SessionCache::class);
+        $sessionCache = app(SessionCache::class);
         $isActive = $sessionCache->isActive($client->id);
 
         return response()->json([

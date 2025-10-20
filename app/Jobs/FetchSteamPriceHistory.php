@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use Exception;
+use Carbon\Carbon;
 use App\Models\SteamMarketItem;
 use App\Models\SteamPriceHistory;
 use Illuminate\Bus\Queueable;
@@ -55,7 +57,7 @@ class FetchSteamPriceHistory implements ShouldQueue
             $html = shell_exec($command);
             
             if (empty($html)) {
-                throw new \Exception("Failed to fetch Steam page - no response");
+                throw new Exception("Failed to fetch Steam page - no response");
             }
             
             // Проверяем, торгуется ли предмет на маркете
@@ -77,7 +79,7 @@ class FetchSteamPriceHistory implements ShouldQueue
                 'last_price_update' => now()
             ]);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Если это вторая попытка - просто завершаем без ошибки
             if ($this->attempts() >= 2) {
                 return;
@@ -121,7 +123,7 @@ class FetchSteamPriceHistory implements ShouldQueue
         $priceData = json_decode($jsonData, true);
         
         if (!$priceData) {
-            throw new \Exception("Failed to parse price history JSON");
+            throw new Exception("Failed to parse price history JSON");
         }
 
         // Берём только последние 365 дней
@@ -197,7 +199,7 @@ class FetchSteamPriceHistory implements ShouldQueue
     /**
      * Парсим дату из формата Steam
      */
-    protected function parseDate(string $dateStr): ?\Carbon\Carbon
+    protected function parseDate(string $dateStr): ?Carbon
     {
         try {
             // Убираем лишние символы после времени
@@ -213,14 +215,14 @@ class FetchSteamPriceHistory implements ShouldQueue
 
             foreach ($formats as $format) {
                 try {
-                    return \Carbon\Carbon::createFromFormat($format, $dateStr);
-                } catch (\Exception $e) {
+                    return Carbon::createFromFormat($format, $dateStr);
+                } catch (Exception $e) {
                     continue;
                 }
             }
 
             return null;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return null;
         }
     }

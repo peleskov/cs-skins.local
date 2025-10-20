@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use Exception;
+use Log;
 use App\Models\Client;
 use App\Models\ClientInventoryItem;
 use App\Services\Steam\InventoryService;
@@ -73,7 +75,7 @@ class SyncInventoryCommand extends Command
             
             $this->info("✅ Инвентарь успешно синхронизирован");
             
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->error("❌ Ошибка синхронизации: " . $e->getMessage());
         }
     }
@@ -163,8 +165,8 @@ class SyncInventoryCommand extends Command
                     }
                     
                     $processedMarketHashNames[] = $item['market_hash_name'];
-                } catch (\Exception $e) {
-                    \Log::error("Failed to dispatch FetchSteamPriceHistory job", [
+                } catch (Exception $e) {
+                    Log::error("Failed to dispatch FetchSteamPriceHistory job", [
                         'market_hash_name' => $item['market_hash_name'], 
                         'error' => $e->getMessage()
                     ]);

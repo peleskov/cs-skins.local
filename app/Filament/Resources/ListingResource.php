@@ -2,12 +2,31 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\KeyValue;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Actions\ViewAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\ListingResource\Pages\ListListings;
+use App\Filament\Resources\ListingResource\Pages\CreateListing;
+use App\Filament\Resources\ListingResource\Pages\EditListing;
 use App\Filament\Resources\ListingResource\Pages;
 use App\Filament\Resources\ListingResource\RelationManagers;
 use App\Models\Listing;
 use App\Models\Client;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -19,7 +38,7 @@ class ListingResource extends Resource
 {
     protected static ?string $model = Listing::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-shopping-bag';
 
     protected static ?string $navigationLabel = 'Активные предложения';
 
@@ -27,31 +46,31 @@ class ListingResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Предложения';
 
-    protected static ?string $navigationGroup = 'Маркетплейс';
+    protected static string | \UnitEnum | null $navigationGroup = 'Маркетплейс';
 
     protected static ?int $navigationSort = 2;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Основная информация')
+        return $schema
+            ->components([
+                Section::make('Основная информация')
                     ->schema([
-                        Forms\Components\Select::make('seller_id')
+                        Select::make('seller_id')
                             ->label('Продавец')
                             ->relationship('seller', 'name')
                             ->searchable()
                             ->preload()
                             ->required(),
 
-                        Forms\Components\TextInput::make('price')
+                        TextInput::make('price')
                             ->label('Цена')
                             ->numeric()
                             ->step(0.01)
                             ->prefix('$')
                             ->required(),
 
-                        Forms\Components\Select::make('status')
+                        Select::make('status')
                             ->label('Статус')
                             ->options([
                                 Listing::STATUS_ACTIVE => 'Активно',
@@ -62,42 +81,42 @@ class ListingResource extends Resource
                             ->required(),
                     ])->columns(2),
 
-                Forms\Components\Section::make('Характеристики предмета')
+                Section::make('Характеристики предмета')
                     ->schema([
-                        Forms\Components\TextInput::make('wear_value')
+                        TextInput::make('wear_value')
                             ->label('Износ (float)')
                             ->numeric()
                             ->step(0.001)
                             ->minValue(0)
                             ->maxValue(1),
 
-                        Forms\Components\TextInput::make('pattern_index')
+                        TextInput::make('pattern_index')
                             ->label('Индекс паттерна')
                             ->numeric(),
 
-                        Forms\Components\TextInput::make('name_tag')
+                        TextInput::make('name_tag')
                             ->label('Именной ярлык')
                             ->maxLength(255),
 
-                        Forms\Components\Toggle::make('is_stattrak')
+                        Toggle::make('is_stattrak')
                             ->label('StatTrak'),
 
-                        Forms\Components\Toggle::make('is_souvenir')
+                        Toggle::make('is_souvenir')
                             ->label('Сувенир'),
 
-                        Forms\Components\KeyValue::make('stickers')
+                        KeyValue::make('stickers')
                             ->label('Наклейки')
                             ->keyLabel('Позиция')
                             ->valueLabel('Наклейка'),
                     ])->columns(2),
 
-                Forms\Components\Section::make('Даты')
+                Section::make('Даты')
                     ->schema([
-                        Forms\Components\DateTimePicker::make('listed_at')
+                        DateTimePicker::make('listed_at')
                             ->label('Дата выставления')
                             ->default(now()),
 
-                        Forms\Components\DateTimePicker::make('expires_at')
+                        DateTimePicker::make('expires_at')
                             ->label('Истекает'),
                     ])->columns(2),
             ]);
@@ -107,19 +126,19 @@ class ListingResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('seller.name')
+                TextColumn::make('seller.name')
                     ->label('Продавец')
                     ->searchable()
                     ->badge()
                     ->color(fn (Listing $record): string => $record->seller->isBot() ? 'warning' : 'primary'),
 
-                Tables\Columns\TextColumn::make('price')
+                TextColumn::make('price')
                     ->label('Цена')
                     ->money('USD')
                     ->sortable()
                     ->weight(FontWeight::Bold),
 
-                Tables\Columns\BadgeColumn::make('status')
+                BadgeColumn::make('status')
                     ->label('Статус')
                     ->colors([
                         'success' => Listing::STATUS_ACTIVE,
@@ -135,7 +154,7 @@ class ListingResource extends Resource
                         default => $state,
                     }),
 
-                Tables\Columns\TextColumn::make('wear_value')
+                TextColumn::make('wear_value')
                     ->label('Износ')
                     ->formatStateUsing(fn (?float $state): string => 
                         $state ? number_format($state, 3) : '—'
@@ -150,13 +169,13 @@ class ListingResource extends Resource
                         default => 'gray',
                     }),
 
-                Tables\Columns\IconColumn::make('is_stattrak')
+                IconColumn::make('is_stattrak')
                     ->label('ST')
                     ->boolean()
                     ->trueIcon('heroicon-s-star')
                     ->falseIcon(''),
 
-                Tables\Columns\TextColumn::make('listed_at')
+                TextColumn::make('listed_at')
                     ->label('Выставлено')
                     ->dateTime()
                     ->sortable()
@@ -164,7 +183,7 @@ class ListingResource extends Resource
 
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')
+                SelectFilter::make('status')
                     ->label('Статус')
                     ->options([
                         Listing::STATUS_ACTIVE => 'Активно',
@@ -175,13 +194,13 @@ class ListingResource extends Resource
                     ->default(Listing::STATUS_ACTIVE),
 
 
-                Tables\Filters\Filter::make('price_range')
-                    ->form([
-                        Forms\Components\TextInput::make('price_from')
+                Filter::make('price_range')
+                    ->schema([
+                        TextInput::make('price_from')
                             ->label('Цена от')
                             ->numeric()
                             ->prefix('$'),
-                        Forms\Components\TextInput::make('price_to')
+                        TextInput::make('price_to')
                             ->label('Цена до')
                             ->numeric()
                             ->prefix('$'),
@@ -198,17 +217,17 @@ class ListingResource extends Resource
                             );
                     }),
 
-                Tables\Filters\TernaryFilter::make('is_stattrak')
+                TernaryFilter::make('is_stattrak')
                     ->label('StatTrak')
                     ->boolean(),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
+            ->recordActions([
+                ViewAction::make(),
+                EditAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('listed_at', 'desc');
@@ -224,9 +243,9 @@ class ListingResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListListings::route('/'),
-            'create' => Pages\CreateListing::route('/create'),
-            'edit' => Pages\EditListing::route('/{record}/edit'),
+            'index' => ListListings::route('/'),
+            'create' => CreateListing::route('/create'),
+            'edit' => EditListing::route('/{record}/edit'),
         ];
     }
 }

@@ -2,12 +2,26 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Actions\Action;
+use Exception;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\CurrencyResource\Pages\ListCurrencies;
+use App\Filament\Resources\CurrencyResource\Pages\CreateCurrency;
+use App\Filament\Resources\CurrencyResource\Pages\EditCurrency;
 use App\Filament\Resources\CurrencyResource\Pages;
 use App\Filament\Resources\CurrencyResource\RelationManagers;
 use App\Models\Currency;
 use App\Services\CurrencyService;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -20,7 +34,7 @@ class CurrencyResource extends Resource
 {
     protected static ?string $model = Currency::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-currency-dollar';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-currency-dollar';
     
     protected static ?string $navigationLabel = 'Валюты';
     
@@ -28,25 +42,25 @@ class CurrencyResource extends Resource
     
     protected static ?string $pluralModelLabel = 'валюты';
     
-    protected static ?string $navigationGroup = 'Настройки';
+    protected static string | \UnitEnum | null $navigationGroup = 'Настройки';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('name')
+        return $schema
+            ->components([
+                TextInput::make('name')
                     ->label('Название')
                     ->required()
                     ->maxLength(255)
                     ->placeholder('Российский рубль'),
                     
-                Forms\Components\TextInput::make('symbol')
+                TextInput::make('symbol')
                     ->label('Символ')
                     ->required()
                     ->maxLength(10)
                     ->placeholder('₽'),
                     
-                Forms\Components\TextInput::make('code')
+                TextInput::make('code')
                     ->label('Код валюты')
                     ->required()
                     ->maxLength(3)
@@ -54,7 +68,7 @@ class CurrencyResource extends Resource
                     ->placeholder('RUB')
                     ->helperText('Трёхбуквенный код валюты (ISO 4217)'),
                     
-                Forms\Components\TextInput::make('exchange_rate')
+                TextInput::make('exchange_rate')
                     ->label('Курс к основной валюте')
                     ->required()
                     ->numeric()
@@ -63,16 +77,16 @@ class CurrencyResource extends Resource
                     ->default(1.0000)
                     ->helperText('Курс относительно основной валюты'),
                     
-                Forms\Components\Toggle::make('is_primary')
+                Toggle::make('is_primary')
                     ->label('Основная валюта')
                     ->helperText('Может быть только одна основная валюта'),
                     
-                Forms\Components\Toggle::make('is_active')
+                Toggle::make('is_active')
                     ->label('Активная')
                     ->default(true)
                     ->helperText('Основная валюта всегда активна'),
                     
-                Forms\Components\TextInput::make('sort_order')
+                TextInput::make('sort_order')
                     ->label('Порядок сортировки')
                     ->numeric()
                     ->default(0)
@@ -84,27 +98,27 @@ class CurrencyResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label('Название')
                     ->searchable()
                     ->sortable(),
                     
-                Tables\Columns\TextColumn::make('symbol')
+                TextColumn::make('symbol')
                     ->label('Символ')
                     ->searchable(),
                     
-                Tables\Columns\TextColumn::make('code')
+                TextColumn::make('code')
                     ->label('Код')
                     ->searchable()
                     ->badge()
                     ->color('primary'),
                     
-                Tables\Columns\TextColumn::make('exchange_rate')
+                TextColumn::make('exchange_rate')
                     ->label('Курс')
                     ->numeric(decimalPlaces: 4)
                     ->sortable(),
                     
-                Tables\Columns\IconColumn::make('is_primary')
+                IconColumn::make('is_primary')
                     ->label('Основная')
                     ->boolean()
                     ->trueIcon('heroicon-o-star')
@@ -112,26 +126,26 @@ class CurrencyResource extends Resource
                     ->trueColor('warning')
                     ->falseColor('gray'),
                     
-                Tables\Columns\IconColumn::make('is_active')
+                IconColumn::make('is_active')
                     ->label('Активная')
                     ->boolean()
                     ->sortable(),
                     
-                Tables\Columns\TextColumn::make('sort_order')
+                TextColumn::make('sort_order')
                     ->label('Порядок')
                     ->numeric()
                     ->sortable(),
             ])
             ->defaultSort('sort_order')
             ->filters([
-                Tables\Filters\TernaryFilter::make('is_active')
+                TernaryFilter::make('is_active')
                     ->label('Активные')
                     ->placeholder('Все валюты')
                     ->trueLabel('Только активные')
                     ->falseLabel('Только неактивные'),
             ])
             ->headerActions([
-                Tables\Actions\Action::make('update_rates')
+                Action::make('update_rates')
                     ->label('Обновить курсы')
                     ->icon('heroicon-o-arrow-path')
                     ->color('success')
@@ -161,7 +175,7 @@ class CurrencyResource extends Resource
                                     ->send();
                             }
                             
-                        } catch (\Exception $e) {
+                        } catch (Exception $e) {
                             Notification::make()
                                 ->title('Ошибка обновления')
                                 ->body($e->getMessage())
@@ -170,13 +184,13 @@ class CurrencyResource extends Resource
                         }
                     })
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+            ->recordActions([
+                EditAction::make(),
+                DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -191,9 +205,9 @@ class CurrencyResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListCurrencies::route('/'),
-            'create' => Pages\CreateCurrency::route('/create'),
-            'edit' => Pages\EditCurrency::route('/{record}/edit'),
+            'index' => ListCurrencies::route('/'),
+            'create' => CreateCurrency::route('/create'),
+            'edit' => EditCurrency::route('/{record}/edit'),
         ];
     }
 }

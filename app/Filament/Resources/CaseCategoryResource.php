@@ -2,11 +2,20 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\TextInput;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\CaseCategoryResource\Pages\ListCaseCategories;
+use App\Filament\Resources\CaseCategoryResource\Pages\CreateCaseCategory;
+use App\Filament\Resources\CaseCategoryResource\Pages\EditCaseCategory;
 use App\Filament\Resources\CaseCategoryResource\Pages;
 use App\Filament\Resources\CaseCategoryResource\RelationManagers;
 use App\Models\CaseCategory;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -17,7 +26,7 @@ class CaseCategoryResource extends Resource
 {
     protected static ?string $model = CaseCategory::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-tag';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-tag';
 
     protected static ?string $navigationLabel = 'Категории кейсов';
 
@@ -25,20 +34,20 @@ class CaseCategoryResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Категории кейсов';
 
-    protected static ?string $navigationGroup = 'Кейсы';
+    protected static string | \UnitEnum | null $navigationGroup = 'Кейсы';
 
     protected static ?int $navigationSort = 1;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('name')
+        return $schema
+            ->components([
+                TextInput::make('name')
                     ->label('Название')
                     ->required()
                     ->maxLength(255),
 
-                Forms\Components\TextInput::make('sort_order')
+                TextInput::make('sort_order')
                     ->label('Порядок сортировки')
                     ->numeric()
                     ->default(0)
@@ -51,27 +60,27 @@ class CaseCategoryResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label('Название')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('sort_order')
+                TextColumn::make('sort_order')
                     ->label('Порядок')
                     ->numeric()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('cases_count')
+                TextColumn::make('cases_count')
                     ->label('Кол-во кейсов')
                     ->counts('cases'),
 
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('Создано')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                Tables\Columns\TextColumn::make('updated_at')
+                TextColumn::make('updated_at')
                     ->label('Обновлено')
                     ->dateTime()
                     ->sortable()
@@ -80,13 +89,13 @@ class CaseCategoryResource extends Resource
             ->filters([
                 //
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+            ->recordActions([
+                EditAction::make(),
+                DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('sort_order');
@@ -102,9 +111,9 @@ class CaseCategoryResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListCaseCategories::route('/'),
-            'create' => Pages\CreateCaseCategory::route('/create'),
-            'edit' => Pages\EditCaseCategory::route('/{record}/edit'),
+            'index' => ListCaseCategories::route('/'),
+            'create' => CreateCaseCategory::route('/create'),
+            'edit' => EditCaseCategory::route('/{record}/edit'),
         ];
     }
 }

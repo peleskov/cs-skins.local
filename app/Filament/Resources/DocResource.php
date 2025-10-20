@@ -2,11 +2,22 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\TextInput;
+use Illuminate\Support\Str;
+use Filament\Forms\Components\RichEditor;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\DocResource\Pages\ListDocs;
+use App\Filament\Resources\DocResource\Pages\CreateDoc;
+use App\Filament\Resources\DocResource\Pages\EditDoc;
 use App\Filament\Resources\DocResource\Pages;
 use App\Filament\Resources\DocResource\RelationManagers;
 use App\Models\Doc;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -17,34 +28,34 @@ class DocResource extends Resource
 {
     protected static ?string $model = Doc::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-document-text';
     
     protected static ?string $modelLabel = 'Документ';
     
     protected static ?string $pluralModelLabel = 'Документы';
     
-    protected static ?string $navigationGroup = 'Контент';
+    protected static string | \UnitEnum | null $navigationGroup = 'Контент';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('title')
+        return $schema
+            ->components([
+                TextInput::make('title')
                     ->label('Название')
                     ->required()
                     ->maxLength(255)
                     ->reactive()
                     ->afterStateUpdated(function ($state, callable $set) {
-                        $set('slug', \Illuminate\Support\Str::slug($state));
+                        $set('slug', Str::slug($state));
                     }),
                 
-                Forms\Components\TextInput::make('slug')
+                TextInput::make('slug')
                     ->label('Slug')
                     ->required()
                     ->unique(ignoreRecord: true)
                     ->maxLength(255),
                 
-                Forms\Components\RichEditor::make('content')
+                RichEditor::make('content')
                     ->label('Контент')
                     ->required()
                     ->columnSpanFull(),
@@ -55,22 +66,22 @@ class DocResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('title')
+                TextColumn::make('title')
                     ->label('Название')
                     ->searchable()
                     ->sortable(),
                 
-                Tables\Columns\TextColumn::make('slug')
+                TextColumn::make('slug')
                     ->label('Slug')
                     ->searchable()
                     ->sortable(),
                 
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('Создан')
                     ->dateTime('d.m.Y H:i')
                     ->sortable(),
                 
-                Tables\Columns\TextColumn::make('updated_at')
+                TextColumn::make('updated_at')
                     ->label('Обновлен')
                     ->dateTime('d.m.Y H:i')
                     ->sortable(),
@@ -78,13 +89,13 @@ class DocResource extends Resource
             ->filters([
                 //
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+            ->recordActions([
+                EditAction::make(),
+                DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -99,9 +110,9 @@ class DocResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListDocs::route('/'),
-            'create' => Pages\CreateDoc::route('/create'),
-            'edit' => Pages\EditDoc::route('/{record}/edit'),
+            'index' => ListDocs::route('/'),
+            'create' => CreateDoc::route('/create'),
+            'edit' => EditDoc::route('/{record}/edit'),
         ];
     }
 }

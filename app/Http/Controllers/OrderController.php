@@ -2,6 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use Exception;
+use App\Models\Listing;
+use App\Models\Transaction;
+use App\Models\Client;
+use App\Services\Steam\SessionCache;
+use App\Models\ClientInventoryItem;
+use App\Models\Currency;
+use App\Services\BotRotationService;
 use App\Models\Order;
 use App\Services\CartService;
 use App\Services\CancelOrderService;
@@ -78,7 +86,7 @@ class OrderController extends Controller
                 'success' => false,
                 'message' => $result['message']
             ], 500);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Ошибка при создании заказа: ' . $e->getMessage()
@@ -104,7 +112,7 @@ class OrderController extends Controller
 
         try {
             // Находим товар
-            $listing = \App\Models\Listing::findOrFail($request->listing_id);
+            $listing = Listing::findOrFail($request->listing_id);
 
             // Проверяем доступность товара
             if (!$listing->isActive()) {
@@ -161,7 +169,7 @@ class OrderController extends Controller
                 'success' => false,
                 'message' => $result['message']
             ], 400);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Ошибка при покупке: ' . $e->getMessage()
@@ -190,7 +198,7 @@ class OrderController extends Controller
             try {
                 // Сначала списываем общую сумму атомарно
                 if (!$buyerClient->debit($totalAmount)) {
-                    throw new \Exception('Недостаточно средств на балансе для оплаты заказа');
+                    throw new Exception('Недостаточно средств на балансе для оплаты заказа');
                 }
                 
                 // Группируем товары по продавцам
@@ -215,12 +223,12 @@ class OrderController extends Controller
                     ]);
 
                     // Создаем транзакцию покупки
-                    \App\Models\Transaction::create([
+                    Transaction::create([
                         'client_id' => $buyerClient->id,
                         'order_id' => $order->id,
-                        'type' => \App\Models\Transaction::TYPE_PURCHASE,
+                        'type' => Transaction::TYPE_PURCHASE,
                         'amount' => $sellerTotal,
-                        'status' => \App\Models\Transaction::STATUS_COMPLETED,
+                        'status' => Transaction::STATUS_COMPLETED,
                         'description' => "Покупка по заказу #{$order->order_number}",
                         'metadata' => [
                             'payment_method' => $order->payment_method,
@@ -249,11 +257,11 @@ class OrderController extends Controller
                     'success' => true,
                     'orders' => $createdOrders
                 ];
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 DB::rollBack();
                 throw $e;
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return [
                 'success' => false,
                 'message' => $e->getMessage()
@@ -284,7 +292,7 @@ class OrderController extends Controller
                 'success' => true,
                 'data' => $orders
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Ошибка при получении заказов: ' . $e->getMessage()
@@ -314,7 +322,7 @@ class OrderController extends Controller
                 'success' => true,
                 'data' => $orders
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Ошибка при получении продаж: ' . $e->getMessage()
@@ -329,13 +337,13 @@ class OrderController extends Controller
     {
         // Проверяем, что корзина не пуста
         if ($this->cartService->getCount() === 0) {
-            throw new \Exception('Корзина пуста');
+            throw new Exception('Корзина пуста');
         }
 
         // Валидируем корзину
         $removedItems = $this->cartService->validate();
         if (!empty($removedItems)) {
-            throw new \Exception('Некоторые товары в корзине больше не доступны');
+            throw new Exception('Некоторые товары в корзине больше не доступны');
         }
 
         // Проверяем, что в корзине остались товары после валидации
@@ -343,7 +351,7 @@ class OrderController extends Controller
         $total = $this->cartService->getTotal();
 
         if ($cartItems->isEmpty() || $total <= 0) {
-            throw new \Exception('В корзине нет доступных товаров для заказа');
+            throw new Exception('В корзине нет доступных товаров для заказа');
         }
     }
 
@@ -355,7 +363,7 @@ class OrderController extends Controller
         $client = $client ?: auth('client')->user();
 
         if (empty($client->steam_trade_url)) {
-            throw new \Exception('Для оформления заказа необходимо указать Trade URL в профиле');
+            throw new Exception('Для оформления заказа необходимо указать Trade URL в профиле');
         }
     }
 
@@ -366,9 +374,9 @@ class OrderController extends Controller
     {
         foreach ($cartItems as $item) {
             if (isset($item['seller_id'])) {
-                $listing = \App\Models\Listing::find($item['listing_id']);
+                $listing = Listing::find($item['listing_id']);
                 if (!$listing || !$listing->isActive()) {
-                    throw new \Exception('Товар "' . ($item['item']['name'] ?? 'Unknown') . '" больше не доступен');
+                    throw new Exception('Товар "' . ($item['item']['name'] ?? 'Unknown') . '" больше не доступен');
                 }
             }
         }
@@ -425,9 +433,9 @@ class OrderController extends Controller
             $this->validateBuyerTradeUrl($winner);
             
             // Проверяем доступность листинга
-            $listing = \App\Models\Listing::find($auction->listing_id);
+            $listing = Listing::find($auction->listing_id);
             if (!$listing || !$listing->isActive()) {
-                throw new \Exception('Товар больше не доступен');
+                throw new Exception('Товар больше не доступен');
             }
             
             // Формируем данные для заказа
@@ -473,14 +481,14 @@ class OrderController extends Controller
                 // Если заказ не создался, откатываем транзакцию
                 // Это автоматически отменит возврат средств
                 DB::rollBack();
-                throw new \Exception($result['message'] ?? 'Не удалось создать заказ');
+                throw new Exception($result['message'] ?? 'Не удалось создать заказ');
                 
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 DB::rollBack();
                 throw $e;
             }
             
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             throw $e;
         }
     }
@@ -495,9 +503,9 @@ class OrderController extends Controller
             $this->validateBuyerTradeUrl($buyer);
             
             // Получаем владельца предмета
-            $seller = \App\Models\Client::find($prizeItem->client_id);
+            $seller = Client::find($prizeItem->client_id);
             if (!$seller) {
-                throw new \Exception('Владелец предмета не найден');
+                throw new Exception('Владелец предмета не найден');
             }
             
             // Формируем данные для заказа
@@ -549,12 +557,12 @@ class OrderController extends Controller
 
                 return $order;
                 
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 DB::rollBack();
                 throw $e;
             }
             
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             throw $e;
         }
     }
@@ -573,7 +581,7 @@ class OrderController extends Controller
 
         // Проверяем активную сессию расширения
         $client = auth('client')->user();
-        $sessionCache = new \App\Services\Steam\SessionCache();
+        $sessionCache = new SessionCache();
         if (!$sessionCache->isActive($client->id)) {
             return response()->json([
                 'success' => false,
@@ -596,7 +604,7 @@ class OrderController extends Controller
             }
 
             // Находим предмет в инвентаре пользователя
-            $item = \App\Models\ClientInventoryItem::where('client_id', $client->id)
+            $item = ClientInventoryItem::where('client_id', $client->id)
                 ->where('steam_asset_id', $request->asset_id)
                 ->where('tradable', true)
                 ->where('marketable', true)
@@ -610,7 +618,7 @@ class OrderController extends Controller
             }
 
             // Проверяем существующий листинг для этого предмета
-            $existingListing = \App\Models\Listing::where('steam_asset_id', $item->steam_asset_id)
+            $existingListing = Listing::where('steam_asset_id', $item->steam_asset_id)
                 ->where('seller_id', $client->id)
                 ->whereIn('status', ['pending', 'active'])
                 ->first();
@@ -625,10 +633,10 @@ class OrderController extends Controller
             }
 
             // Конвертируем в рубли
-            $buyoutPriceRUB = \App\Models\Currency::convert($buyoutPriceUSD, 'USD', 'RUB');
+            $buyoutPriceRUB = Currency::convert($buyoutPriceUSD, 'USD', 'RUB');
 
             // Получаем доступного бота
-            $botService = new \App\Services\BotRotationService();
+            $botService = new BotRotationService();
             $bot = $botService->getNextAvailableBot($buyoutPriceRUB);
 
             if (!$bot) {
@@ -648,7 +656,7 @@ class OrderController extends Controller
                     $listing->save();
                 } else {
                     // Создаем листинг через InventoryController
-                    $inventoryController = new \App\Http\Controllers\InventoryController();
+                    $inventoryController = new InventoryController();
                     $createRequest = new Request(['steam_asset_id' => $item->steam_asset_id]);
                     $createResult = $inventoryController->createListing($createRequest);
 
@@ -663,7 +671,7 @@ class OrderController extends Controller
 
                     // Получаем созданный листинг
                     $resultData = json_decode($createResult->getContent(), true);
-                    $listing = \App\Models\Listing::find($resultData['data']['listing_id']);
+                    $listing = Listing::find($resultData['data']['listing_id']);
                 }
                 // Обновляем цену и статус для покупки ботом
                 $listing->price = $buyoutPriceRUB;
@@ -712,11 +720,11 @@ class OrderController extends Controller
                         'message' => $result['message'] ?? 'Ошибка при покупке ботом'
                     ], 400);
                 }
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 DB::rollBack();
                 throw $e;
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Quick sell error', [
                 'client_id' => auth('client')->id(),
                 'asset_id' => $request->asset_id,

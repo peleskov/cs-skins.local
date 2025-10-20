@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Filament\Resources\TranslationResource\Pages;
+namespace App\Filament\Resources\Translations\Pages;
 
-use App\Filament\Resources\TranslationResource;
-use Filament\Actions;
+use App\Filament\Resources\Translations\TranslationResource;
+use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditTranslation extends EditRecord
@@ -13,7 +13,7 @@ class EditTranslation extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            DeleteAction::make(),
         ];
     }
 }

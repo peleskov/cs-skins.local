@@ -9,11 +9,10 @@ return [
         'string' => 'Поле :attribute должно содержать минимум :min символов.',
         'numeric' => 'Поле :attribute должно быть не меньше :min.',
     ],
-    
     'attributes' => [
         'name' => 'Название',
         'slug' => 'URL',
-        'description' => 'Описание', 
+        'description' => 'Описание',
         'price' => 'Цена',
         'fund_percent' => 'Процент в фонд',
         'tiers' => 'Уровни призов',

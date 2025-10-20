@@ -2,6 +2,10 @@
 
 namespace App\Filament\Resources\CaseItemResource\Pages;
 
+use App\Models\CaseItem;
+use App\Models\CaseModel;
+use App\Models\CaseTier;
+use Filament\Actions\Action;
 use App\Filament\Resources\CaseItemResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
@@ -48,7 +52,7 @@ class ListCaseItems extends ListRecords
         }
         
         // Загружаем текущие предметы уровня из БД
-        $selectedIds = \App\Models\CaseItem::where([
+        $selectedIds = CaseItem::where([
             'case_id' => $this->caseId,
             'tier_id' => $this->tierId,
         ])->pluck('inventory_item_id')->toArray();
@@ -78,14 +82,14 @@ class ListCaseItems extends ListRecords
         $description = '';
 
         if($this->caseId){
-            $case = \App\Models\CaseModel::find($this->caseId);
+            $case = CaseModel::find($this->caseId);
             if ($case) {
                 $description = '<div class="text-gray-500 dark:text-gray-400" style="margin-bottom: 5px;">Кейс: ' . $case->name . '</div>';
             }
         }
 
         if($this->tierId){
-            $tier = \App\Models\CaseTier::find($this->tierId);
+            $tier = CaseTier::find($this->tierId);
             if ($tier) {
                 $description .= '<div class="text-gray-500 dark:text-gray-400" style="margin-bottom: 5px;">Уровень: ' . $tier->name . ' (цена: ' . number_format($tier->price, 2) . ' ₽ • Вероятность: ' . $tier->probability . '%)</div>';
             }
@@ -108,7 +112,7 @@ class ListCaseItems extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\Action::make('save_items')
+            Action::make('save_items')
                 ->label('Сохранить изменения')
                 ->color('primary')
                 ->action('saveItems'),
@@ -126,13 +130,13 @@ class ListCaseItems extends ListRecords
     
     public function saveItems()
     {
-        \App\Models\CaseItem::where([
+        CaseItem::where([
             'case_id' => $this->caseId,
             'tier_id' => $this->tierId,
         ])->delete();
 
         foreach ($this->selectedItems as $itemId) {
-            \App\Models\CaseItem::create([
+            CaseItem::create([
                 'case_id' => $this->caseId,
                 'tier_id' => $this->tierId,
                 'inventory_item_id' => $itemId,

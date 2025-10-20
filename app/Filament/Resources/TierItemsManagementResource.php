@@ -2,12 +2,18 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
+use App\Filament\Resources\TierItemsManagementResource\Pages\ListTierItemsManagement;
 use App\Filament\Resources\TierItemsManagementResource\Pages;
 use App\Models\ClientInventoryItem;
 use App\Models\CaseTier;
 use App\Models\CaseItem;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -17,7 +23,7 @@ class TierItemsManagementResource extends Resource
 {
     protected static ?string $model = ClientInventoryItem::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-cube';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cube';
     
     protected static ?string $navigationLabel = 'Предметы уровня';
     
@@ -27,10 +33,10 @@ class TierItemsManagementResource extends Resource
     
     protected static bool $shouldRegisterNavigation = false;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 //
             ]);
     }
@@ -52,28 +58,28 @@ class TierItemsManagementResource extends Resource
                     ]);
             })
             ->columns([
-                Tables\Columns\IconColumn::make('is_selected')
+                IconColumn::make('is_selected')
                     ->label('Выбран')
                     ->boolean()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('item_name')
+                TextColumn::make('item_name')
                     ->label('Название предмета')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('float_value')
+                TextColumn::make('float_value')
                     ->label('Float')
                     ->formatStateUsing(fn ($state) => number_format($state ?? 0, 4))
                     ->sortable(),
             ])
             ->filters([
-                Tables\Filters\TernaryFilter::make('is_selected')
+                TernaryFilter::make('is_selected')
                     ->label('Статус')
                     ->queries(
                         true: fn (Builder $query) => $query->where('is_selected', true),
                         false: fn (Builder $query) => $query->where('is_selected', false),
                     ),
             ])
-            ->actions([
-                Tables\Actions\Action::make('toggle')
+            ->recordActions([
+                Action::make('toggle')
                     ->label(fn ($record) => $record->is_selected ? 'Удалить' : 'Добавить')
                     ->action(function ($record) {
                         $tierId = request()->get('tier');
@@ -93,8 +99,8 @@ class TierItemsManagementResource extends Resource
                     })
                     ->color(fn ($record) => $record->is_selected ? 'danger' : 'success'),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkAction::make('add_selected')
+            ->toolbarActions([
+                BulkAction::make('add_selected')
                     ->label('Добавить выбранные')
                     ->action(function ($records) {
                         $tierId = request()->route('tier');
@@ -109,7 +115,7 @@ class TierItemsManagementResource extends Resource
                         }
                     })
                     ->color('success'),
-                Tables\Actions\BulkAction::make('remove_selected')
+                BulkAction::make('remove_selected')
                     ->label('Удалить выбранные')
                     ->action(function ($records) {
                         $tierId = request()->route('tier');
@@ -135,7 +141,7 @@ class TierItemsManagementResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListTierItemsManagement::route('/tier-items'),
+            'index' => ListTierItemsManagement::route('/tier-items'),
         ];
     }
 }

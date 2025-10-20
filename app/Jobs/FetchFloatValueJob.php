@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use Exception;
+use Throwable;
 use App\Models\ClientInventoryItem;
 use App\Models\Listing;
 use App\Services\Steam\FloatValueService;
@@ -74,7 +76,7 @@ class FetchFloatValueJob implements ShouldQueue
                 $this->inventoryItem->update(['float_fetched_at' => now()]);
             }
             
-            throw new \Exception('Failed to fetch float data from CSFloat API');
+            throw new Exception('Failed to fetch float data from CSFloat API');
         }
 
         // Обновляем данные в БД
@@ -91,7 +93,7 @@ class FetchFloatValueJob implements ShouldQueue
         ]);
     }
 
-    public function failed(\Throwable $exception): void
+    public function failed(Throwable $exception): void
     {
         Log::error('FetchFloatValueJob failed permanently', [
             'item_id' => $this->inventoryItem->id,

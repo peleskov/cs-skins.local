@@ -9,7 +9,6 @@ return [
         'string' => 'The :attribute must be at least :min characters.',
         'numeric' => 'The :attribute must be at least :min.',
     ],
-
     'attributes' => [
         'name' => 'Name',
         'slug' => 'URL',

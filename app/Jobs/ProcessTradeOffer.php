@@ -94,7 +94,7 @@ class ProcessTradeOffer implements ShouldQueue
                         'system_remarks' => 'Ожидаем подтверждения продавца'
                     ]);
                 }
-                
+
                 /*
                 Log::info('TradeOffer успешно создан', [
                     'trade_offer_id' => $this->tradeOffer->id,

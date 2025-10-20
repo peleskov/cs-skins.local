@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use Exception;
 use App\Models\Client;
 use App\Services\NotificationService;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -63,7 +64,7 @@ class SendTelegramNotificationJob implements ShouldQueue
                 'duration_ms' => $duration
             ]);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::channel('notifications')->error('TELEGRAM_FAILED', [
                 'client_id' => $this->client->id,
                 'type' => $this->type,

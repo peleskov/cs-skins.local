@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use Exception;
 use App\Models\Listing;
 use App\Services\SkinScreenshotService;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -50,7 +51,7 @@ class ProcessSkinScreenshots implements ShouldQueue
         foreach ($listings as $listing) {
             $attemptKey = "screenshot_attempts_{$listing->id}";
             $attempts = Cache::get($attemptKey, 0);
-            
+
             // Если уже было 3 попытки, помечаем как неудачное и пропускаем
             if ($attempts >= 3) {
                 $listing->screenshots = 0;
@@ -58,13 +59,13 @@ class ProcessSkinScreenshots implements ShouldQueue
                 Cache::forget($attemptKey);
                 continue;
             }
-            
+
             try {
                 // Увеличиваем счетчик попыток
                 Cache::put($attemptKey, $attempts + 1, 3600); // храним час
-                
+
                 $success = $screenshotService->processListing($listing);
-                
+
                 if ($success) {
                     // Успешно - удаляем счетчик
                     Cache::forget($attemptKey);
@@ -73,7 +74,7 @@ class ProcessSkinScreenshots implements ShouldQueue
                         'listing_id' => $listing->id,
                         'attempt' => $attempts + 1
                     ]);
-                    
+
                     // Если это была 3-я попытка, помечаем как неудачное
                     if ($attempts + 1 >= 3) {
                         $listing->screenshots = 0;
@@ -81,18 +82,18 @@ class ProcessSkinScreenshots implements ShouldQueue
                         Cache::forget($attemptKey);
                     }
                 }
-                
+
                 // Задержка между запросами (15 секунд)
                 sleep(15);
-                
-            } catch (\Exception $e) {
+
+            } catch (Exception $e) {
                 Log::error('Failed to generate screenshot for listing', [
                     'listing_id' => $listing->id,
                     'inspect_url' => $listing->inspect_url,
                     'attempt' => $attempts + 1,
                     'error' => $e->getMessage()
                 ]);
-                
+
                 // Если это была 3-я попытка, помечаем как неудачное
                 if ($attempts + 1 >= 3) {
                     $listing->screenshots = 0;

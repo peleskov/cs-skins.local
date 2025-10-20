@@ -1,9 +1,8 @@
 <?php
 
-namespace App\Filament\Resources\TranslationResource\Pages;
+namespace App\Filament\Resources\Translations\Pages;
 
-use App\Filament\Resources\TranslationResource;
-use Filament\Actions;
+use App\Filament\Resources\Translations\TranslationResource;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateTranslation extends CreateRecord

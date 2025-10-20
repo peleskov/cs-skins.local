@@ -2,12 +2,30 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Forms\Components\Textarea;
+use Filament\Schemas\Components\Grid;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Placeholder;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\CaseModelResource\RelationManagers\TiersRelationManager;
+use App\Filament\Resources\CaseModelResource\Pages\ListCaseModels;
+use App\Filament\Resources\CaseModelResource\Pages\CreateCaseModel;
+use App\Filament\Resources\CaseModelResource\Pages\EditCaseModel;
 use App\Filament\Resources\CaseModelResource\Pages;
 use App\Filament\Resources\CaseModelResource\RelationManagers;
 use App\Models\CaseModel;
 use App\Models\CaseCategory;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -19,7 +37,7 @@ class CaseModelResource extends Resource
 {
     protected static ?string $model = CaseModel::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-cube';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cube';
 
     protected static ?string $navigationLabel = 'Кейсы';
 
@@ -27,68 +45,68 @@ class CaseModelResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Кейсы';
 
-    protected static ?string $navigationGroup = 'Кейсы';
+    protected static string | \UnitEnum | null $navigationGroup = 'Кейсы';
 
     protected static ?int $navigationSort = 2;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('name')
+        return $schema
+            ->components([
+                TextInput::make('name')
                     ->label('Название')
                     ->required()
                     ->maxLength(255)
                     ->live(onBlur: true)
                     ->afterStateUpdated(
-                        fn(string $operation, $state, Forms\Set $set) =>
+                        fn(string $operation, $state, Set $set) =>
                         $operation === 'create' ? $set('slug', Str::slug($state)) : null
                     ),
-                Forms\Components\TextInput::make('slug')
+                TextInput::make('slug')
                     ->label('URL')
                     ->required()
                     ->unique(ignoreRecord: true)
                     ->maxLength(255)
                     ->dehydrated(),
-                Forms\Components\Textarea::make('description')
+                Textarea::make('description')
                     ->label('Описание')
                     ->maxLength(65535)
                     ->columnSpanFull(),
-                Forms\Components\TextInput::make('price')
+                TextInput::make('price')
                     ->label('Цена')
                     ->required()
                     ->numeric()
                     ->prefix('₽'),
-                Forms\Components\TextInput::make('fund_percent')
+                TextInput::make('fund_percent')
                     ->label('Процент в фонд')
                     ->required()
                     ->numeric()
                     ->default(50)
                     ->suffix('%'),
-                Forms\Components\Grid::make(2)
+                Grid::make(2)
                     ->schema([
-                        Forms\Components\FileUpload::make('image_url')
+                        FileUpload::make('image_url')
                             ->label('Изображение')
                             ->image()
                             ->directory('cases')
                             ->visibility('public')
                             ->columnSpan(1),
-                        Forms\Components\Grid::make(1)
+                        Grid::make(1)
                             ->schema([
-                                Forms\Components\Select::make('category_id')
+                                Select::make('category_id')
                                     ->label('Категория')
                                     ->relationship('category', 'name')
                                     ->options(CaseCategory::ordered()->pluck('name', 'id'))
                                     ->searchable()
                                     ->preload()
                                     ->nullable(),
-                                Forms\Components\Toggle::make('is_active')
+                                Toggle::make('is_active')
                                     ->label('Активен')
                                     ->default(true),
                             ])
                             ->columnSpan(1),
                     ]),
-                Forms\Components\Placeholder::make('tiers_info')
+                Placeholder::make('tiers_info')
                     ->label('Уровни призов')
                     ->content('После создания кейса вы сможете добавить уровни на странице редактирования')
                     ->hiddenOn('edit')
@@ -101,54 +119,54 @@ class CaseModelResource extends Resource
         return $table
             ->poll('10s') // Обновляем таблицу каждые 10 секунд
             ->columns([
-                Tables\Columns\TextColumn::make('category.name')
+                TextColumn::make('category.name')
                     ->label('Категория')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label('Название')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('price')
+                TextColumn::make('price')
                     ->label('Цена')
                     ->money('RUB')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('accumulated_fund')
+                TextColumn::make('accumulated_fund')
                     ->label('Фонд')
                     ->money('RUB')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('fund_percent')
+                TextColumn::make('fund_percent')
                     ->label('% в фонд')
                     ->suffix('%'),
-                Tables\Columns\TextColumn::make('tiers_count')
+                TextColumn::make('tiers_count')
                     ->label('Уровни')
                     ->counts('tiers')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('items_count')
+                TextColumn::make('items_count')
                     ->label('Предметы')
                     ->getStateUsing(function ($record) {
                         return $record->items()->count();
                     })
                     ->sortable(),
-                Tables\Columns\IconColumn::make('is_active')
+                IconColumn::make('is_active')
                     ->label('Активен')
                     ->boolean(),
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('Создан')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\TernaryFilter::make('is_active')
+                TernaryFilter::make('is_active')
                     ->label('Активность'),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
+            ->recordActions([
+                EditAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -156,16 +174,16 @@ class CaseModelResource extends Resource
     public static function getRelations(): array
     {
         return [
-            RelationManagers\TiersRelationManager::class,
+            TiersRelationManager::class,
         ];
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListCaseModels::route('/'),
-            'create' => Pages\CreateCaseModel::route('/create'),
-            'edit' => Pages\EditCaseModel::route('/{record}/edit'),
+            'index' => ListCaseModels::route('/'),
+            'create' => CreateCaseModel::route('/create'),
+            'edit' => EditCaseModel::route('/{record}/edit'),
         ];
     }
 }

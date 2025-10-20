@@ -2,6 +2,11 @@
 
 namespace App\Events;
 
+use App\Models\Client;
+use Laravel\Reverb\ApplicationManager;
+use Laravel\Reverb\Protocols\Pusher\Contracts\ChannelManager;
+use Exception;
+use App\Models\TradeOffer;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -72,7 +77,7 @@ class ExtensionEvents implements ShouldBroadcastNow
     {
         try {
             // Находим клиента и его токен
-            $client = \App\Models\Client::find($sellerId);
+            $client = Client::find($sellerId);
             if (!$client || !$client->extension_token) {
                 return;
             }
@@ -82,12 +87,12 @@ class ExtensionEvents implements ShouldBroadcastNow
             $channel = "seller-{$sellerId}-{$hash}";
             
             // Проверяем доступность Reverb
-            if (!app()->bound(\Laravel\Reverb\ApplicationManager::class)) {
+            if (!app()->bound(ApplicationManager::class)) {
                 return;
             }
             
             // Получаем Reverb приложение
-            $appManager = app(\Laravel\Reverb\ApplicationManager::class);
+            $appManager = app(ApplicationManager::class);
             $appProvider = $appManager->driver();
             $appId = config('reverb.apps.apps.0.app_id', env('REVERB_APP_ID'));
             $app = $appProvider->findById($appId);
@@ -97,11 +102,11 @@ class ExtensionEvents implements ShouldBroadcastNow
             }
             
             // Получаем канал и отправляем сообщение
-            if (!app()->bound(\Laravel\Reverb\Protocols\Pusher\Contracts\ChannelManager::class)) {
+            if (!app()->bound(ChannelManager::class)) {
                 return;
             }
             
-            $channelManager = app(\Laravel\Reverb\Protocols\Pusher\Contracts\ChannelManager::class);
+            $channelManager = app(ChannelManager::class);
             $reverbChannel = $channelManager->for($app)->find($channel);
             
             if ($reverbChannel) {
@@ -121,7 +126,7 @@ class ExtensionEvents implements ShouldBroadcastNow
                 }
             }
             
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Ошибка прямой отправки через WebSocket', [
                 'seller_id' => $sellerId,
                 'event' => $eventType,
@@ -257,7 +262,7 @@ class ExtensionEvents implements ShouldBroadcastNow
         }
         
         // Генерируем правильный канал с хешем токена
-        $client = \App\Models\Client::find($this->sellerId);
+        $client = Client::find($this->sellerId);
         if ($client && $client->extension_token) {
             $hash = substr(hash('sha256', $this->sellerId . $client->extension_token), 0, 16);
             $channel = "seller-{$this->sellerId}-{$hash}";
@@ -276,28 +281,28 @@ class ExtensionEvents implements ShouldBroadcastNow
         $today = today();
         
         // Статистика по TradeOffer за сегодня
-        $pendingTrades = \App\Models\TradeOffer::where('seller_id', $sellerId)
+        $pendingTrades = TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
-            ->where('status', \App\Models\TradeOffer::STATUS_PENDING)
+            ->where('status', TradeOffer::STATUS_PENDING)
             ->count();
             
-        $sentTrades = \App\Models\TradeOffer::where('seller_id', $sellerId)
+        $sentTrades = TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
-            ->where('status', \App\Models\TradeOffer::STATUS_ACTIVE)
+            ->where('status', TradeOffer::STATUS_ACTIVE)
             ->count();
         
-        $completedTrades = \App\Models\TradeOffer::where('seller_id', $sellerId)
+        $completedTrades = TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
-            ->where('status', \App\Models\TradeOffer::STATUS_ACCEPTED)
+            ->where('status', TradeOffer::STATUS_ACCEPTED)
             ->count();
         
-        $cancelledTrades = \App\Models\TradeOffer::where('seller_id', $sellerId)
+        $cancelledTrades = TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
-            ->where('status', \App\Models\TradeOffer::STATUS_CANCELED)
+            ->where('status', TradeOffer::STATUS_CANCELED)
             ->count();
         
         // Всего трейдов за сегодня
-        $totalTradesToday = \App\Models\TradeOffer::where('seller_id', $sellerId)
+        $totalTradesToday = TradeOffer::where('seller_id', $sellerId)
             ->whereDate('created_at', $today)
             ->count();
 

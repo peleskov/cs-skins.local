@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\FaqCategoryResource\Pages;
 
+use Filament\Actions\DeleteAction;
 use App\Filament\Resources\FaqCategoryResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
@@ -13,7 +14,7 @@ class EditFaqCategory extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            DeleteAction::make(),
         ];
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use Exception;
 use Illuminate\Console\Command;
 use TelegramBot\Api\BotApi as TelegramApi;
 
@@ -72,7 +73,7 @@ class SetupTelegramWebhook extends Command
                 return 1;
             }
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->error('Ошибка: ' . $e->getMessage());
             return 1;
         }

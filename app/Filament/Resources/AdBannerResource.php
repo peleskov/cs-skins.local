@@ -2,11 +2,17 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\AdBannerResource\Pages\ListAdBanners;
+use App\Filament\Resources\AdBannerResource\Pages\CreateAdBanner;
+use App\Filament\Resources\AdBannerResource\Pages\EditAdBanner;
 use App\Filament\Resources\AdBannerResource\Pages;
 use App\Filament\Resources\AdBannerResource\RelationManagers;
 use App\Models\AdBanner;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -26,7 +32,7 @@ class AdBannerResource extends Resource
 {
     protected static ?string $model = AdBanner::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-megaphone';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-megaphone';
 
     protected static ?string $navigationLabel = 'Рекламный баннер';
 
@@ -34,12 +40,12 @@ class AdBannerResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Рекламные баннеры';
 
-    protected static ?string $navigationGroup = 'Контент';
+    protected static string | \UnitEnum | null $navigationGroup = 'Контент';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 FileUpload::make('image')
                     ->label('Картинка')
                     ->image()
@@ -101,12 +107,12 @@ class AdBannerResource extends Resource
             ->filters([
                 //
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
+            ->recordActions([
+                EditAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -121,9 +127,9 @@ class AdBannerResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListAdBanners::route('/'),
-            'create' => Pages\CreateAdBanner::route('/create'),
-            'edit' => Pages\EditAdBanner::route('/{record}/edit'),
+            'index' => ListAdBanners::route('/'),
+            'create' => CreateAdBanner::route('/create'),
+            'edit' => EditAdBanner::route('/{record}/edit'),
         ];
     }
 }

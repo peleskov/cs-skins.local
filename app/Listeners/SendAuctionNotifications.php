@@ -2,6 +2,7 @@
 
 namespace App\Listeners;
 
+use DateTime;
 use App\Events\AuctionBidPlaced;
 use App\Services\NotificationService;
 use App\Models\Client;
@@ -54,7 +55,7 @@ class SendAuctionNotifications implements ShouldQueue
     /**
      * Determine the time at which the listener should timeout.
      */
-    public function retryUntil(): \DateTime
+    public function retryUntil(): DateTime
     {
         return now()->addMinutes(5);
     }

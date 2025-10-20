@@ -23,7 +23,7 @@ class ChatMessageSent implements ShouldBroadcast
 
     public function broadcastOn()
     {
-        return new \Illuminate\Broadcasting\PresenceChannel('presence-chat');
+        return new PresenceChannel('presence-chat');
     }
 
     public function broadcastAs()

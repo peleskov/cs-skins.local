@@ -2,11 +2,21 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\KeyValue;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
+use Filament\Actions\ViewAction;
+use App\Filament\Resources\TransactionResource\Pages\ListTransactions;
 use App\Filament\Resources\TransactionResource\Pages;
 use App\Filament\Resources\TransactionResource\RelationManagers;
 use App\Models\Transaction;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -17,7 +27,7 @@ class TransactionResource extends Resource
 {
     protected static ?string $model = Transaction::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-banknotes';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-banknotes';
 
     protected static ?string $navigationLabel = 'Транзакции';
 
@@ -25,26 +35,26 @@ class TransactionResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Транзакции';
 
-    protected static ?string $navigationGroup = 'Пользователи';
+    protected static string | \UnitEnum | null $navigationGroup = 'Пользователи';
 
     protected static ?int $navigationSort = 5;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Select::make('client_id')
+        return $schema
+            ->components([
+                Select::make('client_id')
                     ->label('Клиент')
                     ->relationship('client', 'name')
                     ->searchable()
                     ->required(),
 
-                Forms\Components\Select::make('order_id')
+                Select::make('order_id')
                     ->label('Заказ')
                     ->relationship('order', 'order_number')
                     ->searchable(),
 
-                Forms\Components\Select::make('type')
+                Select::make('type')
                     ->label('Тип транзакции')
                     ->required()
                     ->options([
@@ -56,14 +66,14 @@ class TransactionResource extends Resource
                         Transaction::TYPE_WITHDRAWAL => 'Вывод средств',
                     ]),
 
-                Forms\Components\TextInput::make('amount')
+                TextInput::make('amount')
                     ->label('Сумма')
                     ->required()
                     ->numeric()
                     ->step(0.01)
                     ->suffix('₽'),
 
-                Forms\Components\Select::make('status')
+                Select::make('status')
                     ->label('Статус')
                     ->required()
                     ->options([
@@ -73,15 +83,15 @@ class TransactionResource extends Resource
                         Transaction::STATUS_ON_HOLD => 'На удержании',
                     ]),
 
-                Forms\Components\Textarea::make('description')
+                Textarea::make('description')
                     ->label('Описание')
                     ->maxLength(500),
 
-                Forms\Components\DateTimePicker::make('hold_until')
+                DateTimePicker::make('hold_until')
                     ->label('Удерживать до')
                     ->helperText('Дата и время, до которого транзакция заблокирована'),
 
-                Forms\Components\KeyValue::make('metadata')
+                KeyValue::make('metadata')
                     ->label('Метаданные')
                     ->helperText('Дополнительные данные в формате JSON'),
             ]);
@@ -91,22 +101,22 @@ class TransactionResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('id')
+                TextColumn::make('id')
                     ->label('ID')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('client.name')
+                TextColumn::make('client.name')
                     ->label('Клиент')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('order.order_number')
+                TextColumn::make('order.order_number')
                     ->label('Заказ')
                     ->searchable()
                     ->placeholder('—'),
 
-                Tables\Columns\TextColumn::make('type')
+                TextColumn::make('type')
                     ->label('Тип')
                     ->formatStateUsing(fn (string $state): string => match($state) {
                         Transaction::TYPE_PURCHASE => 'Покупка',
@@ -128,13 +138,13 @@ class TransactionResource extends Resource
                         default => 'gray'
                     }),
 
-                Tables\Columns\TextColumn::make('amount')
+                TextColumn::make('amount')
                     ->label('Сумма')
                     ->money('RUB')
                     ->sortable()
                     ->alignRight(),
 
-                Tables\Columns\TextColumn::make('status')
+                TextColumn::make('status')
                     ->label('Статус')
                     ->formatStateUsing(fn (string $state): string => match($state) {
                         Transaction::STATUS_PENDING => 'В обработке',
@@ -152,25 +162,25 @@ class TransactionResource extends Resource
                         default => 'gray'
                     }),
 
-                Tables\Columns\TextColumn::make('description')
+                TextColumn::make('description')
                     ->label('Описание')
                     ->limit(50)
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('hold_until')
+                TextColumn::make('hold_until')
                     ->label('Удерживать до')
                     ->dateTime('d.m.Y H:i')
                     ->placeholder('—')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('Создано')
                     ->dateTime('d.m.Y H:i')
                     ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
-                Tables\Filters\SelectFilter::make('type')
+                SelectFilter::make('type')
                     ->label('Тип транзакции')
                     ->options([
                         Transaction::TYPE_PURCHASE => 'Покупка',
@@ -181,7 +191,7 @@ class TransactionResource extends Resource
                         Transaction::TYPE_WITHDRAWAL => 'Вывод средств',
                     ]),
 
-                Tables\Filters\SelectFilter::make('status')
+                SelectFilter::make('status')
                     ->label('Статус')
                     ->options([
                         Transaction::STATUS_PENDING => 'В обработке',
@@ -190,25 +200,25 @@ class TransactionResource extends Resource
                         Transaction::STATUS_ON_HOLD => 'На удержании',
                     ]),
 
-                Tables\Filters\SelectFilter::make('client_id')
+                SelectFilter::make('client_id')
                     ->label('Клиент')
                     ->relationship('client', 'name')
                     ->searchable(),
 
-                Tables\Filters\Filter::make('on_hold')
+                Filter::make('on_hold')
                     ->label('На удержании')
                     ->query(fn (Builder $query): Builder => $query->where('hold_until', '>', now()))
                     ->toggle(),
 
-                Tables\Filters\Filter::make('ready_for_release')
+                Filter::make('ready_for_release')
                     ->label('Готово к освобождению')
                     ->query(fn (Builder $query): Builder => $query->readyForRelease())
                     ->toggle(),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
+            ->recordActions([
+                ViewAction::make(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 //
             ]);
     }
@@ -223,7 +233,7 @@ class TransactionResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListTransactions::route('/'),
+            'index' => ListTransactions::route('/'),
         ];
     }
 }

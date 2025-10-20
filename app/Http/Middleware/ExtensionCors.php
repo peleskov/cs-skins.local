@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use Log;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -11,7 +13,7 @@ class ExtensionCors
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param Closure(Request):Response $next
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -21,7 +23,7 @@ class ExtensionCors
         
         // Логируем только запросы от расширений
         if ($isExtensionRequest) {
-            \Log::info('Extension API request', [
+            Log::info('Extension API request', [
                 'method' => $request->method(),
                 'path' => $request->path(),
                 'origin' => $origin
@@ -40,7 +42,7 @@ class ExtensionCors
         $response = $next($request);
 
         // StreamedResponse обрабатываем особым образом
-        if ($response instanceof \Symfony\Component\HttpFoundation\StreamedResponse) {
+        if ($response instanceof StreamedResponse) {
             // Для SSE заголовки уже установлены в контроллере
             return $response;
         }

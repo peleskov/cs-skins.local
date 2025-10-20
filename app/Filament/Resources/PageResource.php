@@ -2,11 +2,30 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\TextInput;
+use Illuminate\Support\Str;
+use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Textarea;
+use Filament\Schemas\Components\Section;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Actions\ViewAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\PageResource\Pages\ListPages;
+use App\Filament\Resources\PageResource\Pages\CreatePage;
+use App\Filament\Resources\PageResource\Pages\EditPage;
 use App\Filament\Resources\PageResource\Pages;
 use App\Filament\Resources\PageResource\RelationManagers;
 use App\Models\Page;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -17,43 +36,43 @@ class PageResource extends Resource
 {
     protected static ?string $model = Page::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-document-text';
 
     protected static ?string $modelLabel = 'Страница';
 
     protected static ?string $pluralModelLabel = 'Контентные страницы';
 
-    protected static ?string $navigationGroup = 'Контент';
+    protected static string | \UnitEnum | null $navigationGroup = 'Контент';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('title')
+        return $schema
+            ->components([
+                TextInput::make('title')
                     ->label('Название')
                     ->required()
                     ->maxLength(255)
                     ->reactive()
                     ->afterStateUpdated(function ($state, callable $set) {
-                        $set('slug', \Illuminate\Support\Str::slug($state));
+                        $set('slug', Str::slug($state));
                     }),
 
-                Forms\Components\TextInput::make('slug')
+                TextInput::make('slug')
                     ->label('Slug')
                     ->required()
                     ->unique(ignoreRecord: true)
                     ->maxLength(255),
 
-                Forms\Components\Toggle::make('is_active')
+                Toggle::make('is_active')
                     ->label('Активна')
                     ->default(true),
 
-                Forms\Components\Tabs::make('content_tabs')
+                Tabs::make('content_tabs')
                     ->columnSpanFull()
                     ->tabs([
-                        Forms\Components\Tabs\Tab::make('Визуальный редактор')
+                        Tab::make('Визуальный редактор')
                             ->schema([
-                                Forms\Components\RichEditor::make('content')
+                                RichEditor::make('content')
                                     ->label('Контент')
                                     ->required()
                                     ->reactive()
@@ -61,9 +80,9 @@ class PageResource extends Resource
                                     ->afterStateHydrated(fn ($state, callable $set) => $set('content_html', $state))
                                     ->columnSpanFull(),
                             ]),
-                        Forms\Components\Tabs\Tab::make('HTML код')
+                        Tab::make('HTML код')
                             ->schema([
-                                Forms\Components\Textarea::make('content_html')
+                                Textarea::make('content_html')
                                     ->label('HTML контент')
                                     ->rows(20)
                                     ->reactive()
@@ -78,13 +97,13 @@ class PageResource extends Resource
                     ])
                     ->contained(false),
 
-                Forms\Components\Section::make('SEO')
+                Section::make('SEO')
                     ->schema([
-                        Forms\Components\TextInput::make('meta_title')
+                        TextInput::make('meta_title')
                             ->label('Meta Title')
                             ->maxLength(255),
 
-                        Forms\Components\Textarea::make('meta_description')
+                        Textarea::make('meta_description')
                             ->label('Meta Description')
                             ->maxLength(160)
                             ->rows(3),
@@ -98,47 +117,47 @@ class PageResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('title')
+                TextColumn::make('title')
                     ->label('Название')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('slug')
+                TextColumn::make('slug')
                     ->label('Slug')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\IconColumn::make('is_active')
+                IconColumn::make('is_active')
                     ->label('Активна')
                     ->boolean(),
 
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('Создана')
                     ->dateTime('d.m.Y H:i')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('updated_at')
+                TextColumn::make('updated_at')
                     ->label('Обновлена')
                     ->dateTime('d.m.Y H:i')
                     ->sortable(),
             ])
             ->filters([
-                Tables\Filters\TernaryFilter::make('is_active')
+                TernaryFilter::make('is_active')
                     ->label('Статус')
                     ->placeholder('Все страницы')
                     ->trueLabel('Активные')
                     ->falseLabel('Неактивные'),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make()
+            ->recordActions([
+                ViewAction::make()
                     ->url(fn (Page $record): string => "/{$record->slug}")
                     ->openUrlInNewTab(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -153,9 +172,9 @@ class PageResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListPages::route('/'),
-            'create' => Pages\CreatePage::route('/create'),
-            'edit' => Pages\EditPage::route('/{record}/edit'),
+            'index' => ListPages::route('/'),
+            'create' => CreatePage::route('/create'),
+            'edit' => EditPage::route('/{record}/edit'),
         ];
     }
 }

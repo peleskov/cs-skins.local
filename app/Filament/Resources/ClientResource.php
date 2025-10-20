@@ -2,11 +2,21 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Actions\EditAction;
+use Filament\Actions\Action;
+use Exception;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\ClientResource\Pages\ListClients;
+use App\Filament\Resources\ClientResource\Pages\CreateClient;
+use App\Filament\Resources\ClientResource\Pages\EditClient;
 use App\Filament\Resources\ClientResource\Pages;
 use App\Filament\Resources\ClientResource\RelationManagers;
 use App\Models\Client;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -27,7 +37,7 @@ class ClientResource extends Resource
 {
     protected static ?string $model = Client::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-users';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-users';
     
     protected static ?string $navigationLabel = 'Клиенты';
     
@@ -35,12 +45,12 @@ class ClientResource extends Resource
     
     protected static ?string $pluralModelLabel = 'Клиенты';
     
-    protected static ?string $navigationGroup = 'Пользователи';
+    protected static string | \UnitEnum | null $navigationGroup = 'Пользователи';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 TextInput::make('name')
                     ->label('Имя')
                     ->required()
@@ -130,29 +140,29 @@ class ClientResource extends Resource
                     ->boolean(),
             ])
             ->filters([
-                Tables\Filters\TernaryFilter::make('is_verified')
+                TernaryFilter::make('is_verified')
                     ->label('Верификация'),
                     
-                Tables\Filters\TernaryFilter::make('is_bot')
+                TernaryFilter::make('is_bot')
                     ->label('Боты'),
                     
-                Tables\Filters\SelectFilter::make('locale')
+                SelectFilter::make('locale')
                     ->label('Язык')
                     ->options([
                         'ru' => 'Русский',
                         'en' => 'English',
                     ]),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make()
+            ->recordActions([
+                EditAction::make()
                     ->label('')
                     ->tooltip('Изменить'),
-                Tables\Actions\Action::make('topup_balance')
+                Action::make('topup_balance')
                     ->label('')
                     ->tooltip('Пополнить баланс')
                     ->icon('heroicon-o-currency-dollar')
                     ->color('success')
-                    ->form([
+                    ->schema([
                         TextInput::make('amount')
                             ->label('Сумма')
                             ->numeric()
@@ -190,7 +200,7 @@ class ClientResource extends Resource
                                 ->success()
                                 ->send();
 
-                        } catch (\Exception $e) {
+                        } catch (Exception $e) {
                             Notification::make()
                                 ->title('Ошибка при пополнении баланса')
                                 ->body($e->getMessage())
@@ -201,12 +211,12 @@ class ClientResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('Пополнить баланс клиента')
                     ->modalDescription(fn ($record) => "Вы собираетесь пополнить баланс клиента {$record->name}"),
-                Tables\Actions\Action::make('withdraw_balance')
+                Action::make('withdraw_balance')
                     ->label('')
                     ->tooltip('Снять с баланса')
                     ->icon('heroicon-o-currency-dollar')
                     ->color('danger')
-                    ->form([
+                    ->schema([
                         TextInput::make('amount')
                             ->label('Сумма')
                             ->numeric()
@@ -254,7 +264,7 @@ class ClientResource extends Resource
                                 ->success()
                                 ->send();
 
-                        } catch (\Exception $e) {
+                        } catch (Exception $e) {
                             Notification::make()
                                 ->title('Ошибка при списании с баланса')
                                 ->body($e->getMessage())
@@ -266,10 +276,10 @@ class ClientResource extends Resource
                     ->modalHeading('Снять с баланса клиента')
                     ->modalDescription(fn ($record) => "Вы собираетесь списать средства с баланса клиента {$record->name}. Текущий баланс: {$record->balance} ₽"),
             ])
-            ->actionsColumnLabel('Действия')
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->recordActionsColumnLabel('Действия')
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
@@ -285,9 +295,9 @@ class ClientResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListClients::route('/'),
-            'create' => Pages\CreateClient::route('/create'),
-            'edit' => Pages\EditClient::route('/{record}/edit'),
+            'index' => ListClients::route('/'),
+            'create' => CreateClient::route('/create'),
+            'edit' => EditClient::route('/{record}/edit'),
         ];
     }
 }

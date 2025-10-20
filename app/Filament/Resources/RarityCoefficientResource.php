@@ -2,10 +2,22 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\RarityCoefficientResource\Pages\ListRarityCoefficients;
+use App\Filament\Resources\RarityCoefficientResource\Pages\CreateRarityCoefficient;
+use App\Filament\Resources\RarityCoefficientResource\Pages\EditRarityCoefficient;
 use App\Filament\Resources\RarityCoefficientResource\Pages;
 use App\Models\RarityCoefficient;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -14,9 +26,9 @@ class RarityCoefficientResource extends Resource
 {
     protected static ?string $model = RarityCoefficient::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-adjustments-horizontal';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-adjustments-horizontal';
     
-    protected static ?string $navigationGroup = 'Настройки';
+    protected static string | \UnitEnum | null $navigationGroup = 'Настройки';
     
     protected static ?string $navigationLabel = 'Коэффициенты выкупа';
     
@@ -26,32 +38,32 @@ class RarityCoefficientResource extends Resource
     
     protected static ?int $navigationSort = 5;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Основная информация')
+        return $schema
+            ->components([
+                Section::make('Основная информация')
                     ->schema([
-                        Forms\Components\TextInput::make('steam_name')
+                        TextInput::make('steam_name')
                             ->label('Steam идентификатор')
                             ->required()
                             ->disabled()
                             ->helperText('Системное название редкости в Steam'),
                             
-                        Forms\Components\TextInput::make('display_name_ru')
+                        TextInput::make('display_name_ru')
                             ->label('Название (Русский)')
                             ->required()
                             ->maxLength(255),
                             
-                        Forms\Components\TextInput::make('display_name_en')
+                        TextInput::make('display_name_en')
                             ->label('Название (English)')
                             ->maxLength(255),
                     ])
                     ->columns(1),
 
-                Forms\Components\Section::make('Настройки выкупа')
+                Section::make('Настройки выкупа')
                     ->schema([
-                        Forms\Components\TextInput::make('coefficient')
+                        TextInput::make('coefficient')
                             ->label('Коэффициент выкупа')
                             ->numeric()
                             ->minValue(0.01)
@@ -62,12 +74,12 @@ class RarityCoefficientResource extends Resource
                             ->suffix('%')
                             ->suffixIcon('heroicon-m-percent-badge'),
                             
-                        Forms\Components\TextInput::make('sort_order')
+                        TextInput::make('sort_order')
                             ->label('Порядок сортировки')
                             ->numeric()
                             ->default(0),
                             
-                        Forms\Components\Toggle::make('is_active')
+                        Toggle::make('is_active')
                             ->label('Активен')
                             ->default(true)
                             ->helperText('Неактивные коэффициенты не используются при расчете'),
@@ -80,17 +92,17 @@ class RarityCoefficientResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('steam_name')
+                TextColumn::make('steam_name')
                     ->label('Steam ID')
                     ->searchable()
                     ->sortable(),
                     
-                Tables\Columns\TextColumn::make('display_name_ru')
+                TextColumn::make('display_name_ru')
                     ->label('Редкость')
                     ->searchable()
                     ->sortable(),
                     
-                Tables\Columns\TextColumn::make('coefficient')
+                TextColumn::make('coefficient')
                     ->label('Коэффициент')
                     ->formatStateUsing(fn ($state) => ($state * 100) . '%')
                     ->badge()
@@ -101,15 +113,15 @@ class RarityCoefficientResource extends Resource
                     })
                     ->sortable(),
                     
-                Tables\Columns\TextColumn::make('sort_order')
+                TextColumn::make('sort_order')
                     ->label('Порядок')
                     ->sortable(),
                     
-                Tables\Columns\IconColumn::make('is_active')
+                IconColumn::make('is_active')
                     ->label('Активен')
                     ->boolean(),
                     
-                Tables\Columns\TextColumn::make('updated_at')
+                TextColumn::make('updated_at')
                     ->label('Обновлено')
                     ->dateTime('d.m.Y H:i')
                     ->sortable()
@@ -117,7 +129,7 @@ class RarityCoefficientResource extends Resource
             ])
             ->defaultSort('sort_order')
             ->filters([
-                Tables\Filters\TernaryFilter::make('is_active')
+                TernaryFilter::make('is_active')
                     ->label('Активность')
                     ->boolean()
                     ->trueLabel('Только активные')
@@ -127,12 +139,12 @@ class RarityCoefficientResource extends Resource
                         false: fn ($query) => $query->where('is_active', false),
                     ),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
+            ->recordActions([
+                EditAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -145,9 +157,9 @@ class RarityCoefficientResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListRarityCoefficients::route('/'),
-            'create' => Pages\CreateRarityCoefficient::route('/create'),
-            'edit' => Pages\EditRarityCoefficient::route('/{record}/edit'),
+            'index' => ListRarityCoefficients::route('/'),
+            'create' => CreateRarityCoefficient::route('/create'),
+            'edit' => EditRarityCoefficient::route('/{record}/edit'),
         ];
     }
 }

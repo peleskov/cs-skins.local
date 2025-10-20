@@ -89,8 +89,8 @@
 
 					<!-- User Balance -->
 					<div v-if="user && user.balance !== undefined" class="user-balance d-none d-md-block">
-						<a :href="routes.profile + '#balance'" class="text-white text-decoration-none">
-							<i class="ri-wallet-line me-1"></i>
+						<a :href="routes.profile + '#balance'" class="btn theme-btn text-decoration-none">
+							<i class="ri-add-circle-line me-1"></i>
 							<span class="balance-amount" v-html="formatPrice(user.balance, 'RUB')"></span>
 						</a>
 					</div>
@@ -149,7 +149,7 @@
 				<!-- Баланс -->
 				<a :href="routes.profile + '#balance'" class="btn theme-outline btn-sm w-100 text-decoration-none"
 					@click="closeOffcanvas">
-					<i class="ri-wallet-line me-1"></i>
+					<i class="ri-add-circle-line me-1"></i>
 					<span v-html="formatPrice(user.balance, 'RUB')"></span>
 				</a>
 			</div>

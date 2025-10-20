@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\CaseModelResource\Pages;
 use App\Filament\Resources\CaseModelResource\RelationManagers;
 use App\Models\CaseModel;
+use App\Models\CaseCategory;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -19,16 +20,16 @@ class CaseModelResource extends Resource
     protected static ?string $model = CaseModel::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-cube';
-    
+
     protected static ?string $navigationLabel = 'Кейсы';
-    
+
     protected static ?string $modelLabel = 'Кейс';
-    
+
     protected static ?string $pluralModelLabel = 'Кейсы';
-    
-    protected static ?string $navigationGroup = 'Маркетплейс';
-    
-    protected static ?int $navigationSort = 3;
+
+    protected static ?string $navigationGroup = 'Кейсы';
+
+    protected static ?int $navigationSort = 2;
 
     public static function form(Form $form): Form
     {
@@ -39,7 +40,8 @@ class CaseModelResource extends Resource
                     ->required()
                     ->maxLength(255)
                     ->live(onBlur: true)
-                    ->afterStateUpdated(fn (string $operation, $state, Forms\Set $set) => 
+                    ->afterStateUpdated(
+                        fn(string $operation, $state, Forms\Set $set) =>
                         $operation === 'create' ? $set('slug', Str::slug($state)) : null
                     ),
                 Forms\Components\TextInput::make('slug')
@@ -63,14 +65,29 @@ class CaseModelResource extends Resource
                     ->numeric()
                     ->default(50)
                     ->suffix('%'),
-                Forms\Components\FileUpload::make('image_url')
-                    ->label('Изображение')
-                    ->image()
-                    ->directory('cases')
-                    ->visibility('public'),
-                Forms\Components\Toggle::make('is_active')
-                    ->label('Активен')
-                    ->default(true),
+                Forms\Components\Grid::make(2)
+                    ->schema([
+                        Forms\Components\FileUpload::make('image_url')
+                            ->label('Изображение')
+                            ->image()
+                            ->directory('cases')
+                            ->visibility('public')
+                            ->columnSpan(1),
+                        Forms\Components\Grid::make(1)
+                            ->schema([
+                                Forms\Components\Select::make('category_id')
+                                    ->label('Категория')
+                                    ->relationship('category', 'name')
+                                    ->options(CaseCategory::ordered()->pluck('name', 'id'))
+                                    ->searchable()
+                                    ->preload()
+                                    ->nullable(),
+                                Forms\Components\Toggle::make('is_active')
+                                    ->label('Активен')
+                                    ->default(true),
+                            ])
+                            ->columnSpan(1),
+                    ]),
                 Forms\Components\Placeholder::make('tiers_info')
                     ->label('Уровни призов')
                     ->content('После создания кейса вы сможете добавить уровни на странице редактирования')
@@ -84,6 +101,11 @@ class CaseModelResource extends Resource
         return $table
             ->poll('10s') // Обновляем таблицу каждые 10 секунд
             ->columns([
+                Tables\Columns\TextColumn::make('category.name')
+                    ->label('Категория')
+                    ->searchable()
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('name')
                     ->label('Название')
                     ->searchable(),

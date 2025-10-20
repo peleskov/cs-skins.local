@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CaseModel extends Model
 {
@@ -18,6 +19,7 @@ class CaseModel extends Model
         'accumulated_fund',
         'fund_percent',
         'is_active',
+        'category_id',
     ];
 
     protected $casts = [
@@ -37,8 +39,18 @@ class CaseModel extends Model
         return $this->hasMany(CaseItem::class, 'case_id');
     }
 
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(CaseCategory::class, 'category_id');
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeByCategory($query, $categoryId)
+    {
+        return $query->where('category_id', $categoryId);
     }
 }

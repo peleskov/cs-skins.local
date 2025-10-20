@@ -139,7 +139,8 @@ class InventoryController extends Controller
         $client = Auth::guard('client')->user();
         
         $request->validate([
-            'steam_asset_id' => 'required|string'
+            'steam_asset_id' => 'required|string',
+            'price' => 'required|numeric|min:1'
         ]);
         
         $steamAssetId = $request->steam_asset_id;
@@ -149,6 +150,15 @@ class InventoryController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Необходимо настроить Trade URL в профиле'
+            ], 400);
+        }
+
+        // Проверяем активность расширения (Steam сессия)
+        $sessionCache = app(\App\Services\Steam\SessionCache::class);
+        if (!$sessionCache->isActive($client->id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Для создания листинга активируйте расширение'
             ], 400);
         }
         
@@ -179,22 +189,44 @@ class InventoryController extends Controller
             ->first();
             
         if ($existingListing) {
-            if (in_array($existingListing->status, ['pending', 'active', 'reserved'])) {
+            if ($existingListing->status === 'reserved') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Предмет уже выставлен на продажу'
+                    'message' => 'Нельзя изменить цену - предмет зарезервирован покупателем'
                 ], 400);
+            } elseif (in_array($existingListing->status, ['pending', 'active'])) {
+                // Разрешаем изменение цены для pending и active статусов
+                try {
+                    $oldPrice = $existingListing->price;
+                    $existingListing->price = $request->price;
+                    $existingListing->save();
+
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Цена обновлена успешно',
+                        'data' => [
+                            'listing_id' => $existingListing->id,
+                            'old_price' => $oldPrice,
+                            'new_price' => $request->price
+                        ]
+                    ]);
+                } catch (\Exception $e) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Ошибка при обновлении цены'
+                    ], 500);
+                }
             } elseif ($existingListing->status === 'cancelled') {
                 // Реактивируем отмененный листинг
                 try {
                     $existingListing->status = 'pending';
-                    $existingListing->price = 0; // сбрасываем цену
+                    $existingListing->price = $request->price; // устанавливаем новую цену
                     $existingListing->listed_at = null;
                     $existingListing->save();
                     
                     return response()->json([
                         'success' => true,
-                        'message' => 'Предмет возвращен в торговлю. Настройте цену в разделе "Торговля"',
+                        'message' => 'Предмет возвращен в торговлю с установленной ценой',
                         'data' => [
                             'listing_id' => $existingListing->id,
                             'redirect_url' => '/profile#trading'
@@ -233,7 +265,7 @@ class InventoryController extends Controller
             $listing->tradable = $inventoryItem->tradable;
             $listing->marketable = $inventoryItem->marketable;
             
-            $listing->price = 0; // пользователь установит цену сам
+            $listing->price = $request->price;
             $listing->currency = 'RUB';
             $listing->status = 'pending';
             
@@ -278,7 +310,7 @@ class InventoryController extends Controller
             
             return response()->json([
                 'success' => true,
-                'message' => 'Предмет добавлен в торговлю. Настройте цену в разделе "Торговля"',
+                'message' => 'Предмет добавлен в торговлю с установленной ценой',
                 'data' => [
                     'listing_id' => $listing->id,
                     'redirect_url' => '/profile#trading'
@@ -319,6 +351,26 @@ class InventoryController extends Controller
             'items_count' => $itemsCount,
             'sync_time' => $syncTime
         ];
+    }
+
+    /**
+     * Проверка статуса расширения
+     */
+    public function checkExtensionStatus()
+    {
+        /** @var Client $client */
+        $client = Auth::guard('client')->user();
+
+        $sessionCache = app(\App\Services\Steam\SessionCache::class);
+        $isActive = $sessionCache->isActive($client->id);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'is_active' => $isActive,
+                'expires_in_seconds' => $isActive ? $sessionCache->getExpiresInSeconds($client->id) : 0
+            ]
+        ]);
     }
 
     private function generateInspectUrl(string $steamId, string $assetId): string

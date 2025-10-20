@@ -25,7 +25,7 @@ class TransactionResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Транзакции';
 
-    protected static ?string $navigationGroup = 'Маркетплейс';
+    protected static ?string $navigationGroup = 'Пользователи';
 
     protected static ?int $navigationSort = 5;
 

@@ -4,17 +4,23 @@
 			<div class="loader-line"></div>
 			<div class="d-flex justify-content-between align-items-center">
 				<h3>Steam Инвентарь</h3>
-				<a v-if="inventoryData && !hasTradeUrl" href="/profile#profile" class="btn theme-btn btn-sm">
-					<i class="ri-link me-1"></i>
-					<span>Установить TradeUrl</span>
-				</a>
-				<button v-else-if="inventoryData" class="btn theme-outline btn-sm" @click="syncInventory"
-					:disabled="isSyncing || syncCooldownRemaining > 0">
-					<i :class="['ri-refresh-line', 'me-1', { 'ri-spin': isSyncing }]"></i>
-					<span v-if="isSyncing">Обновление...</span>
-					<span v-else-if="syncCooldownRemaining > 0">Обновить через {{ getTimeRemaining(syncCooldownRemaining) }}</span>
-					<span v-else>Обновить инвентарь</span>
-				</button>
+				<div class="d-flex gap-2">
+					<a href="/trading-guide" target="_blank" class="btn theme-btn btn-sm" title="Руководство по торговле">
+						<i class="ri-question-line me-1"></i>
+						<span>Как начать торговлю</span>
+					</a>
+					<a v-if="inventoryData && !hasTradeUrl" href="/profile#profile" class="btn theme-btn btn-sm">
+						<i class="ri-link me-1"></i>
+						<span>Установить TradeUrl</span>
+					</a>
+					<button v-else-if="inventoryData" class="btn theme-outline btn-sm" @click="syncInventory"
+						:disabled="isSyncing || syncCooldownRemaining > 0">
+						<i :class="['ri-refresh-line', 'me-1', { 'ri-spin': isSyncing }]"></i>
+						<span v-if="isSyncing">Обновление...</span>
+						<span v-else-if="syncCooldownRemaining > 0">Обновить через {{ getTimeRemaining(syncCooldownRemaining) }}</span>
+						<span v-else>Обновить инвентарь</span>
+					</button>
+				</div>
 			</div>
 		</div>
 		<div v-if="isLoading && items.length === 0" class="text-center py-5">
@@ -71,11 +77,13 @@
 							</div>
 						</div>
 						<div class="col-lg-5 col-12" :id="getDetailsSectionId()">
-							<ItemDetails 
+							<ItemDetails
 								:item="selectedItem"
 								:active-tab="activeInventoryTab"
 								:has-trade-url="hasTradeUrl"
 								:is-creating-listing="isCreatingListing"
+								:extension-active="extensionActive"
+								:extension-checked="extensionChecked"
 								@sell="openSellModal"
 							/>
 						</div>
@@ -105,11 +113,13 @@
 							</div>
 						</div>
 						<div class="col-lg-5 col-12" :id="getDetailsSectionId()">
-							<ItemDetails 
+							<ItemDetails
 								:item="selectedItem"
 								:active-tab="activeInventoryTab"
 								:has-trade-url="hasTradeUrl"
 								:is-creating-listing="isCreatingListing"
+								:extension-active="extensionActive"
+								:extension-checked="extensionChecked"
 								@sell="openSellModal"
 							/>
 						</div>
@@ -186,26 +196,48 @@
 							
 							<!-- Добавить в маркетплейс -->
 							<div class="col-12">
-								<div class="card h-100 sell-option" 
-									 @click="!isCreatingListing ? addToMarketplace() : null" 
-									 :class="{ 'opacity-50': isCreatingListing }"
-									 style="cursor: pointer;">
-									<div class="card-body d-flex align-items-center">
-										<div class="sell-icon me-3">
-											<i v-if="isCreatingListing" class="ri-loader-4-line text-success ri-spin" style="font-size: 2rem;"></i>
-											<i v-else class="ri-store-2-line text-success" style="font-size: 2rem;"></i>
+								<div class="card h-100 sell-option"
+									 :class="{ 'opacity-50': isCreatingListing }">
+									<div class="card-body">
+										<div class="d-flex align-items-center mb-3">
+											<div class="sell-icon me-3">
+												<i v-if="isCreatingListing" class="ri-loader-4-line text-success ri-spin" style="font-size: 2rem;"></i>
+												<i v-else class="ri-store-2-line text-success" style="font-size: 2rem;"></i>
+											</div>
+											<div class="flex-grow-1">
+												<h6 class="card-title mb-1">
+													{{ isCreatingListing ? 'Создаем листинг...' : 'Добавить в маркетплейс' }}
+												</h6>
+												<p class="card-text text-muted mb-0">
+													{{ isCreatingListing ? 'Получаем скриншот предмета' : 'Установите свою цену, комиссия 5%' }}
+												</p>
+											</div>
 										</div>
-										<div class="flex-grow-1">
-											<h6 class="card-title mb-1">
-												{{ isCreatingListing ? 'Создаем листинг...' : 'Добавить в маркетплейс' }}
-											</h6>
-											<p class="card-text text-muted mb-0">
-												{{ isCreatingListing ? 'Получаем скриншот предмета' : 'Установите свою цену, комиссия 5%' }}
-											</p>
+
+										<!-- Поле ввода цены -->
+										<div v-if="!isCreatingListing" class="mb-3">
+											<label class="form-label small">Цена продажи</label>
+											<div class="input-group">
+												<input
+													type="number"
+													class="form-control"
+													v-model="marketplacePrice"
+													:placeholder="itemToSell && itemToSell.buyout_price ? Math.round(itemToSell.buyout_price * 1.3) : '100'"
+													min="1"
+													step="1">
+												<span class="input-group-text">₽</span>
+											</div>
+											<small class="text-muted">Рекомендуемая цена: <span v-html="itemToSell && itemToSell.buyout_price ? formatPrice(itemToSell.buyout_price * 1.3, 'USD') : '100 ₽'"></span></small>
 										</div>
-										<div class="sell-arrow">
-											<i class="ri-arrow-right-line text-muted"></i>
-										</div>
+
+										<!-- Кнопка добавления -->
+										<button
+											v-if="!isCreatingListing"
+											class="btn btn-success w-100"
+											@click="addToMarketplace()"
+											:disabled="!marketplacePrice || marketplacePrice <= 0">
+											<i class="ri-add-line me-1"></i>Добавить за {{ marketplacePrice || '0' }} ₽
+										</button>
 									</div>
 								</div>
 							</div>
@@ -281,10 +313,13 @@ export default {
 			cooldownTimer: null,
 			activeInventoryTab: 'available',
 			isCreatingListing: false,
+			marketplacePrice: null,
 			successModalData: {
 				message: '',
 				order: null
-			}
+			},
+			extensionActive: false,
+			extensionChecked: false
 		}
 	},
 	computed: {
@@ -484,7 +519,21 @@ export default {
 		
 		
 		openSellModal(item) {
+			// Проверяем статус расширения перед открытием модала
+			if (!this.extensionActive) {
+				window.toast.warning('Активируйте расширение для создания листингов');
+				return;
+			}
+
 			this.itemToSell = item;
+
+			// Устанавливаем рекомендуемую цену (на 30% выше цены выкупа)
+			if (item.buyout_price) {
+				this.marketplacePrice = Math.round(item.buyout_price * 1.3);
+			} else {
+				this.marketplacePrice = 100; // Базовая цена по умолчанию
+			}
+
 			const modal = new bootstrap.Modal(document.getElementById('sellTypeModal'));
 			modal.show();
 		},
@@ -564,27 +613,42 @@ export default {
 				this.items = [...this.items];
 			}
 		},
+
+		async checkExtensionStatus() {
+			try {
+				const response = await axios.get('/inventory/extension-status');
+				if (response.data.success) {
+					this.extensionActive = response.data.data.is_active;
+				}
+			} catch (error) {
+				console.error('Failed to check extension status:', error);
+				this.extensionActive = false;
+			} finally {
+				this.extensionChecked = true;
+			}
+		},
 		
 		async addToMarketplace() {
-			if (!this.itemToSell) return;
-			
+			if (!this.itemToSell || !this.marketplacePrice || this.marketplacePrice <= 0) return;
+
 			// Закрываем модальное окно
 			const modal = bootstrap.Modal.getInstance(document.getElementById('sellTypeModal'));
 			if (modal) {
 				modal.hide();
 			}
-			
+
 			this.isCreatingListing = true;
-			
+
 			try {
 				// Показываем уведомление о начале процесса
 				window.toast.info('Создаем листинг и получаем скриншот предмета...', {
 					timeout: 3000
 				});
-				
-				// Отправляем запрос на создание листинга
+
+				// Отправляем запрос на создание листинга с ценой
 				const response = await axios.post('/inventory/create-listing', {
-					steam_asset_id: this.itemToSell.steam_asset_id
+					steam_asset_id: this.itemToSell.steam_asset_id,
+					price: this.marketplacePrice
 				});
 				const data = response.data;
 				
@@ -616,13 +680,17 @@ export default {
 				// Глобальный обработчик покажет toast автоматически
 			} finally {
 				this.isCreatingListing = false;
+				this.marketplacePrice = null; // Очищаем цену для следующего использования
 			}
 		}
 	},
 	mounted() {
 		// Загружаем данные инвентаря при загрузке компонента
 		this.loadInventoryData();
-		
+
+		// Проверяем статус расширения
+		this.checkExtensionStatus();
+
 		// Слушаем события смены валюты
 		window.addEventListener('currency-changed', this.handleCurrencyChange);
 	},

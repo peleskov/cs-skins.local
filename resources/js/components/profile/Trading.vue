@@ -2,7 +2,13 @@
 	<div class="change-profile-content">
 		<div class="title">
 			<div class="loader-line"></div>
-			<h3>Торговля</h3>
+			<div class="d-flex justify-content-between align-items-center">
+				<h3>Торговля</h3>
+				<a href="/trading-guide" class="btn theme-btn" title="Руководство по торговле">
+					<i class="ri-question-line me-1"></i>
+					<span>Как начать торговлю</span>
+				</a>
+			</div>
 		</div>
 
 		<!-- Loading state -->
@@ -124,6 +130,10 @@
 													class="btn theme-outline" title="Просмотреть на маркетплейсе">
 													<i class="ri-external-link-line me-1"></i>Смотреть
 												</a>
+												<button class="btn theme-outline" @click="editPrice(listing)"
+													title="Изменить цену">
+													<i class="ri-edit-line me-1"></i>Редактировать
+												</button>
 												<button class="btn theme-outline" @click="createAuctionForListing(listing)"
 													title="Создать аукцион для этого предмета">
 													<i class="ri-auction-line me-1"></i>Аукцион

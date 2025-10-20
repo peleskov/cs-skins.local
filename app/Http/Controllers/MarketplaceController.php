@@ -256,32 +256,40 @@ class MarketplaceController extends Controller
                 $phases = [$phases];
             }
 
-            $phaseMapping = [
-                'phase1' => 'Phase 1',
-                'phase2' => 'Phase 2',
-                'phase3' => 'Phase 3',
-                'phase4' => 'Phase 4',
-                'ruby' => 'Ruby',
-                'sapphire' => 'Sapphire',
-                'blackpearl' => 'Black Pearl',
-                'emerald' => 'Emerald'
-            ];
+            // Mapping frontend значений фаз на paint_index
+            $phasePaintIndexes = [];
 
-            $phaseNames = array_map(function($phase) use ($phaseMapping) {
-                return $phaseMapping[$phase] ?? $phase;
-            }, $phases);
+            foreach ($phases as $phase) {
+                switch ($phase) {
+                    case 'phase1':
+                        $phasePaintIndexes[] = 415; // Doppler Phase 1
+                        break;
+                    case 'phase2':
+                        $phasePaintIndexes[] = 416; // Doppler Phase 2
+                        break;
+                    case 'phase3':
+                        $phasePaintIndexes[] = 417; // Doppler Phase 3
+                        break;
+                    case 'phase4':
+                        $phasePaintIndexes[] = 418; // Doppler Phase 4
+                        break;
+                    case 'ruby':
+                        $phasePaintIndexes[] = 415; // Ruby использует тот же paint_index что и Phase 1
+                        break;
+                    case 'sapphire':
+                        $phasePaintIndexes[] = 416; // Sapphire использует тот же paint_index что и Phase 2
+                        break;
+                    case 'blackpearl':
+                        $phasePaintIndexes[] = 419; // Black Pearl
+                        break;
+                    case 'emerald':
+                        $phasePaintIndexes[] = 618; // Gamma Doppler Emerald
+                        break;
+                }
+            }
 
-            $phaseTagIds = Tag::where('category_code', 'phase')
-                ->whereIn('display_name', $phaseNames)
-                ->pluck('id');
-
-            if ($phaseTagIds->isNotEmpty()) {
-                $query->whereExists(function ($subQuery) use ($phaseTagIds) {
-                    $subQuery->select(DB::raw(1))
-                        ->from('market_item_tags')
-                        ->whereColumn('market_item_tags.market_hash_name', 'listings.market_hash_name')
-                        ->whereIn('market_item_tags.tag_id', $phaseTagIds);
-                });
+            if (!empty($phasePaintIndexes)) {
+                $query->whereIn('paint_index', $phasePaintIndexes);
             }
         }
 

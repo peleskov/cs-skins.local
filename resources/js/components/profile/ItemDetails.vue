@@ -56,7 +56,7 @@
 			<slot name="actions" :item="item">
 				<!-- Кнопки по умолчанию для инвентаря -->
 				<div v-if="activeTab === 'available'">
-					<button v-if="item.tradable && item.marketable && hasTradeUrl && !item.is_listed" 
+					<button v-if="item.tradable && item.marketable && hasTradeUrl && !item.is_listed && extensionActive"
 						class="btn theme-btn w-100 mb-2"
 						:disabled="isCreatingListing"
 						@click="$emit('sell', item)">
@@ -66,6 +66,9 @@
 					</button>
 					<div v-else-if="!hasTradeUrl" class="alert alert-light mb-0 small">
 						<i class="ri-information-line me-2"></i>Для того чтобы выставить на продажу нужно добавить Trade URL в настройках <a href="/profile#profile">профиля</a>
+					</div>
+					<div v-else-if="extensionChecked && !extensionActive && item.tradable && item.marketable && hasTradeUrl && !item.is_listed" class="alert alert-warning mb-0 small">
+						<i class="ri-error-warning-line me-2"></i>Чтобы продать активируйте расширение
 					</div>
 					<div v-else-if="!item.tradable || !item.marketable" class="alert alert-secondary mb-0">
 						<i class="ri-lock-line me-2"></i>Данный предмет нельзя продать
@@ -98,6 +101,14 @@ export default {
 			default: false
 		},
 		isCreatingListing: {
+			type: Boolean,
+			default: false
+		},
+		extensionActive: {
+			type: Boolean,
+			default: false
+		},
+		extensionChecked: {
 			type: Boolean,
 			default: false
 		}

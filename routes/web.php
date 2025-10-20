@@ -27,6 +27,7 @@ Route::controller(WebController::class)->group(function () {
     Route::get('/locale/{locale}', 'setLocale')->name('locale');
 });
 
+
 // Страница корзины
 Route::get('/cart', [CartController::class, 'index'])->name('cart');
 Route::get('/checkout', [OrderController::class, 'index'])->name('checkout');
@@ -189,6 +190,7 @@ Route::middleware(['auth:client'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/sync', 'sync')->name('sync');
         Route::post('/create-listing', 'createListing')->name('create-listing');
+        Route::get('/extension-status', 'checkExtensionStatus')->name('extension-status');
         Route::get('/{assetId}/sell', 'sell')->name('sell');
         Route::get('/{assetId}', 'show')->name('show');
     });
@@ -222,3 +224,12 @@ Route::middleware(['auth:client'])->prefix('api/chat')->name('api.chat.')->contr
     Route::post('/send', 'sendMessage')->name('send')->middleware('throttle:30,1');
     Route::get('/ban-status', 'checkBanStatus')->name('ban-status');
 });
+
+// Тестовый маршрут для проверки JS
+Route::get('/test-js', function() { return view('test-js'); });
+
+// Динамические страницы (должно быть в самом конце)
+Route::get('/{page}', function ($slug) {
+    $page = \App\Models\Page::where('slug', $slug)->active()->firstOrFail();
+    return view('page', compact('page'));
+})->name('page');

@@ -100,7 +100,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const casesElement = document.getElementById('cases-app');
     if (casesElement) {
         const app = createApp(Cases, {
-            initialCases: JSON.parse(casesElement.dataset.cases || '[]')
+            initialCases: JSON.parse(casesElement.dataset.cases || '[]'),
+            user: casesElement.dataset.user !== 'null' ? JSON.parse(casesElement.dataset.user) : null
         });
         app.mount('#cases-app');
     }

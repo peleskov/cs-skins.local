@@ -91,7 +91,7 @@ class CartService
      */
     public function getTotal(): float
     {
-        return $this->getCart()->sum('price');
+        return $this->getDetailedItems()->sum('price');
     }
 
     /**

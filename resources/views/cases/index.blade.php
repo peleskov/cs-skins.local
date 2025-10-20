@@ -4,5 +4,6 @@
 
 @section('content')
 @include('partials.breadcrumbs', ['title' => 'Кейсы'])
+@include('partials.categories-section')
 @include('partials.cases-section')
 @endsection

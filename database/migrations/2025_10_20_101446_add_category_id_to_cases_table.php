@@ -13,8 +13,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('cases', function (Blueprint $table) {
-            // Сначала изменяем колонку на nullable
-            $table->bigInteger('category_id')->unsigned()->nullable()->change();
+            // Проверяем, есть ли уже колонка category_id
+            if (!Schema::hasColumn('cases', 'category_id')) {
+                // Добавляем новую колонку
+                $table->unsignedBigInteger('category_id')->nullable();
+            } else {
+                // Если колонка есть, изменяем её на nullable
+                $table->unsignedBigInteger('category_id')->nullable()->change();
+            }
         });
 
         // Обнуляем все существующие значения category_id
@@ -33,10 +39,12 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('cases', function (Blueprint $table) {
-            $table->dropForeign(['category_id']);
-            $table->dropIndex(['category_id']);
-            // Не удаляем колонку, так как она может быть нужна
-            // $table->dropColumn('category_id');
+            // Удаляем внешний ключ и индекс, если они существуют
+            if (Schema::hasColumn('cases', 'category_id')) {
+                $table->dropForeign(['category_id']);
+                $table->dropIndex(['category_id']);
+                $table->dropColumn('category_id');
+            }
         });
     }
 };

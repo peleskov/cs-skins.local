@@ -107,8 +107,11 @@ function replaceUrlsInJsFiles($dir, $newUrl) {
         $dir . '/assets/js/service-worker.js'
     ];
 
+    // Убираем завершающий слеш если он есть
+    $newUrl = rtrim($newUrl, '/');
+
     $domain = parse_url($newUrl, PHP_URL_HOST);
-    $wsUrl = str_replace(['http://', 'https://'], ['ws://', 'wss://'], $newUrl);
+    $wsUrl = rtrim(str_replace(['http://', 'https://'], ['ws://', 'wss://'], $newUrl), '/');
 
     foreach ($jsFiles as $file) {
         if (!file_exists($file)) {
@@ -125,16 +128,26 @@ function replaceUrlsInJsFiles($dir, $newUrl) {
         );
 
         // Заменяем WebSocket URL в service-worker.js
-        $content = preg_replace(
+        $content = preg_replace_callback(
             '/new WebSocket\([\'"]wss?:\/\/[^\/]+([^\'"]*)[\'"]/',
-            "new WebSocket('$wsUrl$1'",
+            function($matches) use ($wsUrl) {
+                $path = $matches[1];
+                // Обеспечиваем правильное соединение URL и пути
+                $fullUrl = $wsUrl . (strpos($path, '/') === 0 ? $path : '/' . $path);
+                return "new WebSocket('$fullUrl'";
+            },
             $content
         );
 
         // Заменяем fetch URL в service-worker.js
-        $content = preg_replace(
+        $content = preg_replace_callback(
             '/fetch\([\'"]https?:\/\/[^\/]+([^\'"]*)[\'"]/',
-            "fetch('$newUrl$1'",
+            function($matches) use ($newUrl) {
+                $path = $matches[1];
+                // Обеспечиваем правильное соединение URL и пути
+                $fullUrl = $newUrl . (strpos($path, '/') === 0 ? $path : '/' . $path);
+                return "fetch('$fullUrl'";
+            },
             $content
         );
 

@@ -1,20 +1,20 @@
 <template>
 	<header>
 		<div class="container-fluid">
-			<nav class="navbar navbar-expand-lg p-0">
+			<nav class="navbar navbar-expand-lg p-0 gap-0">
 				<button class="navbar-toggler" type="button" data-bs-toggle="offcanvas"
 					data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar">
 					<span class="navbar-toggler-icon">
 						<i class="ri-menu-line"></i>
 					</span>
 				</button>
-				<a class="me-lg-3 me-xl-5" :href="routes.home">
+				<a class="me-lg-3 me-xl-4" :href="routes.home">
 					<img class="img-fluid logo" :src="logoUrl" alt="logo">
 				</a>
 				<!-- Main Navigation Menu (Desktop) -->
-				<ul class="navbar-nav d-none d-lg-flex mt-2">
+				<ul class="navbar-nav d-none d-lg-flex mt-2 gap-0">
 					<template v-for="(item, key) in mainNavigation" :key="key">
-						<li v-if="!item.auth_required || user" class="nav-item">
+						<li v-if="!item.auth_required || user" class="nav-item me-lg-3 me-xl-4">
 							<a class="nav-link" :href="getNavigationUrl(item.route)">{{ item.title }}</a>
 						</li>
 					</template>
@@ -241,7 +241,7 @@
 					</div>
 
 					<div class="text-center">
-						<a href="/downloads/extension/cs-skins-extension.zip" download class="btn theme-btn">
+						<a :href="extensionDownloadUrl" download class="btn theme-btn">
 							<i class="ri-download-2-line me-2"></i>Скачать расширение
 						</a>
 					</div>
@@ -286,6 +286,10 @@ export default {
 		initialFavoritesCount: {
 			type: Number,
 			default: 0
+		},
+		extensionDownloadUrl: {
+			type: String,
+			required: true
 		}
 	},
 	data() {

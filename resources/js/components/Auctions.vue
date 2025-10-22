@@ -36,7 +36,7 @@
 					<!-- Контейнер для аукционов -->
 					<div class="row g-4">
 						<div v-for="auction in auctions" :key="auction.id" class="col-lg-3 col-md-4">
-							<div class="vertical-product-box">
+							<div class="vertical-product-box h-100 d-flex flex-column" :class="getRarityClass(auction.listing)">
 								<div v-if="auction.listing?.is_stattrak" class="seller-badge new-badge">
 									<img class="img-fluid badge"
 										src="/images/svg/star-white.svg" alt="medal">
@@ -55,7 +55,7 @@
 										</div>
 									</div>
 								</div>
-								<div class="vertical-product-body">
+								<div class="vertical-product-body d-flex flex-column flex-grow-1">
 									<div class="d-flex flex-column mt-sm-3 mt-2 mb-2">
 										<a :href="`/marketplace/${auction.listing_id}`">
 											<h4 class="vertical-product-title">{{ auction.listing?.item?.name_ru ||
@@ -347,6 +347,19 @@ export default {
 			return currentPrice + minIncrement
 		}
 
+		const getRarityClass = (listing) => {
+			if (!listing || !listing.structured_tags) {
+				return ''
+			}
+
+			const rarityTag = listing.structured_tags.find(tag => tag.category_code === 'rarity')
+			if (rarityTag) {
+				return `rarity-${rarityTag.normalized_value}`
+			}
+
+			return ''
+		}
+
 		const initializeWebSocket = () => {
 			if (!echo.value) {
 				echo.value = createEcho()
@@ -498,7 +511,8 @@ export default {
 			getMinimumBid,
 			placeBid,
 			placingBids,
-			currentUser
+			currentUser,
+			getRarityClass
 		}
 	}
 }

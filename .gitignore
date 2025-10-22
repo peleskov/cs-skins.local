@@ -26,3 +26,4 @@ tmp
 .gitignore
 .env.prod
 public/images/skins
+public/downloads/extension/cs-skins-extension-dev.zip

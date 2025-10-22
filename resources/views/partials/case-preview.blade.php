@@ -24,6 +24,12 @@
                 </div>
             </div>
         </div>
+        <!-- Кнопка для перехода на страницу кейсов -->
+        <div class="text-center mt-4">
+            <a href="{{ route('cases.index') }}" class="btn theme-btn">
+                {{ __('home.view_all_cases') }}
+            </a>
+        </div>
     </div>
 </section>
 @endif

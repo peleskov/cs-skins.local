@@ -165,13 +165,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const logoUrl = headerElement.dataset.logoUrl;
                 const cartCount = parseInt(headerElement.dataset.cartCount || '0');
                 const favoritesCount = parseInt(headerElement.dataset.favoritesCount || '0');
+                const extensionDownloadUrl = headerElement.dataset.extensionDownloadUrl;
 
                 const app = createApp(Header, {
                     user: user,
                     routes: routes,
                     logoUrl: logoUrl,
                     initialCartCount: cartCount,
-                    initialFavoritesCount: favoritesCount
+                    initialFavoritesCount: favoritesCount,
+                    extensionDownloadUrl: extensionDownloadUrl
                 });
                 app.mount('#header-app');
                 

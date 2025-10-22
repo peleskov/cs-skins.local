@@ -4,10 +4,13 @@
 			<div class="loader-line"></div>
 			<div class="d-flex justify-content-between align-items-center">
 				<h3>Торговля</h3>
-				<a href="/rukovodstvo-po-torgovle" class="btn theme-btn" title="Руководство по торговле">
-					<i class="ri-question-line me-1"></i>
-					<span>Как начать торговлю</span>
-				</a>
+				<div class="btn-group">
+					<a href="/rukovodstvo-po-torgovle" class="btn theme-outline" title="Руководство по торговле">
+						<i class="ri-question-line me-1"></i>
+						<span>Как начать торговлю</span>
+					</a>
+					<a class="btn theme-outline" href="#" data-bs-toggle="modal" data-bs-target="#extensionModal"><i class="ri-download-2-line me-2"></i>Расширение </a>
+				</div>
 			</div>
 		</div>
 
@@ -85,7 +88,9 @@
 											<div class="d-flex align-items-center gap-2">
 												<span v-if="getExteriorTag(listing)" class="badge bg-secondary">
 													{{ getExteriorTag(listing) }}
-													<span v-if="listing.wear_value !== null && listing.wear_value !== undefined" class="ms-1">
+													<span
+														v-if="listing.wear_value !== null && listing.wear_value !== undefined"
+														class="ms-1">
 														({{ listing.wear_value.toFixed(4) }})
 													</span>
 												</span>
@@ -134,7 +139,8 @@
 													title="Изменить цену">
 													<i class="ri-edit-line me-1"></i>Редактировать
 												</button>
-												<button class="btn theme-outline" @click="createAuctionForListing(listing)"
+												<button class="btn theme-outline"
+													@click="createAuctionForListing(listing)"
 													title="Создать аукцион для этого предмета">
 													<i class="ri-auction-line me-1"></i>Аукцион
 												</button>
@@ -389,7 +395,7 @@
 							</div>
 						</div>
 					</div>
-					
+
 					<div class="alert alert-info">
 						<i class="ri-information-line me-2"></i>
 						<strong>Что такое аукцион?</strong>
@@ -400,11 +406,12 @@
 							<li>Победитель получит предмет по цене своей ставки</li>
 						</ul>
 					</div>
-					
+
 					<p class="mb-0">Вы уверены, что хотите создать аукцион для этого предмета?</p>
 				</div>
 				<div class="modal-footer">
-					<button type="button" class="btn theme-outline" data-bs-dismiss="modal" @click="clearAuctionData">Отмена</button>
+					<button type="button" class="btn theme-outline" data-bs-dismiss="modal"
+						@click="clearAuctionData">Отмена</button>
 					<button type="button" class="btn theme-btn theme-btn-info" @click="confirmCreateAuction">
 						<i class="ri-auction-line me-1"></i>Создать аукцион
 					</button>
@@ -431,7 +438,8 @@
 						</div>
 						<h5 class="mb-3">Аукцион успешно создан!</h5>
 						<p class="text-muted mb-4">
-							Ваш аукцион создан с настройками по умолчанию. Вы можете отредактировать параметры и активировать его в разделе "Мои аукционы".
+							Ваш аукцион создан с настройками по умолчанию. Вы можете отредактировать параметры и
+							активировать его в разделе "Мои аукционы".
 						</p>
 						<div class="alert alert-info">
 							<i class="ri-information-line me-2"></i>
@@ -572,7 +580,7 @@ export default {
 				},
 				reserved: {
 					emptyIcon: 'ri-bookmark-line',
-					emptyTitle: 'Нет резервированных лотов', 
+					emptyTitle: 'Нет резервированных лотов',
 					emptyText: 'Здесь отображаются предметы которые находятся в процессе продажи'
 				},
 				cancelled: {
@@ -987,7 +995,7 @@ export default {
 				if (data.success) {
 					// Очищаем данные только при успехе
 					this.itemToAuction = null;
-					
+
 					// Закрываем модальное окно создания
 					const modal = bootstrap.Modal.getInstance(document.getElementById('createAuctionModal'));
 					if (modal) {
@@ -999,7 +1007,7 @@ export default {
 						const successModal = new bootstrap.Modal(document.getElementById('auctionCreatedModal'));
 						successModal.show();
 					}, 300);
-					
+
 				} else {
 					// Глобальный обработчик покажет toast автоматически
 					// НЕ очищаем itemToAuction, чтобы модальное окно оставалось с данными
@@ -1022,7 +1030,7 @@ export default {
 			if (modal) {
 				modal.hide();
 			}
-			
+
 			// Переходим на раздел аукционов в профиле
 			window.location.href = '/profile#auctions';
 		}
@@ -1030,7 +1038,7 @@ export default {
 
 	mounted() {
 		this.loadListings();
-		
+
 		// Добавляем обработчик закрытия модального окна создания аукциона
 		const createAuctionModal = document.getElementById('createAuctionModal');
 		if (createAuctionModal) {

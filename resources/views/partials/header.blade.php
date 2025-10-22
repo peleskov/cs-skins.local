@@ -21,6 +21,7 @@
     }}"
     data-logo-url="{{ asset('images/logo_white.svg') }}"
     data-cart-count="{{ app('App\Services\CartService')->getCount() }}"
-    data-favorites-count="{{ auth('client')->check() ? auth('client')->user()->favorites()->whereHas('listing', function($query) { $query->where('status', 'active'); })->count() : 0 }}">
+    data-favorites-count="{{ auth('client')->check() ? auth('client')->user()->favorites()->whereHas('listing', function($query) { $query->where('status', 'active'); })->count() : 0 }}"
+    data-extension-download-url="{{ env('EXTENSION_DOWNLOAD_URL') }}">
 </div>
 <!-- Header Section end -->

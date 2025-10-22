@@ -333,7 +333,6 @@ class InventoryController extends Controller
         }
     }
 
-
     private function syncInventory(Client $client): array
     {
         $startTime = microtime(true);

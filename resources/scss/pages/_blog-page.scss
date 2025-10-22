@@ -260,6 +260,7 @@
 					&.active {
 						.form-check {
 							.form-check-label {
+
 								.name,
 								.number {
 									color: rgba(var(--theme-color), 1);
@@ -473,11 +474,33 @@
 	.content-box {
 		margin-top: 20px;
 
+		ul {
+			display: flex;
+			flex-direction: column;
+			padding-left: 30px;
+
+			li {
+				margin-bottom: 10px;
+				font-size: calc(14px + (16 - 14) * ((100vw - 320px) / (1920 - 320)));
+				color: rgba(var(--content-color), 1);
+				line-height: 1.2;
+				display: list-item;
+				list-style-type: disc;
+			}
+		}
+
 		p {
-			margin-top: 10px;
+			margin-bottom: 10px;
 			font-size: calc(14px + (16 - 14) * ((100vw - 320px) / (1920 - 320)));
 			color: rgba(var(--content-color), 1);
 			line-height: 1.6;
+
+			strong {
+				font-size: calc(14px + (16 - 14) * ((100vw - 320px) / (1920 - 320)));
+				color: rgba(var(--content-color), 1);
+				line-height: 1.6;
+				font-weight: 600;
+			}
 		}
 
 		.blog-title {

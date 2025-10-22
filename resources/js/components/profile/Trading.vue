@@ -4,7 +4,7 @@
 			<div class="loader-line"></div>
 			<div class="d-flex justify-content-between align-items-center">
 				<h3>Торговля</h3>
-				<a href="/trading-guide" class="btn theme-btn" title="Руководство по торговле">
+				<a href="/rukovodstvo-po-torgovle" class="btn theme-btn" title="Руководство по торговле">
 					<i class="ri-question-line me-1"></i>
 					<span>Как начать торговлю</span>
 				</a>

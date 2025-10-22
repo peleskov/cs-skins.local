@@ -6,10 +6,9 @@ use Filament\Schemas\Schema;
 use Filament\Forms\Components\TextInput;
 use Illuminate\Support\Str;
 use Filament\Forms\Components\Toggle;
-use Filament\Schemas\Components\Tabs;
-use Filament\Schemas\Components\Tabs\Tab;
-use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\CodeEditor;
+use Filament\Forms\Components\CodeEditor\Enums\Language;
 use Filament\Schemas\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
@@ -67,35 +66,11 @@ class PageResource extends Resource
                     ->label('Активна')
                     ->default(true),
 
-                Tabs::make('content_tabs')
-                    ->columnSpanFull()
-                    ->tabs([
-                        Tab::make('Визуальный редактор')
-                            ->schema([
-                                RichEditor::make('content')
-                                    ->label('Контент')
-                                    ->required()
-                                    ->reactive()
-                                    ->afterStateUpdated(fn (?string $state, callable $set) => $set('content_html', $state))
-                                    ->afterStateHydrated(fn ($state, callable $set) => $set('content_html', $state))
-                                    ->columnSpanFull(),
-                            ]),
-                        Tab::make('HTML код')
-                            ->schema([
-                                Textarea::make('content_html')
-                                    ->label('HTML контент')
-                                    ->rows(20)
-                                    ->reactive()
-                                    ->afterStateUpdated(fn (?string $state, callable $set) => $set('content', $state))
-                                    ->dehydrated(false)
-                                    ->columnSpanFull()
-                                    ->extraAttributes([
-                                        'style' => 'font-family: "Consolas", "Monaco", "Lucida Console", "Liberation Mono", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", "Courier New", monospace; font-size: 13px;',
-                                        'spellcheck' => 'false'
-                                    ]),
-                            ]),
-                    ])
-                    ->contained(false),
+                CodeEditor::make('content')
+                    ->label('HTML контент')
+                    ->language(Language::Html)
+                    ->required()
+                    ->columnSpanFull(),
 
                 Section::make('SEO')
                     ->schema([

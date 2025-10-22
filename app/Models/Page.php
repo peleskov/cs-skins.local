@@ -18,7 +18,16 @@ class Page extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'content' => 'string',
     ];
+
+    /**
+     * Accessor для поля content - всегда возвращает строку
+     */
+    public function getContentAttribute($value)
+    {
+        return $value ?? '';
+    }
 
     protected static function boot()
     {

@@ -143,7 +143,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Cart компонент
     const cartElement = document.getElementById('cart-app');
     if (cartElement) {
-        const app = createApp(Cart);
+        const user = cartElement.dataset.user !== 'null' ? JSON.parse(cartElement.dataset.user) : null;
+        const routes = JSON.parse(cartElement.dataset.routes);
+        const app = createApp(Cart, {
+            user: user,
+            routes: routes
+        });
         app.mount('#cart-app');
     }
     

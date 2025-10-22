@@ -800,6 +800,21 @@ export default {
 			this.itemToEdit = listing;
 			this.editPriceValue = listing.price;
 			const modal = new bootstrap.Modal(document.getElementById('editPriceModal'));
+
+			// Добавляем обработчик события полного открытия модального окна
+			const modalElement = document.getElementById('editPriceModal');
+			modalElement.addEventListener('shown.bs.modal', function selectPriceText() {
+				const priceInput = document.getElementById('priceInput');
+				if (priceInput) {
+					setTimeout(() => {
+						priceInput.focus();
+						priceInput.select();
+					}, 50);
+				}
+				// Удаляем обработчик после использования
+				modalElement.removeEventListener('shown.bs.modal', selectPriceText);
+			});
+
 			modal.show();
 		},
 

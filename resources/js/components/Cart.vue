@@ -27,7 +27,7 @@
 								</p>
 							</div>
 							<div class="col-md-6 text-end">
-								<a href="/checkout" class="btn theme-btn me-2"
+								<a :href="routes.checkout" class="btn theme-btn me-2"
 								   :class="{ disabled: cartItems.length === 0 }">
 									<i class="ri-shopping-cart-line me-1"></i>Оформить заказ
 								</a>
@@ -84,10 +84,10 @@
 					<i class="ri-shopping-cart-line display-4 text-muted mb-3"></i>
 					<h4>Корзина пуста</h4>
 					<p class="text-muted mb-4">Добавьте товары из маркетплейса для покупки</p>
-					<a href="/marketplace" class="btn theme-outline me-sm-2 mb-2 mb-sm-0">
+					<a :href="routes.marketplace" class="btn theme-outline me-sm-2 mb-2 mb-sm-0">
 						<i class="ri-store-2-line me-2"></i>Перейти в маркетплейс
 					</a>
-					<a href="https://cs-skins.s1temaker.ru/auth/steam" class="btn theme-btn"><i class="ri-steam-fill me-1"></i>Войти через Steam</a>
+					<a v-if="!user" :href="routes.login" class="btn theme-btn"><i class="ri-steam-fill me-1"></i>Войти через Steam</a>
 				</div>
 			</div>
 		</div>
@@ -160,6 +160,16 @@ import { cartAPI } from '../utils/api';
 
 export default {
 	name: 'Cart',
+	props: {
+		user: {
+			type: Object,
+			default: null
+		},
+		routes: {
+			type: Object,
+			required: true
+		}
+	},
 	setup() {
 		return { formatPrice };
 	},

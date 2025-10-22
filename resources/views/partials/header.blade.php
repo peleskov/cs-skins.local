@@ -22,6 +22,6 @@
     data-logo-url="{{ asset('images/logo_white.svg') }}"
     data-cart-count="{{ app('App\Services\CartService')->getCount() }}"
     data-favorites-count="{{ auth('client')->check() ? auth('client')->user()->favorites()->whereHas('listing', function($query) { $query->where('status', 'active'); })->count() : 0 }}"
-    data-extension-download-url="{{ env('EXTENSION_DOWNLOAD_URL') }}">
+    data-extension-download-url="{{ config('extension.download_url') }}">
 </div>
 <!-- Header Section end -->

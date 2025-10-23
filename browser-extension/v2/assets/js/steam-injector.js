@@ -47,25 +47,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 async function getTradeOffersFromSteam(steamLoginSecure) {
     try {
-        console.log('🔍 Начинаем получение трейдов...');
-        console.log('🌐 Текущая страница:', window.location.href);
+        //console.log('🔍 Начинаем получение трейдов...');
+        //console.log('🌐 Текущая страница:', window.location.href);
         
         if (!steamLoginSecure) {
-            console.log('❌ steamLoginSecure cookie не передан из service worker');
+            //console.log('❌ steamLoginSecure cookie не передан из service worker');
             throw new Error('steamLoginSecure cookie не найден');
         }
-        
-        console.log('✅ steamLoginSecure cookie получен из service worker');
-        
+
+        //console.log('✅ steamLoginSecure cookie получен из service worker');
+
         const cookieValue = decodeURIComponent(steamLoginSecure);
         const accessToken = cookieValue.split('||')[1];
         
         if (!accessToken) {
-            console.log('❌ access_token не найден в cookie');
+            //console.log('❌ access_token не найден в cookie');
             throw new Error('access_token не найден в cookie');
         }
         
-        console.log('✅ access_token извлечен:', accessToken.substring(0, 10) + '...');
+        //console.log('✅ access_token извлечен:', accessToken.substring(0, 10) + '...');
         
         const params = new URLSearchParams({
             access_token: accessToken,
@@ -75,21 +75,21 @@ async function getTradeOffersFromSteam(steamLoginSecure) {
         });
         
         const url = `https://api.steampowered.com/IEconService/GetTradeOffers/v1/?${params}`;
-        console.log('🌐 Делаем запрос к Steam API...');
+        //console.log('🌐 Делаем запрос к Steam API...');
         
         const response = await fetch(url);
         
         if (!response.ok) {
-            console.log('❌ HTTP ошибка:', response.status, response.statusText);
+            //console.log('❌ HTTP ошибка:', response.status, response.statusText);
             throw new Error(`HTTP error ${response.status}`);
         }
         
-        console.log('✅ Ответ получен, парсим JSON...');
+        //console.log('✅ Ответ получен, парсим JSON...');
         const data = await response.json();
-        console.log('📦 Полный ответ Steam API:', data);
+        //console.log('📦 Полный ответ Steam API:', data);
         
         const offers = data.response.trade_offers_sent || [];
-        console.log('📋 Количество трейдов:', offers.length);
+        //console.log('📋 Количество трейдов:', offers.length);
         
         return offers;
     } catch (error) {

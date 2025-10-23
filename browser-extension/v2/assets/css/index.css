@@ -391,7 +391,7 @@ body.expanded .popup-container {
     top: 16px;
     right: 16px;
     left: 16px;
-    z-index: 1000;
+    z-index: 10001;
     animation: slideIn 0.3s ease-out;
 }
 

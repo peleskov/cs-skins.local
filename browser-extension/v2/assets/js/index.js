@@ -57,6 +57,12 @@ class PopupManager {
             } else if (message.type === 'FORCE_LOGOUT') {
                 this.showView('unauthorized');
                 this.showNotification(message.message || 'Требуется переавторизация', 'warning');
+            } else if (message.type === 'STEAM_AUTH_REQUIRED') {
+                //console.log('🔔 Received STEAM_AUTH_REQUIRED:', message);
+                this.showNotification(message.message || 'Необходимо авторизоваться в Steam', 'warning');
+            } else if (message.type === 'STEAM_WRONG_ACCOUNT') {
+                //console.log('🔔 Received STEAM_WRONG_ACCOUNT:', message);
+                this.showNotification(message.message || 'Авторизован другой аккаунт Steam', 'error');
             }
         });
         

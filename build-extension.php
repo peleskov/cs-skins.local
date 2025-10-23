@@ -77,7 +77,11 @@ function buildExtension($envFile, $outputFileName, $isDev) {
     $manifest = json_decode(file_get_contents($manifestPath), true);
 
     // Обновляем параметры
-    $manifest['name'] = $extensionName;
+    if ($isDev) {
+        $manifest['name'] = $extensionName . ' v2 DEV';
+    } else {
+        $manifest['name'] = $extensionName . ' v2';
+    }
     $manifest['host_permissions'] = [
         'https://steamcommunity.com/*',
         'https://' . $domain . '/*'
@@ -104,7 +108,8 @@ function buildExtension($envFile, $outputFileName, $isDev) {
 function replaceUrlsInJsFiles($dir, $newUrl) {
     $jsFiles = [
         $dir . '/assets/js/index.js',
-        $dir . '/assets/js/service-worker.js'
+        $dir . '/assets/js/service-worker.js',
+        $dir . '/index.html'
     ];
 
     // Убираем завершающий слеш если он есть
@@ -151,6 +156,20 @@ function replaceUrlsInJsFiles($dir, $newUrl) {
             $content
         );
 
+        // Заменяем URL в index.html - простая замена строк
+        $content = str_replace('https://cs-skins.s1temaker.ru', $newUrl, $content);
+
+        // Заменяем title в index.html для prod версии
+        if (basename($file) === 'index.html') {
+            global $extensionName, $isDev;
+            $titleText = $isDev ? $extensionName . ' v2 DEV' : $extensionName . ' v2';
+            $content = preg_replace(
+                '/<title>[^<]*<\/title>/',
+                "<title>$titleText</title>",
+                $content
+            );
+        }
+
         file_put_contents($file, $content);
         echo "✓ Обновлен файл: " . basename($file) . "\n";
     }
@@ -170,7 +189,9 @@ function copyDirectory($source, $dest) {
     );
 
     foreach ($iterator as $item) {
-        $destPath = $dest . DIRECTORY_SEPARATOR . $iterator->getSubPathname();
+        $itemPath = $item->getPathname();
+        $relativePath = substr($itemPath, strlen($source) + 1);
+        $destPath = $dest . DIRECTORY_SEPARATOR . $relativePath;
 
         if ($item->isDir()) {
             if (!is_dir($destPath)) {

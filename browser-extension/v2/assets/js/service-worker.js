@@ -90,7 +90,7 @@ class TradingAssistant {
             const steamData = await this.getValidSteamData();
             
             if (!steamData) {
-                console.log('⚠️ getValidSteamData returned null');
+                //console.log('⚠️ getValidSteamData returned null');
                 await this.storage('set', { 
                     overallStatus: 'inactive',
                     steamStatus: 'no_data'
@@ -254,29 +254,29 @@ class TradingAssistant {
             const expectedSteamId = storageData.userInfo?.steam_id;
             
             if (!expectedSteamId) {
-                console.log('⚠️ No expectedSteamId found', { userInfo: storageData.userInfo });
+                //console.log('⚠️ No expectedSteamId found', { userInfo: storageData.userInfo });
                 return null;
             }
             
-            console.log('✓ Starting Steam data collection for', expectedSteamId);
+            //console.log('✓ Starting Steam data collection for', expectedSteamId);
             
             // Ищем первую Steam вкладку (любую)
             const steamTabs = await chrome.tabs.query({ url: ["*://steamcommunity.com/*"] });
             let targetTab;
             
-            console.log('✓ Found Steam tabs:', steamTabs.length);
+            //console.log('✓ Found Steam tabs:', steamTabs.length);
             
             if (steamTabs.length > 0) {
                 // Используем первую найденную Steam вкладку
                 targetTab = steamTabs[0];
-                console.log('✓ Using existing tab:', targetTab.id);
+                //console.log('✓ Using existing tab:', targetTab.id);
                 // Всегда обновляем страницу для получения актуальных данных
                 await chrome.tabs.update(targetTab.id, { 
                     url: `https://steamcommunity.com/profiles/${expectedSteamId}/edit/info` 
                 });
             } else {
                 // Создаем новую вкладку если Steam вкладок нет
-                console.log('✓ Creating new Steam tab');
+                //console.log('✓ Creating new Steam tab');
                 targetTab = await chrome.tabs.create({ 
                     url: `https://steamcommunity.com/profiles/${expectedSteamId}/edit/info`, 
                     active: false 
@@ -309,18 +309,25 @@ class TradingAssistant {
             
             if (finalTab.url.includes('/login/')) {
                 // Перенаправило на страницу входа - не авторизован
+                //console.log('🔔 Sending STEAM_AUTH_REQUIRED notification');
+                chrome.runtime.sendMessage({
+                    type: 'STEAM_AUTH_REQUIRED',
+                    message: 'Необходимо авторизоваться в Steam'
+                }).catch((error) => {
+                    //console.log('❌ Failed to send STEAM_AUTH_REQUIRED:', error);
+                });
                 return null;
             }
             
             // Получаем данные сессии из вкладки
-            console.log('✓ Getting Steam data from tab');
+            //console.log('✓ Getting Steam data from tab');
             const steamData = await this.getSteamData(targetTab.id);
             
-            console.log('✓ Steam data result:', steamData ? 'success' : 'null');
-            console.log('✓ Data structure:', steamData);
+            //console.log('✓ Steam data result:', steamData ? 'success' : 'null');
+            //console.log('✓ Data structure:', steamData);
             
             if (!steamData?.session?.sessionid) {
-                console.log('⚠️ No sessionid in Steam data');
+                //console.log('⚠️ No sessionid in Steam data');
                 return null;
             }
             
@@ -330,15 +337,19 @@ class TradingAssistant {
             
             // Проверяем что это правильный аккаунт
             if (actualSteamId !== expectedSteamId) {
-                console.log('⚠️ Steam ID mismatch:', actualSteamId, 'expected:', expectedSteamId);
+                //console.log('⚠️ Steam ID mismatch:', actualSteamId, 'expected:', expectedSteamId);
+                chrome.runtime.sendMessage({
+                    type: 'STEAM_WRONG_ACCOUNT',
+                    message: 'Авторизован другой аккаунт Steam. Войдите в правильный аккаунт.'
+                }).catch(() => {});
                 return null;
             }
             
-            console.log('✓ Steam data validation passed, returning data');
+            //console.log('✓ Steam data validation passed, returning data');
             return steamData;
             
         } catch (error) {
-            console.log('⚠️ Error in getValidSteamData:', error);
+            //console.log('⚠️ Error in getValidSteamData:', error);
             return null;
         }
     }
@@ -526,7 +537,13 @@ class TradingAssistant {
 }
 
 async function handleServerMessage(messageType, messageData) {
-    if (['pusher:connection_established', 'pusher_internal:subscription_succeeded', 'pusher:error', 'pusher:ping', 'pusher:pong'].includes(messageType)) return;
+    if (['pusher:connection_established', 'pusher_internal:subscription_succeeded', 'pusher:error', 'pusher:pong'].includes(messageType)) return;
+
+    // Отвечаем на ping сообщения
+    if (messageType === 'pusher:ping') {
+        assistant.sendWS('pusher:pong', {});
+        return;
+    }
     
     switch (messageType) {
         case 'session_received':

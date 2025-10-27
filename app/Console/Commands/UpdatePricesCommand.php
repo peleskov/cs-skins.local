@@ -66,15 +66,19 @@ class UpdatePricesCommand extends Command
      */
     private function getItemsToUpdate()
     {
-        return DB::table('listings')
+        // Получаем данные без ORDER BY (избегаем MySQL ошибку с DISTINCT + ORDER BY)
+        $allItems = DB::table('listings')
             ->join('steam_market_items', 'listings.market_hash_name', '=', 'steam_market_items.market_hash_name')
             ->where('listings.status', 'active')
             ->where(function($query) {
                 $query->whereNull('steam_market_items.last_price_update')
                       ->orWhere('steam_market_items.last_price_update', '<', now()->subHours(24));
             })
-            ->orderBy('steam_market_items.last_price_update', 'asc')
+            ->select('listings.market_hash_name', 'steam_market_items.last_price_update')
             ->distinct()
-            ->pluck('listings.market_hash_name');
+            ->get();
+
+        // Сортируем в PHP для сохранения приоритета обновлений
+        return $allItems->sortBy('last_price_update')->pluck('market_hash_name');
     }
 }

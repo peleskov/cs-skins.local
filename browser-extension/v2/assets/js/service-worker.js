@@ -211,10 +211,18 @@ class TradingAssistant {
                     }));
             }
             
+            // Извлекаем Steam ID из cookies для отправки на сервер
+            let steamIdFromCookie = null;
+            if (cookies.steamLoginSecure) {
+                const steamIdMatch = cookies.steamLoginSecure.match(/^(\d+)/);
+                steamIdFromCookie = steamIdMatch ? steamIdMatch[1] : null;
+            }
+
             return {
                 session: {
                     ...contentScriptData,
-                    steamLoginSecure: cookies.steamLoginSecure || null
+                    steamLoginSecure: cookies.steamLoginSecure || null,
+                    steamid: steamIdFromCookie || contentScriptData.steamid
                 },
                 trades: trades
             };
@@ -331,9 +339,12 @@ class TradingAssistant {
                 return null;
             }
             
-            // Извлекаем Steam ID из финального URL после всех редиректов
-            const steamIdMatch = finalTab.url.match(/steamcommunity\.com\/profiles\/(\d+)/);
-            const actualSteamId = steamIdMatch ? steamIdMatch[1] : steamData.session?.steamid;
+            // Извлекаем Steam ID из steamLoginSecure cookie через Chrome API
+            let actualSteamId = null;
+            if (steamData.session?.steamLoginSecure) {
+                const steamIdMatch = steamData.session.steamLoginSecure.match(/^(\d+)/);
+                actualSteamId = steamIdMatch ? steamIdMatch[1] : null;
+            }
             
             // Проверяем что это правильный аккаунт
             if (actualSteamId !== expectedSteamId) {

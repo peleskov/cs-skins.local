@@ -12,25 +12,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             sessionData.sessionid = sessionCookie ? sessionCookie.split('=')[1] : null;
         }
         
-        // Извлечение Steam ID (как в v1)
-        if (window.g_steamID) {
-            sessionData.steamid = window.g_steamID;
+        // Извлечение Steam ID только из steamLoginSecure cookie
+        const steamLoginCookie = document.cookie
+            .split(';')
+            .find(cookie => cookie.trim().startsWith('steamLoginSecure='));
+
+        if (steamLoginCookie) {
+            sessionData.steamLoginSecure = steamLoginCookie.split('=')[1];
+            const steamidMatch = sessionData.steamLoginSecure.match(/^(\d+)/);
+            sessionData.steamid = steamidMatch ? steamidMatch[1] : null;
         } else {
-            // Пробуем извлечь из steamLoginSecure cookie
-            const steamLoginCookie = document.cookie
-                .split(';')
-                .find(cookie => cookie.trim().startsWith('steamLoginSecure='));
-            if (steamLoginCookie) {
-                sessionData.steamLoginSecure = steamLoginCookie.split('=')[1];
-                const steamidMatch = sessionData.steamLoginSecure.match(/^(\d+)/);
-                if (steamidMatch) sessionData.steamid = steamidMatch[1];
-            }
-            
-            // Если не получили из cookie, пробуем из URL (как в v1)
-            if (!sessionData.steamid) {
-                const profileMatch = window.location.href.match(/steamcommunity\.com\/(profiles|id)\/([^\/]+)/);
-                sessionData.steamid = profileMatch ? profileMatch[2] : null;
-            }
+            sessionData.steamid = null;
         }
         
         sendResponse(sessionData);

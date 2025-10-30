@@ -266,6 +266,8 @@ export default {
 			return amount >= this.minimumDepositAmount && amount <= this.maximumDepositAmount;
 		}
 	},
+
+
 	methods: {
 		formatPrice,
 
@@ -382,8 +384,8 @@ export default {
 			try {
 				// Формируем URL для редиректов
 				const baseUrl = window.location.origin;
-				const successUrl = `${baseUrl}/profile#balance?payment=success`;
-				const failUrl = `${baseUrl}/profile#balance?payment=failed`;
+				const successUrl = `${baseUrl}/profile?payment=success#balance`;
+				const failUrl = `${baseUrl}/profile?payment=failed#balance`;
 
 				const response = await axios.post('/api/deposit/payment-form', {
 					amount: parseFloat(this.depositForm.amount),
@@ -420,6 +422,13 @@ export default {
 		},
 
 		submitPaymentForm(paymentFormUrl, successUrl, failUrl) {
+			// Debug: проверяем параметры
+			console.log('Payment form submission:', {
+				paymentFormUrl,
+				successUrl,
+				failUrl
+			});
+
 			// Создаем нативную HTML форму для POST запроса
 			const form = document.createElement('form');
 			form.method = 'POST';
@@ -507,14 +516,82 @@ export default {
 			this.depositForm.amount = '';
 			this.depositForm.error = null;
 			this.depositForm.processing = false;
+		},
+
+		checkPaymentStatus() {
+			// Получаем URL параметры из search (до хэша)
+			let urlParams = new URLSearchParams(window.location.search);
+			let paymentStatus = urlParams.get('payment');
+
+			// Если не найдено в search, ищем в hash (после хэша)
+			if (!paymentStatus && window.location.hash) {
+				const hashParts = window.location.hash.split('?');
+				if (hashParts.length > 1) {
+					// Есть параметры после хэша, например: #balance?payment=success
+					const hashParams = new URLSearchParams(hashParts[1]);
+					paymentStatus = hashParams.get('payment');
+				}
+			}
+
+			if (paymentStatus === 'success') {
+				// Добавляем задержку для корректного отображения тоста
+				setTimeout(() => {
+					window.toast?.success('Платеж успешно завершен! Баланс будет обновлен в течение нескольких минут.');
+				}, 1500);
+
+				// Обновляем баланс и транзакции
+				this.loadTransactions();
+
+				// Очищаем URL параметры
+				this.clearPaymentParams();
+
+			} else if (paymentStatus === 'failed') {
+				// Показываем уведомление о неуспешной оплате с задержкой
+				setTimeout(() => {
+					window.toast?.error('Платеж не был завершен. Попробуйте еще раз позже.');
+				}, 1500);
+
+				// Очищаем URL параметры
+				this.clearPaymentParams();
+			}
+		},
+
+		clearPaymentParams() {
+			// Удаляем параметр payment из URL без перезагрузки страницы
+			const url = new URL(window.location);
+
+			// Удаляем из search параметров (до хэша)
+			url.searchParams.delete('payment');
+
+			// Удаляем из hash параметров (после хэша)
+			if (url.hash) {
+				const hashParts = url.hash.split('?');
+				if (hashParts.length > 1) {
+					const hashParams = new URLSearchParams(hashParts[1]);
+					hashParams.delete('payment');
+
+					// Собираем hash обратно
+					if (hashParams.toString()) {
+						url.hash = hashParts[0] + '?' + hashParams.toString();
+					} else {
+						url.hash = hashParts[0];
+					}
+				}
+			}
+
+			window.history.replaceState({}, '', url);
 		}
 
 	},
 
 	async mounted() {
+		// Проверяем статус платежа
+		this.checkPaymentStatus();
+
 		// Слушаем события изменения валюты
 		window.addEventListener('currency-changed', this.handleCurrencyChange);
 
+		// Загружаем данные
 		await Promise.all([
 			this.loadTransactions(),
 			this.loadSalesStats()

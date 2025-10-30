@@ -63,7 +63,6 @@
 					:client="client"
 					:deposit-settings="depositSettings" />
 
-
 				<!-- Other Tabs Placeholder -->
 				<div v-else class="text-center py-5">
 					<h4>{{ getTabTitle(activeTab) }}</h4>

@@ -19,6 +19,9 @@ use App\Http\Controllers\TelegramWebhookController;
 Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle'])
     ->name('telegram.webhook');
 
+// Payment webhook (не требует авторизации и CSRF)
+Route::post('/webhook/payment', [\App\Http\Controllers\DepositController::class, 'handleWebhook'])->name('webhook.payment');
+
 // API для браузерного расширения (без web middleware)
 Route::prefix('ext-api')->name('extension.')->middleware('extension.cors')->controller(ExtensionController::class)->group(function () {
     Route::post('/auth', 'authenticateExtension')->name('auth');

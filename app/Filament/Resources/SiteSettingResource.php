@@ -84,10 +84,12 @@ class SiteSettingResource extends Resource
                         ->numeric()
                         ->helperText('Введите число'),
 
-                    Toggle::make('boolean_value')
+                    Toggle::make('value')
                         ->label('Значение')
                         ->visible(fn ($get) => $get('type') === SiteSetting::TYPE_BOOLEAN)
-                        ->helperText('Включить/выключить настройку'),
+                        ->helperText('Включить/выключить настройку')
+                        ->formatStateUsing(fn ($state) => (bool) $state)
+                        ->dehydrateStateUsing(fn ($state) => $state ? '1' : '0'),
                 ])
                 ->columnSpanFull(),
             ])

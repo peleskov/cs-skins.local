@@ -33,14 +33,20 @@ class ProfileController extends Controller
         $client = $this->getAuthenticatedClient();
         $telegramBotName = config('services.telegram.bot_name');
 
-
         // Делаем extension_token видимым для владельца профиля
         $client->makeVisible(['extension_token']);
 
         // Переводы для табов профиля
         $profileTabs = __('profile.tabs');
 
-        return view('profile.index', compact('client', 'telegramBotName', 'profileTabs'));
+        // Настройки депозитов
+        $depositSettings = [
+            'minimum_amount' => \App\Models\SiteSetting::get('minimum_deposit_amount', 100),
+            'maximum_amount' => \App\Models\SiteSetting::get('maximum_deposit_amount', 50000),
+            'card_payment_enabled' => \App\Models\SiteSetting::get('card_payment_enabled', true),
+        ];
+
+        return view('profile.index', compact('client', 'telegramBotName', 'profileTabs', 'depositSettings'));
     }
 
     /**

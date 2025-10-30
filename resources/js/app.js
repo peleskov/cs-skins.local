@@ -131,12 +131,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (profileElement) {
         const app = createApp(Profile, {
             initialClient: JSON.parse(profileElement.dataset.client || '{}'),
-            telegramBotName: profileElement.dataset.telegramBotName || ''
+            telegramBotName: profileElement.dataset.telegramBotName || '',
+            depositSettings: JSON.parse(profileElement.dataset.depositSettings || '{}')
         });
-        
+
         // Устанавливаем глобальную переменную для Telegram виджета
         window.telegramBotName = profileElement.dataset.telegramBotName || '';
-        
+
         app.mount('#profile-app');
     }
     

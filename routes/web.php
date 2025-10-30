@@ -148,6 +148,15 @@ Route::prefix('api')->name('api.')->group(function () {
             Route::get('/ban-status', 'checkBanStatus')->name('ban-status')->middleware('throttle:60,1');
         });
 
+        // Платежи API
+        Route::prefix('deposit')->name('deposit.')->controller(\App\Http\Controllers\DepositController::class)->group(function () {
+            Route::post('/payment-form', 'createPaymentForm')->name('payment-form')->middleware('throttle:10,1'); // Payment form
+            Route::get('/status/{paymentId}', 'getPaymentStatus')->name('status')->middleware('throttle:60,1');
+            Route::post('/check-status/{paymentId}', 'checkPaymentStatus')->name('check-status')->middleware('throttle:30,1');
+            Route::get('/history', 'getPaymentsHistory')->name('history')->middleware('throttle:60,1');
+            Route::post('/cancel/{paymentId}', 'cancelPayment')->name('cancel')->middleware('throttle:10,1');
+        });
+
     });
 });
 
@@ -159,6 +168,9 @@ Route::middleware(['auth:client'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/{slug}', 'show')->name('show');
     });
+
+    // Пополнение баланса
+    Route::get('/deposit', [\App\Http\Controllers\DepositController::class, 'index'])->name('deposit');
 
 
     Route::get('/profile', function () {

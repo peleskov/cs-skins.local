@@ -59,8 +59,9 @@
 					:client="client" />
 
 				<!-- Balance Tab -->
-				<ProfileBalance v-else-if="activeTab === 'balance'" 
-					:client="client" />
+				<ProfileBalance v-else-if="activeTab === 'balance'"
+					:client="client"
+					:deposit-settings="depositSettings" />
 
 
 				<!-- Other Tabs Placeholder -->
@@ -103,6 +104,14 @@ export default {
 		telegramBotName: {
 			type: String,
 			default: ''
+		},
+		depositSettings: {
+			type: Object,
+			default: () => ({
+				minimum_amount: 100,
+				maximum_amount: 50000,
+				enabled: true
+			})
 		}
 	},
 

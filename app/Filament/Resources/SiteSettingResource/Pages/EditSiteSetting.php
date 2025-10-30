@@ -36,4 +36,5 @@ class EditSiteSetting extends EditRecord
         }
         return $data;
     }
+
 }

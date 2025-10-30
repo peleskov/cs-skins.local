@@ -23,10 +23,11 @@
 <section class="profile-section section-b-space">
     <div class="container">
         <!-- Vue Profile Component -->
-        <div id="profile-app" 
+        <div id="profile-app"
              data-client="{{ $client->toJson() }}"
              data-telegram-bot-name="{{ $telegramBotName }}"
-             data-profile-tabs="{{ json_encode($profileTabs) }}">
+             data-profile-tabs="{{ json_encode($profileTabs) }}"
+             data-deposit-settings="{{ json_encode($depositSettings) }}">
         </div>
     </div>
 </section>

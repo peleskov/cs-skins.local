@@ -6,6 +6,11 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
+// Приватный канал для уведомлений пользователей
+Broadcast::channel('user.{id}', function ($client, $id) {
+    return (int) $client->id === (int) $id;
+}, ['guards' => ['client']]);
+
 // Публичный канал для расширения
 Broadcast::channel('extension-orders', function () {
     return true;

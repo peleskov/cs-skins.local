@@ -109,14 +109,17 @@
                                     :data-is-in-cart="listing.is_in_cart" data-size="large" data-variant="primary"
                                     class="flex-fill cart-button-placeholder">
                                 </div>
-                                <button class="btn theme-outline flex-fill" @click="quickBuy">
+                                <button v-if="shouldShowQuickBuy"
+                                        class="btn theme-outline flex-fill"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#confirmPurchaseModal">
                                     <i class="ri-flashlight-line me-2"></i>Быстрая покупка
                                 </button>
                             </div>
                         </div>
                         
                         <!-- Компонент аукциона -->
-                        <AuctionDetails :listingId="listing.id" />
+                        <AuctionDetails :listingId="listing.id" @auction-updated="onAuctionUpdated" />
                         
                         <!-- Float Bar -->
                         <div v-if="listing.float_value || listing.wear_value" class="col-12">
@@ -247,6 +250,51 @@
             </div>
         </div>
 
+        <!-- Confirm Purchase modal -->
+        <div class="modal fade" id="confirmPurchaseModal" tabindex="-1" aria-labelledby="confirmPurchaseModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning text-white">
+                        <h5 class="modal-title" id="confirmPurchaseModalLabel">
+                            <i class="ri-question-line me-2"></i>Подтверждение покупки
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <i class="ri-shopping-cart-line text-warning" style="font-size: 3rem;"></i>
+                        <h4 class="mt-3">Подтвердите покупку</h4>
+
+                        <!-- Purchase details -->
+                        <div v-if="listing" class="mt-3">
+                            <div class="border rounded p-3 text-start">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>
+                                        <strong>{{ getItemName() }}</strong>
+                                        <small class="text-muted d-block">{{ getItemNameEn() }}</small>
+                                        <small class="text-muted d-block">Продавец: {{ listing.seller?.name || 'Не указан' }}</small>
+                                    </span>
+                                    <strong class="text-primary" v-html="formatPrice(listing.price, 'RUB')"></strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="text-muted mt-3">
+                            Вы действительно хотите купить этот предмет?<br>
+                            Средства будут списаны с вашего баланса.
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn theme-outline" data-bs-dismiss="modal">
+                            Отмена
+                        </button>
+                        <button type="button" class="btn theme-btn" @click="quickBuy" data-bs-dismiss="modal">
+                            Подтвердить покупку
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Success modal -->
         <div v-if="showSuccessModal" class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
             <div class="modal-dialog modal-dialog-centered">
@@ -330,12 +378,26 @@ export default {
             steamPriceStats: null,
             showSuccessModal: false,
             purchasedOrder: null,
-            currencySymbol: '₽' // Реактивная переменная для символа валюты
+            currencySymbol: '₽', // Реактивная переменная для символа валюты
+            auctionState: null // Состояние аукциона от дочернего компонента
         };
     },
     computed: {
         currentCurrencySymbol() {
             return this.currencySymbol;
+        },
+
+        shouldShowQuickBuy() {
+            // Если нет активного аукциона - показываем кнопку
+            if (!this.auctionState || !this.auctionState.isActive) {
+                return true;
+            }
+
+            // Если есть аукцион - проверяем условия цены и времени
+            const priceCondition = this.listing.price > this.auctionState.currentPrice;
+            const timeCondition = this.auctionState.timeLeft > (this.auctionState.totalDuration / 2);
+
+            return priceCondition && timeCondition;
         },
 
         chartSeries() {
@@ -504,6 +566,10 @@ export default {
         window.removeEventListener('currency-changed', this.handleCurrencyChange);
     },
     methods: {
+        onAuctionUpdated(auctionData) {
+            this.auctionState = auctionData;
+        },
+
         // Метод для конвертации цен из USD в выбранную валюту
         convertUsdPrice(usdPrice) {
             return formatPrice(usdPrice, 'USD', true);

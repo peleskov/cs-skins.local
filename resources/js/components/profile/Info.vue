@@ -13,6 +13,15 @@
 						<span>Имя :</span>
 					</div>
 					<h6>{{ client.name }}</h6>
+
+					<!-- Toast Notifications Toggle -->
+					<div class="form-check form-switch mt-2">
+						<input class="form-check-input" type="checkbox" role="switch" id="toastNotifications"
+							:checked="isToastNotificationsEnabled" @change="toggleToastNotifications">
+						<label class="form-check-label" for="toastNotifications">
+							Показывать всплывающие уведомления
+						</label>
+					</div>
 				</div>
 			</li>
 
@@ -407,6 +416,12 @@ export default {
 			return this.client.notification_settings &&
 				Array.isArray(this.client.notification_settings) &&
 				this.client.notification_settings.includes('telegram');
+		},
+
+		isToastNotificationsEnabled() {
+			return this.client.notification_settings &&
+				Array.isArray(this.client.notification_settings) &&
+				this.client.notification_settings.includes('toast');
 		}
 	},
 	methods: {
@@ -750,6 +765,10 @@ export default {
 			await this.updateNotificationSettings('telegram');
 		},
 
+		async toggleToastNotifications() {
+			await this.updateNotificationSettings('toast');
+		},
+
 		async updateNotificationSettings(type) {
 			try {
 				const currentSettings = Array.isArray(this.client.notification_settings)
@@ -778,8 +797,9 @@ export default {
 					});
 
 					const action = newSettings.includes(type) ? 'включены' : 'отключены';
-					const channel = type === 'email' ? 'email' : 'Telegram';
-					window.toast.success(`Уведомления на ${channel} ${action}`);
+					const channel = type === 'email' ? 'email' : type === 'telegram' ? 'Telegram' : 'всплывающие уведомления';
+					const message = type === 'toast' ? `Всплывающие уведомления ${action}` : `Уведомления на ${channel} ${action}`;
+					window.toast.success(message);
 				}
 			} catch (error) {
 				console.error('Update notification settings error:', error);

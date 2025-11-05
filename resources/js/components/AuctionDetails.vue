@@ -115,6 +115,7 @@ export default {
 		await this.loadAuctionData();
 		this.startCountdown();
 		this.initializeWebSocket();
+		this.emitAuctionState();
 	},
 	beforeUnmount() {
 		if (this.countdownInterval) {
@@ -223,6 +224,9 @@ export default {
 			const now = new Date().getTime();
 			const endTime = new Date(this.auction.ends_at).getTime();
 			this.timeLeft = Math.max(0, endTime - now);
+
+			// Уведомляем родительский компонент об изменении времени
+			this.emitAuctionState();
 		},
 
 		getTimeLeft() {
@@ -327,6 +331,22 @@ export default {
 			});
 		},
 
+		emitAuctionState() {
+			if (this.auction && this.auction.status === 'active') {
+				// Используем duration_hours аукциона, конвертируем в миллисекунды
+				const totalDuration = (this.auction.duration_hours || 1) * 60 * 60 * 1000; // часы в мс
+				const auctionData = {
+					isActive: true,
+					currentPrice: parseFloat(this.auction.current_price) || 0,
+					timeLeft: this.timeLeft || 0,
+					totalDuration: totalDuration
+				};
+				this.$emit('auction-updated', auctionData);
+			} else {
+				this.$emit('auction-updated', { isActive: false });
+			}
+		},
+
 		initializeWebSocket() {
 			if (!this.auction) return;
 
@@ -362,7 +382,10 @@ export default {
 					
 					// Обновляем минимальную ставку
 					this.bidAmount = this.getMinimumBid();
-					
+
+					// Уведомляем родительский компонент об изменении аукциона
+					this.emitAuctionState();
+
 					// Показываем уведомление если ставка не наша
 					if (this.currentUser && e.bid && e.bid.bidder.id !== this.currentUser.id) {
 						window.toast.success(`${e.bid.bidder.name} сделал ставку ${this.formatPrice(e.bid.amount)}`);

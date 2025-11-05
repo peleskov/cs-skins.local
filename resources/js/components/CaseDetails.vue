@@ -14,7 +14,7 @@
 			</div>
 
 			<!-- Слайдер для розыгрыша -->
-			<section class="banner-section section-b-space case-prize-slider">
+			<section class="banner-section section-b-space case-prize-slider" v-if="allItems.length > 0">
 				<div class="container">
 					<div class="case-roulette-container">
 						<!-- Окошко для приза -->
@@ -72,7 +72,7 @@
 			</section>
 
 			<!-- Все предметы кейса -->
-			<div class="title text-center">
+			<div class="title text-center" v-if="allItems.length > 0">
 				<h3>Возможные предметы</h3>
 				<div class="loader-line" style="left: calc(50% - 40px);"></div>
 			</div>
@@ -267,6 +267,8 @@ export default {
 		},
 
 		startAutoScroll() {
+			if (!this.displayItems || this.displayItems.length === 0) return;
+
 			if (this.animationInterval) {
 				clearInterval(this.animationInterval);
 			}

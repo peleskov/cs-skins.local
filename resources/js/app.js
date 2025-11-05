@@ -45,21 +45,93 @@ const toastOptions = {
     newestOnTop: true
 };
 
+// Звуковые файлы для уведомлений
+const sounds = {
+    success: new Audio('/sounds/success.mp3'),
+    error: new Audio('/sounds/error.mp3'),
+    info: new Audio('/sounds/info.mp3'),
+    warning: new Audio('/sounds/warning.mp3')
+};
+
+// Настройки звука
+const soundSettings = {
+    enabled: localStorage.getItem('soundEnabled') !== 'false',
+    volume: parseFloat(localStorage.getItem('soundVolume') || '0.5')
+};
+
+// Флаг для отслеживания первого взаимодействия пользователя
+let userInteracted = false;
+
+// Функция инициализации звуков после взаимодействия пользователя
+const initSoundsAfterInteraction = () => {
+    if (userInteracted) return;
+
+    // Пробуем предзагрузить звуки
+    Object.values(sounds).forEach(sound => {
+        if (sound) {
+            sound.load();
+        }
+    });
+    userInteracted = true;
+};
+
+// Добавляем обработчики для первого взаимодействия
+document.addEventListener('click', initSoundsAfterInteraction, { once: true });
+document.addEventListener('keydown', initSoundsAfterInteraction, { once: true });
+document.addEventListener('touchstart', initSoundsAfterInteraction, { once: true });
+
+// Функция воспроизведения звука
+const playNotificationSound = (type) => {
+    if (!soundSettings.enabled) return;
+
+    const sound = sounds[type];
+    if (sound) {
+        sound.volume = soundSettings.volume;
+        sound.play().catch(() => {
+            // Тихо игнорируем любые ошибки воспроизведения
+        });
+    }
+};
+
 // Создаем глобальный экземпляр toast
 const initializeGlobalToast = () => {
     const app = createApp({
         name: 'ToastApp',
         setup() {
-            const toast = useToast();
+            const originalToast = useToast();
+
+            // Расширяем toast со звуками
+            const toastWithSound = {
+                success: (message, options = {}) => {
+                    if (options.sound !== false) playNotificationSound('success');
+                    return originalToast.success(message, options);
+                },
+                error: (message, options = {}) => {
+                    if (options.sound !== false) playNotificationSound('error');
+                    return originalToast.error(message, options);
+                },
+                info: (message, options = {}) => {
+                    if (options.sound !== false) playNotificationSound('info');
+                    return originalToast.info(message, options);
+                },
+                warning: (message, options = {}) => {
+                    if (options.sound !== false) playNotificationSound('warning');
+                    return originalToast.warning(message, options);
+                },
+                // Сохраняем оригинальные методы
+                clear: originalToast.clear,
+                updateDefaults: originalToast.updateDefaults
+            };
+
             // Делаем toast доступным глобально
-            window.toast = toast;
+            window.toast = toastWithSound;
             return {};
         },
         template: '<div></div>'
     });
-    
+
     app.use(Toast, toastOptions);
-    
+
     // Создаем скрытый элемент для монтирования
     const container = document.createElement('div');
     container.style.display = 'none';
@@ -67,10 +139,50 @@ const initializeGlobalToast = () => {
     app.mount(container);
 };
 
+// Глобальный WebSocket слушатель для toast уведомлений
+const initializeToastWebSocket = () => {
+    // Проверяем есть ли авторизованный пользователь
+    const headerElement = document.querySelector('#header-app');
+    const userData = headerElement?.dataset?.user;
+
+    if (!userData || userData === 'null') return;
+
+    try {
+        const user = JSON.parse(userData);
+        if (!user.id) return;
+
+        // Импортируем Echo
+        import('./echo').then(({ createEcho }) => {
+            const echo = createEcho();
+
+            // Подписываемся на приватный канал пользователя для toast уведомлений
+            echo.private(`user.${user.id}`)
+                .listen('.toast.notification', (e) => {
+                    // Показываем уведомление через глобальный toast
+                    if (window.toast && e.message) {
+                        const toastType = e.type || 'info';
+                        window.toast[toastType](e.message, {
+                            sound: true // Включаем звук
+                        });
+                    }
+                });
+
+        }).catch(error => {
+            // Тихо игнорируем ошибки подключения Echo
+        });
+
+    } catch (error) {
+        // Тихо игнорируем ошибки парсинга пользовательских данных
+    }
+};
+
 // Инициализация Vue компонентов
 document.addEventListener('DOMContentLoaded', () => {
     // Инициализируем глобальный toast первым
     initializeGlobalToast();
+
+    // Инициализируем WebSocket для toast уведомлений
+    initializeToastWebSocket();
     // Marketplace компонент
     const marketplaceElement = document.getElementById('marketplace-app');
     if (marketplaceElement) {

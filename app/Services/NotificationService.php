@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Client;
 use App\Jobs\SendEmailNotificationJob;
 use App\Jobs\SendTelegramNotificationJob;
+use App\Jobs\SendToastNotificationJob;
 use Illuminate\Support\Facades\Log;
 
 class NotificationService
@@ -61,6 +62,11 @@ class NotificationService
             if (in_array('telegram', $settings) && $client->telegram_id) {
                 $channels[] = 'telegram';
             }
+
+            // Проверяем Toast (всегда включен для авторизованных пользователей)
+            if (in_array('toast', $settings)) {
+                $channels[] = 'toast';
+            }
         }
 
         return $channels;
@@ -88,6 +94,8 @@ class NotificationService
                 'email' => SendEmailNotificationJob::dispatch($client, $type, $data)
                     ->onQueue('notifications'),
                 'telegram' => SendTelegramNotificationJob::dispatch($client, $type, $data)
+                    ->onQueue('notifications'),
+                'toast' => SendToastNotificationJob::dispatch($client, $type, $data)
                     ->onQueue('notifications'),
                 default => Log::channel('notifications')->warning('UNKNOWN_CHANNEL', [
                     'channel' => $channel,
@@ -173,5 +181,18 @@ class NotificationService
             $alertData = array_merge($data, ['message' => $message]);
             $this->send($admin, self::TYPE_ADMIN_ALERT, $alertData);
         }
+    }
+
+    // Тестовый метод для проверки toast уведомлений
+    public function sendTestToastNotification(Client $client, string $testMessage = 'Тестовое уведомление')
+    {
+        $data = [
+            'message' => $testMessage,
+            'test' => true,
+            'timestamp' => now()->toISOString()
+        ];
+
+        // Отправляем только в toast канал
+        $this->sendToChannel($client, 'toast', 'admin_alert', $data);
     }
 }

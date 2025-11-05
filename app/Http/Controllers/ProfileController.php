@@ -371,7 +371,7 @@ class ProfileController extends Controller
 
         $request->validate([
             'notification_settings' => 'array',
-            'notification_settings.*' => 'in:email,telegram'
+            'notification_settings.*' => 'in:email,telegram,toast'
         ]);
 
         $notificationSettings = $request->notification_settings ?? [];

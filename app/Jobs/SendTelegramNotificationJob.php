@@ -65,6 +65,31 @@ class SendTelegramNotificationJob implements ShouldQueue
             ]);
 
         } catch (Exception $e) {
+            if ($e instanceof \TelegramBot\Api\HttpException) {
+                $code = $e->getCode();
+
+                // Официальные коды Telegram API для недоступных чатов:
+                // 400 - BAD_REQUEST (chat not found, invalid data)
+                // 401 - UNAUTHORIZED (user deactivated, session issues)
+                // 403 - FORBIDDEN (bot blocked by user, privacy violation)
+                if (in_array($code, [400, 401, 403])) {
+                    Log::channel('notifications')->info('TELEGRAM_CHAT_UNAVAILABLE', [
+                        'client_id' => $this->client->id,
+                        'telegram_id' => $this->client->telegram_id,
+                        'error_code' => $code,
+                        'error_description' => $e->getMessage()
+                    ]);
+
+                    // Тихо завершаем - чат недоступен, повторы бесполезны
+                    return;
+                }
+
+                // 420 FLOOD - rate limiting, можно повторить позже
+                // 500 INTERNAL - серверные ошибки, можно повторить
+                // Для них используем стандартную логику retry
+            }
+
+            // Остальные ошибки (network, timeout и т.д.) - обычная обработка
             Log::channel('notifications')->error('TELEGRAM_FAILED', [
                 'client_id' => $this->client->id,
                 'type' => $this->type,

@@ -16,8 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Настраиваем доверенные прокси для Cloudflare
         $middleware->trustProxies(at: '*');
 
-        // Добавляем middleware для установки локали
+        // Добавляем middleware для установки локали и проверки режима тех. работ
         $middleware->web(append: [
+            \App\Http\Middleware\CheckMaintenanceMode::class,
             \App\Http\Middleware\SetLocale::class,
         ]);
 

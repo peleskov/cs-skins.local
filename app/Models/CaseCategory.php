@@ -9,6 +9,7 @@ class CaseCategory extends Model
 {
     protected $fillable = [
         'name',
+        'icon',
         'sort_order',
     ];
 

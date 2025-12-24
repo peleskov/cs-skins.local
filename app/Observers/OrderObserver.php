@@ -127,7 +127,7 @@ class OrderObserver
             'status' => Transaction::STATUS_COMPLETED,
             'client_id' => $order->buyer_id,
             'order_id' => $order->id,
-            'description' => "Возврат средств за заказ #{$order->order_number} ({$order->system_remarks})"
+            'description' => "Заказ #{$order->order_number} ({$order->system_remarks})"
         ]);
         
         // Возвращаем средства на баланс покупателя
@@ -213,34 +213,77 @@ class OrderObserver
             return;
         }
 
-        $fee = $this->calculateOrderFee($order);
-        $holdUntil = now()->addDays($this->getHoldDays());
+        // Проверяем есть ли холд Steam (delay_settlement)
+        $tradeOffer = $order->tradeOffer;
+        if ($tradeOffer && $tradeOffer->delay_settlement && $tradeOffer->settlement_date) {
+            if ($tradeOffer->settlement_date->isFuture()) {
+                // Холд активен - НЕ создаём транзакции, ждём окончания холда
+                Log::info('Order completion delayed due to Steam settlement hold', [
+                    'order_id' => $order->id,
+                    'settlement_date' => $tradeOffer->settlement_date->toDateTimeString()
+                ]);
+                return;
+            }
+        }
 
-        // Создаем транзакцию продажи (с холдом)
+        // Нет холда или холд закончился - выплачиваем продавцу сразу
+        $this->createSellerTransactions($order);
+    }
+
+    /**
+     * Создание транзакций для продавца (вызывается когда холда нет или он закончился)
+     */
+    public function createSellerTransactions(Order $order): void
+    {
+        // Проверяем что транзакции ещё не созданы
+        $existingTransaction = Transaction::where('order_id', $order->id)
+            ->where('type', Transaction::TYPE_SALE)
+            ->first();
+
+        if ($existingTransaction) {
+            Log::info('Seller transaction already exists', [
+                'order_id' => $order->id,
+                'transaction_id' => $existingTransaction->id
+            ]);
+            return;
+        }
+
+        $fee = $this->calculateOrderFee($order);
+        $sellerAmount = $order->total_amount - $fee;
+
+        // Создаем транзакцию продажи
         Transaction::create([
             'client_id' => $order->seller_id,
             'order_id' => $order->id,
             'type' => Transaction::TYPE_SALE,
-            'amount' => $order->total_amount - $fee,
-            'status' => Transaction::STATUS_ON_HOLD,
+            'amount' => $sellerAmount,
+            'status' => Transaction::STATUS_COMPLETED,
             'description' => "Продажа по заказу #{$order->order_number}",
-            'hold_until' => $holdUntil,
             'metadata' => [
                 'original_amount' => $order->total_amount,
                 'fee_amount' => $fee
             ]
         ]);
 
-        // Создаем транзакцию комиссии (с холдом)
+        // Начисляем деньги продавцу
+        $order->seller->credit($sellerAmount);
+
+        Log::info('Seller paid for order', [
+            'order_id' => $order->id,
+            'seller_id' => $order->seller_id,
+            'amount' => $sellerAmount,
+            'fee' => $fee
+        ]);
+
+        // Создаем транзакцию комиссии (информационную)
         if ($fee > 0) {
             Transaction::create([
                 'client_id' => $order->seller_id,
                 'order_id' => $order->id,
                 'type' => Transaction::TYPE_FEE,
                 'amount' => $fee,
-                'status' => Transaction::STATUS_ON_HOLD,
+                'status' => Transaction::STATUS_COMPLETED,
                 'description' => "Комиссия с продажи по заказу #{$order->order_number}",
-                'hold_until' => $holdUntil,
                 'metadata' => [
                     'fee_type' => $this->getOrderType($order),
                     'fee_percent' => $this->getFeePercent($order)

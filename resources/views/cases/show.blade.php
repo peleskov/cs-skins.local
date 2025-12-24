@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.cases')
 
 @section('title', $case->name . ' - Кейсы CS2')
 
@@ -11,9 +11,10 @@
     ]
 ])
 
-<div 
+<div
     id="case-details-app"
     data-case="{{ json_encode($caseData) }}"
     data-case-slug="{{ $case->slug }}"
+    data-routes="{{ json_encode(['cases' => route('cases.index')]) }}"
 ></div>
 @endsection

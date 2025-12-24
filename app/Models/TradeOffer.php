@@ -16,15 +16,19 @@ class TradeOffer extends Model
     protected $fillable = [
         'order_id',
         'seller_id',
-        'buyer_id',  
+        'buyer_id',
         'buyer_trade_url',
         'asset_ids',
         'status',
         'steam_trade_offer_id',
+        'delay_settlement',
+        'settlement_date',
     ];
 
     protected $casts = [
         'asset_ids' => 'array',
+        'delay_settlement' => 'boolean',
+        'settlement_date' => 'datetime',
     ];
 
     const STATUS_INVALID = 'Invalid';

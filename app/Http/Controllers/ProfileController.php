@@ -225,11 +225,32 @@ class ProfileController extends Controller
 
         $perPage = min($request->get('per_page', 20), 100); // Максимум 100 на страницу
 
+        // Получаем ID заказов, которые сейчас на холде
+        $heldOrderIds = Order::where(function ($q) use ($client) {
+                $q->where('seller_id', $client->id)
+                  ->orWhere('buyer_id', $client->id);
+            })
+            ->where('status', Order::STATUS_COMPLETED)
+            ->whereHas('tradeOffer', function ($query) {
+                $query->where('delay_settlement', true)
+                    ->where('settlement_date', '>', now());
+            })
+            ->pluck('id');
+
         $transactions = $client->transactions()
+            ->with('order')
+            ->whereNotIn('order_id', $heldOrderIds)
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
         $data = $transactions->getCollection()->map(function ($transaction) {
+            // Получаем listing_id из cart_snapshot заказа
+            $listingId = null;
+            if ($transaction->order && $transaction->order->cart_snapshot) {
+                $firstItem = $transaction->order->cart_snapshot[0] ?? null;
+                $listingId = $firstItem['listing_id'] ?? null;
+            }
+
             return [
                 'id' => $transaction->id,
                 'type' => $transaction->type,
@@ -238,6 +259,7 @@ class ProfileController extends Controller
                 'description' => $transaction->description,
                 'created_at' => $transaction->created_at->toISOString(),
                 'metadata' => $transaction->metadata,
+                'listing_id' => $listingId,
             ];
         });
 
@@ -275,6 +297,54 @@ class ProfileController extends Controller
         return response()->json([
             'success' => true,
             'data' => $stats
+        ]);
+    }
+
+    /**
+     * Получить информацию о средствах в холде
+     */
+    public function getHeldBalance(Request $request): JsonResponse
+    {
+        $client = $this->getAuthenticatedClient();
+
+        // Сумма в холде как продавец (ожидает выплаты)
+        $sellerHeldBalance = $client->getSellerHeldBalance();
+
+        // Сумма в холде как покупатель (покупки на удержании)
+        $buyerHeldBalance = $client->getBuyerHeldBalance();
+
+        // Заказы в холде как продавец
+        $sellerHeldOrders = $client->getSellerHeldOrders()->map(function ($order) {
+            return [
+                'id' => $order->id,
+                'order_number' => $order->order_number,
+                'total_amount' => $order->total_amount,
+                'buyer_name' => $order->buyer?->name,
+                'created_at' => $order->created_at?->toISOString(),
+                'settlement_date' => $order->tradeOffer?->settlement_date?->toISOString(),
+            ];
+        });
+
+        // Заказы в холде как покупатель
+        $buyerHeldOrders = $client->getBuyerHeldOrders()->map(function ($order) {
+            return [
+                'id' => $order->id,
+                'order_number' => $order->order_number,
+                'total_amount' => $order->total_amount,
+                'seller_name' => $order->seller?->name,
+                'created_at' => $order->created_at?->toISOString(),
+                'settlement_date' => $order->tradeOffer?->settlement_date?->toISOString(),
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'seller_held_balance' => $sellerHeldBalance,
+                'buyer_held_balance' => $buyerHeldBalance,
+                'seller_held_orders' => $sellerHeldOrders,
+                'buyer_held_orders' => $buyerHeldOrders,
+            ]
         ]);
     }
 

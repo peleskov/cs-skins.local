@@ -71,6 +71,16 @@ class Order extends Model
         return $this->hasOne(TradeOffer::class);
     }
 
+    public function auction()
+    {
+        return $this->hasOne(Auction::class);
+    }
+
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
     public static function generateOrderNumber(): string
     {
         do {

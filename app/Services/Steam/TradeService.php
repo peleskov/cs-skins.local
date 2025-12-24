@@ -491,27 +491,64 @@ class TradeService
         foreach ($steamTrades as $steamTrade) {
             $steamTradeOfferId = $steamTrade['trade_offer_id'] ?? null;
             $newStatus = $steamTrade['status'] ?? null;
+            $escrowEndDate = $steamTrade['escrow_end_date'] ?? null;
 
             if (!$steamTradeOfferId || $newStatus === null) {
                 continue;
             }
 
+            $delaySettlement = $steamTrade['delay_settlement'] ?? false;
+            $settlementDate = $steamTrade['settlement_date'] ?? null;
+
+            // Логируем данные трейда для отладки escrow/settlement
+            Log::info('Trade status update received', [
+                'seller_id' => $sellerId,
+                'steam_trade_offer_id' => $steamTradeOfferId,
+                'status' => $newStatus,
+                'status_text' => $this->mapTradeOfferState($newStatus),
+                'escrow_end_date' => $escrowEndDate,
+                'delay_settlement' => $delaySettlement,
+                'settlement_date' => $settlementDate,
+                'settlement_date_formatted' => $settlementDate ? date('Y-m-d H:i:s', $settlementDate) : null,
+            ]);
+
             $oldStatus = $cachedStatuses[$steamTradeOfferId] ?? null;
 
+            $tradeOffer = TradeOffer::where('steam_trade_offer_id', $steamTradeOfferId)
+                ->where('seller_id', $sellerId)
+                ->first();
+
+            if (!$tradeOffer) {
+                continue;
+            }
+
+            // Обновляем settlement данные если они пришли
+            $updateData = [];
+
+            if ($delaySettlement !== null) {
+                $updateData['delay_settlement'] = $delaySettlement;
+            }
+
+            if ($settlementDate) {
+                $updateData['settlement_date'] = date('Y-m-d H:i:s', $settlementDate);
+            }
+
+            // Обновляем статус если изменился
             if ($oldStatus !== $newStatus) {
-                $tradeOffer = TradeOffer::where('steam_trade_offer_id', $steamTradeOfferId)
-                    ->where('seller_id', $sellerId)
-                    ->first();
-
-                if (!$tradeOffer) {
-                    continue;
-                }
-
                 $newStatusText = $this->mapTradeOfferState($newStatus);
-                $tradeOffer->update(['status' => $newStatusText]);
-
+                $updateData['status'] = $newStatusText;
                 $cachedStatuses[$steamTradeOfferId] = $newStatus;
                 $hasChanges = true;
+            }
+
+            // Применяем обновления если есть
+            if (!empty($updateData)) {
+                $tradeOffer->update($updateData);
+
+                Log::info('TradeOffer updated', [
+                    'trade_offer_id' => $tradeOffer->id,
+                    'updates' => $updateData
+                ]);
             }
         }
 

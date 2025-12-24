@@ -139,6 +139,7 @@ Route::prefix('api')->name('api.')->group(function () {
             Route::get('/me', 'getCurrentUser')->name('me')->middleware('throttle:60,1');
             Route::get('/transactions', 'getTransactions')->name('transactions')->middleware('throttle:60,1');
             Route::get('/sales-stats', 'getSalesStats')->name('sales-stats')->middleware('throttle:60,1');
+            Route::get('/held-balance', 'getHeldBalance')->name('held-balance')->middleware('throttle:60,1');
         });
 
         // Чат API

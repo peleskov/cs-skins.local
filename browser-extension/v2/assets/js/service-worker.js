@@ -207,7 +207,10 @@ class TradingAssistant {
                     .map(trade => ({
                         trade_offer_id: trade.tradeofferid,
                         status: trade.trade_offer_state,
-                        needs_confirmation: trade.confirmation_method === 2
+                        needs_confirmation: trade.confirmation_method === 2,
+                        escrow_end_date: trade.escrow_end_date || null,
+                        delay_settlement: trade.delay_settlement || false,
+                        settlement_date: trade.settlement_date || null
                     }));
             }
             

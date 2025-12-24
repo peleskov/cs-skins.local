@@ -33,7 +33,7 @@ class CaseController extends Controller
                 'accumulated_fund',
                 'category_id'
             ])
-            ->with('category:id,name,sort_order')
+            ->with('category:id,name,icon,sort_order')
             ->whereHas('tiers', function ($query) {
                 // Находим минимальную цену среди уровней и проверяем что есть предметы
                 $query->whereRaw('price = (SELECT MIN(price) FROM case_tiers WHERE case_id = cases.id)')
@@ -119,7 +119,7 @@ class CaseController extends Controller
                 'accumulated_fund',
                 'category_id'
             ])
-            ->with('category:id,name,sort_order')
+            ->with('category:id,name,icon,sort_order')
             ->get();
 
         return response()->json([

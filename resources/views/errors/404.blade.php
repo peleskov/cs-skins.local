@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.mplace')
 
 @section('title', 'Страница не найдена - CS2 Marketplace')
 

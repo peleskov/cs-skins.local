@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.mplace')
 
 @section('title', ($page->meta_title ?? $page->title) . ' - CS2 Скины')
 

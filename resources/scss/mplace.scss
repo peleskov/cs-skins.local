@@ -1,0 +1,56 @@
+/*-----------------------------------------------------------------------------------
+    Mplace Template Styles
+    Шаблон маркетплейса
+----------------------------------------------------------------------------------- */
+
+/* utils scss files */
+@import "mplace/utils/variables";
+@import "mplace/utils/animation";
+@import "mplace/utils/svg-url";
+
+/* base scss files */
+@import "mplace/base/reset";
+@import "mplace/base/typography";
+
+/* components scss files */
+@import "mplace/components/accordion";
+@import "mplace/components/button";
+@import "mplace/components/category";
+@import "mplace/components/form";
+@import "mplace/components/modal";
+@import "mplace/components/nav";
+@import "mplace/components/offcanvas";
+@import "mplace/components/product-box";
+@import "mplace/components/ratio";
+@import "mplace/components/tabs";
+@import "mplace/components/swiper-slider";
+@import "mplace/components/title";
+@import "mplace/components/loader";
+@import "mplace/components/inventory";
+@import "mplace/components/case-prize-slider";
+
+/* layout scss files */
+@import "mplace/layout/footer";
+@import "mplace/layout/header";
+@import "mplace/layout/mode-button";
+@import "mplace/layout/tap-to-top";
+
+/* pages */
+@import "mplace/pages/about";
+@import "mplace/pages/authentication";
+@import "mplace/pages/blog-page";
+@import "mplace/pages/cart";
+@import "mplace/pages/checkout";
+@import "mplace/pages/coupon";
+@import "mplace/pages/banner";
+@import "mplace/pages/home";
+@import "mplace/pages/menu";
+@import "mplace/pages/order-tracking";
+@import "mplace/pages/product-details";
+@import "mplace/pages/product-page";
+@import "mplace/pages/profile";
+@import "mplace/pages/shop-page";
+@import "mplace/pages/sub-page";
+
+/* themes */
+@import "mplace/themes/dark";

@@ -10,5 +10,6 @@ return [
         'sales' => 'Продажи',
         'auctions' => 'Мои аукционы',
         'balance' => 'Баланс',
+        'notifications' => 'Уведомления',
     ],
 ];

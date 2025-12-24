@@ -13,6 +13,7 @@ use App\Models\AdBanner;
 use App\Models\CaseModel;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Redis;
 
 class WebController extends Controller
 {
@@ -21,15 +22,19 @@ class WebController extends Controller
      */
     public function home()
     {
+        $onlineSellerIds = $this->getOnlineSellerIds();
+
         $featuredListings = Listing::with(['seller'])
             ->active()
             ->where('price', '>', 0)
+            ->whereIn('seller_id', $onlineSellerIds)
             ->inRandomOrder()
             ->limit(12)
             ->get();
 
         $totalListings = Listing::active()
             ->where('price', '>', 0)
+            ->whereIn('seller_id', $onlineSellerIds)
             ->count();
 
         $hasMorePages = $totalListings > 12;
@@ -170,7 +175,17 @@ class WebController extends Controller
             session(['locale' => $locale]);
             app()->setLocale($locale);
         }
-        
+
         return redirect()->back();
+    }
+
+    /**
+     * Получение списка онлайн продавцов из Redis
+     */
+    private function getOnlineSellerIds(): array
+    {
+        Redis::zremrangebyscore('online_sellers', '-inf', now()->timestamp);
+        $ids = Redis::zrangebyscore('online_sellers', now()->timestamp, '+inf');
+        return !empty($ids) ? $ids : [0];
     }
 }

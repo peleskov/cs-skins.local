@@ -10,5 +10,6 @@ return [
         'sales' => 'Sales',
         'auctions' => 'My Auctions',
         'balance' => 'Balance',
+        'notifications' => 'Notifications',
     ],
 ];

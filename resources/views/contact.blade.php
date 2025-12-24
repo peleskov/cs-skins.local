@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.mplace')
 
 @use(App\Models\SiteSetting)
 

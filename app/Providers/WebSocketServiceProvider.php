@@ -7,6 +7,7 @@ use Laravel\Reverb\Events\MessageReceived;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Redis;
 
 class WebSocketServiceProvider extends ServiceProvider
 {
@@ -395,6 +396,9 @@ class WebSocketServiceProvider extends ServiceProvider
         $success = $sessionCache->set($sellerId, $sessionData);
 
         if ($success) {
+            // Отмечаем продавца как онлайн (TTL 30 секунд)
+            Redis::zadd('online_sellers', now()->timestamp + 30, $sellerId);
+
             \App\Events\ExtensionEvents::sendSmart('session_received', $sellerId, [
                 'status' => 'success',
                 'expires_in' => $sessionCache->getExpiresInSeconds($sellerId)

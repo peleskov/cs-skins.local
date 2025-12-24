@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redis;
 
 class MarketplaceController extends Controller
 {
@@ -27,6 +28,9 @@ class MarketplaceController extends Controller
         $query = Listing::with(['seller'])
             ->active()
             ->where('price', '>', 0);
+
+        // Фильтр по онлайн продавцам
+        $query->whereIn('seller_id', $this->getOnlineSellerIds());
 
         // Фильтр по продавцу
         $sellerId = request()->get('seller_id');
@@ -105,6 +109,9 @@ class MarketplaceController extends Controller
         $query = Listing::with(['seller'])
             ->active()
             ->where('price', '>', 0);
+
+        // Фильтр по онлайн продавцам
+        $query->whereIn('seller_id', $this->getOnlineSellerIds());
 
         // Фильтр по продавцу
         if ($sellerId = $request->get('seller_id')) {
@@ -450,6 +457,9 @@ class MarketplaceController extends Controller
             ->where('price', '>', 0)
             ->whereNotNull('type');
 
+        // Фильтр по онлайн продавцам
+        $query->whereIn('seller_id', $this->getOnlineSellerIds());
+
         // Применяем те же фильтры что и в getListings, кроме фильтра по типу
         
         // Поиск по названию
@@ -571,7 +581,10 @@ class MarketplaceController extends Controller
     public function getFilterStats(): JsonResponse
     {
         $activeListings = Listing::active()->where('price', '>', 0);
-        
+
+        // Фильтр по онлайн продавцам
+        $activeListings->whereIn('seller_id', $this->getOnlineSellerIds());
+
         $stats = [
             'price_range' => [
                 'min' => $activeListings->min('price'),
@@ -592,7 +605,10 @@ class MarketplaceController extends Controller
     public function getTags(Request $request): JsonResponse
     {
         $activeListings = Listing::active()->where('price', '>', 0);
-        
+
+        // Фильтр по онлайн продавцам
+        $activeListings->whereIn('seller_id', $this->getOnlineSellerIds());
+
         // Применяем фильтры (кроме самих тегов)
         if ($search = $request->get('search')) {
             $activeListings->where(function ($q) use ($search) {
@@ -854,15 +870,19 @@ class MarketplaceController extends Controller
     public function search(Request $request): JsonResponse
     {
         $query = $request->get('q', '');
-        
+
         if (strlen($query) < 2) {
             return response()->json([]);
         }
 
-        $suggestions = Listing::select('inventory_item_name', 'market_hash_name', 'inventory_icon_url')
+        $listingsQuery = Listing::select('inventory_item_name', 'market_hash_name', 'inventory_icon_url')
             ->active()
-            ->where('price', '>', 0)
-            ->where(function ($q) use ($query) {
+            ->where('price', '>', 0);
+
+        // Фильтр по онлайн продавцам
+        $listingsQuery->whereIn('seller_id', $this->getOnlineSellerIds());
+
+        $suggestions = $listingsQuery->where(function ($q) use ($query) {
                 $q->where('inventory_item_name', 'LIKE', "%{$query}%")
                   ->orWhere('market_hash_name', 'LIKE', "%{$query}%");
             })
@@ -1069,5 +1089,20 @@ class MarketplaceController extends Controller
                 'contraband' => __('items.rarities.contraband'),
             ],
         ]);
+    }
+
+    /**
+     * Получение списка онлайн продавцов из Redis
+     */
+    private function getOnlineSellerIds(): array
+    {
+        // Очищаем устаревшие записи
+        Redis::zremrangebyscore('online_sellers', '-inf', now()->timestamp);
+
+        // Получаем актуальных онлайн продавцов
+        $ids = Redis::zrangebyscore('online_sellers', now()->timestamp, '+inf');
+
+        // Если нет онлайн — возвращаем [0] чтобы whereIn вернул пустой результат
+        return !empty($ids) ? $ids : [0];
     }
 }

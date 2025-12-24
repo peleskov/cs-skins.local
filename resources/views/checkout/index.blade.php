@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.mplace')
 
 @section('title', 'Оформление заказа')
 @section('meta-description', 'Оформите заказ на CS2 скины на лучшей торговой площадке')

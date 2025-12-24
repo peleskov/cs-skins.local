@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.mplace')
 
 @section('title', 'Аукционы - CS2 Скины')
 

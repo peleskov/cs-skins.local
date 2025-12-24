@@ -13,6 +13,10 @@ class Client extends Authenticatable
 {
     use Notifiable;
 
+    protected $attributes = [
+        'notification_settings' => '["toast", "telegram"]',
+    ];
+
     protected $fillable = [
         'name',
         'email',
@@ -335,5 +339,69 @@ class Client extends Authenticatable
             'verification_code' => null,
             'verification_expires_at' => null,
         ]);
+    }
+
+    /**
+     * Получить сумму средств в холде как продавец (ожидает выплаты)
+     */
+    public function getSellerHeldBalance(): float
+    {
+        return (float) Order::where('seller_id', $this->id)
+            ->where('status', Order::STATUS_COMPLETED)
+            ->whereHas('tradeOffer', function ($query) {
+                $query->where('delay_settlement', true)
+                    ->where('settlement_date', '>', now());
+            })
+            ->whereDoesntHave('transactions', function ($query) {
+                $query->where('type', Transaction::TYPE_SALE);
+            })
+            ->sum('total_amount');
+    }
+
+    /**
+     * Получить сумму средств в холде как покупатель (покупки на удержании)
+     */
+    public function getBuyerHeldBalance(): float
+    {
+        return (float) Order::where('buyer_id', $this->id)
+            ->where('status', Order::STATUS_COMPLETED)
+            ->whereHas('tradeOffer', function ($query) {
+                $query->where('delay_settlement', true)
+                    ->where('settlement_date', '>', now());
+            })
+            ->sum('total_amount');
+    }
+
+    /**
+     * Получить заказы в холде как продавец
+     */
+    public function getSellerHeldOrders()
+    {
+        return Order::where('seller_id', $this->id)
+            ->where('status', Order::STATUS_COMPLETED)
+            ->whereHas('tradeOffer', function ($query) {
+                $query->where('delay_settlement', true)
+                    ->where('settlement_date', '>', now());
+            })
+            ->whereDoesntHave('transactions', function ($query) {
+                $query->where('type', Transaction::TYPE_SALE);
+            })
+            ->with(['tradeOffer', 'buyer'])
+            ->get();
+    }
+
+    /**
+     * Получить заказы в холде как покупатель
+     */
+    public function getBuyerHeldOrders()
+    {
+        return Order::where('buyer_id', $this->id)
+            ->where('status', Order::STATUS_COMPLETED)
+            ->whereHas('tradeOffer', function ($query) {
+                $query->where('delay_settlement', true)
+                    ->where('settlement_date', '>', now());
+            })
+            ->with(['tradeOffer', 'seller'])
+            ->get();
     }
 }

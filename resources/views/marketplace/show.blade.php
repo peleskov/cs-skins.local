@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.mplace')
 
 @section('title', ($listing->inventory_item_name ?: $listing->market_hash_name ?: 'Неизвестный предмет') . ' - CS2 Marketplace')
 

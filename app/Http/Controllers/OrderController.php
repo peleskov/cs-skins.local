@@ -65,12 +65,34 @@ class OrderController extends Controller
             // Получаем товары из корзины
             $cartItems = $this->cartService->getDetailedItems();
 
+            // Фильтруем по выбранным listing_ids если переданы
+            $selectedListingIds = $request->input('listing_ids');
+            if (!empty($selectedListingIds) && is_array($selectedListingIds)) {
+                $cartItems = collect($cartItems)->filter(function ($item) use ($selectedListingIds) {
+                    return in_array($item['listing_id'], $selectedListingIds);
+                })->values();
+
+                if ($cartItems->isEmpty()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Выбранные товары не найдены в корзине'
+                    ], 400);
+                }
+            }
+
             // Создаем заказы
             $result = $this->createOrder($cartItems);
 
             if ($result['success']) {
-                // Очищаем корзину после успешной покупки
-                $this->cartService->clear();
+                // Удаляем только купленные товары из корзины
+                $cartItemsCollection = $cartItems instanceof \Illuminate\Support\Collection ? $cartItems : collect($cartItems);
+                $purchasedListingIds = $cartItemsCollection->pluck('listing_id')->all();
+                foreach ($purchasedListingIds as $listingId) {
+                    $this->cartService->remove($listingId);
+                }
+
+                // Получаем оставшееся количество товаров в корзине
+                $remainingCount = $this->cartService->getCount();
 
                 return response()->json([
                     'success' => true,
@@ -78,7 +100,8 @@ class OrderController extends Controller
                         ? 'Заказ успешно оплачен!'
                         : 'Заказы успешно оплачены!',
                     'orders' => $result['orders'],
-                    'total_orders' => count($result['orders'])
+                    'total_orders' => count($result['orders']),
+                    'cart_count' => $remainingCount
                 ]);
             }
 
@@ -229,7 +252,7 @@ class OrderController extends Controller
                         'type' => Transaction::TYPE_PURCHASE,
                         'amount' => $sellerTotal,
                         'status' => Transaction::STATUS_COMPLETED,
-                        'description' => "Покупка по заказу #{$order->order_number}",
+                        'description' => "Заказ #{$order->order_number}",
                         'metadata' => [
                             'payment_method' => $order->payment_method,
                             'items_count' => $sellerItems->count()

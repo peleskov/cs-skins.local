@@ -74,3 +74,9 @@ Schedule::command('auctions:complete-expired')
     ->onOneServer()
     ->withoutOverlapping()
     ->runInBackground();
+
+// Релиз заказов после окончания Steam холда каждые 5 минут
+Schedule::job(new \App\Jobs\ReleaseSettledOrders())
+    ->everyFiveMinutes()
+    ->onOneServer()
+    ->withoutOverlapping();

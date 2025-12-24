@@ -18,7 +18,8 @@ class ToastNotificationEvent implements ShouldBroadcast
         public int $clientId,
         public string $message,
         public string $type = 'info',
-        public array $data = []
+        public array $data = [],
+        public ?string $noticeType = null
     ) {}
 
     /**
@@ -48,6 +49,7 @@ class ToastNotificationEvent implements ShouldBroadcast
             'message' => $this->message,
             'type' => $this->type,
             'data' => $this->data,
+            'noticeType' => $this->noticeType,
             'timestamp' => now()->toISOString()
         ];
     }

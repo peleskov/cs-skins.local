@@ -29,12 +29,15 @@ class SendToastNotificationJob implements ShouldQueue
             $message = $this->formatMessage();
             $toastType = $this->getToastType();
 
+            $noticeType = $this->getNoticeType();
+
             // Отправляем через WebSocket
             broadcast(new ToastNotificationEvent(
                 $this->client->id,
                 $message,
                 $toastType,
-                $this->data
+                $this->data,
+                $noticeType
             ));
 
             Log::channel('notifications')->info('TOAST_SENT', [
@@ -79,6 +82,30 @@ class SendToastNotificationJob implements ShouldQueue
             'balance_change' => 'info',
             'admin_alert' => 'error',
             default => 'info'
+        };
+    }
+
+    private function getNoticeType(): ?string
+    {
+        $role = $this->data['role'] ?? null;
+        $status = $this->data['new_status'] ?? null;
+
+        return match ($this->type) {
+            'order_status' => match (true) {
+                // Продавец: новый заказ - нужно передать предмет
+                $role === 'seller' && $status === 'paid' => 'saleTransfer',
+                // Покупатель: предмет передан
+                $role === 'buyer' && $status === 'processing' => 'purchaseReceive',
+                // Обе стороны: успешное завершение
+                $status === 'completed' => 'success',
+                // Обе стороны: отмена
+                $status === 'cancelled' => 'failed',
+                default => 'other'
+            },
+            'auction_outbid' => 'auction',
+            'balance_change' => 'other',
+            'admin_alert' => 'other',
+            default => 'other'
         };
     }
 

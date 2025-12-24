@@ -4,7 +4,9 @@ namespace App\Filament\Resources;
 
 use Filament\Schemas\Schema;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\FileUpload;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Actions\EditAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\BulkActionGroup;
@@ -47,6 +49,12 @@ class CaseCategoryResource extends Resource
                     ->required()
                     ->maxLength(255),
 
+                FileUpload::make('icon')
+                    ->label('Иконка')
+                    ->image()
+                    ->directory('case-categories')
+                    ->visibility('public'),
+
                 TextInput::make('sort_order')
                     ->label('Порядок сортировки')
                     ->numeric()
@@ -60,6 +68,11 @@ class CaseCategoryResource extends Resource
     {
         return $table
             ->columns([
+                ImageColumn::make('icon')
+                    ->label('Иконка')
+                    ->square()
+                    ->size(40),
+
                 TextColumn::make('name')
                     ->label('Название')
                     ->searchable()

@@ -1,19 +1,21 @@
 @extends('layouts.base', [
-    'viteStyles' => 'resources/scss/cases.scss',
-    'viteScripts' => 'resources/js/cases.js'
+'viteStyles' => 'resources/scss/cases.scss',
+'viteScripts' => 'resources/js/cases.js'
 ])
 
-@section('body_class', 'cases-layout')
+@section('body_class', 'theme-cases')
 
 @section('body')
+<div class="min-vh-100 d-flex flex-column  justify-content-between">
     <!-- Cases Header -->
     @include('partials.cases.header')
 
     <!-- Main content -->
-    <main class="cases-main">
+    <main class="main flex-grow-1">
         @yield('content')
     </main>
 
     <!-- Cases Footer -->
     @include('partials.cases.footer')
+</div>
 @endsection

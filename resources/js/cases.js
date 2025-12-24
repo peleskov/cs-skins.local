@@ -1,30 +1,42 @@
 import './shared/bootstrap';
 import { createApp } from 'vue';
 
-// Cases Vue компоненты
-import Cases from './cases/components/Cases.vue';
-import CaseDetails from './cases/components/CaseDetails.vue';
+// Lazy loading: компоненты загружаются только когда нужны
+const components = import.meta.glob('./cases/components/**/*.vue');
 
-// Инициализация Vue компонентов
+// Собираем реестр: header -> () => import('./cases/components/Header.vue')
+const registry = {};
+for (const path in components) {
+    const name = path.split('/').pop().replace('.vue', '');
+    const kebabName = name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+    registry[kebabName] = components[path];
+}
+
+// Автоматическое монтирование по data-vue-component
 document.addEventListener('DOMContentLoaded', () => {
-    // Cases компонент (список кейсов)
-    const casesElement = document.getElementById('cases-app');
-    if (casesElement) {
-        const app = createApp(Cases, {
-            initialCases: JSON.parse(casesElement.dataset.cases || '[]'),
-            user: casesElement.dataset.user !== 'null' ? JSON.parse(casesElement.dataset.user) : null
-        });
-        app.mount('#cases-app');
-    }
+    document.querySelectorAll('[data-vue-component]').forEach(async el => {
+        const componentName = el.dataset.vueComponent;
+        const loader = registry[componentName];
 
-    // CaseDetails компонент (открытие кейса)
-    const caseDetailsElement = document.getElementById('case-details-app');
-    if (caseDetailsElement) {
-        const app = createApp(CaseDetails, {
-            initialCase: JSON.parse(caseDetailsElement.dataset.case || '{}'),
-            caseSlug: caseDetailsElement.dataset.caseSlug || '',
-            routes: JSON.parse(caseDetailsElement.dataset.routes || '{}')
-        });
-        app.mount('#case-details-app');
-    }
+        if (!loader) {
+            console.warn(`Vue component "${componentName}" not found`);
+            return;
+        }
+
+        // Загружаем компонент
+        const module = await loader();
+
+        // Собираем props из data-* атрибутов
+        const props = {};
+        for (const key in el.dataset) {
+            if (key === 'vueComponent') continue;
+            try {
+                props[key] = JSON.parse(el.dataset[key]);
+            } catch {
+                props[key] = el.dataset[key];
+            }
+        }
+
+        createApp(module.default, props).mount(el);
+    });
 });

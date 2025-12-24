@@ -1,4 +1,254 @@
-// Cases Header Styles
-.cases-header {
-    // TODO: Добавить стили header для кейсов
+.theme-cases {
+    .header {
+        border: 1px solid #2B1902;
+        background: linear-gradient(#0a0a0a, #040305);
+
+        .logo {
+            width: 160px;
+            height: 33px;
+            display: block;
+
+            img {
+                width: 100%;
+                height: 100%;
+            }
+
+            @media (max-width: 1199px) {
+                width: 100px;
+                height: 24px;
+            }
+
+            @media (max-width: 991px) {
+                width: 32px;
+                height: 32px;
+            }
+
+        }
+
+        .divider {
+            width: 1px;
+            background-color: #2B1902;
+        }
+
+        .navbar-nav {
+            .nav-item {
+                padding-left: 12px;
+                padding-right: 12px;
+
+                @media (max-width: 1199px) {
+                    padding-left: 6px;
+                    padding-right: 6px;
+                }
+
+                @media (max-width: 991px) {
+                    padding-left: 4px;
+                    padding-right: 4px;
+                }
+
+                &:first-child {
+                    padding-left: 0;
+                }
+
+                &:last-child {
+                    padding-right: 0;
+                }
+
+                .nav-link {
+                    padding: 0;
+                    font: 500 16px / 125% "Inter", sans-serif;
+                    color: #fff;
+
+                    &:hover,
+                    &.active {
+                        color: #ff8c00;
+                    }
+
+                    @media (max-width: 1199px) {
+                        font-size: 14px;
+                    }
+                }
+
+                @media (max-width: 1199px) {
+                    padding-top: 4px;
+                }
+            }
+        }
+
+        .currency-selector {
+            .dropdown-toggle {
+                min-width: 88px;
+                display: flex;
+                align-items: center;
+                padding: 10px 12px;
+                font: 500 16px / 125% "Inter", sans-serif;
+                color: #fffbff;
+                border: 0 none;
+                border-radius: 10px;
+                background-color: #1d130c;
+
+                @media (max-width: 1199px) {
+                    min-width: auto;
+                    font-size: 14px;
+                }
+
+                @media (max-width: 991px) {
+                    padding: 6px 2px;
+                    font-size: 12px;
+                }
+            }
+
+            .currency-symbol {
+                margin-right: 8px;
+
+                &.flag-icon {
+                    width: 21px;
+                    height: 15px;
+                    display: block;
+
+                    &.flag-ru {
+                        background-image: svg-url('<svg viewBox="0 0 21 15" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_97_6335)"><mask id="mask0_97_6335" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="21" height="15"><path d="M19 0H2C0.89543 0 0 0.89543 0 2V13C0 14.1046 0.89543 15 2 15H19C20.1046 15 21 14.1046 21 13V2C21 0.89543 20.1046 0 19 0Z" fill="white" /></mask><g mask="url(#mask0_97_6335)"><path d="M19 0H2C0.89543 0 0 0.89543 0 2V13C0 14.1046 0.89543 15 2 15H19C20.1046 15 21 14.1046 21 13V2C21 0.89543 20.1046 0 19 0Z" fill="#0034A9" /><path fill-rule="evenodd" clip-rule="evenodd" d="M0 10H21V15H0V10Z" fill="#D7280F" /><path fill-rule="evenodd" clip-rule="evenodd" d="M0 0H21V5H0V0Z" fill="white" /><path d="M19 0.5H2C1.17157 0.5 0.5 1.17157 0.5 2V13C0.5 13.8284 1.17157 14.5 2 14.5H19C19.8284 14.5 20.5 13.8284 20.5 13V2C20.5 1.17157 19.8284 0.5 19 0.5Z" stroke="black" stroke-opacity="0.1" /></g></g><defs><clipPath id="clip0_97_6335"><rect width="21" height="15" fill="white" /></clipPath></defs></svg>');
+                    }
+                }
+
+                @media (max-width: 991px) {
+                    display: none;
+                }
+
+            }
+
+            .currency-dropdown {
+                padding: 4px 0 0 0;
+                border: 0 none;
+                border-radius: 4px;
+                background-color: #1d130c;
+                box-shadow: 0 4px 6px -2px rgba(16, 24, 40, 0.05), 0 12px 16px -4px rgba(16, 24, 40, 0.1);
+
+                .currency-item {
+                    font: 400 16px / 150% "Inter", sans-serif;
+                    color: #fff;
+
+                    &:hover,
+                    &.active {
+                        background-color: #2c190c;
+                    }
+
+                    .currency-symbol {
+                        display: none;
+                    }
+                }
+            }
+        }
+
+        .balances {
+            padding: 10px 16px;
+            border-radius: 10px;
+            background-color: #1d130c;
+
+            .list-group-item {
+                padding: 0;
+                font: 500 16px / 125% "Inter", sans-serif;
+                color: #f6f4f9;
+                border: 0 none;
+                background-color: transparent;
+
+                .divider {
+                    width: 1px;
+                    height: 100%;
+                    display: block;
+                    margin: 0 12px;
+                    background-color: #412005;
+                }
+
+                .ico {
+                    display: block;
+                    background-repeat: no-repeat;
+                    background-position: center;
+                    background-size: cover;
+
+                    &.dollar {
+                        width: 16px;
+                        height: 16px;
+                        background-image: url('/images/icons/ico_dollar.png');
+                    }
+
+                    &.ruble {
+                        width: 11px;
+                        height: 12px;
+                        background-image: url('/images/icons/ico_ruble.png');
+                    }
+
+                }
+
+                @media (max-width: 1199px) {
+                    font-size: 14px;
+                }
+
+                @media (max-width: 991px) {
+                    font-size: 12px;
+                }
+            }
+
+            @media (max-width: 991px) {
+                padding: 8px 5px;
+            }
+        }
+
+        .btn-add_balance {
+            width: 40px;
+            height: 40px;
+            display: block;
+            border-radius: 10px;
+            background-color: #1D130C;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 22px 18px;
+            background-image: svg-url('<svg viewBox="0 0 22 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 0C20.6569 8.03624e-07 22 1.34315 22 3V5H19C17.3431 5 16 6.34315 16 8C16 9.65685 17.3431 11 19 11H22V13C22 14.6569 20.6569 16 19 16H8.58301C8.8507 15.3874 9 14.7112 9 14C9 11.2386 6.76142 9 4 9C3.65756 9 3.32309 9.03403 3 9.09961V3C3 1.34315 4.34315 0 6 0H19Z" fill="#FEFEFE" /><path fill-rule="evenodd" clip-rule="evenodd" d="M4 10C6.20914 10 8 11.7909 8 14C8 16.2091 6.20914 18 4 18C1.79086 18 0 16.2091 0 14C0 11.7909 1.79086 10 4 10ZM4 11C3.88634 11 3.77764 11.0456 3.69727 11.126C3.61694 11.2063 3.57129 11.3151 3.57129 11.4287V13.5713H1.42871C1.31508 13.5713 1.20634 13.6169 1.12598 13.6973C1.0456 13.7776 1 13.8863 1 14C1 14.1137 1.0456 14.2224 1.12598 14.3027C1.20634 14.3831 1.31508 14.4287 1.42871 14.4287H3.57129V16.5713C3.57129 16.6849 3.61694 16.7937 3.69727 16.874C3.77764 16.9544 3.88634 17 4 17C4.11366 17 4.22236 16.9544 4.30273 16.874C4.38306 16.7937 4.42871 16.6849 4.42871 16.5713V14.4287H6.57129C6.68492 14.4287 6.79366 14.3831 6.87402 14.3027C6.9544 14.2224 7 14.1137 7 14C7 13.8863 6.9544 13.7776 6.87402 13.6973C6.79366 13.6169 6.68492 13.5713 6.57129 13.5713H4.42871V11.4287C4.42871 11.3151 4.38306 11.2063 4.30273 11.126C4.22236 11.0456 4.11366 11 4 11Z" fill="#FEFEFE" /><path d="M17 8C17 6.89543 17.8954 6 19 6H22V10H19C17.8954 10 17 9.10457 17 8Z" fill="#FEFEFE" /></svg>');
+            transition: all 300ms ease;
+
+            &:hover {
+                background-image: svg-url('<svg viewBox="0 0 22 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 0C20.6569 8.03624e-07 22 1.34315 22 3V5H19C17.3431 5 16 6.34315 16 8C16 9.65685 17.3431 11 19 11H22V13C22 14.6569 20.6569 16 19 16H8.58301C8.8507 15.3874 9 14.7112 9 14C9 11.2386 6.76142 9 4 9C3.65756 9 3.32309 9.03403 3 9.09961V3C3 1.34315 4.34315 0 6 0H19Z" fill="url(#paint0_linear_2014_17245)" /><path fill-rule="evenodd" clip-rule="evenodd" d="M4 10C6.20914 10 8 11.7909 8 14C8 16.2091 6.20914 18 4 18C1.79086 18 0 16.2091 0 14C0 11.7909 1.79086 10 4 10ZM4 11C3.88634 11 3.77764 11.0456 3.69727 11.126C3.61694 11.2063 3.57129 11.3151 3.57129 11.4287V13.5713H1.42871C1.31508 13.5713 1.20634 13.6169 1.12598 13.6973C1.0456 13.7776 1 13.8863 1 14C1 14.1137 1.0456 14.2224 1.12598 14.3027C1.20634 14.3831 1.31508 14.4287 1.42871 14.4287H3.57129V16.5713C3.57129 16.6849 3.61694 16.7937 3.69727 16.874C3.77764 16.9544 3.88634 17 4 17C4.11366 17 4.22236 16.9544 4.30273 16.874C4.38306 16.7937 4.42871 16.6849 4.42871 16.5713V14.4287H6.57129C6.68492 14.4287 6.79366 14.3831 6.87402 14.3027C6.9544 14.2224 7 14.1137 7 14C7 13.8863 6.9544 13.7776 6.87402 13.6973C6.79366 13.6169 6.68492 13.5713 6.57129 13.5713H4.42871V11.4287C4.42871 11.3151 4.38306 11.2063 4.30273 11.126C4.22236 11.0456 4.11366 11 4 11Z" fill="url(#paint1_linear_2014_17245)" /><path d="M17 8C17 6.89543 17.8954 6 19 6H22V10H19C17.8954 10 17 9.10457 17 8Z" fill="url(#paint2_linear_2014_17245)" /><defs><linearGradient id="paint0_linear_2014_17245" x1="11" y1="0" x2="11" y2="18" gradientUnits="userSpaceOnUse"><stop stop-color="#FF8C00" /><stop offset="1" stop-color="#FFD400" /></linearGradient><linearGradient id="paint1_linear_2014_17245" x1="11" y1="0" x2="11" y2="18" gradientUnits="userSpaceOnUse"><stop stop-color="#FF8C00" /><stop offset="1" stop-color="#FFD400" /></linearGradient><linearGradient id="paint2_linear_2014_17245" x1="11" y1="0" x2="11" y2="18" gradientUnits="userSpaceOnUse"><stop stop-color="#FF8C00" /><stop offset="1" stop-color="#FFD400" /></linearGradient></defs></svg>');
+            }
+
+            &:active {
+                background-image: svg-url('<svg viewBox="0 0 22 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 0C20.6569 8.03624e-07 22 1.34315 22 3V5H19C17.3431 5 16 6.34315 16 8C16 9.65685 17.3431 11 19 11H22V13C22 14.6569 20.6569 16 19 16H8.58301C8.8507 15.3874 9 14.7112 9 14C9 11.2386 6.76142 9 4 9C3.65756 9 3.32309 9.03403 3 9.09961V3C3 1.34315 4.34315 0 6 0H19Z" fill="#FF8C00" /><path fill-rule="evenodd" clip-rule="evenodd" d="M4 10C6.20914 10 8 11.7909 8 14C8 16.2091 6.20914 18 4 18C1.79086 18 0 16.2091 0 14C0 11.7909 1.79086 10 4 10ZM4 11C3.88634 11 3.77764 11.0456 3.69727 11.126C3.61694 11.2063 3.57129 11.3151 3.57129 11.4287V13.5713H1.42871C1.31508 13.5713 1.20634 13.6169 1.12598 13.6973C1.0456 13.7776 1 13.8863 1 14C1 14.1137 1.0456 14.2224 1.12598 14.3027C1.20634 14.3831 1.31508 14.4287 1.42871 14.4287H3.57129V16.5713C3.57129 16.6849 3.61694 16.7937 3.69727 16.874C3.77764 16.9544 3.88634 17 4 17C4.11366 17 4.22236 16.9544 4.30273 16.874C4.38306 16.7937 4.42871 16.6849 4.42871 16.5713V14.4287H6.57129C6.68492 14.4287 6.79366 14.3831 6.87402 14.3027C6.9544 14.2224 7 14.1137 7 14C7 13.8863 6.9544 13.7776 6.87402 13.6973C6.79366 13.6169 6.68492 13.5713 6.57129 13.5713H4.42871V11.4287C4.42871 11.3151 4.38306 11.2063 4.30273 11.126C4.22236 11.0456 4.11366 11 4 11Z" fill="#FF8C00" /><path d="M17 8C17 6.89543 17.8954 6 19 6H22V10H19C17.8954 10 17 9.10457 17 8Z" fill="#FF8C00" /></svg>');
+            }
+
+            @media (max-width: 1199px) {
+                width: 38px;
+                height: 36px;
+            }
+
+            @media (max-width: 991px) {
+                width: 32px;
+                height: 32px;
+            }
+
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 1px solid #2b1902;
+            border-radius: 50%;
+
+            img {
+                max-width: 100%;
+                max-height: 100%;
+            }
+
+            @media (max-width: 1199px) {
+                width: 37px;
+                height: 37px;
+            }
+
+            @media (max-width: 991px) {
+                width: 30px;
+                height: 30px;
+            }
+        }
+    }
 }

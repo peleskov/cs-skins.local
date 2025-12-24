@@ -254,8 +254,8 @@
 <script>
 import { formatPrice } from '../../shared/utils/helpers';
 import { cartAPI } from '../../shared/utils/api';
-import CurrencySelector from './CurrencySelector.vue';
-import LanguageSelector from './LanguageSelector.vue';
+import CurrencySelector from '../../shared/components/CurrencySelector.vue';
+import LanguageSelector from '../../shared/components/LanguageSelector.vue';
 
 export default {
 	name: 'Header',

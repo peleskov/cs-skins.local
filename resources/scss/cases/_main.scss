@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
 // Cases Layout
 @import "layout/header";
 @import "layout/footer";
@@ -9,3 +11,8 @@
 // @import "pages/cases";
 // @import "pages/case-details";
 // @import "pages/upgrades";
+
+.theme-cases{
+    background: linear-gradient(180deg, #0a0a0a 0%, #1c1c1c 100%);
+
+}

@@ -1,4 +1,125 @@
-// Cases Footer Styles
-.cases-footer {
-    // TODO: Добавить стили footer для кейсов
+.theme-cases {
+    .footer-section {
+        position: relative;
+        background-color: rgba(43, 43, 43, 1);
+        overflow: hidden;
+
+        a.footer-link {
+            color: rgba(255, 255, 255, 0.6);
+            transition: 0.4s ease;
+
+            &:hover {
+                margin-left: 5px;
+
+            }
+        }
+
+        .item-3 {
+            width: 280px;
+            position: absolute;
+            top: 0;
+            right: -100px;
+            opacity: 0.1;
+
+            @media (max-width: 1150px) {
+                display: none;
+            }
+        }
+
+        .main-footer {
+            padding: 20px 0;
+
+            .footer-logo-part {
+                .logo {
+                    height: calc(35px + (52 - 35) * ((100vw - 320px) / (1920 - 320)));
+                    padding-bottom: calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320)));
+                    cursor: pointer;
+                }
+
+                p {
+                    width: 80%;
+                    color: rgba(255, 255, 255, 0.6);
+                    line-height: 1.6;
+
+                    @media (max-width: 1200px) {
+                        width: 100%;
+                    }
+                }
+
+            }
+
+            .footer-title {
+                position: relative;
+                font-size: calc(15px + (20 - 15) * ((100vw - 320px) / (1920 - 320)));
+                color: #fff;
+                margin-bottom: calc(10px + (25 - 10) * ((100vw - 320px) / (1920 - 320)));
+                padding-left: 10px;
+
+                &::before {
+                    content: "";
+                    position: absolute;
+                    left: 0;
+                    top: 50%;
+                    transform: translate(-50%, -50%);
+                    height: calc(15px + (30 - 15) * ((100vw - 320px) / (1920 - 320)));
+                    border: 1px solid rgba(var(--theme-color), 1);
+
+                }
+            }
+
+            h5 {
+                color: rgba(var(--white), 1);
+            }
+
+            .content {
+                @media (max-width: 576px) {
+                    display: none;
+                }
+
+                li {
+                    display: block;
+                    padding-bottom: calc(8px + (20 - 8) * ((100vw - 320px) / (1920 - 320)));
+
+                    &:last-child {
+                        padding-bottom: 0;
+                    }
+
+                    a {
+                        h6 {
+                            color: rgba(255, 255, 255, 0.6);
+                            transition: 0.4s ease;
+
+                            &:hover {
+                                margin-left: 5px;
+                                color: rgba(var(--theme-color), 1);
+
+                                [dir="rtl"] & {
+                                    margin-left: unset;
+                                    margin-right: 5px;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        .bottom-footer-part {
+            padding: 10px 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+
+            h6 {
+                color: #fff;
+                font-weight: 400;
+                line-height: 1.5;
+                letter-spacing: 0.4px;
+                text-align: center;
+                font-size: 18px;
+                line-height: 1.5;
+                margin-bottom: 0;
+            }
+
+        }
+
+    }
 }

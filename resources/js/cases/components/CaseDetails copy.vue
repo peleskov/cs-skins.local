@@ -1,10 +1,183 @@
 <template>
-	<section>
+	<section class="popular-restaurant banner-section section-b-space ratio3_2 overflow-hidden">
 		<div class="container">
-			<div class="container">
-				<div class="row justify-content-between align-items-center mb-3">
-					<div class="col-auto">
-						<a :href="routes.cases" class="text-uppercase link-tocases">{{ caseData.name }}</a>
+			<div class="row justify-content-between align-items-center mb-3">
+				<div class="col-auto">
+					<a :href="routes.cases" class="text-uppercase link-tocases">{{ caseData.name }}</a>
+				</div>
+			</div>
+			<div class="case-box mb-5">
+				<div class="case-box-image mb-3" v-if="!isSpinning && !wonItem"
+					:style="{ backgroundImage: `url(/storage/${caseData.image_url})` }">
+				</div>
+				<!-- Слайдер для розыгрыша -->
+				<div class="case-prize-slider" v-if="isSpinning || wonItem">
+					<div class="container">
+						<div class="case-roulette-container">
+							<!-- Окошко для приза -->
+							<div class="roulette-window"></div>
+
+							<!-- Слайдер -->
+							<div class="roulette-wrapper">
+								<div class="roulette-track" :class="{ 'spinning': isSpinning }"
+									:style="{ transform: `translateX(${sliderOffset}px)` }">
+									<div v-for="(item, index) in displayItems" :key="`item-${index}`"
+										:data-item-id="item.id" class="roulette-item case-content-item" :class="[
+											{
+												'winner': item.isWinner,
+												'center': getItemPosition(index) === 'center'
+											},
+											getRarityClass(item)
+										]">
+										<div class="image"
+											:style="{ backgroundImage: `url(${getItemImageUrl(item)})` }">
+										</div>
+										<div class="d-flex justify-content-center">
+											<p class="w-75 text-truncate">{{ item.name }}</p>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<!-- Результат открытия -->
+						<div v-if="wonItem" class="text-center mt-4">
+							<div class="alert">
+								<h4 class="">Поздравляем!</h4>
+								<p class="mb-0">Вы выиграли: <strong>{{ wonItem.name }}</strong></p>
+								<p class="mb-3">Стоимость: <strong v-html="formatPrice(wonItem.price)"></strong></p>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="case-box-footer d-flex justify-content-center gap-3 py-2" v-if="allItems.length > 0">
+					<template v-if="wonItem">
+						<button class="btn theme-btn btn-lg px-5" @click="reloadPage">
+							Ещё раз
+						</button>
+					</template>
+					<template v-else-if="isProcessing || isSpinning">
+						<button class="btn theme-btn btn-lg px-5" disabled>
+							<span class="spinner-border spinner-border-sm me-2"></span>
+							Кейс открывается...
+						</button>
+					</template>
+					<template v-else>
+						<button class="btn theme-btn btn-lg px-5" data-bs-toggle="modal"
+							data-bs-target="#confirmPurchaseModal">
+							Открыть за <span v-html="formatPrice(caseData.price)"></span>
+						</button>
+						<button class="btn theme-outline btn-lg px-4" @click="openFast">
+							Открыть быстро за <span v-html="formatPrice(caseData.price)"></span>
+						</button>
+					</template>
+				</div>
+			</div>
+
+			<!-- Все предметы кейса -->
+
+			<h3 class="category-title text-center mb-5 d-flex align-items-center justify-content-center gap-2"
+				v-if="allItems.length > 0">
+				<svg width="19" height="15" viewBox="0 0 19 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path
+						d="M18.4298 12.5C18.6703 12.5 18.8005 12.7825 18.6436 12.9648L17.7657 13.9844C17.552 14.2325 17.2406 14.375 16.9132 14.375H1.7989C1.47146 14.375 1.16006 14.2325 0.946363 13.9844L0.0684336 12.9648C-0.0884056 12.7825 0.0417616 12.5 0.282301 12.5H18.4298Z"
+						fill="url(#paint0_linear_2034_1647)" />
+					<path fill-rule="evenodd" clip-rule="evenodd"
+						d="M4.07625 2.50195C4.25093 2.92094 4.6604 3.19419 5.11433 3.19434H13.5977C14.0516 3.19416 14.4611 2.9209 14.6358 2.50195L15.1798 1.19824H18.2589C18.4141 1.1983 18.5401 1.3242 18.5401 1.47949V11.2988C18.54 11.454 18.4141 11.58 18.2589 11.5801H0.453199C0.297984 11.5801 0.172097 11.454 0.171949 11.2988V1.47949C0.171949 1.32418 0.297892 1.19827 0.453199 1.19824H3.5323L4.07625 2.50195ZM6.84187 5.59082C6.68666 5.59096 6.56062 5.71683 6.56062 5.87207V7.30566C6.56077 7.46078 6.68676 7.58677 6.84187 7.58691H11.8702C12.0253 7.58674 12.1513 7.46076 12.1514 7.30566V5.87207C12.1514 5.71685 12.0254 5.591 11.8702 5.59082H6.84187Z"
+						fill="url(#paint1_linear_2034_1647)" />
+					<path
+						d="M14.2247 0C14.431 9.78978e-07 14.5667 0.2148 14.4786 0.401367L14.088 1.23047C13.9021 1.62399 13.5056 1.87494 13.0704 1.875H5.64168C5.20649 1.87494 4.80993 1.62399 4.6241 1.23047L4.23347 0.401367C4.14537 0.214799 4.28106 0 4.48738 0H14.2247Z"
+						fill="url(#paint2_linear_2034_1647)" />
+					<defs>
+						<linearGradient id="paint0_linear_2034_1647" x1="9.35603" y1="0" x2="9.35603" y2="14.375"
+							gradientUnits="userSpaceOnUse">
+							<stop stop-color="#FF8C00" />
+							<stop offset="1" stop-color="#FFD400" />
+						</linearGradient>
+						<linearGradient id="paint1_linear_2034_1647" x1="9.35603" y1="0" x2="9.35603" y2="14.375"
+							gradientUnits="userSpaceOnUse">
+							<stop stop-color="#FF8C00" />
+							<stop offset="1" stop-color="#FFD400" />
+						</linearGradient>
+						<linearGradient id="paint2_linear_2034_1647" x1="9.35603" y1="0" x2="9.35603" y2="14.375"
+							gradientUnits="userSpaceOnUse">
+							<stop stop-color="#FF8C00" />
+							<stop offset="1" stop-color="#FFD400" />
+						</linearGradient>
+					</defs>
+				</svg>
+				Содержимое кейса
+			</h3>
+
+			<div class="case-content row g-4" v-if="allItems.length > 0">
+				<div v-for="item in allItems" :key="item.id" class="col-lg-2 col-md-3 col-sm-4 col-6">
+					<div class="case-content-item" :class="getRarityClass(item)">
+						<div class="image" :style="{ backgroundImage: `url(${getItemImageUrl(item)})` }">
+						</div>
+						<div class="d-flex justify-content-center">
+							<p class="w-75 text-truncate">{{ item.name }}</p>
+						</div>
+					</div>
+
+
+
+					<!--
+					<div class="vertical-product-box h-100" :class="getRarityClass(item)">
+						<div class="vertical-product-box-img">
+							<div>
+								<img class="product-img-top w-100 bg-img" :src="getItemImageUrl(item)" :alt="item.name"
+									@error="handleImageError">
+							</div>
+							<div class="offers">
+								<div class="d-flex align-items-center justify-content-between">
+									<h4 v-html="formatPrice(item.price)"></h4>
+								</div>
+							</div>
+						</div>
+						<div class="vertical-product-body">
+							<div class="d-flex flex-column mt-sm-3 mt-2">
+								<FloatBar :item="item" :show-value="false" :show-min-max="false" />
+								<h4 class="vertical-product-title">{{ item.name }}</h4>
+								<div v-if="item.float_value !== null && item.float_value !== undefined"
+									class="text-muted small">
+									{{ item.float_value.toFixed(4) }}
+								</div>
+							</div>
+						</div>
+					</div>
+					-->
+				</div>
+			</div>
+
+			<!-- Сообщение если предметов нет -->
+			<div v-if="allItems.length === 0" class="text-center py-5">
+				<i class="ri-archive-line fs-1 text-muted mb-3"></i>
+				<h4>Предметы не найдены</h4>
+				<p class="text-muted">В этом кейсе пока нет предметов.</p>
+			</div>
+		</div>
+
+		<!-- Модальное окно подтверждения покупки -->
+		<div class="modal fade" id="confirmPurchaseModal" tabindex="-1" data-bs-backdrop="static">
+			<div class="modal-dialog modal-dialog-centered">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title">Подтверждение покупки</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+					</div>
+					<div class="modal-body">
+						<div class="text-center">
+							<h4 class="mb-3">{{ caseData.name }}</h4>
+							<p class="fs-5">Открыть кейс за: <strong class="text-primary"
+									v-html="formatPrice(caseData.price)"></strong></p>
+						</div>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn theme-outline" data-bs-dismiss="modal">Отмена</button>
+						<button type="button" class="btn theme-btn" @click="confirmPurchase" :disabled="isProcessing">
+							<span v-if="isProcessing" class="spinner-border spinner-border-sm me-2"></span>
+							Подтвердить покупку
+						</button>
 					</div>
 				</div>
 			</div>

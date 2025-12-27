@@ -11,7 +11,7 @@
     @include('partials.cases.header')
 
     <!-- Main content -->
-    <main class="main flex-grow-1">
+    <main class="main flex-grow-1 d-flex flex-column">
         @yield('content')
     </main>
 

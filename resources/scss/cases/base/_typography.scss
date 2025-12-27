@@ -1,0 +1,28 @@
+a {
+  text-decoration: none;
+
+  &:hover {
+    color: #f2a93e
+  }
+}
+
+h1 {
+  font: 700 20px / 100% "Inter", sans-serif;
+  color: #16344c;
+}
+
+h2 {
+  margin-bottom: 12px;
+  font: 700 20px / 100% "Inter", sans-serif;
+  color: #16344c;
+}
+
+h3 {
+  font: 600 20px / 120% "Inter", sans-serif;
+  color: #16344c;
+}
+
+h4 {
+  font: 500 16px / 125% "Inter", sans-serif;
+  color: #16344c;
+}

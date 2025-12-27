@@ -1,0 +1,216 @@
+.theme-cases {
+
+    // Search box
+    .search-box {
+        position: relative;
+
+        &::after {
+            content: '';
+            width: 31px;
+            height: 26px;
+            display: block;
+            position: absolute;
+            top: calc(50% - 13px);
+            right: 12px;
+            border-left: 1px solid #5c5249;
+            background-repeat: no-repeat;
+            background-position: 100% center;
+            background-size: 20px 20px;
+            background-image: svg-url('<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.7874 14.3898L20 18.6024L18.6024 20L14.3898 15.7874C13.6155 16.4042 12.769 16.8766 11.8504 17.2047C10.8793 17.5459 9.88189 17.7165 8.85827 17.7165C7.25722 17.7165 5.76772 17.3163 4.38976 16.5157C3.05118 15.7283 1.99475 14.6654 1.22047 13.3268C0.406824 11.9488 0 10.4593 0 8.85827C0 7.25722 0.406824 5.76772 1.22047 4.38976C1.99475 3.05118 3.05118 1.99475 4.38976 1.22047C5.76772 0.406824 7.25722 0 8.85827 0C10.4593 0 11.9488 0.406824 13.3268 1.22047C14.6654 1.99475 15.7283 3.05118 16.5157 4.38976C17.3163 5.76772 17.7165 7.25722 17.7165 8.85827C17.7165 9.88189 17.5459 10.8793 17.2047 11.8504C16.8766 12.769 16.4042 13.6155 15.7874 14.3898ZM13.7992 13.6614C14.416 13.0315 14.895 12.3097 15.2362 11.4961C15.5774 10.6562 15.748 9.7769 15.748 8.85827C15.748 7.61155 15.4331 6.45013 14.8031 5.37402C14.1995 4.33727 13.3793 3.51706 12.3425 2.91339C11.2664 2.28346 10.105 1.9685 8.85827 1.9685C7.61155 1.9685 6.45013 2.28346 5.37402 2.91339C4.33727 3.51706 3.51706 4.33727 2.91339 5.37402C2.28346 6.45013 1.9685 7.61155 1.9685 8.85827C1.9685 10.105 2.28346 11.2664 2.91339 12.3425C3.51706 13.3793 4.33727 14.1995 5.37402 14.8031C6.45013 15.4331 7.61155 15.748 8.85827 15.748C9.7769 15.748 10.6562 15.5774 11.4961 15.2362C12.3097 14.895 13.0315 14.416 13.6614 13.7992L13.7992 13.6614Z" fill="#80522E" /></svg>');
+        }
+    }
+
+    // Form control
+    .form-control {
+        padding: 8px 43px 8px 12px;
+        font: 400 16px "Inter", sans-serif;
+        color: #c6c3c1;
+        border: 1px solid #5c5249;
+        border-radius: 6px;
+        background-color: #171717;
+        box-shadow: none !important;
+
+        &::placeholder {
+            color: rgba(198, 195, 193, .5);
+        }
+    }
+
+    .slider-target {
+        position: relative;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+        box-sizing: border-box;
+        touch-action: none;
+        user-select: none;
+
+        * {
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+            box-sizing: border-box;
+            touch-action: none;
+            user-select: none;
+        }
+
+        &.slider-horizontal {
+            width: calc(100% - 16px);
+            height: 6px;
+            margin-top: 36px;
+            margin-left: 8px;
+            margin-right: 8px;
+
+            .slider-handle {
+                height: 16px;
+                width: 16px;
+                right: -8px;
+                top: -5px;
+            }
+
+            .slider-tooltip-top {
+                bottom: 18px;
+                left: 50%;
+                transform: translate(-50%);
+            }
+        }
+
+        .slider-base {
+            height: 100%;
+            position: relative;
+            width: 100%;
+            z-index: 1;
+            background-color: #7d8091;
+            border-radius: 20px;
+        }
+
+        .slider-connects {
+            height: 100%;
+            position: relative;
+            width: 100%;
+            z-index: 0;
+            overflow: hidden;
+            border-radius: 20px;
+        }
+
+        .slider-connect {
+            height: 100%;
+            position: absolute;
+            right: 0;
+            top: 0;
+            transform-origin: 0 0;
+            transform-style: flat;
+            width: 100%;
+            will-change: transform;
+            z-index: 1;
+            background-color: #ff8c00;
+            cursor: pointer;
+            border-radius: 20px;
+        }
+
+        .slider-origin {
+            height: 100%;
+            position: absolute;
+            right: 0;
+            top: 0;
+            transform-origin: 0 0;
+            transform-style: flat;
+            width: 100%;
+            will-change: transform;
+            z-index: 1;
+
+            >.slider-tooltip {
+                left: auto;
+                transform: translate(50%);
+            }
+
+        }
+
+        .slider-handle {
+            position: absolute;
+            backface-visibility: hidden;
+            border: 2px solid #121212;
+            border-radius: 50%;
+            background-color: #ff8c00;
+            cursor: grab;
+
+            &:focus {
+                box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.3), 0.5px 0.5px 2px 1px rgba(0, 0, 0, 0.32);
+                outline: none;
+            }
+
+            &.slider-active {
+                cursor: grabbing;
+            }
+        }
+
+        .slider-tooltip {
+            position: absolute;
+            display: block;
+            text-align: center;
+            font: 600 12px / 133% "Inter", sans-serif;
+            color: #ff8c00;
+        }
+
+        .slider-touch-area {
+            height: 100%;
+            width: 100%;
+        }
+    }
+
+    .sidebar {
+        .accordion {
+            .accordion-button {
+                padding: 0;
+                display: block;
+                margin-bottom: 20px;
+                position: relative;
+                font: 700 20px / 100% "Inter", sans-serif;
+                color: #fff;
+                border: 0 none;
+                background-color: transparent;
+                box-shadow: none;
+
+                &::after {
+                    content: '';
+                    width: 20px;
+                    height: 20px;
+                    display: block;
+                    position: absolute;
+                    top: calc(50% - 10px);
+                    right: 0;
+                    background-repeat: no-repeat;
+                    background-position: center;
+                    background-size: 17px 9px;
+                    background-image: svg-url('<svg viewBox="0 0 17 9" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M0.183617 0.183617C0.241674 0.125413 0.310644 0.0792341 0.386575 0.047726C0.462507 0.016218 0.543908 0 0.626117 0C0.708326 0 0.789728 0.016218 0.865659 0.047726C0.941591 0.0792341 1.01056 0.125413 1.06862 0.183617L8.12612 7.24237L15.1836 0.183617C15.2417 0.125507 15.3107 0.0794115 15.3866 0.0479627C15.4626 0.0165138 15.5439 0.000327229 15.6261 0.000327229C15.7083 0.000327229 15.7897 0.0165138 15.8656 0.0479627C15.9415 0.0794115 16.0105 0.125507 16.0686 0.183617C16.1267 0.241727 16.1728 0.310713 16.2043 0.386637C16.2357 0.462562 16.2519 0.543937 16.2519 0.626117C16.2519 0.708297 16.2357 0.789672 16.2043 0.865596C16.1728 0.941521 16.1267 1.01051 16.0686 1.06862L8.56862 8.56862C8.51056 8.62682 8.44159 8.673 8.36566 8.70451C8.28973 8.73601 8.20833 8.75223 8.12612 8.75223C8.04391 8.75223 7.96251 8.73601 7.88658 8.70451C7.81064 8.673 7.74167 8.62682 7.68362 8.56862L0.183617 1.06862C0.125413 1.01056 0.0792347 0.94159 0.0477266 0.865659C0.0162186 0.789728 0 0.708326 0 0.626117C0 0.543908 0.0162186 0.462506 0.0477266 0.386575C0.0792347 0.310643 0.125413 0.241674 0.183617 0.183617Z" fill="#FF8C00" /></svg>');
+
+                }
+            }
+
+            .accordion-body {
+                padding: 0;
+
+                .category-list {
+                    padding: 0;
+                    list-style: none;
+
+                    li {
+                        margin-bottom: 13px;
+
+                        .form-check {
+                            .form-check-input {
+                                margin-top: 2px;
+                                border: 1px solid #5c5249;
+                                border-radius: 6px;
+                                background-color: #0a0a0a;
+                                box-shadow: none;
+                            }
+
+                            .form-check-label {
+                                font: 500 18px / 144% "Inter", sans-serif;
+                                color: #e0dede;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,50 @@
+.theme-cases {
+    .case-list {
+        .sidebar {
+            width: 320px;
+            padding: 10px 16px 10px 24px;
+            border-right: 1px solid #2b1902;
+            background-color: #0a0a0a;
+        }
+    }
+
+    .category-title {
+        position: relative;
+        padding-bottom: 14px;
+        overflow: hidden;
+        font: 700 20px / 100% "Inter", sans-serif;
+        text-align: center;
+        color: #f6f4f9;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='3000' height='22' viewBox='0 0 3000 22' fill='none'%3E%3Cpath d='M0 0.5L1203 0.5L1231 21.5L1500 21.5L1769 21.5L1797 0.5L3000 0.5' stroke='%23563203' stroke-linecap='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: center 100%;
+
+        &::after {
+            content: '';
+            width: 140px;
+            height: 1px;
+            display: block;
+            position: absolute;
+            left: calc(50% - 70px);
+            bottom: 0;
+            background-color: #FF8C00;
+        }
+
+        img {
+            max-width: 20px;
+            max-height: 20px;
+        }
+    }
+
+    .case-box {
+        .image-box {
+            width: 100%;
+            height: 292px;
+
+            img {
+                max-width: 100%;
+                max-height: 100%;
+            }
+        }
+    }
+}

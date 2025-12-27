@@ -1,6 +1,9 @@
 import './shared/bootstrap';
 import { createApp } from 'vue';
 
+import './cases/scripts/custom-swiper.js';
+
+
 // Lazy loading: компоненты загружаются только когда нужны
 const components = import.meta.glob('./cases/components/**/*.vue');
 
@@ -14,6 +17,7 @@ for (const path in components) {
 
 // Автоматическое монтирование по data-vue-component
 document.addEventListener('DOMContentLoaded', () => {
+
     document.querySelectorAll('[data-vue-component]').forEach(async el => {
         const componentName = el.dataset.vueComponent;
         const loader = registry[componentName];

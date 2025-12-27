@@ -3,16 +3,9 @@
 @section('title', $case->name . ' - Кейсы CS2')
 
 @section('content')
-@include('partials.breadcrumbs', [
-    'title' => $case->name,
-    'breadcrumbs' => [
-        ['title' => 'Кейсы', 'url' => route('cases.index')],
-        ['title' => $case->name]
-    ]
-])
-
+@include('partials.cases.carousel-winner')
 <div
-    id="case-details-app"
+    data-vue-component="case-details"
     data-case="{{ json_encode($caseData) }}"
     data-case-slug="{{ $case->slug }}"
     data-routes="{{ json_encode(['cases' => route('cases.index')]) }}"

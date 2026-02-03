@@ -44,6 +44,7 @@ class ProfileController extends Controller
             'minimum_amount' => \App\Models\SiteSetting::get('minimum_deposit_amount', 100),
             'maximum_amount' => \App\Models\SiteSetting::get('maximum_deposit_amount', 50000),
             'card_payment_enabled' => \App\Models\SiteSetting::get('card_payment_enabled', true),
+            'test_payment_enabled' => \App\Models\SiteSetting::get('test_payment_enabled', false),
         ];
 
         return view('profile.index', compact('client', 'telegramBotName', 'profileTabs', 'depositSettings'));
@@ -260,6 +261,42 @@ class ProfileController extends Controller
                 'created_at' => $transaction->created_at->toISOString(),
                 'metadata' => $transaction->metadata,
                 'listing_id' => $listingId,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+            'pagination' => [
+                'current_page' => $transactions->currentPage(),
+                'per_page' => $transactions->perPage(),
+                'total' => $transactions->total(),
+                'last_page' => $transactions->lastPage(),
+                'has_more_pages' => $transactions->hasMorePages(),
+            ]
+        ]);
+    }
+
+    /**
+     * Получить историю бонусных транзакций
+     */
+    public function getBonusTransactions(Request $request): JsonResponse
+    {
+        $client = $this->getAuthenticatedClient();
+
+        $perPage = min($request->get('per_page', 20), 100);
+
+        $transactions = $client->bonusTransactions()
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
+        $data = $transactions->getCollection()->map(function ($tx) {
+            return [
+                'id' => $tx->id,
+                'type' => $tx->type,
+                'amount' => $tx->amount,
+                'description' => $tx->description,
+                'created_at' => $tx->created_at->toISOString(),
             ];
         });
 
@@ -568,7 +605,9 @@ class ProfileController extends Controller
             'telegram_id' => $client->telegram_id,
             'telegram_username' => $client->telegram_username,
             'is_verified' => $client->is_verified,
-            'email_verified_at' => $client->email_verified_at
+            'email_verified_at' => $client->email_verified_at,
+            'balance' => (float) $client->balance,
+            'bonus_balance' => (float) $client->bonus_balance,
         ]);
     }
 

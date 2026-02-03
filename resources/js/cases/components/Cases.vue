@@ -1,10 +1,14 @@
 <template>
 	<div class="container-fluid flex-fill d-flex flex-column g-0">
 		<div class="row g-0 flex-fill">
-			<aside class="sidebar align-self-stretch">
-				<div class="search-box mb-4">
-					<input type="text" class="form-control" placeholder="Поиск кейсов..." v-model="filters.search"
-						@input="debouncedSearch">
+			<aside class="sidebar align-self-stretch" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
+				<div class="d-flex gap-4">
+					<div class="search-box mb-4">
+						<input type="text" class="form-control" placeholder="Поиск кейсов..." v-model="filters.search"
+							@input="debouncedSearch">
+					</div>
+					<button class="sidebar-toggle d-xl-none" @click="toggleSidebar"
+						:title="sidebarCollapsed ? 'Показать фильтры' : 'Скрыть фильтры'"></button>
 				</div>
 				<div class="price-filter mb-4">
 					<h2 class="text-white">Цена</h2>
@@ -50,32 +54,52 @@
 					</button>
 				</div>
 			</aside>
-			<div class="col-1 d-none d-xxl-block"></div>
-			<div class="col d-flex flex-column gap-5 mb-5">
-				<div v-for="category in filteredCategorizedCases" :key="category.id || 'no-category'" class="px-4">
-					<h2 class="category-title text-center mb-5 d-flex align-items-center justify-content-center gap-2">
-						<img v-if="category.icon" :src="`/storage/${category.icon}`" :alt="category.name"
-							class="category-icon" style="width: 32px; height: 32px; object-fit: contain;">
-						<span>{{ category.name }}</span>
-					</h2>
-					<div class="row g-5 justify-content-center">
-						<div v-for="case_item in category.cases" :key="case_item.id" class="col-6 col-xl-4">
-							<div class="case-box d-flex flex-column align-items-center">
-								<a :href="`/cases/${case_item.slug}`" class="d-flex justify-content-center align-items-center image-box">
-									<img :src="case_item.image_url ? `/storage/${case_item.image_url}` : '/images/case-placeholder.png'"
-										:alt="case_item.name" @error="handleImageError">
-								</a>
-								<a :href="`/cases/${case_item.slug}`" class="mb-4">
-									<h3 class="text-white text-center">{{ case_item.name }}</h3>
-								</a>
-								<a :href="`/cases/${case_item.slug}`" class="btn btn-tertiary"
-									v-html="formatPrice(case_item.price)"></a>
+			<div class="category-list col mb-5" :class="{ 'mt-n1': sidebarCollapsed }">
+				<button v-if="sidebarCollapsed" class="sidebar-toggle d-xl-none" @click="toggleSidebar"
+					title="Показать фильтры">Фильтр</button>
+				<div class=" d-flex flex-column gap-5">
+					<div v-for="category in filteredCategorizedCases" :key="category.id || 'no-category'" class="px-4">
+						<h2
+							class="category-title text-center mb-5 d-flex align-items-center justify-content-center gap-2">
+							<img v-if="category.icon" :src="`/storage/${category.icon}`" :alt="category.name"
+								class="category-icon" style="width: 32px; height: 32px; object-fit: contain;">
+							<span>{{ category.name }}</span>
+						</h2>
+						<div class="row g-5 justify-content-center align-items-stretch">
+							<div v-for="case_item in category.cases" :key="case_item.id"
+								:class="sidebarCollapsed ? 'col-lg-4 col-xl-3' : 'col-6 col-lg-4 col-xl-2'">
+								<div class="category-case-box d-flex flex-column align-items-center h-100">
+									<!-- Бейджи -->
+									<div class="case-badges" v-if="case_item.label_hot || case_item.label_new || case_item.label_limited">
+										<span v-if="case_item.label_hot" class="case-badge case-badge-hot">
+											<i class="case-badge-icon case-badge-icon-hot"></i>
+											<span>HOT</span>
+										</span>
+										<span v-if="case_item.label_new" class="case-badge case-badge-new">
+											<i class="case-badge-icon case-badge-icon-new"></i>
+											<span>NEW</span>
+										</span>
+										<span v-if="case_item.label_limited" class="case-badge case-badge-limited">
+											<i class="case-badge-icon case-badge-icon-limited"></i>
+											<span>LIMITED</span>
+										</span>
+									</div>
+									<a :href="`/cases/${case_item.slug}`"
+										class="d-flex justify-content-center align-items-center image-box">
+										<img :src="case_item.image_url ? `/storage/${case_item.image_url}` : '/images/case-placeholder.png'"
+											:alt="case_item.name" @error="handleImageError">
+									</a>
+									<a :href="`/cases/${case_item.slug}`" class="mb-4 flex-fill">
+										<h3 class="text-white text-center">{{ case_item.name }}</h3>
+									</a>
+									<a :href="`/cases/${case_item.slug}`" class="btn btn-quaternary"
+										v-html="formatPrice(case_item.price)"></a>
+								</div>
 							</div>
 						</div>
 					</div>
 				</div>
 			</div>
-			<div class="col-1 d-none d-xxl-block"></div>
 		</div>
 	</div>
 </template>
@@ -111,7 +135,8 @@ export default {
 				onlyAffordable: false,
 				categoryIds: []
 			},
-			searchTimeout: null
+			searchTimeout: null,
+			sidebarCollapsed: false
 		};
 	},
 	computed: {
@@ -271,6 +296,10 @@ export default {
 			this.filters.maxPrice = null;
 			this.filters.onlyAffordable = false;
 			this.filters.categoryIds = [];
+		},
+
+		toggleSidebar() {
+			this.sidebarCollapsed = !this.sidebarCollapsed;
 		}
 	},
 	mounted() {

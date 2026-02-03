@@ -12,15 +12,25 @@ export default defineConfig({
                 'resources/js/mplace.js',
                 'resources/js/cases.js'
             ],
-            refresh: true,
+            refresh: ['resources/views/**'],
         }),
         vue(),
     ],
+    server: {
+        watch: {
+            ignored: ['**/node_modules/**', '**/vendor/**', '**/storage/**', '**/.git/**'],
+        },
+    },
+    optimizeDeps: {
+        include: ['vue', 'axios', 'bootstrap'],
+    },
     css: {
+        devSourcemap: false,
         preprocessorOptions: {
             scss: {
+                api: 'modern-compiler',
                 quietDeps: true,
-                silenceDeprecations: ['import', 'mixed-decls'],
+                silenceDeprecations: ['import'],
                 additionalData: `$public-path: '/';`
             }
         }
@@ -28,6 +38,18 @@ export default defineConfig({
     resolve: {
         alias: {
             '/images': path.resolve(__dirname, 'public/images')
+        }
+    },
+    build: {
+        sourcemap: false,
+        minify: 'esbuild',
+        target: 'es2020',
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    vue: ['vue'],
+                }
+            }
         }
     }
 });

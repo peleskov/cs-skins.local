@@ -13,6 +13,7 @@
         "laravel/reverb": "^1.0",
         "laravel/socialite": "^5.21",
         "laravel/tinker": "^2.10.1",
+        "maatwebsite/excel": "*",
         "pusher/pusher-php-server": "*",
         "socialiteproviders/steam": "^4.3",
         "telegram-bot/api": "^2.5"

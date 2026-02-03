@@ -31,6 +31,8 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use App\Models\Transaction;
+use App\Models\BonusTransaction;
+use App\Services\BonusBalanceService;
 use Illuminate\Support\Facades\Auth;
 
 class ClientResource extends Resource
@@ -85,6 +87,15 @@ class ClientResource extends Resource
                     ->suffix('₽')
                     ->disabled()
                     ->dehydrated(false),
+
+                TextInput::make('bonus_balance')
+                    ->label('Бонусный баланс')
+                    ->numeric()
+                    ->default(0)
+                    ->step(0.01)
+                    ->suffix('₽')
+                    ->disabled()
+                    ->dehydrated(false),
                     
                 Toggle::make('is_verified')
                     ->label('Верифицирован'),
@@ -130,6 +141,12 @@ class ClientResource extends Resource
                     ->label('Баланс')
                     ->money('RUB')
                     ->sortable(),
+
+                TextColumn::make('bonus_balance')
+                    ->label('Бонусный баланс')
+                    ->money('RUB')
+                    ->sortable()
+                    ->color('success'),
                     
                 IconColumn::make('is_verified')
                     ->label('Верифицирован')
@@ -275,6 +292,105 @@ class ClientResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('Снять с баланса клиента')
                     ->modalDescription(fn ($record) => "Вы собираетесь списать средства с баланса клиента {$record->name}. Текущий баланс: {$record->balance} ₽"),
+                Action::make('topup_bonus')
+                    ->label('')
+                    ->tooltip('Пополнить бонусный баланс')
+                    ->icon('heroicon-o-gift')
+                    ->color('success')
+                    ->schema([
+                        TextInput::make('amount')
+                            ->label('Сумма')
+                            ->numeric()
+                            ->required()
+                            ->step(0.01)
+                            ->minValue(0.01)
+                            ->suffix('₽'),
+                        Textarea::make('description')
+                            ->label('Причина')
+                            ->default('Начисление бонуса администратором')
+                            ->required()
+                            ->rows(3),
+                    ])
+                    ->action(function ($record, array $data) {
+                        try {
+                            $service = app(BonusBalanceService::class);
+                            $service->credit(
+                                $record,
+                                $data['amount'],
+                                $data['description']
+                            );
+
+                            Notification::make()
+                                ->title('Бонус начислен')
+                                ->body("Клиенту {$record->name} начислено {$data['amount']} ₽ бонусов")
+                                ->success()
+                                ->send();
+
+                        } catch (Exception $e) {
+                            Notification::make()
+                                ->title('Ошибка при начислении бонуса')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    })
+                    ->requiresConfirmation()
+                    ->modalHeading('Начислить бонус')
+                    ->modalDescription(fn ($record) => "Начисление бонуса клиенту {$record->name}. Текущий бонусный баланс: {$record->bonus_balance} ₽"),
+                Action::make('withdraw_bonus')
+                    ->label('')
+                    ->tooltip('Снять бонусы')
+                    ->icon('heroicon-o-gift')
+                    ->color('warning')
+                    ->schema([
+                        TextInput::make('amount')
+                            ->label('Сумма')
+                            ->numeric()
+                            ->required()
+                            ->step(0.01)
+                            ->minValue(0.01)
+                            ->suffix('₽'),
+                        Textarea::make('description')
+                            ->label('Причина')
+                            ->default('Списание бонуса администратором')
+                            ->required()
+                            ->rows(3),
+                    ])
+                    ->action(function ($record, array $data) {
+                        try {
+                            if ($record->bonus_balance < $data['amount']) {
+                                Notification::make()
+                                    ->title('Недостаточно бонусов')
+                                    ->body("Бонусный баланс клиента: {$record->bonus_balance} ₽")
+                                    ->warning()
+                                    ->send();
+                                return;
+                            }
+
+                            $service = app(BonusBalanceService::class);
+                            $service->debit(
+                                $record,
+                                $data['amount'],
+                                $data['description']
+                            );
+
+                            Notification::make()
+                                ->title('Бонус списан')
+                                ->body("С клиента {$record->name} списано {$data['amount']} ₽ бонусов")
+                                ->success()
+                                ->send();
+
+                        } catch (Exception $e) {
+                            Notification::make()
+                                ->title('Ошибка при списании бонуса')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    })
+                    ->requiresConfirmation()
+                    ->modalHeading('Списать бонус')
+                    ->modalDescription(fn ($record) => "Списание бонуса с клиента {$record->name}. Текущий бонусный баланс: {$record->bonus_balance} ₽"),
             ])
             ->recordActionsColumnLabel('Действия')
             ->toolbarActions([
@@ -288,7 +404,9 @@ class ClientResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\TransactionsRelationManager::class,
+            RelationManagers\BonusTransactionsRelationManager::class,
+            RelationManagers\CaseInventoryRelationManager::class,
         ];
     }
 

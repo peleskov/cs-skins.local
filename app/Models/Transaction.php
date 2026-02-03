@@ -32,6 +32,9 @@ class Transaction extends Model
     const TYPE_REFUND = 'refund';
     const TYPE_AUCTION_BID = 'auction_bid';
     const TYPE_AUCTION_REFUND = 'auction_refund';
+    const TYPE_CASE_PURCHASE = 'case_purchase';
+    const TYPE_VIRTUAL_ITEM_SALE = 'virtual_item_sale';
+    const TYPE_UPGRADE_BET = 'upgrade_bet';
 
     const STATUS_PENDING = 'pending';
     const STATUS_COMPLETED = 'completed';
@@ -87,12 +90,12 @@ class Transaction extends Model
 
     public function isCredit(): bool
     {
-        return in_array($this->type, [self::TYPE_DEPOSIT, self::TYPE_SALE, self::TYPE_REFUND]);
+        return in_array($this->type, [self::TYPE_DEPOSIT, self::TYPE_SALE, self::TYPE_REFUND, self::TYPE_VIRTUAL_ITEM_SALE]);
     }
 
     public function isDebit(): bool
     {
-        return in_array($this->type, [self::TYPE_WITHDRAWAL, self::TYPE_PURCHASE, self::TYPE_FEE]);
+        return in_array($this->type, [self::TYPE_WITHDRAWAL, self::TYPE_PURCHASE, self::TYPE_FEE, self::TYPE_CASE_PURCHASE, self::TYPE_UPGRADE_BET]);
     }
 
     public function getSignedAmount(): float

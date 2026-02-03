@@ -24,6 +24,7 @@ class Client extends Authenticatable
         'steam_avatar',
         'steam_trade_url',
         'balance',
+        'bonus_balance',
         'payment_password',
         'is_verified',
         'is_bot',
@@ -47,6 +48,7 @@ class Client extends Authenticatable
 
     protected $casts = [
         'balance' => 'decimal:2',
+        'bonus_balance' => 'decimal:2',
         'is_verified' => 'boolean',
         'is_bot' => 'boolean',
         'email_verified_at' => 'datetime',
@@ -219,14 +221,138 @@ class Client extends Authenticatable
         $updated = self::where('id', $this->id)
             ->where('balance', '>=', $amount)
             ->decrement('balance', $amount);
-            
+
         if ($updated) {
             // Обновляем локальное значение баланса
             $this->refresh();
             return true;
         }
-        
+
         return false;
+    }
+
+    // ========== Бонусный баланс ==========
+
+    /**
+     * Проверка наличия бонусного баланса
+     */
+    public function hasBonusBalance(): bool
+    {
+        return $this->bonus_balance > 0;
+    }
+
+    /**
+     * Получить бонусный баланс
+     */
+    public function getBonusBalance(): float
+    {
+        return (float) $this->bonus_balance;
+    }
+
+    /**
+     * Получить общий баланс (основной + бонусный)
+     */
+    public function getTotalBalance(): float
+    {
+        return (float) $this->balance + (float) $this->bonus_balance;
+    }
+
+    /**
+     * Проверка достаточности общего баланса (основной + бонусный)
+     */
+    public function hasEnoughTotalBalance(float $amount): bool
+    {
+        return $this->getTotalBalance() >= $amount;
+    }
+
+    /**
+     * Начислить бонусный баланс
+     */
+    public function creditBonus(float $amount): void
+    {
+        $this->increment('bonus_balance', $amount);
+    }
+
+    /**
+     * Списать с бонусного баланса (атомарно)
+     */
+    public function debitBonus(float $amount): bool
+    {
+        $updated = self::where('id', $this->id)
+            ->where('bonus_balance', '>=', $amount)
+            ->decrement('bonus_balance', $amount);
+
+        if ($updated) {
+            $this->refresh();
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Списать средства с приоритетом бонусного баланса
+     * Возвращает массив с информацией о списании
+     *
+     * @return array{success: bool, bonus_used: float, balance_used: float}
+     */
+    public function debitWithBonusPriority(float $amount): array
+    {
+        $bonusBalance = (float) $this->bonus_balance;
+        $mainBalance = (float) $this->balance;
+
+        // Проверяем достаточность общего баланса
+        if (($bonusBalance + $mainBalance) < $amount) {
+            return [
+                'success' => false,
+                'bonus_used' => 0,
+                'balance_used' => 0,
+            ];
+        }
+
+        // Рассчитываем сколько списать с каждого баланса
+        $bonusToUse = min($bonusBalance, $amount);
+        $balanceToUse = $amount - $bonusToUse;
+
+        // Атомарное списание
+        $updated = self::where('id', $this->id)
+            ->where('bonus_balance', '>=', $bonusToUse)
+            ->where('balance', '>=', $balanceToUse)
+            ->update([
+                'bonus_balance' => \DB::raw("bonus_balance - {$bonusToUse}"),
+                'balance' => \DB::raw("balance - {$balanceToUse}"),
+            ]);
+
+        if ($updated) {
+            $this->refresh();
+            return [
+                'success' => true,
+                'bonus_used' => $bonusToUse,
+                'balance_used' => $balanceToUse,
+            ];
+        }
+
+        return [
+            'success' => false,
+            'bonus_used' => 0,
+            'balance_used' => 0,
+        ];
+    }
+
+    /**
+     * Связь с бонусными транзакциями
+     */
+    public function bonusTransactions(): HasMany
+    {
+        return $this->hasMany(BonusTransaction::class);
+    }
+
+    /**
+     * Связь с инвентарём кейсов
+     */
+    public function caseInventoryItems(): HasMany
+    {
+        return $this->hasMany(CaseInventoryItem::class);
     }
 
     public function favorites(): HasMany

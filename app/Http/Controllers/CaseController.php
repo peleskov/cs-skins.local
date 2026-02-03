@@ -2,17 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Transaction;
 use App\Models\CaseModel;
-use App\Models\CaseTier;
+use App\Models\CaseOpen;
 use App\Models\Client;
 use App\Services\CaseService;
-use \App\Http\Controllers\OrderController;
+use App\Services\FreeCaseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Exception;
 
 class CaseController extends Controller
@@ -31,13 +29,15 @@ class CaseController extends Controller
                 'price',
                 'image_url',
                 'accumulated_fund',
-                'category_id'
+                'category_id',
+                'case_type',
+                'label_hot',
+                'label_new',
+                'label_limited',
             ])
             ->with('category:id,name,icon,sort_order')
             ->whereHas('tiers', function ($query) {
-                // Находим минимальную цену среди уровней и проверяем что есть предметы
-                $query->whereRaw('price = (SELECT MIN(price) FROM case_tiers WHERE case_id = cases.id)')
-                    ->whereHas('items');
+                $query->whereHas('items');
             })
             ->get();
 
@@ -53,21 +53,15 @@ class CaseController extends Controller
             ->where('is_active', true)
             ->with(['tiers' => function ($query) {
                 $query->orderBy('price', 'asc')
-                    ->with(['items.inventoryItem' => function ($q) {
-                        $q->select([
-                            'id',
-                            'item_name',
-                            'float_value',
-                            'float_min',
-                            'float_max',
-                            'icon_url',
-                            'market_hash_name'
-                        ]);
-                    }]);
+                    ->with(['items.virtualItem']);
             }])
             ->firstOrFail();
 
-        // Форматируем данные для передачи в компонент
+        /** @var Client|null $client */
+        $client = Auth::guard('client')->user();
+        $caseService = app(CaseService::class);
+
+        // Формируем данные для передачи в компонент
         $caseData = [
             'id' => $case->id,
             'name' => $case->name,
@@ -75,7 +69,7 @@ class CaseController extends Controller
             'description' => $case->description,
             'price' => (float) $case->price,
             'image_url' => $case->image_url,
-            'accumulated_fund' => (float) $case->accumulated_fund,
+            'case_type' => $case->case_type,
             'tiers' => $case->tiers->map(function ($tier) {
                 return [
                     'id' => $tier->id,
@@ -83,22 +77,36 @@ class CaseController extends Controller
                     'price' => (float) $tier->price,
                     'probability' => (float) $tier->probability,
                     'items' => $tier->items->map(function ($item) use ($tier) {
-                        $inventory = $item->inventoryItem;
+                        $virtual = $item->virtualItem;
                         return [
-                            'id' => $inventory->id,
-                            'name' => $inventory->item_name,
-                            'float_value' => $inventory->float_value,
-                            'float_min' => $inventory->float_min,
-                            'float_max' => $inventory->float_max,
-                            'price' => $inventory->getCurrentPrice() ?: 0,
-                            'image_url' => $inventory->icon_url,
+                            'id' => $item->id,
+                            'name' => $virtual->name,
+                            'price' => (float) $item->price,
+                            'image_url' => $virtual->image_url,
                             'tier_id' => $tier->id,
-                            'structured_tags' => $inventory->structured_tags
+                            'rarity' => $virtual->rarity,
+                            'rarity_color' => $virtual->rarity_color,
+                            'quality' => $virtual->quality,
+                            'weapon_type' => $virtual->weapon_type,
                         ];
                     })
                 ];
-            })
+            }),
+            'multipliers' => [
+                'available' => $client
+                    ? $caseService->getAvailableMultipliers($case, $client)
+                    : [1, 2, 3, 4, 5, 10],
+                'max_opens' => $client
+                    ? $caseService->getMaxOpens($case, $client)
+                    : 10,
+            ],
         ];
+
+        // Для бесплатных кейсов добавляем информацию о бесплатных открытиях
+        if ($case->isFree() && $client) {
+            $freeCaseService = app(FreeCaseService::class);
+            $caseData['free_opens_info'] = $freeCaseService->getFreeOpensInfo($client, $case);
+        }
 
         return view('cases.show', compact('case', 'caseData'));
     }
@@ -117,7 +125,11 @@ class CaseController extends Controller
                 'price',
                 'image_url',
                 'accumulated_fund',
-                'category_id'
+                'category_id',
+                'case_type',
+                'label_hot',
+                'label_new',
+                'label_limited',
             ])
             ->with('category:id,name,icon,sort_order')
             ->get();
@@ -136,43 +148,64 @@ class CaseController extends Controller
             ->where('is_active', true)
             ->with(['tiers' => function ($query) {
                 $query->orderBy('price', 'asc')
-                    ->with(['items.inventoryItem']);
+                    ->with(['items.virtualItem']);
             }])
             ->firstOrFail();
+
+        /** @var Client|null $client */
+        $client = Auth::guard('client')->user();
+        $caseService = app(CaseService::class);
 
         $tiers = $case->tiers->map(function ($tier) {
             return [
                 'id' => $tier->id,
                 'name' => $tier->name,
-                'price' => $tier->price,
-                'probability' => $tier->probability,
-                'items' => $tier->items->map(function ($item) {
-                    $inventory = $item->inventoryItem;
+                'price' => (float) $tier->price,
+                'probability' => (float) $tier->probability,
+                'items' => $tier->items->map(function ($item) use ($tier) {
+                    $virtual = $item->virtualItem;
                     return [
-                        'id' => $inventory->id,
-                        'name' => $inventory->item_name,
-                        'float_value' => $inventory->float_value,
-                        'float_min' => $inventory->float_min,
-                        'float_max' => $inventory->float_max,
-                        'price' => $inventory->getCurrentPrice() ?: 0,
-                        'image_url' => $inventory->icon_url,
-                        'structured_tags' => $inventory->structured_tags
+                        'id' => $item->id,
+                        'name' => $virtual->name,
+                        'price' => (float) $item->price,
+                        'image_url' => $virtual->image_url,
+                        'tier_id' => $tier->id,
+                        'rarity' => $virtual->rarity,
+                        'rarity_color' => $virtual->rarity_color,
+                        'quality' => $virtual->quality,
+                        'weapon_type' => $virtual->weapon_type,
                     ];
                 })
             ];
         });
 
+        $data = [
+            'id' => $case->id,
+            'name' => $case->name,
+            'slug' => $case->slug,
+            'description' => $case->description,
+            'price' => (float) $case->price,
+            'image_url' => $case->image_url,
+            'case_type' => $case->case_type,
+            'tiers' => $tiers,
+            'multipliers' => [
+                'available' => $client
+                    ? $caseService->getAvailableMultipliers($case, $client)
+                    : [1, 2, 3, 4, 5, 10],
+                'max_opens' => $client
+                    ? $caseService->getMaxOpens($case, $client)
+                    : 10,
+            ],
+        ];
+
+        // Для бесплатных кейсов добавляем информацию о бесплатных открытиях
+        if ($case->isFree() && $client) {
+            $freeCaseService = app(FreeCaseService::class);
+            $data['free_opens_info'] = $freeCaseService->getFreeOpensInfo($client, $case);
+        }
+
         return response()->json([
-            'data' => [
-                'id' => $case->id,
-                'name' => $case->name,
-                'slug' => $case->slug,
-                'description' => $case->description,
-                'price' => $case->price,
-                'image_url' => $case->image_url,
-                'accumulated_fund' => $case->accumulated_fund,
-                'tiers' => $tiers
-            ]
+            'data' => $data
         ]);
     }
 
@@ -183,97 +216,67 @@ class CaseController extends Controller
     {
         $request->validate([
             'case_id' => 'required|exists:cases,id',
+            'count' => 'integer|min:1|max:10',
         ]);
 
         try {
             $case = CaseModel::findOrFail($request->case_id);
-            /** @var Client $buyer */
-            $buyer = Auth::guard('client')->user();
+            /** @var Client $client */
+            $client = Auth::guard('client')->user();
+            $count = $request->input('count', 1);
 
-            if (!$buyer) {
+            if (!$client) {
                 throw new Exception('Необходима авторизация');
             }
-            
+
             // Проверяем что покупатель не бот
-            if ($buyer->is_bot) {
-                throw new Exception('Вы не можете покупать кейсы');
+            if ($client->is_bot) {
+                throw new Exception('Боты не могут открывать кейсы');
             }
 
-            // Проверяем что кейс активен
-            if (!$case->is_active) {
-                throw new Exception('Кейс недоступен для покупки');
+            // Проверяем что count допустим
+            $allowedMultipliers = [1, 2, 3, 4, 5, 10];
+            if (!in_array($count, $allowedMultipliers)) {
+                throw new Exception('Недопустимое количество');
             }
-            
-            // Проверяем что у кейса есть предметы
-            if (!$case->tiers()->whereHas('items')->exists()) {
-                throw new Exception('В кейсе нет доступных предметов');
+
+            $caseService = app(CaseService::class);
+
+            // Проверяем доступность множителя
+            $maxOpens = $caseService->getMaxOpens($case, $client);
+            if ($count > $maxOpens) {
+                throw new Exception("Можно открыть максимум {$maxOpens}");
             }
-            
-            // Используем транзакцию для атомарности всей операции
-            return DB::transaction(function () use ($case, $buyer) {
-                // Проверяем баланс и списываем средства
-                if (!$buyer->debit($case->price)) {
-                    throw new Exception('Недостаточно средств на балансе');
-                }
-                
-                $caseService = app(CaseService::class);
 
-                // Пополняем фонд кейса (используем fund_percent)
-                $fundAmount = $case->price * ($case->fund_percent / 100);
-                $case->increment('accumulated_fund', $fundAmount);
+            // Открываем кейс(ы)
+            $result = $caseService->openCase($case, $client, $count);
 
-                // Создаем транзакцию покупки кейса (видна покупателю)
-                Transaction::create([
-                    'client_id' => $buyer->id,
-                    'type' => Transaction::TYPE_PURCHASE,
-                    'amount' => $case->price,
-                    'status' => Transaction::STATUS_COMPLETED,
-                    'description' => "Покупка кейса \"{$case->name}\"",
-                    'metadata' => [
-                        'case_id' => $case->id,
-                        'case_name' => $case->name,
-                        'fund_amount' => $fundAmount,
-                        'site_revenue' => $case->price - $fundAmount
-                    ]
-                ]);
-
-                // Создаем транзакцию дохода сайта (скрыта от покупателя, видна только в админке)
-                $siteRevenue = $case->price - $fundAmount;
-                if ($siteRevenue > 0) {
-                    // Получаем системного клиента
-                    $systemClient = Client::where('email', 'system@cs-skins.local')->first();
-
-                    Transaction::create([
-                        'client_id' => $systemClient?->id, // Системная транзакция
-                        'type' => Transaction::TYPE_FEE,
-                        'amount' => $siteRevenue,
-                        'status' => Transaction::STATUS_COMPLETED,
-                        'description' => "Доход с продажи кейса \"{$case->name}\"",
-                        'metadata' => [
-                            'case_id' => $case->id,
-                            'case_name' => $case->name,
-                            'buyer_id' => $buyer->id,
-                            'case_price' => $case->price,
-                            'fund_percent' => $case->fund_percent,
-                            'source' => 'case_revenue'
-                        ]
-                    ]);
-                }
-
-                // Открываем кейс и получаем приз
-                $prizeItem = $caseService->openCase($case, $buyer);
-
-                // Создаем заказ для приза через OrderController
-                $orderController = app(OrderController::class);
-                $order = $orderController->casePrizeBuy($case, $prizeItem, $buyer);
-
-                return response()->json([
-                    'success' => true,
-                    'prize' => [
-                        'id' => $prizeItem->id
-                    ]
-                ]);
+            // Формируем призы для ответа
+            $prizes = collect($result['items'])->map(function ($item) {
+                $virtual = $item['case_item']->virtualItem;
+                return [
+                    'id' => $item['case_item']->id,
+                    'inventory_id' => $item['inventory_item']->id,
+                    'name' => $virtual->name,
+                    'price' => (float) $item['case_item']->price,
+                    'image_url' => $virtual->image_url,
+                    'rarity' => $virtual->rarity,
+                    'rarity_color' => $virtual->rarity_color,
+                ];
             });
+
+            // Обновляем данные клиента
+            $client->refresh();
+
+            return response()->json([
+                'success' => true,
+                'prizes' => $prizes,
+                'balance' => [
+                    'main' => (float) $client->balance,
+                    'bonus' => (float) $client->bonus_balance,
+                ],
+                'payment' => $result['payment'],
+            ]);
 
         } catch (Exception $e) {
             return response()->json([
@@ -281,5 +284,58 @@ class CaseController extends Controller
                 'message' => $e->getMessage(),
             ], 400);
         }
+    }
+
+    /**
+     * API: Получить последние дропы для лайв-ленты
+     */
+    public function liveFeed(Request $request): JsonResponse
+    {
+        $limit = min((int) $request->input('limit', 30), 100);
+
+        $drops = CaseOpen::with(['client', 'case', 'inventoryItem.virtualItem'])
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get()
+            ->map(function ($caseOpen) {
+                $client = $caseOpen->client;
+                $case = $caseOpen->case;
+                $inventoryItem = $caseOpen->inventoryItem;
+                $virtualItem = $inventoryItem?->virtualItem;
+
+                if (!$virtualItem) {
+                    return null;
+                }
+
+                return [
+                    'id' => $caseOpen->id,
+                    'user' => [
+                        'id' => $client->id,
+                        'name' => $client->name,
+                        'avatar' => $client->steam_avatar,
+                    ],
+                    'case' => [
+                        'id' => $case->id,
+                        'name' => $case->name,
+                        'image' => $case->image_url,
+                    ],
+                    'item' => [
+                        'id' => $inventoryItem->id,
+                        'name' => $virtualItem->name,
+                        'price' => (float) $inventoryItem->price,
+                        'image_url' => $virtualItem->image_url,
+                        'rarity' => $virtualItem->rarity,
+                        'quality' => $virtualItem->quality,
+                    ],
+                    'timestamp' => $caseOpen->created_at->toISOString(),
+                ];
+            })
+            ->filter()
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'drops' => $drops,
+        ]);
     }
 }

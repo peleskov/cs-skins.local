@@ -5,34 +5,51 @@
 			<h3>Управление балансом</h3>
 		</div>
 
-		<!-- Текущий баланс -->
+		<!-- Балансы -->
 		<div class="row g-4 mb-4">
+			<!-- Основной баланс -->
 			<div class="col-md-6">
 				<div class="card h-100">
 					<div class="card-body text-center">
 						<i class="ri-wallet-3-line display-4 text-primary mb-3"></i>
-						<h5 class="card-title">Текущий баланс</h5>
+						<h5 class="card-title">Основной баланс</h5>
 						<h2 class="text-primary" v-html="formatPrice(client.balance)"></h2>
 						<div class="d-flex justify-content-center gap-3 mt-3">
 							<button class="btn theme-btn"
 								data-bs-toggle="modal"
 								data-bs-target="#balance-refill"
-								:disabled="!cardPaymentEnabled">
+								:disabled="availablePaymentMethods.length === 0">
 								<i class="ri-add-line me-2"></i>
-								{{ cardPaymentEnabled ? 'Пополнить баланс' : 'Пополнение недоступно' }}
+								{{ availablePaymentMethods.length > 0 ? 'Пополнить' : 'Недоступно' }}
 							</button>
 							<button class="btn theme-outline" data-bs-toggle="modal"
 								data-bs-target="#balance-withdraw">
-								<i class="ri-bank-card-line me-2"></i>Вывести средства
+								<i class="ri-bank-card-line me-2"></i>Вывести
 							</button>
-
 						</div>
 					</div>
 				</div>
 			</div>
 
-			<!-- Средства в холде -->
-			<div class="col-md-6" v-if="heldBalance.seller > 0 || heldBalance.buyer > 0">
+			<!-- Бонусный баланс -->
+			<div class="col-md-6">
+				<div class="card h-100">
+					<div class="card-body text-center">
+						<i class="ri-gift-line display-4 text-success mb-3"></i>
+						<h5 class="card-title">Бонусный баланс</h5>
+						<h2 class="text-success" v-html="formatPrice(client.bonus_balance || 0)"></h2>
+						<p class="text-muted small mt-3 mb-0">
+							<i class="ri-information-line me-1"></i>
+							Бонусы можно использовать только для открытия кейсов
+						</p>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Средства в холде -->
+		<div class="row g-4 mb-4" v-if="heldBalance.seller > 0 || heldBalance.buyer > 0">
+			<div class="col-12">
 				<div class="card h-100">
 					<div class="card-body text-center">
 						<i class="ri-time-line display-4 text-warning mb-3"></i>
@@ -58,9 +75,12 @@
 				<button class="nav-link" :class="{ active: historyTab === 'transactions' }"
 					type="button" role="tab" @click="historyTab = 'transactions'">
 					<i class="ri-history-line me-2"></i>История операций
-					<span v-if="transactions.length > 0" class="badge bg-body-secondary ms-1">
-						{{ transactions.length }}
-					</span>
+				</button>
+			</li>
+			<li class="nav-item" role="presentation">
+				<button class="nav-link" :class="{ active: historyTab === 'bonus' }"
+					type="button" role="tab" @click="historyTab = 'bonus'; loadBonusTransactions()">
+					<i class="ri-gift-line me-2"></i>История бонусов
 				</button>
 			</li>
 			<li class="nav-item" role="presentation">
@@ -202,6 +222,52 @@
 						</table>
 					</div>
 				</div>
+
+				<!-- Таб: История бонусов -->
+				<div class="tab-pane fade" :class="{ 'show active': historyTab === 'bonus' }"
+					v-if="historyTab === 'bonus'">
+					<!-- Loading State -->
+					<div v-if="isLoadingBonusTransactions" class="text-center py-4">
+						<div class="spinner-border" role="status">
+							<span class="visually-hidden">Загрузка...</span>
+						</div>
+						<p class="text-muted mt-2 mb-0">Загружаем историю бонусов...</p>
+					</div>
+
+					<!-- Empty State -->
+					<div v-else-if="bonusTransactions.length === 0" class="text-center py-4">
+						<i class="ri-gift-line display-4 text-muted mb-3"></i>
+						<h6>История бонусов пуста</h6>
+						<p class="text-muted mb-0">Здесь будут отображаться все операции с бонусным балансом</p>
+					</div>
+
+					<!-- Bonus Transactions List -->
+					<div v-else class="table-responsive">
+						<table class="table table-hover">
+							<thead>
+								<tr class="text-muted">
+									<th>Тип</th>
+									<th>Описание</th>
+									<th>Сумма</th>
+									<th>Дата</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr v-for="tx in bonusTransactions" :key="tx.id" class="text-muted">
+									<td>
+										<i :class="tx.type === 'credit' ? 'ri-add-circle-line text-success' : 'ri-indeterminate-circle-line text-danger'"></i>
+										<span class="ms-1">{{ tx.type === 'credit' ? 'Начисление' : 'Списание' }}</span>
+									</td>
+									<td>{{ tx.description || '—' }}</td>
+									<td :class="tx.type === 'credit' ? 'text-success' : 'text-danger'">
+										<strong v-html="(tx.type === 'credit' ? '+&nbsp;' : '−&nbsp;') + formatPrice(Math.abs(tx.amount))"></strong>
+									</td>
+									<td class="text-muted">{{ formatDate(tx.created_at) }}</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
 		</div>
 
 		<!-- Модальное окно пополнения -->
@@ -241,6 +307,67 @@
 									</div>
 									<div class="form-text">
 										Сумма от {{ minimumDepositAmount }} до {{ maximumDepositAmount }} ₽
+									</div>
+								</div>
+
+								<!-- Промокод -->
+								<div class="col-12">
+									<label for="depositPromocode" class="form-label">Промокод</label>
+									<div class="input-group">
+										<input type="text"
+											   class="form-control"
+											   id="depositPromocode"
+											   v-model="depositForm.promocode"
+											   placeholder="Введите промокод (необязательно)"
+											   :disabled="depositForm.validatingPromocode">
+										<button class="btn btn-outline-secondary"
+												type="button"
+												@click="validatePromocode"
+												:disabled="!depositForm.promocode || depositForm.validatingPromocode">
+											<span v-if="depositForm.validatingPromocode" class="spinner-border spinner-border-sm"></span>
+											<span v-else>Применить</span>
+										</button>
+									</div>
+									<div v-if="depositForm.promocodeResult" class="mt-2">
+										<div v-if="depositForm.promocodeResult.valid" class="text-success small">
+											<i class="ri-check-line me-1"></i>
+											{{ depositForm.promocodeResult.message }}
+											<span v-if="depositForm.promocodeResult.bonus_amount">
+												(+{{ depositForm.promocodeResult.bonus_amount }} ₽ бонус)
+											</span>
+										</div>
+										<div v-else class="text-danger small">
+											<i class="ri-close-line me-1"></i>
+											{{ depositForm.promocodeResult.message }}
+										</div>
+									</div>
+									<div v-if="depositForm.promocodeResult?.valid && depositForm.promocodeResult?.bonus_amount"
+										 class="alert alert-info mt-2 mb-0 py-2 small">
+										<i class="ri-information-line me-1"></i>
+										Бонусы начисляются на отдельный бонусный баланс и могут быть использованы только для открытия кейсов.
+									</div>
+								</div>
+
+								<!-- Способ оплаты -->
+								<div class="col-12" v-if="availablePaymentMethods.length > 1">
+									<label class="form-label">Способ оплаты</label>
+									<div class="d-flex flex-column gap-2">
+										<label v-for="method in availablePaymentMethods"
+											   :key="method.value"
+											   class="payment-method-option mb-0"
+											   style="cursor: pointer;">
+											<input type="radio"
+												   :value="method.value"
+												   v-model="depositForm.payment_type"
+												   class="d-none">
+											<div class="d-flex align-items-center p-3 border rounded"
+												 :class="depositForm.payment_type === method.value ? 'border-primary bg-primary bg-opacity-10' : 'border-secondary'">
+												<i :class="method.icon" class="me-3" style="font-size: 1.5rem;"></i>
+												<span>{{ method.label }}</span>
+												<i v-if="depositForm.payment_type === method.value"
+												   class="ri-check-line ms-auto text-primary"></i>
+											</div>
+										</label>
 									</div>
 								</div>
 							</div>
@@ -336,7 +463,8 @@ export default {
 			default: () => ({
 				minimum_amount: 100,
 				maximum_amount: 50000,
-				card_payment_enabled: true
+				card_payment_enabled: true,
+				test_payment_enabled: false
 			})
 		}
 	},
@@ -354,6 +482,10 @@ export default {
 			// Данные для пополнения баланса
 			depositForm: {
 				amount: '',
+				payment_type: 'card',
+				promocode: '',
+				promocodeResult: null,
+				validatingPromocode: false,
 				processing: false,
 				error: null
 			},
@@ -368,6 +500,10 @@ export default {
 				buyer: []
 			},
 			isLoadingHeldBalance: false,
+
+			// Данные о бонусах
+			bonusTransactions: [],
+			isLoadingBonusTransactions: false,
 
 			// Активный таб истории
 			historyTab: 'transactions'
@@ -384,9 +520,22 @@ export default {
 		cardPaymentEnabled() {
 			return this.depositSettings.card_payment_enabled;
 		},
+		testPaymentEnabled() {
+			return this.depositSettings.test_payment_enabled;
+		},
 		isValidAmount() {
 			const amount = parseFloat(this.depositForm.amount);
 			return amount >= this.minimumDepositAmount && amount <= this.maximumDepositAmount;
+		},
+		availablePaymentMethods() {
+			const methods = [];
+			if (this.cardPaymentEnabled) {
+				methods.push({ value: 'card', label: 'Банковская карта', icon: 'ri-bank-card-line' });
+			}
+			if (this.testPaymentEnabled) {
+				methods.push({ value: 'test', label: 'Тестовый платеж', icon: 'ri-bug-line' });
+			}
+			return methods;
 		}
 	},
 
@@ -457,6 +606,21 @@ export default {
 				console.error('Failed to load held balance:', error);
 			} finally {
 				this.isLoadingHeldBalance = false;
+			}
+		},
+
+		async loadBonusTransactions() {
+			if (this.isLoadingBonusTransactions) return;
+
+			this.isLoadingBonusTransactions = true;
+			try {
+				const response = await axios.get('/api/profile/bonus-transactions');
+				this.bonusTransactions = response.data.data || [];
+			} catch (error) {
+				console.error('Failed to load bonus transactions:', error);
+				window.toast?.error('Не удалось загрузить историю бонусов');
+			} finally {
+				this.isLoadingBonusTransactions = false;
 			}
 		},
 
@@ -552,21 +716,35 @@ export default {
 				const successUrl = `${baseUrl}/profile?payment=success#balance`;
 				const failUrl = `${baseUrl}/profile?payment=failed#balance`;
 
-				const response = await axios.post('/api/deposit/payment-form', {
+				const requestData = {
 					amount: parseFloat(this.depositForm.amount),
+					payment_type: this.depositForm.payment_type,
 					success_url: successUrl,
 					fail_url: failUrl
-				});
+				};
+
+				// Добавляем промокод если он валиден
+				if (this.depositForm.promocode && this.depositForm.promocodeResult?.valid) {
+					requestData.promocode = this.depositForm.promocode;
+				}
+
+				const response = await axios.post('/api/deposit/payment-form', requestData);
 
 				if (response.data.success) {
 					// Закрываем модальное окно
 					this.closeModal();
 
-					// Создаем POST-форму для отправки на платежную форму
-					this.submitPaymentForm(response.data.payment_form_url, successUrl, failUrl);
+					// Тестовый платеж завершается сразу
+					if (response.data.status === 'completed') {
+						this.onPaymentSuccess(response.data.amount);
+						window.toast?.success(response.data.message || 'Платеж успешно завершен!');
+					} else {
+						// Обычный платеж - редирект на платежную форму
+						this.submitPaymentForm(response.data.payment_form_url, successUrl, failUrl);
 
-					// Начинаем периодическую проверку статуса платежа
-					this.startPaymentStatusCheck(response.data.payment_id);
+						// Начинаем периодическую проверку статуса платежа
+						this.startPaymentStatusCheck(response.data.payment_id);
+					}
 				} else {
 					this.depositForm.error = response.data.message || 'Ошибка создания платежа';
 				}
@@ -679,8 +857,45 @@ export default {
 
 		resetForm() {
 			this.depositForm.amount = '';
+			this.depositForm.payment_type = 'card';
+			this.depositForm.promocode = '';
+			this.depositForm.promocodeResult = null;
+			this.depositForm.validatingPromocode = false;
 			this.depositForm.error = null;
 			this.depositForm.processing = false;
+		},
+
+		async validatePromocode() {
+			if (!this.depositForm.promocode || !this.depositForm.amount) {
+				this.depositForm.promocodeResult = {
+					valid: false,
+					message: 'Введите сумму пополнения для проверки промокода'
+				};
+				return;
+			}
+
+			this.depositForm.validatingPromocode = true;
+			this.depositForm.promocodeResult = null;
+
+			try {
+				const response = await axios.post('/api/deposit/validate-promocode', {
+					code: this.depositForm.promocode,
+					amount: parseFloat(this.depositForm.amount)
+				});
+
+				this.depositForm.promocodeResult = {
+					valid: response.data.valid,
+					message: response.data.message,
+					bonus_amount: response.data.bonus_amount
+				};
+			} catch (error) {
+				this.depositForm.promocodeResult = {
+					valid: false,
+					message: error.response?.data?.message || 'Ошибка проверки промокода'
+				};
+			} finally {
+				this.depositForm.validatingPromocode = false;
+			}
 		},
 
 		checkPaymentStatus() {

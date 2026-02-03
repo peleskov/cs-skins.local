@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Payment;
+use App\Models\Promocode;
 use App\Services\PaymentService;
+use App\Services\PromocodeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,10 +16,42 @@ use Illuminate\View\View;
 class DepositController extends Controller
 {
     private PaymentService $paymentService;
+    private PromocodeService $promocodeService;
 
-    public function __construct(PaymentService $paymentService)
+    public function __construct(PaymentService $paymentService, PromocodeService $promocodeService)
     {
         $this->paymentService = $paymentService;
+        $this->promocodeService = $promocodeService;
+    }
+
+    /**
+     * Validate promocode
+     */
+    public function validatePromocode(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'code' => ['required', 'string', 'max:100'],
+            'amount' => ['required', 'numeric', 'min:1'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'valid' => false,
+                'message' => $validator->errors()->first(),
+            ]);
+        }
+
+        $client = Auth::guard('client')->user();
+        $code = $request->input('code');
+        $amount = (float) $request->input('amount');
+
+        $result = $this->promocodeService->validate($code, $client, $amount);
+
+        return response()->json([
+            'valid' => $result['valid'],
+            'message' => $result['message'],
+            'bonus_amount' => $result['bonus_amount'] ?? null,
+        ]);
     }
 
     /**
@@ -229,6 +263,8 @@ class DepositController extends Controller
             'amount' => ['required', 'numeric', 'min:' . $minAmount, 'max:' . $maxAmount],
             'success_url' => ['nullable', 'url'],
             'fail_url' => ['nullable', 'url'],
+            'promocode' => ['nullable', 'string', 'max:100'],
+            'payment_type' => ['nullable', 'string', 'in:card,test'],
         ], [
             'amount.required' => 'Укажите сумму пополнения',
             'amount.numeric' => 'Сумма должна быть числом',
@@ -249,9 +285,24 @@ class DepositController extends Controller
         $amount = (float) $request->input('amount');
         $successUrl = $request->input('success_url');
         $failUrl = $request->input('fail_url');
+        $promocodeInput = $request->input('promocode');
+        $paymentType = $request->input('payment_type', 'card');
+
+        // Validate promocode if provided
+        $promocodeId = null;
+        if ($promocodeInput) {
+            $promoResult = $this->promocodeService->validate($promocodeInput, $client, $amount);
+            if (!$promoResult['valid']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $promoResult['message'],
+                ], 422);
+            }
+            $promocodeId = $promoResult['promocode']->id;
+        }
 
         // Create payment form
-        $result = $this->paymentService->createPaymentForm($client, $amount, $successUrl, $failUrl);
+        $result = $this->paymentService->createPaymentForm($client, $amount, $successUrl, $failUrl, $promocodeId, $paymentType);
 
         return response()->json($result);
     }

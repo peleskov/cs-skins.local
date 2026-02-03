@@ -1,7 +1,11 @@
 import './shared/bootstrap';
 import { createApp } from 'vue';
+import { initializeGlobalToast } from './shared/toast';
 
 import './cases/scripts/custom-swiper.js';
+
+// Инициализируем глобальный toast для уведомлений
+initializeGlobalToast();
 
 
 // Lazy loading: компоненты загружаются только когда нужны

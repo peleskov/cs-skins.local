@@ -92,8 +92,8 @@ class SendToastNotificationJob implements ShouldQueue
 
         return match ($this->type) {
             'order_status' => match (true) {
-                // Продавец: новый заказ - нужно передать предмет
-                $role === 'seller' && $status === 'paid' => 'saleTransfer',
+                // Продавец: новый заказ - нужно передать предмет (paid или processing)
+                $role === 'seller' && in_array($status, ['paid', 'processing']) => 'saleTransfer',
                 // Покупатель: предмет передан
                 $role === 'buyer' && $status === 'processing' => 'purchaseReceive',
                 // Обе стороны: успешное завершение

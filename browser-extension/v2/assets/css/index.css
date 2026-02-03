@@ -62,6 +62,14 @@ body.expanded .btn-toggle {
     display: none !important;
 }
 
+#loaderPlayBtn {
+    display: none !important;
+}
+
+#loaderPlayBtn.show {
+    display: flex !important;
+}
+
 .popup-container {
     width: 350px;
     background: var(--bg-primary);
@@ -255,6 +263,13 @@ body.expanded .popup-container {
     font-size: 16px;
 }
 
+.btn-group{
+    display: flex;
+    align-items: center;
+    justify-content: end;
+    gap: 4px;
+}
+
 .btn-toggle {
     width: 24px;
     height: 24px;
@@ -273,11 +288,21 @@ body.expanded .popup-container {
     width: 20px;
     height: 20px;
     fill: var(--text-tertiary);
-    transition: fill 0.2s ease;
+    stroke: var(--text-tertiary);
+    transition: fill 0.2s ease, stroke 0.2s ease;
 }
 
 .btn-toggle:hover svg {
     fill: var(--text-brand);
+    stroke: var(--text-brand);
+}
+
+.btn-pause.paused svg {
+    stroke: var(--text-success);
+}
+
+.btn-pause.paused:hover svg {
+    stroke: var(--text-success);
 }
 
 .user-info {
@@ -348,11 +373,13 @@ body.expanded .popup-container {
     display: flex;
 }
 
-.loader-toggle {
+.loader-controls {
     position: absolute;
-    top: 16px;
+    top: 21px;
     right: 16px;
     z-index: 10000;
+    display: flex;
+    gap: 4px;
 }
 
 .loader-content {

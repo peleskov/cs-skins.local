@@ -7,13 +7,14 @@
 @import "components/form";
 @import "components/button";
 @import "pages/cases";
+@import "pages/inventory";
 
-.theme-cases{
+.theme-cases {
     font: 400 18px/26px "Inter", sans-serif;
     color: #16344C;
     background: linear-gradient(180deg, #0a0a0a 0%, #1c1c1c 100%);
 
-    .mb-60{
+    .mb-60 {
         margin-bottom: 60px;
     }
 }

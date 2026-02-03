@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Client;
 use App\Models\Payment;
+use App\Models\Promocode;
 use App\Models\Transaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -33,9 +34,14 @@ class PaymentService
      * Create payment form for balance deposit using ArcopayAPI
      * This method is PCI DSS compliant as card data is handled by the acquiring system
      */
-    public function createPaymentForm(Client $client, float $amount, ?string $successUrl = null, ?string $failUrl = null): array
+    public function createPaymentForm(Client $client, float $amount, ?string $successUrl = null, ?string $failUrl = null, ?int $promocodeId = null, string $paymentType = 'card'): array
     {
         try {
+            // Handle test payment type (only in non-production)
+            if ($paymentType === 'test') {
+                return $this->createTestPayment($client, $amount, $promocodeId);
+            }
+
             // Check if card payment is enabled
             if (!$this->isPaymentTypeEnabled('card')) {
                 return [
@@ -88,6 +94,7 @@ class PaymentService
                 'currency' => config('payment.default_currency', 'RUB'),
                 'status' => Payment::STATUS_CREATED,
                 'payment_type' => Payment::TYPE_CARD,
+                'promocode_id' => $promocodeId,
                 'expires_at' => now()->addMinutes(config('payment.form_lifetime_minutes', 30)),
             ]);
 
@@ -110,6 +117,59 @@ class PaymentService
             return [
                 'success' => false,
                 'message' => 'Ошибка создания платежа. Попробуйте позже.'
+            ];
+        }
+    }
+
+    /**
+     * Create test payment - immediately completes without external acquiring
+     */
+    private function createTestPayment(Client $client, float $amount, ?int $promocodeId = null): array
+    {
+        // Check if test payment is enabled in settings
+        if (!\App\Models\SiteSetting::get('test_payment_enabled', false)) {
+            return [
+                'success' => false,
+                'message' => 'Тестовые платежи недоступны'
+            ];
+        }
+
+        try {
+            $orderId = Payment::generateOrderId();
+
+            // Create payment record
+            $payment = Payment::create([
+                'client_id' => $client->id,
+                'order_id' => $orderId,
+                'merchant_order_id' => 'TEST_' . $orderId,
+                'amount' => $amount,
+                'currency' => config('payment.default_currency', 'RUB'),
+                'status' => Payment::STATUS_CREATED,
+                'payment_type' => Payment::TYPE_TEST,
+                'promocode_id' => $promocodeId,
+            ]);
+
+            // Immediately complete the payment
+            $this->completePurchase($payment);
+
+            return [
+                'success' => true,
+                'payment_id' => $payment->id,
+                'order_id' => $payment->order_id,
+                'amount' => $payment->amount,
+                'status' => 'completed',
+                'message' => 'Тестовый платеж успешно выполнен',
+            ];
+        } catch (Exception $e) {
+            Log::error('Test payment failed', [
+                'client_id' => $client->id,
+                'amount' => $amount,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Ошибка тестового платежа: ' . $e->getMessage()
             ];
         }
     }
@@ -368,32 +428,39 @@ class PaymentService
             // Credit client balance
             $payment->client->credit($payment->amount);
 
+            // Determine payment method description
+            $paymentMethodName = match ($payment->payment_type) {
+                Payment::TYPE_TEST => 'тестовый платеж',
+                Payment::TYPE_SBP => 'СБП',
+                default => 'картой',
+            };
+
             // Create transaction record
             Transaction::create([
                 'client_id' => $payment->client_id,
                 'type' => Transaction::TYPE_DEPOSIT,
                 'amount' => $payment->amount,
                 'status' => Transaction::STATUS_COMPLETED,
-                'description' => "Пополнение баланса картой на сумму " . number_format($payment->amount, 0, ',', ' ') . " ₽",
+                'description' => "Пополнение баланса ({$paymentMethodName}) на сумму " . number_format($payment->amount, 0, ',', ' ') . " ₽",
                 'metadata' => [
                     'payment_id' => $payment->id,
                     'order_id' => $payment->order_id,
                     'merchant_order_id' => $payment->merchant_order_id,
-                    'payment_method' => 'card',
+                    'payment_method' => $payment->payment_type,
                 ],
             ]);
 
+            // Apply promocode if exists
+            if ($payment->promocode_id) {
+                $promocode = Promocode::find($payment->promocode_id);
+                if ($promocode) {
+                    $promocodeService = app(PromocodeService::class);
+                    $promocodeService->apply($promocode, $payment->client, $payment);
+                }
+            }
+
             // Mark payment as paid
             $payment->markAsPaid();
-
-            /*
-
-            Log::info('Balance deposit completed', [
-                'payment_id' => $payment->id,
-                'client_id' => $payment->client_id,
-                'amount' => $payment->amount,
-            ]);
-            */
         });
     }
 

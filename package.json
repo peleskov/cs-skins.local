@@ -4,7 +4,7 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite",
+        "dev": "vite --host",
         "watch": "vite build --watch"
     },
     "devDependencies": {
@@ -23,8 +23,6 @@
         "@vitejs/plugin-vue": "^5.2.4",
         "@vueform/slider": "^2.1.10",
         "apexcharts": "^5.3.3",
-        "playwright": "^1.54.2",
-        "puppeteer": "^24.16.1",
         "steam-tradeoffer-manager": "^2.12.1",
         "vue": "^3.5.17",
         "vue-toastification": "^2.0.0-rc.5",

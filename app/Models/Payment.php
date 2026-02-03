@@ -18,6 +18,7 @@ class Payment extends Model
         'amount',
         'currency',
         'payment_type',
+        'promocode_id',
         'payment_url',
         'status',
         'webhook_data',
@@ -44,6 +45,7 @@ class Payment extends Model
     // Payment type constants
     const TYPE_CARD = 'card';
     const TYPE_SBP = 'sbp';
+    const TYPE_TEST = 'test'; // For testing in dev environment
 
     /**
      * Relationship with Client
@@ -51,6 +53,14 @@ class Payment extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    /**
+     * Relationship with Promocode
+     */
+    public function promocode(): BelongsTo
+    {
+        return $this->belongsTo(Promocode::class);
     }
 
     /**

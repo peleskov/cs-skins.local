@@ -220,6 +220,7 @@
 												<input
 													type="number"
 													class="form-control"
+													id="marketplacePriceInput"
 													v-model="marketplacePrice"
 													:placeholder="itemToSell && itemToSell.buyout_price ? Math.round(itemToSell.buyout_price * 1.3) : '100'"
 													min="1"
@@ -535,6 +536,21 @@ export default {
 			}
 
 			const modal = new bootstrap.Modal(document.getElementById('sellTypeModal'));
+
+			// Добавляем обработчик события полного открытия модального окна
+			const modalElement = document.getElementById('sellTypeModal');
+			modalElement.addEventListener('shown.bs.modal', function selectPriceText() {
+				const priceInput = document.getElementById('marketplacePriceInput');
+				if (priceInput) {
+					setTimeout(() => {
+						priceInput.focus();
+						priceInput.select();
+					}, 50);
+				}
+				// Удаляем обработчик после использования
+				modalElement.removeEventListener('shown.bs.modal', selectPriceText);
+			});
+
 			modal.show();
 		},
 		

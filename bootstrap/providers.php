@@ -7,4 +7,5 @@ return [
     App\Providers\HorizonServiceProvider::class,
     App\Providers\ViewServiceProvider::class,
     App\Providers\WebSocketServiceProvider::class,
+    Maatwebsite\Excel\ExcelServiceProvider::class,
 ];

@@ -71,7 +71,10 @@ class TradingAssistant {
     
     async init() {
         this.isAuthorized = await this.storage('isAuth');
-        if (this.isAuthorized) {
+        const data = await this.storage('get');
+
+        // Не подключаемся если на паузе
+        if (this.isAuthorized && !data.isPaused) {
             await this.connectWebSocket();
             chrome.alarms.create('statusCheck', { periodInMinutes: 0.4 }); // 24 секунды
         }
@@ -468,6 +471,23 @@ class TradingAssistant {
         this.isAuthorized = false;
         await updateActivityIcon();
     }
+
+    async pause() {
+        await this.stop();
+        await this.storage('set', { isPaused: true, overallStatus: 'inactive' });
+        await updateActivityIcon();
+    }
+
+    async resume() {
+        await this.storage('set', { isPaused: false });
+        const data = await this.storage('get');
+        if (data.authToken && data.websocketChannel) {
+            this.isAuthorized = true;
+            await this.connectWebSocket();
+            chrome.alarms.create('statusCheck', { periodInMinutes: 0.4 });
+        }
+        await updateActivityIcon();
+    }
     
     async handleMessage(message, sender, sendResponse) {
         switch (message.type) {
@@ -507,7 +527,17 @@ class TradingAssistant {
                 await this.logout();
                 sendResponse({ success: true });
                 break;
-                
+
+            case 'PAUSE':
+                await this.pause();
+                sendResponse({ success: true });
+                break;
+
+            case 'RESUME':
+                await this.resume();
+                sendResponse({ success: true });
+                break;
+
             case 'GET_STATUS':
                 const data = await this.storage('get');
                 sendResponse({
@@ -591,7 +621,18 @@ const assistant = new TradingAssistant();
 
 async function updateActivityIcon() {
     const { isActive, isAuthorized } = assistant;
-    
+
+    // Получаем данные из storage
+    const data = await assistant.storage('get');
+
+    // Проверяем паузу
+    if (data.isPaused) {
+        chrome.action.setTitle({ title: 'CS-SKINS.pro - Приостановлено' });
+        chrome.action.setBadgeText({ text: '⏸' });
+        chrome.action.setBadgeBackgroundColor({ color: '#ff9900' });
+        return;
+    }
+
     if (!isAuthorized) {
         // Не авторизован
         chrome.action.setTitle({ title: 'CS-SKINS.pro - Не подключен' });
@@ -599,9 +640,7 @@ async function updateActivityIcon() {
         chrome.action.setBadgeBackgroundColor({ color: '#888888' });
         return;
     }
-    
-    // Получаем общий статус
-    const data = await assistant.storage('get');
+
     const overallStatus = data.overallStatus || 'inactive';
     
     switch (overallStatus) {

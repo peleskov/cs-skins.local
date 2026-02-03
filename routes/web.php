@@ -14,6 +14,7 @@ use App\Http\Controllers\FavoritesController;
 use App\Http\Controllers\ExtensionController;
 use App\Http\Controllers\AuctionController;
 use App\Http\Controllers\CaseController;
+use App\Http\Controllers\CaseInventoryController;
 use App\Http\Controllers\ChatController;
 use App\Models\Currency;
 
@@ -72,6 +73,45 @@ Route::prefix('api')->name('api.')->group(function () {
         Route::get('/{slug}', 'detail')->name('detail')->middleware('throttle:60,1');
         Route::post('/purchase', 'purchaseCase')->name('purchase')->middleware(['auth:client', 'throttle:10,1']);
     });
+
+    // Лайв-лента дропов
+    Route::get('/live-feed', [CaseController::class, 'liveFeed'])
+        ->name('live-feed')
+        ->middleware('throttle:30,1');
+
+    // Инвентарь кейсов API
+    Route::get('/case-inventory', [CaseInventoryController::class, 'getItems'])
+        ->name('case-inventory.items')
+        ->middleware(['auth:client', 'throttle:60,1']);
+
+    Route::post('/case-inventory/sell', [CaseInventoryController::class, 'sell'])
+        ->name('case-inventory.sell')
+        ->middleware(['auth:client', 'throttle:30,1']);
+
+    Route::get('/case-inventory/{id}/replacements', [CaseInventoryController::class, 'getReplacements'])
+        ->name('case-inventory.replacements')
+        ->middleware(['auth:client', 'throttle:60,1']);
+
+    Route::post('/case-inventory/{id}/withdraw', [CaseInventoryController::class, 'withdraw'])
+        ->name('case-inventory.withdraw')
+        ->middleware(['auth:client', 'throttle:10,1']);
+
+    // Апгрейд API
+    Route::get('/upgrade/targets', [\App\Http\Controllers\UpgradeController::class, 'getTargets'])
+        ->name('upgrade.targets')
+        ->middleware(['auth:client', 'throttle:60,1']);
+
+    Route::post('/upgrade/calculate', [\App\Http\Controllers\UpgradeController::class, 'calculate'])
+        ->name('upgrade.calculate')
+        ->middleware(['auth:client', 'throttle:60,1']);
+
+    Route::post('/upgrade/execute', [\App\Http\Controllers\UpgradeController::class, 'execute'])
+        ->name('upgrade.execute')
+        ->middleware(['auth:client', 'throttle:10,1']);
+
+    Route::get('/upgrade/history', [\App\Http\Controllers\UpgradeController::class, 'history'])
+        ->name('upgrade.history')
+        ->middleware(['auth:client', 'throttle:60,1']);
 
 
     // CSRF токен
@@ -138,6 +178,7 @@ Route::prefix('api')->name('api.')->group(function () {
         Route::prefix('profile')->name('profile.')->controller(ProfileController::class)->group(function () {
             Route::get('/me', 'getCurrentUser')->name('me')->middleware('throttle:60,1');
             Route::get('/transactions', 'getTransactions')->name('transactions')->middleware('throttle:60,1');
+            Route::get('/bonus-transactions', 'getBonusTransactions')->name('bonus-transactions')->middleware('throttle:60,1');
             Route::get('/sales-stats', 'getSalesStats')->name('sales-stats')->middleware('throttle:60,1');
             Route::get('/held-balance', 'getHeldBalance')->name('held-balance')->middleware('throttle:60,1');
         });
@@ -152,6 +193,7 @@ Route::prefix('api')->name('api.')->group(function () {
         // Платежи API
         Route::prefix('deposit')->name('deposit.')->controller(\App\Http\Controllers\DepositController::class)->group(function () {
             Route::post('/payment-form', 'createPaymentForm')->name('payment-form')->middleware('throttle:10,1'); // Payment form
+            Route::post('/validate-promocode', 'validatePromocode')->name('validate-promocode')->middleware('throttle:30,1');
             Route::get('/status/{paymentId}', 'getPaymentStatus')->name('status')->middleware('throttle:60,1');
             Route::post('/check-status/{paymentId}', 'checkPaymentStatus')->name('check-status')->middleware('throttle:30,1');
             Route::get('/history', 'getPaymentsHistory')->name('history')->middleware('throttle:60,1');
@@ -169,6 +211,12 @@ Route::middleware(['auth:client'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/{slug}', 'show')->name('show');
     });
+
+    // Инвентарь кейсов (виртуальные предметы)
+    Route::get('/case-inventory', [CaseInventoryController::class, 'index'])->name('case-inventory.index');
+
+    // Апгрейд
+    Route::get('/upgrade', [\App\Http\Controllers\UpgradeController::class, 'index'])->name('upgrade.index');
 
     // Пополнение баланса
     Route::get('/deposit', [\App\Http\Controllers\DepositController::class, 'index'])->name('deposit');

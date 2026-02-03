@@ -9,9 +9,9 @@ class PopupManager {
     }
     
     async init() {
-        
+
         const data = await this.getStorage();
-        
+
         if (data?.authToken && data?.websocketChannel) {
             // Есть полные данные авторизации
             this.showView('authorized');
@@ -23,16 +23,23 @@ class PopupManager {
                 document.getElementById('userName').textContent = 'Пользователь';
                 document.getElementById('userSteam').textContent = '';
             }
-            
-            // Уведомляем service worker что мы авторизованы
-            chrome.runtime.sendMessage({ type: 'AUTHORIZE', token: data.authToken }).catch(() => {});
+
+            // Проверяем состояние паузы
+            if (data?.isPaused) {
+                this.updatePauseButton(true);
+            }
+
+            // Уведомляем service worker что мы авторизованы (если не на паузе)
+            if (!data?.isPaused) {
+                chrome.runtime.sendMessage({ type: 'AUTHORIZE', token: data.authToken }).catch(() => {});
+            }
         } else {
             this.showView('unauthorized');
         }
-        
+
         this.bindEvents();
         chrome.runtime.sendMessage({ type: 'GET_STATUS' });
-        
+
         // Уведомляем service worker о необходимости изменить размер окна
         this.notifyWindowResize();
     }
@@ -48,7 +55,9 @@ class PopupManager {
     bindEvents() {
         document.getElementById('authorizeBtn').addEventListener('click', () => this.handleAuthorize());
         document.getElementById('toggleBtn').addEventListener('click', () => this.handleToggle());
+        document.getElementById('pauseBtn').addEventListener('click', () => this.handlePause());
         document.getElementById('loaderLogoutBtn').addEventListener('click', () => this.handleToggle());
+        document.getElementById('loaderPlayBtn').addEventListener('click', () => this.handleResume());
         document.querySelector('.notification-close').addEventListener('click', () => this.hideNotification());
         
         chrome.runtime.onMessage.addListener((message) => {
@@ -227,6 +236,64 @@ class PopupManager {
         }
     }
 
+    async handlePause() {
+        try {
+            const data = await this.getStorage();
+
+            if (data?.isPaused) {
+                // Снимаем паузу через handleResume
+                await this.handleResume();
+            } else {
+                // Ставим на паузу - отключаемся но сохраняем токен
+                await chrome.runtime.sendMessage({ type: 'PAUSE' });
+                this.showLoader('Расширение на паузе', true);
+                this.updatePauseButton(true);
+                this.showNotification('Расширение на паузе', 'success');
+            }
+        } catch (error) {
+            // Тихо игнорируем ошибки
+        }
+    }
+
+    async handleResume() {
+        try {
+            // Скрываем кнопку play, показываем сообщение о подключении
+            document.getElementById('loaderPlayBtn').classList.remove('show');
+            this.showLoader('Подключение к серверу...<br>Подождите 20-30 секунд', false);
+
+            await chrome.runtime.sendMessage({ type: 'RESUME' });
+            this.updatePauseButton(false);
+            this.showNotification('Расширение активировано', 'success');
+        } catch (error) {
+            // Тихо игнорируем ошибки
+        }
+    }
+
+    updatePauseButton(isPaused) {
+        const pauseBtns = [
+            document.getElementById('pauseBtn')
+        ];
+
+        pauseBtns.forEach(btn => {
+            if (!btn) return;
+            if (isPaused) {
+                btn.title = 'Возобновить расширение';
+                btn.innerHTML = `<svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="1" y="1" width="20" height="20" rx="3" stroke-width="1.5" fill="none"/>
+                    <path d="M8 6L16 11L8 16V6Z" stroke-width="1.75" stroke-miterlimit="10" />
+                </svg>`;
+                btn.classList.add('paused');
+            } else {
+                btn.title = 'Приостановить расширение';
+                btn.innerHTML = `<svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="1" y="1" width="20" height="20" rx="3" stroke-width="1.5" fill="none"/>
+                    <path d="M7.5 6H9.5V16H7.5V6ZM12.5 6H14.5V16H12.5V6Z" stroke-width="1.5" stroke-miterlimit="10" />
+                </svg>`;
+                btn.classList.remove('paused');
+            }
+        });
+    }
+
     updateStatuses(data) {
         // WebSocket статус на основе overallStatus
         const websocketActive = data.overallStatus === 'active';
@@ -256,16 +323,28 @@ class PopupManager {
             if (websocketActive) {
                 this.hideLoader();
             } else {
-                this.showLoader('Подключение к серверу...<br>Подождите 20-30 секунд');
+                // Проверяем состояние паузы для отображения правильного текста
+                this.getStorage().then(data => {
+                    if (data?.isPaused) {
+                        this.showLoader('Расширение на паузе', true);
+                    } else {
+                        this.showLoader('Подключение к серверу...<br>Подождите 20-30 секунд', false);
+                    }
+                });
             }
         }
     }
     
-    showLoader(text = 'Загрузка...') {
+    showLoader(text = 'Загрузка...', showPlayBtn = false) {
         const loader = document.getElementById('fullscreenLoader');
         if (!loader) return;
         const loaderText = loader.querySelector('.loader-text');
         if (loaderText) loaderText.innerHTML = text;
+
+        // Показываем/скрываем кнопку play через класс
+        const playBtn = document.getElementById('loaderPlayBtn');
+        if (playBtn) playBtn.classList.toggle('show', showPlayBtn);
+
         loader.classList.add('active');
     }
     

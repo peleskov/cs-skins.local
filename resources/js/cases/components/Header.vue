@@ -10,8 +10,8 @@
             <div class="col-auto p-0">
                 <div class="h-100 divider mx-auto"></div>
             </div>
-            <div class="col d-flex justify-content-xxl-center align-items-center">
-                <ul class="navbar-nav flex-row">
+            <div class="col d-flex align-items-center">
+                <ul class="navbar-nav flex-row ms-3">
                     <template v-for="(item, key) in mainNavigation" :key="key">
                         <li v-if="!item.auth_required || user" class="nav-item">
                             <a class="nav-link" :class="{ 'active': isActive(item.route) }"
@@ -28,16 +28,16 @@
                 <div class="col-auto">
                     <ul class="list-group list-group-horizontal balances">
                         <li class="list-group-item d-flex align-items-center gap-1" data-bs-toggle="tooltip"
-                            data-bs-title="Подпись для чего баланс">
+                            data-bs-title="Бонусный баланс">
                             <span class="ico dollar"></span>
-                            0
+                            <span class="balance-amount" v-html="formatPrice(bonusBalance, 'RUB', true)"></span>
                         </li>
                         <li class="list-group-item">
                             <span class="divider"></span>
                         </li>
                         <li class="list-group-item d-flex align-items-center gap-1">
                             <span class="ico ruble"></span>
-                            <span class="balance-amount" v-html="formatPrice(user.balance, 'RUB', true)"></span>
+                            <span class="balance-amount" v-html="formatPrice(mainBalance, 'RUB', true)"></span>
                         </li>
                     </ul>
                 </div>
@@ -45,7 +45,7 @@
                     <a :href="routes.profile + '#balance'" class="btn-add_balance"></a>
                 </div>
                 <div class="col-auto">
-                    <a :href="routes.profile + '#inventory'" class="avatar">
+                    <a :href="routes.caseInventory" class="avatar">
                         <img class="img-fluid" :src="user.steam_avatar" alt="profile">
                     </a>
                 </div>
@@ -90,7 +90,9 @@ export default {
         return {
             cartCount: this.initialCartCount,
             isLoading: false,
-            tooltips: []
+            tooltips: [],
+            mainBalance: this.user?.balance || 0,
+            bonusBalance: this.user?.bonus_balance || 0
         }
     },
     computed: {
@@ -99,7 +101,7 @@ export default {
             return {
                 cases: { title: 'Кейсы', route: 'cases', order: 1 },
                 marketplace: { title: 'Маркетплейс', route: 'marketplace', order: 2 },
-                upgrade: { title: 'Апгрейд', route: '#', order: 3 },
+                upgrade: { title: 'Апгрейд', route: 'upgrade', order: 3 },
                 socials: { title: 'Соцсети', route: '#', order: 4 },
                 faq: { title: 'FAQ', route: 'faq', order: 5 }
             };
@@ -142,6 +144,14 @@ export default {
             if (this.cartItems.length > 0) {
                 this.cartItems = [...this.cartItems];
             }
+        },
+
+        handleBalanceUpdate(event) {
+            // Обновляем балансы при получении события
+            if (event.detail) {
+                this.mainBalance = event.detail.main ?? this.mainBalance;
+                this.bonusBalance = event.detail.bonus ?? this.bonusBalance;
+            }
         }
 
     },
@@ -149,6 +159,9 @@ export default {
     async mounted() {
         // Слушаем события смены валюты
         window.addEventListener('currency-changed', this.handleCurrencyChange);
+
+        // Слушаем события обновления баланса
+        window.addEventListener('balance-updated', this.handleBalanceUpdate);
 
         // Инициализация Bootstrap tooltips
         if (window.bootstrap?.Tooltip) {
@@ -160,6 +173,7 @@ export default {
     beforeUnmount() {
         // Убираем слушатели при размонтировании
         window.removeEventListener('currency-changed', this.handleCurrencyChange);
+        window.removeEventListener('balance-updated', this.handleBalanceUpdate);
 
         // Уничтожаем tooltips
         if (this.tooltips) {

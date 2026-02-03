@@ -242,6 +242,15 @@ return [
                 'timeout' => 60,
                 'nice' => 0, // высокий приоритет для уведомлений
             ],
+            'imports' => [
+                'connection' => 'redis',
+                'queue' => ['imports'],
+                'balance' => 'simple',
+                'maxProcesses' => 1,
+                'tries' => 1,
+                'timeout' => 7200,
+                'nice' => 10,
+            ],
         ],
 
         'local' => [
@@ -287,6 +296,15 @@ return [
                 'tries' => 3,
                 'timeout' => 60,
                 'nice' => 0, // высокий приоритет для уведомлений
+            ],
+            'imports' => [
+                'connection' => 'redis',
+                'queue' => ['imports'],
+                'balance' => 'simple',
+                'maxProcesses' => 1, // только 1 процесс для импорта
+                'tries' => 1, // не повторять
+                'timeout' => 7200, // 2 часа
+                'nice' => 10, // низкий приоритет
             ],
         ],
     ],

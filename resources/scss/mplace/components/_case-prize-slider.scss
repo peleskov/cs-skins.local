@@ -4,6 +4,17 @@
 		width: 100%;
 		height: 250px;
 		overflow: hidden;
+		margin-bottom: 10px;
+		transition: opacity 0.3s ease;
+
+		// Неактивные рулетки затеняются
+		&:not(.roulette-active) {
+			opacity: 0.5;
+		}
+
+		&.roulette-active {
+			opacity: 1;
+		}
 	}
 
 	.roulette-wrapper {
@@ -119,6 +130,56 @@
 			}
 		}
 
+		&.rarity-extraordinary {
+			box-shadow: 0 0 10px rgba(255, 215, 0, 0.3) inset; // Extraordinary - золотой
+
+			.case-banner-text {
+				background: linear-gradient(0deg,
+						rgba(255, 215, 0, 0.9) 0%,
+						rgba(255, 215, 0, 0) 100%);
+			}
+		}
+
+		&.rarity-exotic {
+			box-shadow: 0 0 10px rgba(211, 44, 230, 0.3) inset; // Exotic - розовый
+
+			.case-banner-text {
+				background: linear-gradient(0deg,
+						rgba(211, 44, 230, 0.9) 0%,
+						rgba(211, 44, 230, 0) 100%);
+			}
+		}
+
+		&.rarity-remarkable {
+			box-shadow: 0 0 10px rgba(136, 71, 255, 0.3) inset; // Remarkable - фиолетовый
+
+			.case-banner-text {
+				background: linear-gradient(0deg,
+						rgba(136, 71, 255, 0.9) 0%,
+						rgba(136, 71, 255, 0) 100%);
+			}
+		}
+
+		&.rarity-highgrade {
+			box-shadow: 0 0 10px rgba(75, 105, 255, 0.3) inset; // High Grade - синий
+
+			.case-banner-text {
+				background: linear-gradient(0deg,
+						rgba(75, 105, 255, 0.9) 0%,
+						rgba(75, 105, 255, 0) 100%);
+			}
+		}
+
+		&.rarity-basegrade {
+			box-shadow: 0 0 10px rgba(176, 195, 217, 0.3) inset; // Base Grade - светло-серый
+
+			.case-banner-text {
+				background: linear-gradient(0deg,
+						rgba(176, 195, 217, 0.9) 0%,
+						rgba(176, 195, 217, 0) 100%);
+			}
+		}
+
 		.case-banner-part {
 			width: 100%;
 			height: 100%;
@@ -193,5 +254,75 @@
 		.roulette-mask {
 			width: 20%;
 		}
+	}
+
+	// Список выигранных предметов (для множественного открытия)
+	.won-items-list {
+		max-height: 200px;
+		overflow-y: auto;
+	}
+
+	.won-item-badge {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: 8px 12px;
+		border-radius: 8px;
+		background: rgba(255, 255, 255, 0.1);
+		font-size: 0.85rem;
+
+		// Классы редкости для бэджей
+		&.rarity-consumer {
+			border-left: 3px solid rgb(192, 192, 192);
+		}
+
+		&.rarity-industrial {
+			border-left: 3px solid rgb(94, 152, 217);
+		}
+
+		&.rarity-milspec {
+			border-left: 3px solid rgb(75, 105, 255);
+		}
+
+		&.rarity-restricted {
+			border-left: 3px solid rgb(136, 71, 255);
+		}
+
+		&.rarity-classified {
+			border-left: 3px solid rgb(211, 44, 230);
+		}
+
+		&.rarity-covert {
+			border-left: 3px solid rgb(235, 75, 75);
+		}
+
+		&.rarity-contraband {
+			border-left: 3px solid rgb(228, 174, 57);
+		}
+
+		&.rarity-extraordinary {
+			border-left: 3px solid rgb(255, 215, 0);
+		}
+
+		&.rarity-exotic {
+			border-left: 3px solid rgb(211, 44, 230);
+		}
+
+		&.rarity-remarkable {
+			border-left: 3px solid rgb(136, 71, 255);
+		}
+
+		&.rarity-highgrade {
+			border-left: 3px solid rgb(75, 105, 255);
+		}
+
+		&.rarity-basegrade {
+			border-left: 3px solid rgb(176, 195, 217);
+		}
+	}
+
+	.won-item-price {
+		font-size: 0.75rem;
+		opacity: 0.8;
 	}
 }

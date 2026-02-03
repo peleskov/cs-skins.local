@@ -1,5 +1,7 @@
 .theme-cases {
     .carousel-winner {
+        min-height: 140px; // Reserve space to prevent page jump on load
+
         .swiper {
             opacity: 0;
             transition: opacity 0.3s ease;

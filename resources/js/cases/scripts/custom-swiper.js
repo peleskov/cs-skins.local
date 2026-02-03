@@ -13,7 +13,7 @@ window.addEventListener('load', function () {
 			spaceBetween: 10,
 			loop: true,
 			autoplay: {
-				delay: 20000,
+				delay: 3000,
 				disableOnInteraction: false,
 			},
 

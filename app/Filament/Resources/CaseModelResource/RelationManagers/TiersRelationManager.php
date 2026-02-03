@@ -6,22 +6,13 @@ use Filament\Schemas\Schema;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Actions\CreateAction;
-use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use App\Filament\Resources\CaseModelResource;
-use App\Models\CaseItem;
-use App\Models\ClientInventoryItem;
-use Filament\Forms;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Filament\Support\Enums\MaxWidth;
-use Filament\Notifications\Notification;
 
 class TiersRelationManager extends RelationManager
 {
@@ -85,16 +76,6 @@ class TiersRelationManager extends RelationManager
                     }),
             ])
             ->recordActions([
-                Action::make('manage_items')
-                    ->label('Управление предметами')
-                    ->icon('heroicon-m-cube')
-                    ->url(fn ($record) => '/admin/case-items?' . http_build_query([
-                        'tableFilters' => [
-                            'case_id' => ['value' => $record->case_id],
-                            'tier_id' => ['value' => $record->id],
-                        ]
-                    ]))
-                    ->openUrlInNewTab(true),
                 EditAction::make(),
                 DeleteAction::make(),
             ])

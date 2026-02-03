@@ -116,10 +116,27 @@ class OrderObserver
                 'status' => TradeOffer::STATUS_CANCELED
             ]);
         }
-        
+
         // Освобождаем зарезервированные товары
         Listing::where('reserved_by_order_id', $order->id)->get()->each->release();
-        
+
+        // Для вывода из кейса - особая логика
+        if ($order->payment_method === 'case_withdraw') {
+            // Возвращаем виртуальный предмет в доступные
+            $caseItemId = $order->cart_snapshot[0]['case_inventory_item_id'] ?? null;
+            if ($caseItemId) {
+                \App\Models\CaseInventoryItem::where('id', $caseItemId)
+                    ->update(['status' => \App\Models\CaseInventoryItem::STATUS_AVAILABLE]);
+
+                Log::info('Виртуальный предмет возвращён в инвентарь при отмене заказа', [
+                    'order_id' => $order->id,
+                    'case_inventory_item_id' => $caseItemId,
+                ]);
+            }
+            // НЕ создаём refund и НЕ возвращаем деньги - покупатель не платил
+            return;
+        }
+
         // Создаем возврат средств
         Transaction::create([
             'type' => Transaction::TYPE_REFUND,
@@ -129,7 +146,7 @@ class OrderObserver
             'order_id' => $order->id,
             'description' => "Заказ #{$order->order_number} ({$order->system_remarks})"
         ]);
-        
+
         // Возвращаем средства на баланс покупателя
         if ($order->buyer_id) {
             $buyer = Client::find($order->buyer_id);

@@ -144,72 +144,72 @@
 
 	// Классы редкости CS2
 	&.rarity-consumer {
-		box-shadow: 0 0 10px rgba(192, 192, 192, 0.3) inset; // Потребительское качество - серебристый
+		box-shadow: 0 0 10px rgba(var(--rarity-consumer), 0.3) inset; // Потребительское качество - серебристый
 
 		.vertical-product-box-img .offers {
 			background: linear-gradient(0deg,
-					rgba(192, 192, 192, 0.7) 43.87%,
-					rgba(192, 192, 192, 0) 94.57%);
+					rgba(var(--rarity-consumer), 0.7) 43.87%,
+					rgba(var(--rarity-consumer), 0) 94.57%);
 		}
 	}
 
 	&.rarity-industrial {
-		box-shadow: 0 0 10px rgba(94, 152, 217, 0.3) inset; // Промышленное качество - светло-синий
+		box-shadow: 0 0 10px rgba(var(--rarity-industrial), 0.3) inset; // Промышленное качество - светло-синий
 
 		.vertical-product-box-img .offers {
 			background: linear-gradient(0deg,
-					rgba(94, 152, 217, 0.7) 43.87%,
-					rgba(94, 152, 217, 0) 94.57%);
+					rgba(var(--rarity-industrial), 0.7) 43.87%,
+					rgba(var(--rarity-industrial), 0) 94.57%);
 		}
 	}
 
 	&.rarity-milspec {
-		box-shadow: 0 0 10px rgba(75, 105, 255, 0.3) inset; // Армейское качество - темно-синий
+		box-shadow: 0 0 10px rgba(var(--rarity-milspec), 0.3) inset; // Армейское качество - темно-синий
 
 		.vertical-product-box-img .offers {
 			background: linear-gradient(0deg,
-					rgba(75, 105, 255, 0.7) 43.87%,
-					rgba(75, 105, 255, 0) 94.57%);
+					rgba(var(--rarity-milspec), 0.7) 43.87%,
+					rgba(var(--rarity-milspec), 0) 94.57%);
 		}
 	}
 
 	&.rarity-restricted {
-		box-shadow: 0 0 10px rgba(136, 71, 255, 0.3) inset; // Запрещенное - фиолетовый
+		box-shadow: 0 0 10px rgba(var(--rarity-restricted), 0.3) inset; // Запрещенное - фиолетовый
 
 		.vertical-product-box-img .offers {
 			background: linear-gradient(0deg,
-					rgba(136, 71, 255, 0.7) 43.87%,
-					rgba(136, 71, 255, 0) 94.57%);
+					rgba(var(--rarity-restricted), 0.7) 43.87%,
+					rgba(var(--rarity-restricted), 0) 94.57%);
 		}
 	}
 
 	&.rarity-classified {
-		box-shadow: 0 0 10px rgba(211, 44, 230, 0.3) inset; // Засекреченное - розовый
+		box-shadow: 0 0 10px rgba(var(--rarity-classified), 0.3) inset; // Засекреченное - розовый
 
 		.vertical-product-box-img .offers {
 			background: linear-gradient(0deg,
-					rgba(211, 44, 230, 0.7) 43.87%,
-					rgba(211, 44, 230, 0) 94.57%);
+					rgba(var(--rarity-classified), 0.7) 43.87%,
+					rgba(var(--rarity-classified), 0) 94.57%);
 		}
 	}
 
 	&.rarity-covert {
-		box-shadow: 0 0 10px rgba(235, 75, 75, 0.3) inset; // Тайное - красный
+		box-shadow: 0 0 10px rgba(var(--rarity-covert), 0.3) inset; // Тайное - красный
 
 		.vertical-product-box-img .offers {
 			background: linear-gradient(0deg,
-					rgba(235, 75, 75, 0.7) 43.87%,
-					rgba(235, 75, 75, 0) 94.57%);
+					rgba(var(--rarity-covert), 0.7) 43.87%,
+					rgba(var(--rarity-covert), 0) 94.57%);
 		}
 	}
 
 	&.rarity-contraband {
-		box-shadow: 0 0 10px rgba(228, 174, 57, 0.3) inset; // Контрабанда/Крайне редкий - золотой
+		box-shadow: 0 0 10px rgba(var(--rarity-contraband), 0.3) inset; // Контрабанда/Крайне редкий - золотой
 
 		.vertical-product-box-img .offers {
 			background: linear-gradient(0deg,
-					rgba(228, 174, 57, 0.7) 43.87%,
-					rgba(228, 174, 57, 0) 94.57%);
+					rgba(var(--rarity-contraband), 0.7) 43.87%,
+					rgba(var(--rarity-contraband), 0) 94.57%);
 		}
 	}
  

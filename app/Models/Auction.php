@@ -112,8 +112,31 @@ class Auction extends Model
         return true;
     }
 
+    /**
+     * Покупка заблокирована: прошла половина времени аукциона ИЛИ ставка >= цена листинга
+     */
+    public function isPurchaseBlocked(): bool
+    {
+        if (!$this->is_active) {
+            return false;
+        }
+
+        $totalDuration = ($this->duration_hours ?: 1) * 3600;
+        $timeLeft = max(0, $this->ends_at->timestamp - now()->timestamp);
+        $pastHalf = $timeLeft <= ($totalDuration / 2);
+
+        $listingPrice = (float) $this->listing->price;
+        $bidAbovePrice = (float) $this->current_price >= $listingPrice;
+
+        return $pastHalf || $bidAbovePrice;
+    }
+
     public function shouldExtend(): bool
     {
+        if (!$this->auto_extend) {
+            return false;
+        }
+
         $timeUntilEnd = $this->ends_at->diffInMinutes(now());
         return $timeUntilEnd <= 5;
     }

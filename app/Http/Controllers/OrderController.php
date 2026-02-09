@@ -13,6 +13,7 @@ use App\Services\BotRotationService;
 use App\Models\Order;
 use App\Services\CartService;
 use App\Services\CancelOrderService;
+use App\Models\Auction;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
@@ -150,6 +151,19 @@ class OrderController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Нельзя купить свой собственный товар'
+                ], 400);
+            }
+
+            // Проверяем аукционную блокировку покупки
+            $activeAuction = Auction::where('listing_id', $listing->id)
+                ->where('status', Auction::STATUS_ACTIVE)
+                ->where('ends_at', '>', now())
+                ->first();
+
+            if ($activeAuction && $activeAuction->isPurchaseBlocked()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Покупка недоступна — аукцион в активной фазе торгов'
                 ], 400);
             }
 

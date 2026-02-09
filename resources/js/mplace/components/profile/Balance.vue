@@ -15,16 +15,17 @@
 						<h5 class="card-title">Основной баланс</h5>
 						<h2 class="text-primary" v-html="formatPrice(client.balance)"></h2>
 						<div class="d-flex justify-content-center gap-3 mt-3">
-							<button class="btn theme-btn"
-								data-bs-toggle="modal"
-								data-bs-target="#balance-refill"
+							<button class="btn theme-btn" data-bs-toggle="modal" data-bs-target="#balance-refill"
 								:disabled="availablePaymentMethods.length === 0">
 								<i class="ri-add-line me-2"></i>
 								{{ availablePaymentMethods.length > 0 ? 'Пополнить' : 'Недоступно' }}
 							</button>
-							<button class="btn theme-outline" data-bs-toggle="modal"
-								data-bs-target="#balance-withdraw">
+							<button class="btn theme-outline" data-bs-toggle="modal" data-bs-target="#balance-withdraw">
 								<i class="ri-bank-card-line me-2"></i>Вывести
+							</button>
+							<button class="btn theme-outline" data-bs-toggle="modal"
+								data-bs-target="#promocode-activate">
+								<i class="ri-coupon-line me-2"></i>Промокод
 							</button>
 						</div>
 					</div>
@@ -72,20 +73,20 @@
 		<!-- История операций с табами -->
 		<ul class="nav nav-tabs tab-style1 mb-4" role="tablist">
 			<li class="nav-item" role="presentation">
-				<button class="nav-link" :class="{ active: historyTab === 'transactions' }"
-					type="button" role="tab" @click="historyTab = 'transactions'">
+				<button class="nav-link" :class="{ active: historyTab === 'transactions' }" type="button" role="tab"
+					@click="historyTab = 'transactions'">
 					<i class="ri-history-line me-2"></i>История операций
 				</button>
 			</li>
 			<li class="nav-item" role="presentation">
-				<button class="nav-link" :class="{ active: historyTab === 'bonus' }"
-					type="button" role="tab" @click="historyTab = 'bonus'; loadBonusTransactions()">
+				<button class="nav-link" :class="{ active: historyTab === 'bonus' }" type="button" role="tab"
+					@click="historyTab = 'bonus'; loadBonusTransactions()">
 					<i class="ri-gift-line me-2"></i>История бонусов
 				</button>
 			</li>
 			<li class="nav-item" role="presentation">
-				<button class="nav-link" :class="{ active: historyTab === 'held' }"
-					type="button" role="tab" @click="historyTab = 'held'">
+				<button class="nav-link" :class="{ active: historyTab === 'held' }" type="button" role="tab"
+					@click="historyTab = 'held'">
 					<i class="ri-time-line me-2"></i>На удержании
 					<span v-if="heldOrders.seller.length + heldOrders.buyer.length > 0"
 						class="badge bg-warning text-dark ms-1">
@@ -96,178 +97,182 @@
 		</ul>
 
 		<div class="tab-content">
-				<!-- Таб: Транзакции -->
-				<div class="tab-pane fade" :class="{ 'show active': historyTab === 'transactions' }"
-					v-if="historyTab === 'transactions'">
-					<!-- Loading State -->
-					<div v-if="isLoadingTransactions" class="text-center py-4">
-						<div class="spinner-border" role="status">
-							<span class="visually-hidden">Загрузка...</span>
-						</div>
-						<p class="text-muted mt-2 mb-0">Загружаем историю операций...</p>
+			<!-- Таб: Транзакции -->
+			<div class="tab-pane fade" :class="{ 'show active': historyTab === 'transactions' }"
+				v-if="historyTab === 'transactions'">
+				<!-- Loading State -->
+				<div v-if="isLoadingTransactions" class="text-center py-4">
+					<div class="spinner-border" role="status">
+						<span class="visually-hidden">Загрузка...</span>
 					</div>
-
-					<!-- Empty State -->
-					<div v-else-if="transactions.length === 0" class="text-center py-4">
-						<i class="ri-file-list-line display-4 text-muted mb-3"></i>
-						<h6>История операций пуста</h6>
-						<p class="text-muted mb-0">Здесь будут отображаться все ваши финансовые операции</p>
-					</div>
-
-					<!-- Transactions List -->
-					<div v-else class="table-responsive">
-						<table class="table table-hover">
-							<thead>
-								<tr class="text-muted">
-									<th>Тип</th>
-									<th>Описание</th>
-									<th>Сумма</th>
-									<th>Дата</th>
-									<th>Статус</th>
-								</tr>
-							</thead>
-							<tbody>
-								<tr v-for="transaction in transactions" :key="transaction.id" class="text-muted">
-									<td>
-										<i :class="getTransactionIcon(transaction.type)"></i>&nbsp;<span>{{ getTransactionTypeText(transaction.type) }}</span>
-									</td>
-									<td>{{ transaction.description || '—' }}</td>
-									<td :class="getTransactionColor(transaction.type)">
-										<strong v-html="getTransactionSign(transaction.type) + formatPrice(Math.abs(transaction.amount))">
-										</strong>
-									</td>
-									<td class="text-muted">{{ formatDate(transaction.created_at) }}</td>
-									<td>
-										<span class="badge bg-success"
-											v-if="transaction.status === 'completed'">Завершено</span>
-										<span class="badge bg-warning" v-else-if="transaction.status === 'pending'">В
-											обработке</span>
-										<span class="badge bg-warning" v-else-if="transaction.status === 'on_hold'">На удержании</span>
-										<span class="badge bg-danger"
-											v-else-if="transaction.status === 'failed'">Ошибка</span>
-										<span class="badge bg-secondary" v-else>{{ transaction.status }}</span>
-									</td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
+					<p class="text-muted mt-2 mb-0">Загружаем историю операций...</p>
 				</div>
 
-				<!-- Таб: На удержании -->
-				<div class="tab-pane fade" :class="{ 'show active': historyTab === 'held' }"
-					v-if="historyTab === 'held'">
-					<!-- Loading State -->
-					<div v-if="isLoadingHeldBalance" class="text-center py-4">
-						<div class="spinner-border" role="status">
-							<span class="visually-hidden">Загрузка...</span>
-						</div>
-						<p class="text-muted mt-2 mb-0">Загружаем данные об удержании...</p>
-					</div>
-
-					<!-- Empty State -->
-					<div v-else-if="heldOrders.seller.length === 0 && heldOrders.buyer.length === 0" class="text-center py-4">
-						<i class="ri-checkbox-circle-line display-4 text-success mb-3"></i>
-						<h6>Нет средств на удержании</h6>
-						<p class="text-muted mb-0">Все ваши средства доступны</p>
-					</div>
-
-					<!-- Held Orders List -->
-					<div v-else class="table-responsive">
-						<table class="table table-hover">
-							<thead>
-								<tr class="text-muted">
-									<th>Тип</th>
-									<th>Описание</th>
-									<th>Сумма</th>
-									<th>Дата</th>
-									<th>Разблокировка</th>
-								</tr>
-							</thead>
-							<tbody>
-								<!-- Продажи на удержании -->
-								<tr v-for="order in heldOrders.seller" :key="'s-' + order.id" class="text-muted">
-									<td>
-										<i class="ri-money-dollar-circle-line"></i>&nbsp;<span>Продажа</span>
-									</td>
-									<td>Заказ #{{ order.order_number }} · {{ order.buyer_name || '—' }}</td>
-									<td class="text-success">
-										<strong v-html="'+&nbsp;' + formatPrice(order.total_amount)"></strong>
-									</td>
-									<td class="text-muted">{{ formatDate(order.created_at) }}</td>
-									<td>
-										<span class="badge bg-warning text-dark">
-											<i class="ri-time-line me-1"></i>
-											{{ formatSettlementDate(order.settlement_date) }}
-										</span>
-									</td>
-								</tr>
-								<!-- Покупки на удержании -->
-								<tr v-for="order in heldOrders.buyer" :key="'b-' + order.id" class="text-muted">
-									<td>
-										<i class="ri-shopping-cart-line"></i>&nbsp;<span>Покупка</span>
-									</td>
-									<td>Заказ #{{ order.order_number }} · {{ order.seller_name || '—' }}</td>
-									<td class="text-danger">
-										<strong v-html="'−&nbsp;' + formatPrice(order.total_amount)"></strong>
-									</td>
-									<td class="text-muted">{{ formatDate(order.created_at) }}</td>
-									<td>
-										<span class="badge bg-warning text-dark">
-											<i class="ri-time-line me-1"></i>
-											{{ formatSettlementDate(order.settlement_date) }}
-										</span>
-									</td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
+				<!-- Empty State -->
+				<div v-else-if="transactions.length === 0" class="text-center py-4">
+					<i class="ri-file-list-line display-4 text-muted mb-3"></i>
+					<h6>История операций пуста</h6>
+					<p class="text-muted mb-0">Здесь будут отображаться все ваши финансовые операции</p>
 				</div>
 
-				<!-- Таб: История бонусов -->
-				<div class="tab-pane fade" :class="{ 'show active': historyTab === 'bonus' }"
-					v-if="historyTab === 'bonus'">
-					<!-- Loading State -->
-					<div v-if="isLoadingBonusTransactions" class="text-center py-4">
-						<div class="spinner-border" role="status">
-							<span class="visually-hidden">Загрузка...</span>
-						</div>
-						<p class="text-muted mt-2 mb-0">Загружаем историю бонусов...</p>
-					</div>
-
-					<!-- Empty State -->
-					<div v-else-if="bonusTransactions.length === 0" class="text-center py-4">
-						<i class="ri-gift-line display-4 text-muted mb-3"></i>
-						<h6>История бонусов пуста</h6>
-						<p class="text-muted mb-0">Здесь будут отображаться все операции с бонусным балансом</p>
-					</div>
-
-					<!-- Bonus Transactions List -->
-					<div v-else class="table-responsive">
-						<table class="table table-hover">
-							<thead>
-								<tr class="text-muted">
-									<th>Тип</th>
-									<th>Описание</th>
-									<th>Сумма</th>
-									<th>Дата</th>
-								</tr>
-							</thead>
-							<tbody>
-								<tr v-for="tx in bonusTransactions" :key="tx.id" class="text-muted">
-									<td>
-										<i :class="tx.type === 'credit' ? 'ri-add-circle-line text-success' : 'ri-indeterminate-circle-line text-danger'"></i>
-										<span class="ms-1">{{ tx.type === 'credit' ? 'Начисление' : 'Списание' }}</span>
-									</td>
-									<td>{{ tx.description || '—' }}</td>
-									<td :class="tx.type === 'credit' ? 'text-success' : 'text-danger'">
-										<strong v-html="(tx.type === 'credit' ? '+&nbsp;' : '−&nbsp;') + formatPrice(Math.abs(tx.amount))"></strong>
-									</td>
-									<td class="text-muted">{{ formatDate(tx.created_at) }}</td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
+				<!-- Transactions List -->
+				<div v-else class="table-responsive">
+					<table class="table table-hover">
+						<thead>
+							<tr class="text-muted">
+								<th>Тип</th>
+								<th>Описание</th>
+								<th>Сумма</th>
+								<th>Дата</th>
+								<th>Статус</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr v-for="transaction in transactions" :key="transaction.id" class="text-muted">
+								<td>
+									<i :class="getTransactionIcon(transaction.type)"></i>&nbsp;<span>{{
+										getTransactionTypeText(transaction.type) }}</span>
+								</td>
+								<td>{{ transaction.description || '—' }}</td>
+								<td :class="getTransactionColor(transaction.type)">
+									<strong
+										v-html="getTransactionSign(transaction.type) + formatPrice(Math.abs(transaction.amount))">
+									</strong>
+								</td>
+								<td class="text-muted">{{ formatDate(transaction.created_at) }}</td>
+								<td>
+									<span class="badge bg-success"
+										v-if="transaction.status === 'completed'">Завершено</span>
+									<span class="badge bg-warning" v-else-if="transaction.status === 'pending'">В
+										обработке</span>
+									<span class="badge bg-warning" v-else-if="transaction.status === 'on_hold'">На
+										удержании</span>
+									<span class="badge bg-danger"
+										v-else-if="transaction.status === 'failed'">Ошибка</span>
+									<span class="badge bg-secondary" v-else>{{ transaction.status }}</span>
+								</td>
+							</tr>
+						</tbody>
+					</table>
 				</div>
+			</div>
+
+			<!-- Таб: На удержании -->
+			<div class="tab-pane fade" :class="{ 'show active': historyTab === 'held' }" v-if="historyTab === 'held'">
+				<!-- Loading State -->
+				<div v-if="isLoadingHeldBalance" class="text-center py-4">
+					<div class="spinner-border" role="status">
+						<span class="visually-hidden">Загрузка...</span>
+					</div>
+					<p class="text-muted mt-2 mb-0">Загружаем данные об удержании...</p>
+				</div>
+
+				<!-- Empty State -->
+				<div v-else-if="heldOrders.seller.length === 0 && heldOrders.buyer.length === 0"
+					class="text-center py-4">
+					<i class="ri-checkbox-circle-line display-4 text-success mb-3"></i>
+					<h6>Нет средств на удержании</h6>
+					<p class="text-muted mb-0">Все ваши средства доступны</p>
+				</div>
+
+				<!-- Held Orders List -->
+				<div v-else class="table-responsive">
+					<table class="table table-hover">
+						<thead>
+							<tr class="text-muted">
+								<th>Тип</th>
+								<th>Описание</th>
+								<th>Сумма</th>
+								<th>Дата</th>
+								<th>Разблокировка</th>
+							</tr>
+						</thead>
+						<tbody>
+							<!-- Продажи на удержании -->
+							<tr v-for="order in heldOrders.seller" :key="'s-' + order.id" class="text-muted">
+								<td>
+									<i class="ri-money-dollar-circle-line"></i>&nbsp;<span>Продажа</span>
+								</td>
+								<td>Заказ #{{ order.order_number }} · {{ order.buyer_name || '—' }}</td>
+								<td class="text-success">
+									<strong v-html="'+&nbsp;' + formatPrice(order.total_amount)"></strong>
+								</td>
+								<td class="text-muted">{{ formatDate(order.created_at) }}</td>
+								<td>
+									<span class="badge bg-warning text-dark">
+										<i class="ri-time-line me-1"></i>
+										{{ formatSettlementDate(order.settlement_date) }}
+									</span>
+								</td>
+							</tr>
+							<!-- Покупки на удержании -->
+							<tr v-for="order in heldOrders.buyer" :key="'b-' + order.id" class="text-muted">
+								<td>
+									<i class="ri-shopping-cart-line"></i>&nbsp;<span>Покупка</span>
+								</td>
+								<td>Заказ #{{ order.order_number }} · {{ order.seller_name || '—' }}</td>
+								<td class="text-danger">
+									<strong v-html="'−&nbsp;' + formatPrice(order.total_amount)"></strong>
+								</td>
+								<td class="text-muted">{{ formatDate(order.created_at) }}</td>
+								<td>
+									<span class="badge bg-warning text-dark">
+										<i class="ri-time-line me-1"></i>
+										{{ formatSettlementDate(order.settlement_date) }}
+									</span>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<!-- Таб: История бонусов -->
+			<div class="tab-pane fade" :class="{ 'show active': historyTab === 'bonus' }" v-if="historyTab === 'bonus'">
+				<!-- Loading State -->
+				<div v-if="isLoadingBonusTransactions" class="text-center py-4">
+					<div class="spinner-border" role="status">
+						<span class="visually-hidden">Загрузка...</span>
+					</div>
+					<p class="text-muted mt-2 mb-0">Загружаем историю бонусов...</p>
+				</div>
+
+				<!-- Empty State -->
+				<div v-else-if="bonusTransactions.length === 0" class="text-center py-4">
+					<i class="ri-gift-line display-4 text-muted mb-3"></i>
+					<h6>История бонусов пуста</h6>
+					<p class="text-muted mb-0">Здесь будут отображаться все операции с бонусным балансом</p>
+				</div>
+
+				<!-- Bonus Transactions List -->
+				<div v-else class="table-responsive">
+					<table class="table table-hover">
+						<thead>
+							<tr class="text-muted">
+								<th>Тип</th>
+								<th>Описание</th>
+								<th>Сумма</th>
+								<th>Дата</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr v-for="tx in bonusTransactions" :key="tx.id" class="text-muted">
+								<td>
+									<i
+										:class="tx.type === 'credit' ? 'ri-add-circle-line text-success' : 'ri-indeterminate-circle-line text-danger'"></i>
+									<span class="ms-1">{{ tx.type === 'credit' ? 'Начисление' : 'Списание' }}</span>
+								</td>
+								<td>{{ tx.description || '—' }}</td>
+								<td :class="tx.type === 'credit' ? 'text-success' : 'text-danger'">
+									<strong
+										v-html="(tx.type === 'credit' ? '+&nbsp;' : '−&nbsp;') + formatPrice(Math.abs(tx.amount))"></strong>
+								</td>
+								<td class="text-muted">{{ formatDate(tx.created_at) }}</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
 		</div>
 
 		<!-- Модальное окно пополнения -->
@@ -295,14 +300,9 @@
 								<div class="col-12">
 									<label for="depositAmount" class="form-label">Сумма пополнения</label>
 									<div class="input-group">
-										<input type="number"
-											   class="form-control"
-											   id="depositAmount"
-											   v-model="depositForm.amount"
-											   :min="minimumDepositAmount"
-											   :max="maximumDepositAmount"
-											   step="1"
-											   placeholder="Введите сумму">
+										<input type="number" class="form-control" id="depositAmount"
+											v-model="depositForm.amount" :min="minimumDepositAmount"
+											:max="maximumDepositAmount" step="1" placeholder="Введите сумму">
 										<span class="input-group-text">₽</span>
 									</div>
 									<div class="form-text">
@@ -314,19 +314,13 @@
 								<div class="col-12">
 									<label for="depositPromocode" class="form-label">Промокод</label>
 									<div class="input-group">
-										<input type="text"
-											   class="form-control"
-											   id="depositPromocode"
-											   v-model="depositForm.promocode"
-											   placeholder="Введите промокод (необязательно)"
-											   :disabled="depositForm.validatingPromocode">
-										<button class="btn btn-outline-secondary"
-												type="button"
-												@click="validatePromocode"
-												:disabled="!depositForm.promocode || depositForm.validatingPromocode">
-											<span v-if="depositForm.validatingPromocode" class="spinner-border spinner-border-sm"></span>
-											<span v-else>Применить</span>
-										</button>
+										<input type="text" class="form-control" id="depositPromocode"
+											v-model="depositForm.promocode"
+											placeholder="Введите промокод (необязательно)"
+											:disabled="depositForm.validatingPromocode">
+										<span v-if="depositForm.validatingPromocode" class="input-group-text">
+											<span class="spinner-border spinner-border-sm"></span>
+										</span>
 									</div>
 									<div v-if="depositForm.promocodeResult" class="mt-2">
 										<div v-if="depositForm.promocodeResult.valid" class="text-success small">
@@ -342,9 +336,10 @@
 										</div>
 									</div>
 									<div v-if="depositForm.promocodeResult?.valid && depositForm.promocodeResult?.bonus_amount"
-										 class="alert alert-info mt-2 mb-0 py-2 small">
+										class="alert alert-info mt-2 mb-0 py-2 small">
 										<i class="ri-information-line me-1"></i>
-										Бонусы начисляются на отдельный бонусный баланс и могут быть использованы только для открытия кейсов.
+										Бонусы начисляются на отдельный бонусный баланс и могут быть использованы только
+										для открытия кейсов.
 									</div>
 								</div>
 
@@ -352,20 +347,16 @@
 								<div class="col-12" v-if="availablePaymentMethods.length > 1">
 									<label class="form-label">Способ оплаты</label>
 									<div class="d-flex flex-column gap-2">
-										<label v-for="method in availablePaymentMethods"
-											   :key="method.value"
-											   class="payment-method-option mb-0"
-											   style="cursor: pointer;">
-											<input type="radio"
-												   :value="method.value"
-												   v-model="depositForm.payment_type"
-												   class="d-none">
+										<label v-for="method in availablePaymentMethods" :key="method.value"
+											class="payment-method-option mb-0" style="cursor: pointer;">
+											<input type="radio" :value="method.value" v-model="depositForm.payment_type"
+												class="d-none">
 											<div class="d-flex align-items-center p-3 border rounded"
-												 :class="depositForm.payment_type === method.value ? 'border-primary bg-primary bg-opacity-10' : 'border-secondary'">
+												:class="depositForm.payment_type === method.value ? 'border-primary bg-primary bg-opacity-10' : 'border-secondary'">
 												<i :class="method.icon" class="me-3" style="font-size: 1.5rem;"></i>
 												<span>{{ method.label }}</span>
 												<i v-if="depositForm.payment_type === method.value"
-												   class="ri-check-line ms-auto text-primary"></i>
+													class="ri-check-line ms-auto text-primary"></i>
 											</div>
 										</label>
 									</div>
@@ -406,10 +397,8 @@
 					<div class="modal-footer">
 						<div v-if="!depositForm.processing" class="w-100 d-flex gap-2">
 							<button type="button" class="btn theme-outline" data-bs-dismiss="modal">Отмена</button>
-							<button type="button"
-									class="btn theme-btn flex-fill"
-									@click="createPaymentForm"
-									:disabled="!isValidAmount">
+							<button type="button" class="btn theme-btn flex-fill" @click="createPaymentForm"
+								:disabled="!isValidAmount">
 								Перейти к оплате <span v-html="formatPrice(depositForm.amount)"></span>
 							</button>
 						</div>
@@ -439,6 +428,42 @@
 					</div>
 					<div class="modal-footer">
 						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Понятно</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Модальное окно активации промокода -->
+		<div class="modal fade" id="promocode-activate" tabindex="-1" aria-labelledby="promocodeActivateLabel"
+			aria-hidden="true">
+			<div class="modal-dialog modal-dialog-centered">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title" id="promocodeActivateLabel">
+							<i class="ri-coupon-line me-2"></i>Активация промокода
+						</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+					</div>
+					<div class="modal-body">
+						<div class="mb-3">
+							<label for="promocodeInput" class="form-label">Промокод</label>
+							<input type="text" class="form-control" id="promocodeInput" v-model="promocodeActivate.code"
+								placeholder="Введите промокод" :disabled="promocodeActivate.loading"
+								@keyup.enter="activatePromocode">
+						</div>
+						<div v-if="promocodeActivate.message" class="small"
+							:class="promocodeActivate.success ? 'text-success' : 'text-danger'">
+							<i :class="promocodeActivate.success ? 'ri-check-line' : 'ri-close-line'" class="me-1"></i>
+							{{ promocodeActivate.message }}
+						</div>
+					</div>
+					<div class="modal-footer d-flex justify-content-center align-items-center gap-2">
+						<button type="button" class="btn theme-outline" data-bs-dismiss="modal">Отмена</button>
+						<button type="button" class="btn theme-btn" @click="activatePromocode"
+							:disabled="!promocodeActivate.code || promocodeActivate.loading">
+							<span v-if="promocodeActivate.loading" class="spinner-border spinner-border-sm me-1"></span>
+							Активировать
+						</button>
 					</div>
 				</div>
 			</div>
@@ -506,7 +531,27 @@ export default {
 			isLoadingBonusTransactions: false,
 
 			// Активный таб истории
-			historyTab: 'transactions'
+			historyTab: 'transactions',
+
+			// Таймер для debounce промокода
+			promocodeDebounceTimer: null,
+
+			// Активация промокода
+			promocodeActivate: {
+				code: '',
+				loading: false,
+				message: null,
+				success: false
+			}
+		}
+	},
+
+	watch: {
+		'depositForm.amount'() {
+			this.debouncedValidatePromocode();
+		},
+		'depositForm.promocode'() {
+			this.debouncedValidatePromocode();
 		}
 	},
 
@@ -656,16 +701,20 @@ export default {
 				'withdrawal': 'Списание',
 				'deposit': 'Пополнение',
 				'auction_bid': 'Ставка на аукционе',
-				'auction_refund': 'Возврат со ставки'
+				'auction_refund': 'Возврат со ставки',
+				'promocode': 'Промокод',
+				'case_purchase': 'Открытие кейса',
+				'virtual_item_sale': 'Продажа предмета',
+				'upgrade_bet': 'Апгрейд'
 			};
 			return types[type] || type;
 		},
 
 		getTransactionSign(type) {
 			// Операции, которые уменьшают баланс (-)
-			const negativeTypes = ['purchase', 'withdrawal', 'fee', 'auction_bid'];
+			const negativeTypes = ['purchase', 'withdrawal', 'fee', 'auction_bid', 'case_purchase', 'upgrade_bet'];
 			// Операции, которые увеличивают баланс (+)
-			const positiveTypes = ['sale', 'deposit', 'refund', 'auction_refund'];
+			const positiveTypes = ['sale', 'deposit', 'refund', 'auction_refund', 'promocode', 'virtual_item_sale'];
 
 			if (negativeTypes.includes(type)) return '−&nbsp;';
 			if (positiveTypes.includes(type)) return '+&nbsp;';
@@ -679,7 +728,11 @@ export default {
 				'fee': 'ri-percent-line',
 				'refund': 'ri-refund-line',
 				'withdrawal': 'ri-bank-card-line',
-				'deposit': 'ri-add-circle-line'
+				'deposit': 'ri-add-circle-line',
+				'promocode': 'ri-coupon-line',
+				'case_purchase': 'ri-box-3-line',
+				'virtual_item_sale': 'ri-hand-coin-line',
+				'upgrade_bet': 'ri-arrow-up-circle-line'
 			};
 			return icons[type] || 'ri-exchange-line';
 		},
@@ -691,7 +744,11 @@ export default {
 				'fee': 'text-danger',
 				'refund': 'text-info',
 				'withdrawal': 'text-danger',
-				'deposit': 'text-success'
+				'deposit': 'text-success',
+				'promocode': 'text-success',
+				'case_purchase': 'text-danger',
+				'virtual_item_sale': 'text-success',
+				'upgrade_bet': 'text-danger'
 			};
 			return colors[type] || 'text-muted';
 		},
@@ -856,6 +913,11 @@ export default {
 		},
 
 		resetForm() {
+			// Очищаем таймер debounce
+			if (this.promocodeDebounceTimer) {
+				clearTimeout(this.promocodeDebounceTimer);
+			}
+
 			this.depositForm.amount = '';
 			this.depositForm.payment_type = 'card';
 			this.depositForm.promocode = '';
@@ -865,17 +927,40 @@ export default {
 			this.depositForm.processing = false;
 		},
 
+		debouncedValidatePromocode() {
+			// Очищаем предыдущий таймер
+			if (this.promocodeDebounceTimer) {
+				clearTimeout(this.promocodeDebounceTimer);
+			}
+
+			// Если нет промокода - очищаем результат
+			if (!this.depositForm.promocode) {
+				this.depositForm.promocodeResult = null;
+				return;
+			}
+
+			// Запускаем проверку с задержкой 500мс
+			this.promocodeDebounceTimer = setTimeout(() => {
+				this.validatePromocode();
+			}, 500);
+		},
+
 		async validatePromocode() {
-			if (!this.depositForm.promocode || !this.depositForm.amount) {
+			// Если нет промокода или суммы - не валидируем
+			if (!this.depositForm.promocode) {
+				this.depositForm.promocodeResult = null;
+				return;
+			}
+
+			if (!this.depositForm.amount || !this.isValidAmount) {
 				this.depositForm.promocodeResult = {
 					valid: false,
-					message: 'Введите сумму пополнения для проверки промокода'
+					message: 'Введите корректную сумму пополнения'
 				};
 				return;
 			}
 
 			this.depositForm.validatingPromocode = true;
-			this.depositForm.promocodeResult = null;
 
 			try {
 				const response = await axios.post('/api/deposit/validate-promocode', {
@@ -895,6 +980,39 @@ export default {
 				};
 			} finally {
 				this.depositForm.validatingPromocode = false;
+			}
+		},
+
+		async activatePromocode() {
+			if (!this.promocodeActivate.code || this.promocodeActivate.loading) return;
+
+			this.promocodeActivate.loading = true;
+			this.promocodeActivate.message = null;
+
+			try {
+				const response = await axios.post('/api/deposit/activate-promocode', {
+					code: this.promocodeActivate.code
+				});
+
+				if (response.data.success) {
+					this.promocodeActivate.success = true;
+					this.promocodeActivate.message = `Промокод активирован! Зачислено ${response.data.amount} ₽`;
+					this.promocodeActivate.code = '';
+
+					// Обновляем баланс
+					this.client.balance = response.data.balance;
+					window.dispatchEvent(new CustomEvent('balance-updated', {
+						detail: { main: response.data.balance }
+					}));
+
+					// Перезагружаем транзакции
+					this.loadTransactions();
+				}
+			} catch (error) {
+				this.promocodeActivate.success = false;
+				this.promocodeActivate.message = error.response?.data?.message || 'Ошибка активации промокода';
+			} finally {
+				this.promocodeActivate.loading = false;
 			}
 		},
 
@@ -982,6 +1100,11 @@ export default {
 	beforeUnmount() {
 		// Удаляем слушатель при уничтожении компонента
 		window.removeEventListener('currency-changed', this.handleCurrencyChange);
+
+		// Очищаем таймер debounce
+		if (this.promocodeDebounceTimer) {
+			clearTimeout(this.promocodeDebounceTimer);
+		}
 	}
 }
 </script>

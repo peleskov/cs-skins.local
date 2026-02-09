@@ -94,7 +94,7 @@ Route::prefix('api')->name('api.')->group(function () {
 
     Route::post('/case-inventory/{id}/withdraw', [CaseInventoryController::class, 'withdraw'])
         ->name('case-inventory.withdraw')
-        ->middleware(['auth:client', 'throttle:10,1']);
+        ->middleware(['auth:client', 'throttle:60,1']);
 
     // Апгрейд API
     Route::get('/upgrade/targets', [\App\Http\Controllers\UpgradeController::class, 'getTargets'])
@@ -194,6 +194,7 @@ Route::prefix('api')->name('api.')->group(function () {
         Route::prefix('deposit')->name('deposit.')->controller(\App\Http\Controllers\DepositController::class)->group(function () {
             Route::post('/payment-form', 'createPaymentForm')->name('payment-form')->middleware('throttle:10,1'); // Payment form
             Route::post('/validate-promocode', 'validatePromocode')->name('validate-promocode')->middleware('throttle:30,1');
+            Route::post('/activate-promocode', 'activatePromocode')->name('activate-promocode')->middleware('throttle:10,1');
             Route::get('/status/{paymentId}', 'getPaymentStatus')->name('status')->middleware('throttle:60,1');
             Route::post('/check-status/{paymentId}', 'checkPaymentStatus')->name('check-status')->middleware('throttle:30,1');
             Route::get('/history', 'getPaymentsHistory')->name('history')->middleware('throttle:60,1');

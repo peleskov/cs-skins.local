@@ -3,28 +3,44 @@
  */
 
 /**
+ * Форматирование числа с нужным количеством десятичных знаков
+ * Если decimals=false, убирает .00 но оставляет дробную часть если она есть (49.50 → 49.50)
+ * @param {number} num - Число
+ * @param {boolean} decimals - Показывать копейки
+ * @returns {string} Отформатированное число
+ */
+function formatNumber(num, decimals) {
+    if (decimals) {
+        return num.toFixed(2);
+    }
+    return num % 1 === 0 ? num.toFixed(0) : num.toFixed(2);
+}
+
+/**
  * Форматирование цены с разделителями тысяч и конвертацией валюты
  * @param {number|string} price - Цена для форматирования
  * @param {string} sourceCurrency - Валюта исходной цены (по умолчанию RUB)
- * @param {boolean} returnNumber - Если true, возвращает число вместо форматированной строки
+ * @param {boolean|object} returnNumber - Если true, возвращает число. Если объект: { returnNumber, decimals }
+ * @param {boolean} decimals - Показывать копейки (по умолчанию true). false — 49.00 → 49, но 49.50 → 49.50
  * @returns {string|number} Отформатированная цена с символом валюты или число
  */
-export function formatPrice(price, sourceCurrency = 'RUB', returnNumber = false) {
+export function formatPrice(price, sourceCurrency = 'RUB', returnNumber = false, decimals = true, showSymbol = true) {
     const selectedCurrency = getSelectedCurrency();
-    
+    const suffix = showSymbol && selectedCurrency ? '&nbsp;' + selectedCurrency.symbol : '';
+
     if (!selectedCurrency) {
         if (returnNumber) {
             return Number(price);
         }
-        return Number(price).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '&nbsp;');
+        return formatNumber(Number(price), decimals).replace(/\B(?=(\d{3})+(?!\d))/g, '&nbsp;');
     }
-    
+
     // Если исходная валюта совпадает с выбранной, возвращаем как есть
     if (selectedCurrency.code === sourceCurrency) {
         if (returnNumber) {
             return Number(price);
         }
-        return Number(price).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '&nbsp;') + '&nbsp;' + selectedCurrency.symbol;
+        return formatNumber(Number(price), decimals).replace(/\B(?=(\d{3})+(?!\d))/g, '&nbsp;') + suffix;
     }
     
     // Конвертируем цену из исходной валюты в выбранную
@@ -62,7 +78,7 @@ export function formatPrice(price, sourceCurrency = 'RUB', returnNumber = false)
         return Number(convertedPrice);
     }
     
-    return Number(convertedPrice).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '&nbsp;') + '&nbsp;' + selectedCurrency.symbol;
+    return formatNumber(Number(convertedPrice), decimals).replace(/\B(?=(\d{3})+(?!\d))/g, '&nbsp;') + suffix;
 }
 
 /**
@@ -400,4 +416,19 @@ export function getTimeRemaining(endTime) {
     } else {
         return 'Истек';
     }
+}
+
+/**
+ * Склонение слов по числу (русский язык)
+ * pluralize(1, 'открытие', 'открытия', 'открытий') → 'открытие'
+ * pluralize(3, 'открытие', 'открытия', 'открытий') → 'открытия'
+ * pluralize(5, 'открытие', 'открытия', 'открытий') → 'открытий'
+ */
+export function pluralize(n, one, few, many) {
+    const abs = Math.abs(n) % 100;
+    const lastDigit = abs % 10;
+    if (abs > 10 && abs < 20) return many;
+    if (lastDigit > 1 && lastDigit < 5) return few;
+    if (lastDigit === 1) return one;
+    return many;
 }

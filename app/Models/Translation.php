@@ -259,12 +259,14 @@ class Translation extends Model
             }
         }
 
+        // Получаем ID записей, которые существуют в файлах
+        $idsToKeep = static::whereIn(
+            \DB::raw("CONCAT(locale, ':', `group`, ':', `key`)"),
+            $existingKeys->toArray()
+        )->pluck('id')->toArray();
+
         // Удаляем записи из БД, которых нет в файлах
-        static::whereNotIn('id', function($query) use ($existingKeys) {
-            $query->select('id')
-                  ->from('translations')
-                  ->whereIn(\DB::raw("CONCAT(locale, ':', `group`, ':', `key`)"), $existingKeys->toArray());
-        })->delete();
+        static::whereNotIn('id', $idsToKeep)->delete();
     }
 
     /**

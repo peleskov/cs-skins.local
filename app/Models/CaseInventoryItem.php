@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class CaseInventoryItem extends Model
 {
     const STATUS_AVAILABLE = 'available';
+    const STATUS_PENDING_WITHDRAWAL = 'pending_withdrawal';
     const STATUS_WITHDRAWN = 'withdrawn';
     const STATUS_SOLD = 'sold';
     const STATUS_UPGRADED = 'upgraded';
@@ -68,6 +69,7 @@ class CaseInventoryItem extends Model
     {
         return [
             self::STATUS_AVAILABLE => 'Доступен',
+            self::STATUS_PENDING_WITHDRAWAL => 'Ожидается вывод',
             self::STATUS_WITHDRAWN => 'Выведен',
             self::STATUS_SOLD => 'Продан',
             self::STATUS_UPGRADED => 'Использован в апгрейде',

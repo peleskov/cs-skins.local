@@ -20,7 +20,7 @@
                                 <ul class="content">
                                     @foreach(\App\Models\Doc::all() as $doc)
                                         <li>
-                                            <a class="nav-links" href="{{ route('doc', $doc->slug) }}"><h6>{{ __('navigation.docs.' . $doc->slug) }}</h6></a>
+                                            <a class="nav-links" href="{{ route('doc', $doc->slug) }}"><h6>{{ $doc->title }}</h6></a>
                                         </li>
                                     @endforeach
                                 </ul>

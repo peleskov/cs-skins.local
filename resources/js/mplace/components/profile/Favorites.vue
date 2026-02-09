@@ -70,8 +70,11 @@
 							
 							<!-- Статус товара -->
 							<div class="item-status mb-3">
-								<div v-if="item.status === 'active'" class="alert alert-success mb-0 py-2">
+								<div v-if="item.status === 'active' && !item.purchase_blocked" class="alert alert-success mb-0 py-2">
 									<i class="ri-check-line me-2"></i>Товар доступен для покупки
+								</div>
+								<div v-else-if="item.status === 'active' && item.purchase_blocked" class="alert alert-warning mb-0 py-2">
+									<i class="ri-auction-line me-2"></i>Покупка недоступна — активный аукцион
 								</div>
 								<div v-else-if="item.status === 'sold'" class="alert alert-secondary mb-0 py-2">
 									<i class="ri-shopping-cart-line me-2"></i>Товар продан
@@ -106,7 +109,8 @@
 									:key="item.id"
 									:listing-id="item.id" 
 									size="normal" 
-									variant="primary" />
+									variant="primary"
+								v-if="!item.purchase_blocked" />
 							</div>
 							<div v-else class="d-grid">
 								<a :href="`/marketplace/${item.id}`" class="btn theme-outline" title="Посмотреть товар">

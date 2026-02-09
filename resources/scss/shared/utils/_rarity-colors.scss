@@ -1,0 +1,16 @@
+// Цвета редкости CS2
+// Единый источник истины — все файлы используют эти переменные
+:root {
+	--rarity-consumer: 192, 192, 192; // Потребительское качество - серебристый
+	--rarity-industrial: 94, 152, 217; // Промышленное качество - светло-синий
+	--rarity-milspec: 75, 105, 255; // Армейское качество - темно-синий
+	--rarity-restricted: 136, 71, 255; // Запрещенное - фиолетовый
+	--rarity-classified: 211, 44, 230; // Засекреченное - розовый
+	--rarity-covert: 235, 75, 75; // Тайное - красный
+	--rarity-contraband: 228, 174, 57; // Контрабанда - золотой
+	--rarity-extraordinary: 255, 215, 0; // Extraordinary - золотой
+	--rarity-exotic: 211, 44, 230; // Exotic - розовый
+	--rarity-remarkable: 136, 71, 255; // Remarkable - фиолетовый
+	--rarity-highgrade: 75, 105, 255; // High Grade - синий
+	--rarity-basegrade: 176, 195, 217; // Base Grade - светло-серый
+}

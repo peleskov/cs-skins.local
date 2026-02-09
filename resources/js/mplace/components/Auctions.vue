@@ -102,7 +102,7 @@
 
 									<div
 										class="location-distance d-flex align-items-center justify-content-between gap-2 pt-sm-3 pt-2">
-										<div v-if="!auction.is_own_auction" data-cart-button
+										<div v-if="!auction.is_own_auction && canPurchaseAuction(auction)" data-cart-button
 											:data-listing-id="auction.listing_id"
 											:data-is-in-cart="auction.listing.is_in_cart" data-size="small"
 											data-variant="outline" class="cart-button-placeholder flex-fill">
@@ -347,6 +347,17 @@ export default {
 			return currentPrice + minIncrement
 		}
 
+		const canPurchaseAuction = (auction) => {
+			if (!auction || !auction.ends_at || !auction.duration_hours) return true
+			const now = new Date().getTime()
+			const endTime = new Date(auction.ends_at).getTime()
+			const totalDuration = auction.duration_hours * 3600 * 1000
+			const timeLeft = Math.max(0, endTime - now)
+			const pastHalf = timeLeft <= (totalDuration / 2)
+			const bidAbovePrice = parseFloat(auction.current_price) >= parseFloat(auction.listing?.price || 0)
+			return !(pastHalf || bidAbovePrice)
+		}
+
 		const getRarityClass = (listing) => {
 			if (!listing || !listing.structured_tags) {
 				return ''
@@ -512,7 +523,8 @@ export default {
 			placeBid,
 			placingBids,
 			currentUser,
-			getRarityClass
+			getRarityClass,
+			canPurchaseAuction
 		}
 	}
 }

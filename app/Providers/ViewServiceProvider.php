@@ -110,7 +110,7 @@ class ViewServiceProvider extends ServiceProvider
                     'address' => __('navigation.footer.company_info.address'),
                     'email' => __('navigation.footer.company_info.email')
                 ],
-                'copyright' => __('navigation.footer.copyright'),
+                'copyright' => __('navigation.footer.copyright', ['year' => date('Y')]),
                 'documents_title' => __('navigation.footer.documents'),
                 'useful_links_title' => __('navigation.footer.useful_links')
             ];

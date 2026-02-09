@@ -28,16 +28,17 @@
                 <div class="col-auto">
                     <ul class="list-group list-group-horizontal balances">
                         <li class="list-group-item d-flex align-items-center gap-1" data-bs-toggle="tooltip"
-                            data-bs-title="Бонусный баланс">
-                            <span class="ico dollar"></span>
-                            <span class="balance-amount" v-html="formatPrice(bonusBalance, 'RUB', true)"></span>
+                            data-bs-title="Основной баланс. Ваши реальные деньги. Используется, когда бонусные средства закончились.">
+                            <span v-if="isRubleCurrency" class="ico ruble"></span>
+                            <span class="balance-amount" v-html="formatPrice(mainBalance, 'RUB', false, true, !isRubleCurrency)"></span>
                         </li>
                         <li class="list-group-item">
                             <span class="divider"></span>
                         </li>
-                        <li class="list-group-item d-flex align-items-center gap-1">
-                            <span class="ico ruble"></span>
-                            <span class="balance-amount" v-html="formatPrice(mainBalance, 'RUB', true)"></span>
+                        <li class="list-group-item d-flex align-items-center gap-1" data-bs-toggle="tooltip"
+                            data-bs-title="Бонусный баланс. Виртуальные деньги для открытий кейсов. Пополняются от промокодов. Списывается в первую очередь.">
+                            <span class="ico dollar"></span>
+                            <span class="balance-amount">{{ Number(bonusBalance).toFixed(2) }}</span>
                         </li>
                     </ul>
                 </div>
@@ -92,17 +93,18 @@ export default {
             isLoading: false,
             tooltips: [],
             mainBalance: this.user?.balance || 0,
-            bonusBalance: this.user?.bonus_balance || 0
+            bonusBalance: this.user?.bonus_balance || 0,
+            isRubleCurrency: this.checkIsRuble()
         }
     },
     computed: {
         mainNavigation() {
             // Кастомное меню для cases (только нужные пункты)
             return {
-                cases: { title: 'Кейсы', route: 'cases', order: 1 },
-                marketplace: { title: 'Маркетплейс', route: 'marketplace', order: 2 },
+                marketplace: { title: 'Маркетплейс', route: 'marketplace', order: 1 },
+                cases: { title: 'Кейсы', route: 'cases', order: 2 },
                 upgrade: { title: 'Апгрейд', route: 'upgrade', order: 3 },
-                socials: { title: 'Соцсети', route: '#', order: 4 },
+                socials: { title: 'Соцсети', route: 'faq', order: 4 },
                 faq: { title: 'FAQ', route: 'faq', order: 5 }
             };
         }
@@ -140,9 +142,18 @@ export default {
         },
 
         handleCurrencyChange() {
-            // Принудительно обновляем данные для пересчета цен
-            if (this.cartItems.length > 0) {
-                this.cartItems = [...this.cartItems];
+            this.isRubleCurrency = this.checkIsRuble();
+            this.$forceUpdate();
+        },
+
+        checkIsRuble() {
+            try {
+                const saved = localStorage.getItem('selectedCurrency');
+                if (!saved) return true;
+                const currency = JSON.parse(saved);
+                return !currency || currency.code === 'RUB';
+            } catch {
+                return true;
             }
         },
 

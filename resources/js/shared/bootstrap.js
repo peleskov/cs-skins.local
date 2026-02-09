@@ -36,9 +36,11 @@ axios.interceptors.response.use(
         if (error.response && window.toast) {
             let errorMessage;
             
-            // Специальная обработка для 401 - более понятное сообщение
+            // Специальная обработка для 401 и 429
             if (error.response.status === 401) {
                 errorMessage = 'Для выполнения этого действия необходимо войти через Steam';
+            } else if (error.response.status === 429) {
+                errorMessage = 'Слишком много запросов. Попробуйте через несколько секунд.';
             } else {
                 // Извлекаем сообщение в стандартном Laravel формате
                 errorMessage = error.response.data?.message || 

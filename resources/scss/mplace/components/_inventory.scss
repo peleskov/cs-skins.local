@@ -3,7 +3,7 @@
         padding: 8px;
         margin-bottom: 1.5rem;
         border-radius: 16px;
-        background-color: rgba(var(--white),1);
+        background-color: rgba(var(--white), 1);
         box-shadow: 1px 1px 2px 1px lightgray;
         cursor: pointer;
         transition: all 0.3s ease-in-out;
@@ -32,12 +32,61 @@
         small {
             font-size: 0.65rem;
         }
+
+        &.rarity-consumer {
+            background: linear-gradient(0deg,
+                    rgba(var(--rarity-consumer), 0.7) 0%,
+                    rgba(var(--rarity-consumer), 0) 15%);
+            box-shadow: 0 0 10px rgba(var(--rarity-consumer), 0.3) inset; // Потребительское качество - серебристый
+        }
+
+        &.rarity-industrial {
+            background: linear-gradient(0deg,
+                    rgba(var(--rarity-industrial), 0.7) 0%,
+                    rgba(var(--rarity-industrial), 0) 15%);
+            box-shadow: 0 0 10px rgba(var(--rarity-industrial), 0.3) inset; // Промышленное качество - светло-синий
+        }
+
+        &.rarity-milspec {
+            background: linear-gradient(0deg,
+                    rgba(var(--rarity-milspec), 0.7) 0%,
+                    rgba(var(--rarity-milspec), 0) 15%);
+            box-shadow: 0 0 10px rgba(var(--rarity-milspec), 0.3) inset; // Армейское качество - темно-синий
+        }
+
+        &.rarity-restricted {
+            background: linear-gradient(0deg,
+                    rgba(var(--rarity-restricted), 0.7) 0%,
+                    rgba(var(--rarity-restricted), 0) 15%);
+            box-shadow: 0 0 10px rgba(var(--rarity-restricted), 0.3) inset; // Запрещенное - фиолетовый
+        }
+
+        &.rarity-classified {
+            background: linear-gradient(0deg,
+                    rgba(var(--rarity-classified), 0.7) 0%,
+                    rgba(var(--rarity-classified), 0) 15%);
+            box-shadow: 0 0 10px rgba(var(--rarity-classified), 0.3) inset; // Засекреченное - розовый
+        }
+
+        &.rarity-covert {
+            background: linear-gradient(0deg,
+                    rgba(var(--rarity-covert), 0.7) 0%,
+                    rgba(var(--rarity-covert), 0) 15%);
+            box-shadow: 0 0 10px rgba(var(--rarity-covert), 0.3) inset; // Тайное - красный
+        }
+
+        &.rarity-contraband {
+            background: linear-gradient(0deg,
+                    rgba(var(--rarity-contraband), 0.7) 0%,
+                    rgba(var(--rarity-contraband), 0) 15%);
+            box-shadow: 0 0 10px rgba(var(--rarity-contraband), 0.3) inset; // Контрабанда/Крайне редкий - золотой
+        }
     }
 
     .item-details {
         padding: 16px;
         border-radius: 16px;
-        background-color: rgba(var(--white),1);
+        background-color: rgba(var(--white), 1);
         box-shadow: 1px 1px 2px 1px lightgray;
 
         &.sticky-top {

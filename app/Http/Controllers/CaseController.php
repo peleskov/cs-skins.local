@@ -34,6 +34,7 @@ class CaseController extends Controller
                 'label_hot',
                 'label_new',
                 'label_limited',
+                'label_free',
             ])
             ->with('category:id,name,icon,sort_order')
             ->whereHas('tiers', function ($query) {
@@ -108,6 +109,13 @@ class CaseController extends Controller
             $caseData['free_opens_info'] = $freeCaseService->getFreeOpensInfo($client, $case);
         }
 
+        // Для лимитированных кейсов
+        if ($case->isLimited()) {
+            $caseData['available_until'] = $case->available_until?->toIso8601String();
+            $caseData['total_opens_limit'] = $case->total_opens_limit;
+            $caseData['total_opens_count'] = $case->total_opens_count;
+        }
+
         return view('cases.show', compact('case', 'caseData'));
     }
 
@@ -130,6 +138,7 @@ class CaseController extends Controller
                 'label_hot',
                 'label_new',
                 'label_limited',
+                'label_free',
             ])
             ->with('category:id,name,icon,sort_order')
             ->get();
@@ -204,6 +213,13 @@ class CaseController extends Controller
             $data['free_opens_info'] = $freeCaseService->getFreeOpensInfo($client, $case);
         }
 
+        // Для лимитированных кейсов
+        if ($case->isLimited()) {
+            $data['available_until'] = $case->available_until?->toIso8601String();
+            $data['total_opens_limit'] = $case->total_opens_limit;
+            $data['total_opens_count'] = $case->total_opens_count;
+        }
+
         return response()->json([
             'data' => $data
         ]);
@@ -216,7 +232,7 @@ class CaseController extends Controller
     {
         $request->validate([
             'case_id' => 'required|exists:cases,id',
-            'count' => 'integer|min:1|max:10',
+            'count' => 'required|integer|min:1|max:10',
         ]);
 
         try {
@@ -245,6 +261,9 @@ class CaseController extends Controller
             // Проверяем доступность множителя
             $maxOpens = $caseService->getMaxOpens($case, $client);
             if ($count > $maxOpens) {
+                if ($maxOpens <= 0) {
+                    throw new Exception('Недостаточно средств на балансе');
+                }
                 throw new Exception("Можно открыть максимум {$maxOpens}");
             }
 
@@ -316,6 +335,7 @@ class CaseController extends Controller
                     ],
                     'case' => [
                         'id' => $case->id,
+                        'slug' => $case->slug,
                         'name' => $case->name,
                         'image' => $case->image_url,
                     ],

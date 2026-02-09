@@ -22,11 +22,12 @@ export const toastOptions = {
 };
 
 // Звуковые файлы для уведомлений
+const soundVersion = 2;
 const sounds = {
-    success: new Audio('/sounds/success.mp3'),
-    error: new Audio('/sounds/error.mp3'),
-    info: new Audio('/sounds/info.mp3'),
-    warning: new Audio('/sounds/warning.mp3')
+    success: new Audio(`/sounds/success.mp3?v=${soundVersion}`),
+    error: new Audio(`/sounds/error.mp3?v=${soundVersion}`),
+    info: new Audio(`/sounds/info.mp3?v=${soundVersion}`),
+    warning: new Audio(`/sounds/warning.mp3?v=${soundVersion}`)
 };
 
 // Получение настроек звука из localStorage

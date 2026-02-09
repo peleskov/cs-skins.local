@@ -63,7 +63,7 @@ class UpgradeService
     /**
      * Получить доступные целевые предметы
      */
-    public function getAvailableTargets(float $betTotal, int $limit = 50): array
+    public function getAvailableTargets(float $betTotal, array $filters = [], int $limit = 50): array
     {
         $settings = $this->getSettings();
         $usdRate = (float) SiteSetting::get('usd_course', 100);
@@ -76,9 +76,31 @@ class UpgradeService
         $minPriceUsd = $betTotalUsd * $multiplier / ($settings['max_chance'] / 100);
         $maxPriceUsd = $betTotalUsd * $multiplier / ($settings['min_chance'] / 100);
 
-        return VirtualItem::whereBetween('steam_price', [$minPriceUsd, $maxPriceUsd])
-            ->where('steam_price', '>', 0)
-            ->orderBy('steam_price')
+        // Минимальная цена предмета 10 рублей
+        $minPriceFloorUsd = 10 / $usdRate;
+        $minPriceUsd = max($minPriceUsd, $minPriceFloorUsd);
+
+        // Применяем пользовательские фильтры цены (в рублях -> USD)
+        if (!empty($filters['price_from'])) {
+            $minPriceUsd = max($minPriceUsd, (float) $filters['price_from'] / $usdRate);
+        }
+        if (!empty($filters['price_to'])) {
+            $maxPriceUsd = min($maxPriceUsd, (float) $filters['price_to'] / $usdRate);
+        }
+
+        $query = VirtualItem::whereBetween('steam_price', [$minPriceUsd, $maxPriceUsd])
+            ->where('steam_price', '>=', $minPriceFloorUsd);
+
+        // Фильтр по поиску
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('market_hash_name', 'like', "%{$search}%");
+            });
+        }
+
+        return $query->orderBy('steam_price')
             ->limit($limit)
             ->get()
             ->map(function ($item) use ($betTotal, $multiplier, $usdRate) {
@@ -163,7 +185,16 @@ class UpgradeService
 
             $targetPriceRub = $targetItem->steam_price * $usdRate;
 
-            // 4. Расчет шанса
+            // 4. Валидация: цель должна быть дороже ставки (апгрейд — всегда вверх)
+            $priceRange = $this->getPriceRange($totalBet);
+            if ($targetPriceRub < $priceRange['min']) {
+                throw new Exception('Цена цели слишком низкая для апгрейда');
+            }
+            if ($targetPriceRub > $priceRange['max']) {
+                throw new Exception('Цена цели слишком высокая для апгрейда');
+            }
+
+            // 5. Расчет шанса
             $chance = $this->calculateChance($totalBet, $targetPriceRub);
 
             if ($chance < $settings['min_chance']) {

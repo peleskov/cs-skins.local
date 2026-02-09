@@ -17,6 +17,7 @@ import CartButton from './mplace/components/CartButton.vue';
 import Header from './mplace/components/Header.vue';
 import FavoriteButton from './mplace/components/FavoriteButton.vue';
 import Chat from './mplace/components/Chat.vue';
+import CarouselWinner from './cases/components/CarouselWinner.vue';
 
 // Кастомные скрипты шаблона mplace
 import './mplace/scripts/footer-accordion.js';
@@ -171,5 +172,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const app = createApp(Chat);
         app.use(Toast, toastOptions);
         app.mount('#chat-app');
+    }
+
+    // CarouselWinner компонент (лента дропов)
+    const carouselWinnerElement = document.getElementById('carousel-winner-app');
+    if (carouselWinnerElement) {
+        const app = createApp(CarouselWinner);
+        app.mount('#carousel-winner-app');
     }
 });

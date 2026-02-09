@@ -70,7 +70,7 @@
 								:class="sidebarCollapsed ? 'col-lg-4 col-xl-3' : 'col-6 col-lg-4 col-xl-2'">
 								<div class="category-case-box d-flex flex-column align-items-center h-100">
 									<!-- Бейджи -->
-									<div class="case-badges" v-if="case_item.label_hot || case_item.label_new || case_item.label_limited">
+									<div class="case-badges" v-if="case_item.label_hot || case_item.label_new || case_item.label_limited || case_item.label_free">
 										<span v-if="case_item.label_hot" class="case-badge case-badge-hot">
 											<i class="case-badge-icon case-badge-icon-hot"></i>
 											<span>HOT</span>
@@ -83,6 +83,10 @@
 											<i class="case-badge-icon case-badge-icon-limited"></i>
 											<span>LIMITED</span>
 										</span>
+										<span v-if="case_item.label_free" class="case-badge case-badge-free">
+											<i class="case-badge-icon case-badge-icon-free"></i>
+											<span>FREE</span>
+										</span>
 									</div>
 									<a :href="`/cases/${case_item.slug}`"
 										class="d-flex justify-content-center align-items-center image-box">
@@ -93,7 +97,7 @@
 										<h3 class="text-white text-center">{{ case_item.name }}</h3>
 									</a>
 									<a :href="`/cases/${case_item.slug}`" class="btn btn-quaternary"
-										v-html="formatPrice(case_item.price)"></a>
+										v-html="formatPrice(case_item.price, 'RUB', false, false)"></a>
 								</div>
 							</div>
 						</div>
@@ -156,7 +160,7 @@ export default {
 				const categoryId = case_item.category_id;
 				const categoryName = case_item.category?.name || 'Кейсы';
 				const categoryIcon = case_item.category?.icon || null;
-				const sortOrder = case_item.category?.sort_order || 999;
+				const sortOrder = case_item.category?.sort_order ?? 999;
 
 				if (!categoriesMap.has(categoryId)) {
 					categoriesMap.set(categoryId, {
@@ -207,12 +211,12 @@ export default {
 						}
 
 						// Фильтр по минимальной цене
-						if (this.filters.minPrice && case_item.price < this.filters.minPrice) {
+						if (this.filters.minPrice != null && case_item.price < this.filters.minPrice) {
 							return false;
 						}
 
 						// Фильтр по максимальной цене
-						if (this.filters.maxPrice && case_item.price > this.filters.maxPrice) {
+						if (this.filters.maxPrice != null && case_item.price > this.filters.maxPrice) {
 							return false;
 						}
 

@@ -87,6 +87,11 @@ class CaseModelResource extends Resource
                     ->numeric()
                     ->default(50)
                     ->suffix('%'),
+                TextInput::make('accumulated_fund')
+                    ->label('Накопленный фонд')
+                    ->numeric()
+                    ->default(0)
+                    ->suffix('₽'),
                 Select::make('category_id')
                     ->label('Категория')
                     ->relationship('category', 'name')
@@ -99,16 +104,25 @@ class CaseModelResource extends Resource
                     ->image()
                     ->directory('cases')
                     ->visibility('public'),
-                Toggle::make('is_active')
-                    ->label('Активен')
-                    ->default(true),
-
-                Select::make('case_type')
-                    ->label('Тип кейса')
-                    ->options(CaseModel::getTypes())
-                    ->default('normal')
-                    ->required()
-                    ->live(),
+                // Настройки и метки
+                Grid::make(4)
+                    ->schema([
+                        Select::make('case_type')
+                            ->label('Тип кейса')
+                            ->options(CaseModel::getTypes())
+                            ->default('normal')
+                            ->required()
+                            ->live()
+                            ->columnSpanFull(),
+                        Toggle::make('label_hot')->label('HOT'),
+                        Toggle::make('label_new')->label('NEW'),
+                        Toggle::make('label_limited')->label('LIMITED'),
+                        Toggle::make('label_free')->label('FREE'),
+                        Toggle::make('is_active')
+                            ->label('Активен')
+                            ->default(true)
+                            ->columnSpanFull(),
+                    ]),
 
                 // Для бесплатных кейсов
                 TextInput::make('free_min_deposit')
@@ -129,14 +143,6 @@ class CaseModelResource extends Resource
                     ->label('Макс. открытий')
                     ->numeric()
                     ->visible(fn (Get $get) => $get('case_type') === 'limited'),
-
-                // Метки
-                Grid::make(3)
-                    ->schema([
-                        Toggle::make('label_hot')->label('HOT'),
-                        Toggle::make('label_new')->label('NEW'),
-                        Toggle::make('label_limited')->label('LIMITED'),
-                    ]),
 
                 Placeholder::make('tiers_info')
                     ->label('Уровни и предметы')
@@ -163,6 +169,7 @@ class CaseModelResource extends Resource
                         $record->label_hot ? '🔥 HOT' : null,
                         $record->label_new ? '✨ NEW' : null,
                         $record->label_limited ? '⏰ LIMITED' : null,
+                        $record->label_free ? '🎁 FREE' : null,
                     ]))),
 
                 TextColumn::make('case_type')
@@ -184,8 +191,7 @@ class CaseModelResource extends Resource
                 TextColumn::make('accumulated_fund')
                     ->label('Фонд')
                     ->money('RUB')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->sortable(),
 
                 TextColumn::make('tiers_count')
                     ->label('Уровни')

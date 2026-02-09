@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Auction;
 use App\Models\Favorite;
 use App\Models\Listing;
 use Illuminate\Http\Request;
@@ -102,13 +103,22 @@ class FavoritesController extends Controller
         // Добавляем статус корзины для каждого товара (читаем из сессии)
         $cartItemIds = collect(session()->get('shopping_cart', []))->keys();
         
-        $favorites->each(function ($favorite) use ($cartItemIds) {
+        // Получаем заблокированные аукционами листинги
+        $listingIds = $favorites->pluck('listing.id')->filter();
+        $blockedIds = Auction::with('listing')
+            ->where('status', Auction::STATUS_ACTIVE)
+            ->where('ends_at', '>', now())
+            ->whereIn('listing_id', $listingIds)
+            ->get()
+            ->filter(fn ($auction) => $auction->isPurchaseBlocked())
+            ->pluck('listing_id');
+
+        $favorites->each(function ($favorite) use ($cartItemIds, $blockedIds) {
             if ($favorite->listing) {
                 $favorite->listing->is_in_cart = $cartItemIds->contains($favorite->listing->id);
-                // Все товары в избранном по умолчанию имеют is_favorite = true
                 $favorite->listing->is_favorite = true;
-                // Добавляем структурированные теги
                 $favorite->listing->structured_tags = $favorite->listing->structured_tags;
+                $favorite->listing->purchase_blocked = $blockedIds->contains($favorite->listing->id);
             }
         });
 

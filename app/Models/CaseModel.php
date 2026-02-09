@@ -35,6 +35,7 @@ class CaseModel extends Model
         'label_hot',
         'label_new',
         'label_limited',
+        'label_free',
     ];
 
     protected $casts = [
@@ -51,6 +52,7 @@ class CaseModel extends Model
         'label_hot' => 'boolean',
         'label_new' => 'boolean',
         'label_limited' => 'boolean',
+        'label_free' => 'boolean',
     ];
 
     // Relationships

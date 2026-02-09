@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Listing;
+use App\Models\Auction;
 use Illuminate\Support\Collection;
 
 class CartService
@@ -27,6 +28,16 @@ class CartService
         // Проверяем, что пользователь не пытается добавить свой собственный товар
         if (auth('client')->check() && $listing->seller_id === auth('client')->id()) {
             throw new \Exception('Нельзя добавить собственный товар в корзину');
+        }
+
+        // Проверяем аукционную блокировку покупки
+        $activeAuction = Auction::where('listing_id', $listingId)
+            ->where('status', Auction::STATUS_ACTIVE)
+            ->where('ends_at', '>', now())
+            ->first();
+
+        if ($activeAuction && $activeAuction->isPurchaseBlocked()) {
+            throw new \Exception('Покупка недоступна — аукцион в активной фазе торгов');
         }
 
         $cart = $this->getCart();

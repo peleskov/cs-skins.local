@@ -16,6 +16,7 @@
         "maatwebsite/excel": "*",
         "pusher/pusher-php-server": "*",
         "socialiteproviders/steam": "^4.3",
+        "symfony/clock": "^7.4",
         "telegram-bot/api": "^2.5"
     },
     "require-dev": {

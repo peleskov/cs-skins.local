@@ -187,42 +187,6 @@
 		</div>
 	</div>
 
-	<!-- Модальное окно подтверждения удаления -->
-	<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel"
-		aria-hidden="true">
-		<div class="modal-dialog modal-dialog-centered">
-			<div class="modal-content">
-				<div class="modal-header">
-					<h5 class="modal-title" id="confirmDeleteModalLabel">
-						<i class="ri-delete-bin-line me-2 text-danger"></i>Подтверждение удаления
-					</h5>
-					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-				</div>
-				<div class="modal-body">
-					<div v-if="itemToDelete" class="mb-3">
-						<div class="d-flex align-items-center">
-							<div class="product-img me-3"
-								:style="{ backgroundImage: 'url(' + getItemImage(itemToDelete) + ')', width: '64px', height: '64px', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }">
-							</div>
-							<div>
-								<h6 class="mb-1">{{ getItemName(itemToDelete) }}</h6>
-								<small class="text-muted">{{ itemToDelete.market_hash_name }}</small>
-							</div>
-						</div>
-					</div>
-					<p>Вы уверены, что хотите удалить этот предмет из торговли?</p>
-				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn theme-outline theme-outline-danger"
-						data-bs-dismiss="modal">Отмена</button>
-					<button type="button" class="btn theme-btn theme-btn-danger" @click="confirmRemoveListing">
-						<i class="ri-delete-bin-line me-1"></i>Удалить
-					</button>
-				</div>
-			</div>
-		</div>
-	</div>
-
 	<!-- Модальное окно редактирования цены -->
 	<div class="modal fade" id="editPriceModal" tabindex="-1" aria-labelledby="editPriceModalLabel" aria-hidden="true">
 		<div class="modal-dialog modal-dialog-centered">
@@ -270,52 +234,6 @@
 					<button type="button" class="btn theme-btn theme-btn-info" @click="confirmEditPrice"
 						:disabled="!isValidPrice">
 						<i class="ri-save-line me-1"></i>Сохранить
-					</button>
-				</div>
-			</div>
-		</div>
-	</div>
-
-	<!-- Модальное окно подтверждения активации -->
-	<div class="modal fade" id="confirmActivateModal" tabindex="-1" aria-labelledby="confirmActivateModalLabel"
-		aria-hidden="true">
-		<div class="modal-dialog modal-dialog-centered">
-			<div class="modal-content">
-				<div class="modal-header">
-					<h5 class="modal-title" id="confirmActivateModalLabel">
-						<i class="ri-play-line me-2 text-success"></i>Подтверждение активации
-					</h5>
-					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-				</div>
-				<div class="modal-body">
-					<div v-if="itemToActivate" class="mb-3">
-						<div class="d-flex align-items-center">
-							<div class="product-img me-3" :style="{
-								backgroundImage: 'url(' + getItemImage(itemToActivate) + ')',
-								width: '64px',
-								height: '64px',
-								backgroundSize: 'contain',
-								backgroundRepeat: 'no-repeat',
-								backgroundPosition: 'center'
-							}"></div>
-							<div>
-								<h6 class="mb-1">{{ getItemName(itemToActivate) }}</h6>
-								<small class="text-muted">{{ itemToActivate.market_hash_name }}</small>
-								<div class="mt-1">
-									<span class="badge bg-success" v-html="formatPrice(itemToActivate.price)"></span>
-								</div>
-							</div>
-						</div>
-					</div>
-					<p>Вы уверены, что хотите активировать этот листинг? Предмет станет доступен для покупки в
-						маркетплейсе.
-					</p>
-				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn theme-outline theme-outline-danger"
-						data-bs-dismiss="modal">Отмена</button>
-					<button type="button" class="btn theme-btn theme-btn-success" @click="confirmActivateListing">
-						<i class="ri-play-line me-1"></i>Активировать
 					</button>
 				</div>
 			</div>
@@ -530,7 +448,6 @@ export default {
 		return {
 			listings: [],
 			isLoading: false,
-			itemToDelete: null,
 			itemToEdit: null,
 			editPriceValue: null,
 			itemToAuction: null,
@@ -692,107 +609,49 @@ export default {
 			event.target.src = '/images/skin_no_image.svg';
 		},
 
-		activateListing(listing) {
+		async activateListing(listing) {
 			if (listing.price <= 0) {
 				window.toast.error('Сначала установите цену для листинга');
 				return;
 			}
 
-			this.itemToActivate = listing;
-			const modal = new bootstrap.Modal(document.getElementById('confirmActivateModal'));
-			modal.show();
-		},
-
-		async confirmActivateListing() {
-			if (!this.itemToActivate) return;
-
 			try {
 				const response = await axios.post('/api/listings/activate', {
-					listing_id: this.itemToActivate.id
+					listing_id: listing.id
 				});
 				const data = response.data;
 
 				if (data.success) {
-					// Обновляем статус в локальных данных
-					this.itemToActivate.status = 'active';
-					this.itemToActivate.listed_at = new Date().toISOString();
+					listing.status = 'active';
+					listing.listed_at = new Date().toISOString();
 					window.toast.success('Листинг активирован');
-
-					// Обновляем минимальную цену для этого предмета
-					await this.updateMinMarketPrice(this.itemToActivate.market_hash_name);
-
-					// Закрываем модальное окно
-					const modal = bootstrap.Modal.getInstance(document.getElementById('confirmActivateModal'));
-					if (modal) {
-						modal.hide();
-					}
+					await this.updateMinMarketPrice(listing.market_hash_name);
 				} else {
-					// Проверяем, нужен ли Trade URL
 					if (data.require_trade_url) {
-						// Глобальный обработчик покажет toast автоматически
-
-						// Закрываем модальное окно активации
-						const modal = bootstrap.Modal.getInstance(document.getElementById('confirmActivateModal'));
-						if (modal) {
-							modal.hide();
-						}
-
-						// Показываем модальное окно для ввода Trade URL
-						setTimeout(() => {
-							const tradeUrlModal = new bootstrap.Modal(document.getElementById('tradeUrlRequiredModal'));
-							tradeUrlModal.show();
-						}, 300);
-					} else {
-						// Глобальный обработчик покажет toast автоматически
+						this.itemToActivate = listing;
+						const tradeUrlModal = new bootstrap.Modal(document.getElementById('tradeUrlRequiredModal'));
+						tradeUrlModal.show();
 					}
 				}
 			} catch (error) {
 				console.error('Activate listing error:', error);
-				// Глобальный обработчик покажет toast автоматически
-			} finally {
-				this.itemToActivate = null;
 			}
 		},
 
-		removeListing(listing) {
-			this.itemToDelete = listing;
-			const modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
-			modal.show();
-		},
-
-		async confirmRemoveListing() {
-			if (!this.itemToDelete) return;
-
+		async removeListing(listing) {
 			try {
 				const response = await axios.post('/api/listings/delete', {
-					listing_id: this.itemToDelete.id
+					listing_id: listing.id
 				});
 				const data = response.data;
 
 				if (data.success) {
-					const deletedMarketHashName = this.itemToDelete.market_hash_name;
-
-					// Удаляем листинг из локального массива
-					this.listings = this.listings.filter(listing => listing.id !== this.itemToDelete.id);
+					this.listings = this.listings.filter(l => l.id !== listing.id);
 					window.toast.success(data.message || 'Предмет удален из торговли');
-
-					// Обновляем минимальную цену для этого предмета
-					await this.updateMinMarketPrice(deletedMarketHashName);
-				} else {
-					// Глобальный обработчик покажет toast автоматически
+					await this.updateMinMarketPrice(listing.market_hash_name);
 				}
 			} catch (error) {
 				console.error('Delete listing error:', error);
-				// Глобальный обработчик покажет toast автоматически
-			} finally {
-				// Закрываем модальное окно
-				const modal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal'));
-				if (modal) {
-					modal.hide();
-				}
-
-				// Очищаем выбранный элемент
-				this.itemToDelete = null;
 			}
 		},
 

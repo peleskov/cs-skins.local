@@ -35,6 +35,7 @@ class Transaction extends Model
     const TYPE_CASE_PURCHASE = 'case_purchase';
     const TYPE_VIRTUAL_ITEM_SALE = 'virtual_item_sale';
     const TYPE_UPGRADE_BET = 'upgrade_bet';
+    const TYPE_PROMOCODE = 'promocode';
 
     const STATUS_PENDING = 'pending';
     const STATUS_COMPLETED = 'completed';
@@ -90,7 +91,7 @@ class Transaction extends Model
 
     public function isCredit(): bool
     {
-        return in_array($this->type, [self::TYPE_DEPOSIT, self::TYPE_SALE, self::TYPE_REFUND, self::TYPE_VIRTUAL_ITEM_SALE]);
+        return in_array($this->type, [self::TYPE_DEPOSIT, self::TYPE_SALE, self::TYPE_REFUND, self::TYPE_VIRTUAL_ITEM_SALE, self::TYPE_PROMOCODE]);
     }
 
     public function isDebit(): bool

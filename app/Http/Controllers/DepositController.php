@@ -25,6 +25,41 @@ class DepositController extends Controller
     }
 
     /**
+     * Activate promocode directly (without deposit)
+     */
+    public function activatePromocode(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'code' => ['required', 'string', 'max:100'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $client = Auth::guard('client')->user();
+
+        try {
+            $result = $this->promocodeService->activate($request->input('code'), $client);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Промокод активирован',
+                'amount' => $result['amount'],
+                'balance' => $result['balance'],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
      * Validate promocode
      */
     public function validatePromocode(Request $request): JsonResponse

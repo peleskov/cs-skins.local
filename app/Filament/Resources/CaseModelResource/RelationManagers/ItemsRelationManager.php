@@ -43,6 +43,7 @@ class ItemsRelationManager extends RelationManager
                         $existingIds = $this->getOwnerRecord()->items()->pluck('virtual_item_id')->toArray();
                         return VirtualItem::query()
                             ->whereNotNull('steam_price')
+                            ->where('steam_price', '>', 0)
                             ->whereNotIn('id', $existingIds)
                             ->orderBy('steam_price', 'desc')
                             ->limit(1000)
@@ -55,6 +56,8 @@ class ItemsRelationManager extends RelationManager
                     ->getSearchResultsUsing(function (string $search) {
                         $existingIds = $this->getOwnerRecord()->items()->pluck('virtual_item_id')->toArray();
                         return VirtualItem::query()
+                            ->whereNotNull('steam_price')
+                            ->where('steam_price', '>', 0)
                             ->whereNotIn('id', $existingIds)
                             ->where(function ($query) use ($search) {
                                 $query->where('name', 'like', "%{$search}%")
@@ -68,6 +71,9 @@ class ItemsRelationManager extends RelationManager
                                 $item->id => "{$item->name} - \${$item->steam_price}"
                             ]);
                     })
+                    ->validationMessages([
+                        'in' => 'Выбранный предмет недоступен (нет цены или уже добавлен в кейс)',
+                    ])
                     ->required()
                     ->live()
                     ->disabledOn('edit')

@@ -16,7 +16,7 @@ return [
     'footer' => [
         'documents' => 'Documents',
         'useful_links' => 'Useful Links',
-        'copyright' => '© Copyright 2025 CS-SKINS.PRO. All rights reserved.',
+        'copyright' => '© Copyright :year CS-SKINS.PRO. All rights reserved.',
         'company_info' => [
             'name' => 'LLC "Kulchoro"',
             'inn' => 'Tax ID: 01104202510167',

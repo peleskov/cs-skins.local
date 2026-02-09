@@ -6,11 +6,38 @@
 					<a :href="routes.cases" class="text-uppercase link-tocases d-flex align-items-center gap-3">{{
 						caseData.name }}</a>
 				</div>
+				<div class="col-auto" v-if="freeInfo && freeInfo.available">
+					<p class="small text-white mb-0">Доступно
+						{{ freeInfo.opens_remaining }} {{ pluralize(freeInfo.opens_remaining, 'открытие', 'открытия',
+							'открытий') }} {{ freeCountdown }}</p>
+				</div>
+				<div class="col-auto" v-if="isLimitedCase">
+					<p class="small text-white mb-0" v-if="limitedRemainingOpens !== null && !limitedTimeExpired">
+						Осталось {{ limitedRemainingOpens }} / {{ caseData.total_opens_limit }} {{
+							pluralize(limitedRemainingOpens, 'открытие', 'открытия', 'открытий') }}
+					</p>
+					<p class="small text-white mb-0" v-if="caseData.available_until">
+						{{ limitedCountdown }}
+					</p>
+				</div>
 			</div>
 			<div class="case-box mb-5">
-				<div class="case-box-images mb-3 d-flex justify-content-center align-items-center gap-3 flex-wrap" v-if="!isSpinning && !showResults">
-					<div v-for="n in selectedMultiplier" :key="`case-image-${n}`"
-						class="case-box-image"
+				<div class="case-box-images mb-3 d-flex justify-content-center align-items-center gap-3 flex-wrap"
+					v-if="!isSpinning && !showResults">
+					<div v-if="freeInfo && (freeInfo.reason === 'insufficient_deposits' || freeInfo.reason === 'no_opens_left')"
+						class="limit-box d-flex flex-column justify-content-center align-items-center">
+						<h2>До следующего кейса еще <span class="color"
+								v-html="formatPrice(freeInfo.remaining, 'RUB', false, false)"></span> из <span
+								v-html="formatPrice(freeInfo.required_deposits, 'RUB', false, false)"></span></h2>
+						<div class="rest-limit">
+							<div class="fill" :style="{ width: depositProgress + '%' }"></div>
+							<div class="point" :style="{ left: depositProgress + '%' }"></div>
+							<div class="btn btn-secondary text-nowrap" data-bs-toggle="tooltip"
+								data-bs-title="При достижении нужной суммы пополнения кейс становится доступным для открытия. Каждые 24 часа условия необходимо выполнить заново. Все неоткрытые кейсы пропадают.">
+								Как это работает ?</div>
+						</div>
+					</div>
+					<div v-for="n in selectedMultiplier" :key="`case-image-${n}`" class="case-box-image"
 						:class="{ 'case-box-image-small': selectedMultiplier > 3 }"
 						:style="{ backgroundImage: `url(/storage/${caseData.image_url})` }">
 					</div>
@@ -18,79 +45,62 @@
 
 				<!-- Слайдер для розыгрыша (один или несколько) -->
 				<div class="case-prize-slider" v-if="isSpinning || showResults">
-					<div class="container">
-						<!-- Рулетки для каждого приза -->
-						<div v-for="(roulette, rouletteIndex) in roulettes" :key="`roulette-${rouletteIndex}`"
-							class="case-roulette-container mb-3" :class="{ 'roulette-active': roulette.isActive }">
-							<!-- Окошко для приза -->
-							<div class="roulette-window"></div>
+					<!-- Рулетки для каждого приза -->
+					<div v-for="(roulette, rouletteIndex) in roulettes" :key="`roulette-${rouletteIndex}`"
+						class="case-roulette-container mb-3" :class="{ 'roulette-active': roulette.isActive }">
+						<!-- Окошко для приза -->
+						<div class="roulette-window"></div>
 
-							<!-- Слайдер -->
-							<div class="roulette-wrapper">
-								<div class="roulette-track" :class="{ 'spinning': roulette.isSpinning }"
-									:style="{ transform: `translateX(${roulette.sliderOffset}px)` }">
-									<div v-for="(item, index) in roulette.displayItems" :key="`item-${rouletteIndex}-${index}`"
-										:data-item-id="item.id" class="roulette-item case-content-item" :class="[
-											{
-												'winner': item.isWinner,
-												'center': getItemPosition(roulette, index) === 'center'
-											},
-											getRarityClass(item)
-										]">
-										<div class="image"
-											:style="{ backgroundImage: `url(${getItemImageUrl(item)})` }">
-										</div>
-										<div class="d-flex justify-content-center">
-											<p class="w-75 text-truncate">{{ item.name }}</p>
-										</div>
+						<!-- Слайдер -->
+						<div class="roulette-wrapper">
+							<div class="roulette-track" :class="{ 'spinning': roulette.isSpinning }"
+								:style="{ transform: `translateX(${roulette.sliderOffset}px)` }">
+								<div v-for="(item, index) in roulette.displayItems"
+									:key="`item-${rouletteIndex}-${index}`" :data-item-id="item.id"
+									class="roulette-item case-content-item" :class="[
+										{
+											'winner': item.isWinner,
+											'center': getItemPosition(roulette, index) === 'center'
+										},
+										getRarityClass(item)
+									]">
+									<div class="image" :style="{ backgroundImage: `url(${getItemImageUrl(item)})` }">
+									</div>
+									<div class="d-flex justify-content-center name-box">
+										<p class="w-75 text-center">{{ getNameWithoutWear(item.name) }}</p>
 									</div>
 								</div>
-							</div>
-						</div>
-
-						<!-- Результат открытия -->
-						<div v-if="showResults" class="text-center mt-4">
-							<div class="alert text-white">
-								<h4 class="text-white">Поздравляем!</h4>
-								<template v-if="wonItems.length === 1">
-									<p class="mb-0">Вы выиграли: <strong>{{ wonItems[0].name }}</strong></p>
-									<p class="mb-3">Стоимость: <strong v-html="formatPrice(wonItems[0].price)"></strong></p>
-								</template>
-								<template v-else>
-									<p class="mb-2">Вы выиграли {{ wonItems.length }} предметов:</p>
-									<div class="won-items-list d-flex flex-wrap justify-content-center gap-2 mb-3">
-										<div v-for="item in wonItems" :key="item.inventory_id"
-											class="won-item-badge" :class="getRarityClass(item)">
-											<span>{{ item.name }}</span>
-											<span class="won-item-price" v-html="formatPrice(item.price)"></span>
-										</div>
-									</div>
-									<p class="mb-0">Общая стоимость: <strong v-html="formatPrice(totalWonPrice)"></strong></p>
-								</template>
 							</div>
 						</div>
 					</div>
 				</div>
 
-				<div class="case-box-footer row flex-column flex-lg-row justify-content-lg-center p-2"
-					v-if="allItems.length > 0">
-					<div class="col-lg-4 mb-3 mb-lg-0">
+				<div class="case-box-footer p-2 position-relative" v-if="allItems.length > 0">
+					<div class="multiplier-box" v-if="!isSpinning && !showResults">
 						<ul class="nav justify-content-center justify-content-lg-start case-box-qty gap-1">
 							<li class="nav-item" v-for="mult in allMultipliers" :key="mult">
-								<button class="btn btn-tertiary"
-									:class="{ 'active': selectedMultiplier === mult }"
-									:disabled="!isMultiplierAvailable(mult) || isProcessing || isSpinning"
+								<button class="btn btn-tertiary" :class="{ 'active': selectedMultiplier === mult }"
+									:disabled="!isMultiplierAvailable(mult) || isProcessing || freeDisabled || limitedDisabled"
 									@click="selectMultiplier(mult)">
 									{{ mult }}
 								</button>
 							</li>
 						</ul>
 					</div>
-					<div class="col-lg-4 d-flex justify-content-center align-items-start mb-3 mb-lg-0">
+					<div class="d-flex justify-content-center align-items-center mb-3 mb-lg-0 gap-2 position-relative">
 						<template v-if="showResults">
-							<button class="btn btn-primary px-5" @click="resetAndReopen">
-								Ещё раз
-							</button>
+							<div class="col-6 d-flex justify-content-end">
+								<button class="btn btn-primary px-4" @click="resetAndReopen">
+									Попробовать еще раз
+								</button>
+							</div>
+							<div class="col-6">
+								<button class="btn btn-secondary px-4" @click="sellWonItems"
+									:disabled="sellingWonItems">
+									<span v-if="sellingWonItems" class="spinner-border spinner-border-sm me-1"></span>
+									Продать за&nbsp;<span v-html="formatPrice(totalWonPrice)"></span>
+								</button>
+							</div>
 						</template>
 						<template v-else-if="isProcessing || isSpinning">
 							<button class="btn btn-quaternary px-5" disabled>
@@ -99,16 +109,20 @@
 							</button>
 						</template>
 						<template v-else>
-							<button type="button" class="btn btn-primary px-5" @click="confirmPurchase">
-								Открыть за&nbsp;<span v-html="formatPrice(totalPrice)"></span>
-							</button>
+							<div class="col-6 d-flex justify-content-end">
+								<button type="button" class="btn btn-primary px-5"
+									:disabled="freeDisabled || limitedDisabled" @click="confirmPurchase">
+									Открыть за&nbsp;<span v-html="formatPrice(totalPrice, 'RUB', false, false)"></span>
+								</button>
+							</div>
+							<div class="col-6">
+								<button class="btn btn-tertiary px-4" :disabled="freeDisabled || limitedDisabled"
+									@click="openFast" v-if="!showResults && !isProcessing && !isSpinning">
+									Открыть быстро за&nbsp;<span
+										v-html="formatPrice(totalPrice, 'RUB', false, false)"></span>
+								</button>
+							</div>
 						</template>
-					</div>
-					<div class="col-lg-4 d-flex justify-content-center justify-content-lg-start align-items-start">
-						<button class="btn btn-tertiary px-4" @click="openFast"
-							v-if="!showResults && !isProcessing && !isSpinning">
-							Открыть быстро за&nbsp;<span v-html="formatPrice(totalPrice)"></span>
-						</button>
 					</div>
 				</div>
 			</div>
@@ -169,13 +183,13 @@
 </template>
 
 <script>
-import { formatPrice } from '../../shared/utils/helpers';
+import { formatPrice, pluralize } from '../../shared/utils/helpers';
 import axios from 'axios';
 
 // Animation constants
 const ANIMATION_CONFIG = {
 	ITEM_WIDTH: 200,
-	ITEM_GAP: 20,
+	ITEM_GAP: 10,
 	MAX_SPEED: 40,
 	MIN_SPEED: 4,
 	DECELERATION_CARDS: 8,
@@ -213,7 +227,7 @@ export default {
 	},
 
 	setup() {
-		return { formatPrice };
+		return { formatPrice, pluralize };
 	},
 
 	data() {
@@ -228,6 +242,7 @@ export default {
 			isSpinning: false,
 			showResults: false,
 			wonItems: [],
+			sellingWonItems: false,
 
 			// Multiple roulettes support
 			roulettes: [],
@@ -245,7 +260,15 @@ export default {
 
 			// Configuration
 			itemWidth: ANIMATION_CONFIG.ITEM_WIDTH,
-			itemGap: ANIMATION_CONFIG.ITEM_GAP
+			itemGap: ANIMATION_CONFIG.ITEM_GAP,
+
+			// Free case countdown
+			freeCountdown: '',
+			freeCountdownInterval: null,
+
+			// Limited case countdown
+			limitedCountdown: '',
+			limitedCountdownInterval: null,
 		};
 	},
 
@@ -255,10 +278,116 @@ export default {
 		},
 		totalWonPrice() {
 			return this.wonItems.reduce((sum, item) => sum + item.price, 0);
-		}
+		},
+		freeInfo() {
+			return this.caseData.free_opens_info || null;
+		},
+		depositProgress() {
+			if (!this.freeInfo || !this.freeInfo.required_deposits) return 0;
+			const deposited = this.freeInfo.required_deposits - this.freeInfo.remaining;
+			return Math.round((deposited / this.freeInfo.required_deposits) * 100);
+		},
+		isFreeCase() {
+			return this.caseData.case_type === 'free';
+		},
+		hasFreeOpens() {
+			return this.freeInfo && this.freeInfo.available === true;
+		},
+		freeDisabled() {
+			return this.isFreeCase && !this.hasFreeOpens;
+		},
+		isLimitedCase() {
+			return this.caseData.case_type === 'limited';
+		},
+		limitedRemainingOpens() {
+			if (!this.isLimitedCase || this.caseData.total_opens_limit === null) return null;
+			return Math.max(0, this.caseData.total_opens_limit - (this.caseData.total_opens_count || 0));
+		},
+		limitedTimeExpired() {
+			return this.isLimitedCase && this.caseData.available_until && new Date(this.caseData.available_until) <= Date.now();
+		},
+		limitedDisabled() {
+			if (!this.isLimitedCase) return false;
+			if (this.limitedRemainingOpens !== null && this.limitedRemainingOpens <= 0) return true;
+			if (this.caseData.available_until && new Date(this.caseData.available_until) <= Date.now()) return true;
+			return false;
+		},
+	},
+
+	watch: {
+		'caseData.free_opens_info': {
+			handler() {
+				this.startFreeCountdown();
+			},
+			immediate: true,
+		},
+		'caseData.available_until': {
+			handler() {
+				this.startLimitedCountdown();
+			},
+			immediate: true,
+		},
 	},
 
 	methods: {
+		startFreeCountdown() {
+			if (this.freeCountdownInterval) {
+				clearInterval(this.freeCountdownInterval);
+				this.freeCountdownInterval = null;
+			}
+			if (!this.freeInfo || !this.freeInfo.expires_at) return;
+
+			const update = () => {
+				const diff = new Date(this.freeInfo.expires_at) - Date.now();
+				if (diff <= 0) {
+					this.freeCountdown = '';
+					clearInterval(this.freeCountdownInterval);
+					this.freeCountdownInterval = null;
+					this.loadCaseDetails();
+					return;
+				}
+				const h = Math.floor(diff / 3600000);
+				const m = Math.floor((diff % 3600000) / 60000);
+				const s = Math.floor((diff % 60000) / 1000);
+				this.freeCountdown = `${h} ч ${m} м ${s} сек`;
+			};
+			update();
+			this.freeCountdownInterval = setInterval(update, 1000);
+		},
+
+		startLimitedCountdown() {
+			if (this.limitedCountdownInterval) {
+				clearInterval(this.limitedCountdownInterval);
+				this.limitedCountdownInterval = null;
+			}
+			if (!this.caseData.available_until) return;
+
+			const update = () => {
+				const diff = new Date(this.caseData.available_until) - Date.now();
+				if (diff <= 0) {
+					this.limitedCountdown = 'Время вышло';
+					clearInterval(this.limitedCountdownInterval);
+					this.limitedCountdownInterval = null;
+					return;
+				}
+				const d = Math.floor(diff / 86400000);
+				const h = Math.floor((diff % 86400000) / 3600000);
+				const m = Math.floor((diff % 3600000) / 60000);
+				const s = Math.floor((diff % 60000) / 1000);
+				this.limitedCountdown = d > 0
+					? `${d}д ${h} ч ${m} м ${s} сек`
+					: `${h} ч ${m} м ${s} сек`;
+			};
+			update();
+			this.limitedCountdownInterval = setInterval(update, 1000);
+		},
+
+		getNameWithoutWear(name) {
+			if (!name) return '';
+			// Убираем качество в скобках: (Factory New), (Field-Tested) и т.д.
+			return name.replace(/\s*\((Factory New|Minimal Wear|Field-Tested|Well-Worn|Battle-Scarred)\)\s*$/i, '').trim();
+		},
+
 		async loadCaseDetails() {
 			try {
 				const response = await axios.get(`/api/cases/${this.caseSlug}`);
@@ -295,7 +424,7 @@ export default {
 				});
 			}
 
-			this.allItems = this.shuffleArray([...items]);
+			this.allItems = this.sortItemsByRarity([...items]);
 			this.generateDisplayItems();
 			this.startAutoScroll();
 		},
@@ -373,6 +502,35 @@ export default {
 			}, ANIMATION_CONFIG.ANIMATION_FRAME_RATE);
 		},
 
+		sortItemsByRarity(items) {
+			const rarityOrder = {
+				'Contraband': 7,
+				'Covert': 6,
+				'Classified': 5,
+				'Restricted': 4,
+				'Mil-Spec Grade': 3,
+				'Mil-Spec': 3,
+				'Industrial Grade': 2,
+				'Consumer Grade': 1,
+				'Extraordinary': 6,
+				'Exotic': 5,
+				'Remarkable': 4,
+				'High Grade': 2,
+				'Base Grade': 1,
+			};
+
+			return items.sort((a, b) => {
+				const rarityA = rarityOrder[a.rarity] || 0;
+				const rarityB = rarityOrder[b.rarity] || 0;
+
+				if (rarityB !== rarityA) {
+					return rarityB - rarityA;
+				}
+
+				return (b.price || 0) - (a.price || 0);
+			});
+		},
+
 		shuffleArray(array) {
 			const shuffled = [...array];
 			for (let i = shuffled.length - 1; i > 0; i--) {
@@ -443,19 +601,14 @@ export default {
 
 			await this.$nextTick();
 
-			// Запускаем рулетки последовательно с задержкой
-			for (let i = 0; i < this.roulettes.length; i++) {
-				this.currentRouletteIndex = i;
-				this.roulettes[i].isActive = true;
+			// Запускаем все рулетки одновременно
+			const roulettePromises = this.roulettes.map((roulette, i) => {
+				roulette.isActive = true;
+				return this.spinSingleRoulette(i, fastMode);
+			});
 
-				// Ждём завершения текущей рулетки
-				await this.spinSingleRoulette(i, fastMode);
-
-				// Задержка перед следующей рулеткой (кроме последней)
-				if (i < this.roulettes.length - 1) {
-					await this.delay(ANIMATION_CONFIG.ROULETTE_DELAY);
-				}
-			}
+			// Ждём завершения всех рулеток
+			await Promise.all(roulettePromises);
 
 			// Все рулетки завершены
 			this.isSpinning = false;
@@ -641,6 +794,36 @@ export default {
 			this.loadCaseDetails();
 		},
 
+		async sellWonItems() {
+			if (this.sellingWonItems || this.wonItems.length === 0) return;
+
+			this.sellingWonItems = true;
+
+			try {
+				const itemIds = this.wonItems.map(item => item.inventory_id);
+				const response = await axios.post('/api/case-inventory/sell', {
+					item_ids: itemIds
+				});
+
+				if (response.data.success) {
+					// Обновляем баланс в хедере
+					if (response.data.balance) {
+						window.dispatchEvent(new CustomEvent('balance-updated', {
+							detail: { main: response.data.balance }
+						}));
+					}
+
+					// Сбрасываем состояние и перезагружаем
+					this.resetAndReopen();
+				}
+			} catch (error) {
+				console.error('Ошибка продажи:', error);
+				alert(error.response?.data?.message || 'Ошибка при продаже предметов');
+			} finally {
+				this.sellingWonItems = false;
+			}
+		},
+
 		getItemImageUrl(item) {
 			if (!item.image_url) {
 				return '/images/item-placeholder.png';
@@ -725,6 +908,47 @@ export default {
 			});
 		},
 
+		handlePageShow(event) {
+			if (event.persisted) {
+				// Страница восстановлена из bfcache — полный сброс
+				if (this.animationInterval) {
+					clearInterval(this.animationInterval);
+					this.animationInterval = null;
+				}
+				if (this.freeCountdownInterval) {
+					clearInterval(this.freeCountdownInterval);
+					this.freeCountdownInterval = null;
+				}
+				if (this.limitedCountdownInterval) {
+					clearInterval(this.limitedCountdownInterval);
+					this.limitedCountdownInterval = null;
+				}
+
+				this.isOpening = false;
+				this.isProcessing = false;
+				this.isSpinning = false;
+				this.showResults = false;
+				this.wonItems = [];
+				this.roulettes = [];
+				this.currentRouletteIndex = 0;
+				this.sellingWonItems = false;
+				this.sliderOffset = 0;
+
+				this.loadCaseDetails();
+			}
+		},
+
+		initTooltips() {
+			if (window.bootstrap?.Tooltip) {
+				this.$el.querySelectorAll('[data-bs-toggle="tooltip"]')
+					.forEach(el => {
+						if (!window.bootstrap.Tooltip.getInstance(el)) {
+							new window.bootstrap.Tooltip(el);
+						}
+					});
+			}
+		},
+
 		recalculateRoulettePosition(rouletteIndex) {
 			const roulette = this.roulettes[rouletteIndex];
 			if (!roulette || roulette.isSpinning) return;
@@ -761,16 +985,27 @@ export default {
 		this.updateAvailableMultipliers();
 		window.addEventListener('currency-changed', this.handleCurrencyChange);
 		window.addEventListener('resize', this.handleResize);
+		window.addEventListener('pageshow', this.handlePageShow);
+	},
+
+	updated() {
+		this.initTooltips();
 	},
 
 	beforeUnmount() {
 		window.removeEventListener('currency-changed', this.handleCurrencyChange);
 		window.removeEventListener('resize', this.handleResize);
+		window.removeEventListener('pageshow', this.handlePageShow);
 
 		if (this.animationInterval) {
 			clearInterval(this.animationInterval);
 		}
+		if (this.freeCountdownInterval) {
+			clearInterval(this.freeCountdownInterval);
+		}
+		if (this.limitedCountdownInterval) {
+			clearInterval(this.limitedCountdownInterval);
+		}
 	}
 }
 </script>
-

@@ -98,10 +98,8 @@ export default {
 				}
 			}
 			
-			// Эмитим событие для других компонентов
-			window.dispatchEvent(new CustomEvent('currency-changed', {
-				detail: { currency }
-			}));
+			// Перезагружаем страницу для обновления всех цен
+			window.location.reload();
 		}
 	}
 }

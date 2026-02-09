@@ -240,7 +240,10 @@ class ProfileController extends Controller
 
         $transactions = $client->transactions()
             ->with('order')
-            ->whereNotIn('order_id', $heldOrderIds)
+            ->where(function ($q) use ($heldOrderIds) {
+                $q->whereNull('order_id')
+                  ->orWhereNotIn('order_id', $heldOrderIds);
+            })
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 

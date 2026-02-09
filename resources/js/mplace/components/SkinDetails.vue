@@ -17,8 +17,7 @@
                     <div class="product-detail-image p-4 rounded-4">
                         <div class="product-main-image position-relative">
                             <div v-if="listing.is_stattrak" class="seller-badge new-badge">
-                                <img class="img-fluid badge"
-                                    src="/images/svg/star-white.svg" alt="medal">
+                                <img class="img-fluid badge" src="/images/svg/star-white.svg" alt="medal">
                                 <h6>ST</h6>
                             </div>
                             <div v-if="listing.is_souvenir" class="seller-badge souvenir-badge">
@@ -54,7 +53,8 @@
                             <i class="ri-line-chart-line me-2"></i>История цен
                         </h5>
                         <div class="price-chart-container">
-                            <apexchart type="line" height="300" :options="chartOptions" :series="chartSeries" :key="currentCurrencySymbol">
+                            <apexchart type="line" height="300" :options="chartOptions" :series="chartSeries"
+                                :key="currentCurrencySymbol">
                             </apexchart>
                         </div>
                         <div class="price-stats mt-3">
@@ -99,21 +99,20 @@
                                 </div>
                                 <div>
                                     <p class="seller-info text-muted mb-0">
-                                        Продавец: <a :href="'/marketplace?seller_id=' + listing.seller.id" class="fw-bold text-decoration-none">{{ listing.seller.name }}</a>
+                                        Продавец: <a :href="'/marketplace?seller_id=' + listing.seller.id"
+                                            class="fw-bold text-decoration-none">{{ listing.seller.name }}</a>
                                     </p>
                                 </div>
                             </div>
 
                             <!-- Кнопки только для активных листингов -->
-                            <div v-if="listing.status === 'active'" class="d-flex gap-3">
+                            <div v-if="listing.status === 'active' && canPurchase" class="d-flex gap-3">
                                 <div data-cart-button :data-listing-id="listing.id"
                                     :data-is-in-cart="listing.is_in_cart" data-size="large" data-variant="primary"
                                     class="flex-fill cart-button-placeholder">
                                 </div>
-                                <button v-if="shouldShowQuickBuy"
-                                        class="btn theme-outline flex-fill"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#confirmPurchaseModal">
+                                <button class="btn theme-outline flex-fill"
+                                    data-bs-toggle="modal" data-bs-target="#confirmPurchaseModal">
                                     <i class="ri-flashlight-line me-2"></i>Быстрая покупка
                                 </button>
                             </div>
@@ -124,17 +123,13 @@
                                 <strong>Продано</strong>
                             </div>
                         </div>
-                        
+
                         <!-- Компонент аукциона -->
                         <AuctionDetails :listingId="listing.id" @auction-updated="onAuctionUpdated" />
-                        
+
                         <!-- Float Bar -->
                         <div v-if="listing.float_value || listing.wear_value" class="col-12">
-                            <FloatBar 
-                                :item="listing" 
-                                :show-value="true" 
-                                :show-min-max="true" 
-                            />
+                            <FloatBar :item="listing" :show-value="true" :show-min-max="true" />
                         </div>
 
                         <!-- Информация о состоянии -->
@@ -219,31 +214,49 @@
 
             <!-- Другие предложения этого предмета -->
             <div v-if="otherListings.length > 0" class="related-listings mt-5">
-                <h4 class="mb-4">Другие предложения этого предмета</h4>
+                <h4 class="mb-4">Другие предложения</h4>
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>Продавец</th>
-                                <th>Состояние</th>
-                                <th>Износ</th>
-                                <th>Цена</th>
+                                <th>Предмет</th>
+                                <th class="sortable" @click="sortOther('wear_name')">Состояние <span class="sort-arrows"><span class="arrow-up" :class="{ active: otherSortKey === 'wear_name' && otherSortAsc }">&#9650;</span><span class="arrow-down" :class="{ active: otherSortKey === 'wear_name' && !otherSortAsc }">&#9660;</span></span></th>
+                                <th class="sortable" @click="sortOther('float')">Износ <span class="sort-arrows"><span class="arrow-up" :class="{ active: otherSortKey === 'float' && otherSortAsc }">&#9650;</span><span class="arrow-down" :class="{ active: otherSortKey === 'float' && !otherSortAsc }">&#9660;</span></span></th>
+                                <th class="sortable" @click="sortOther('seller')">Продавец <span class="sort-arrows"><span class="arrow-up" :class="{ active: otherSortKey === 'seller' && otherSortAsc }">&#9650;</span><span class="arrow-down" :class="{ active: otherSortKey === 'seller' && !otherSortAsc }">&#9660;</span></span></th>
+                                <th class="sortable" @click="sortOther('price')">Цена <span class="sort-arrows"><span class="arrow-up" :class="{ active: otherSortKey === 'price' && otherSortAsc }">&#9650;</span><span class="arrow-down" :class="{ active: otherSortKey === 'price' && !otherSortAsc }">&#9660;</span></span></th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="other in otherListings" :key="other.id">
-                                <td>{{ other.seller.name }}</td>
+                            <tr v-for="other in sortedOtherListings" :key="other.id">
                                 <td>
-                                    <span v-if="other.wear_name && other.wear_name !== 'Не указано'">{{ other.wear_name }}</span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <img
+                                            :src="getOtherImageUrl(other)"
+                                            :alt="other.inventory_item_name || other.market_hash_name"
+                                            class="other-listing-img"
+                                            style="width: 48px; height: 36px; object-fit: contain;"
+                                            @error="$event.target.src = '/images/skin_no_image.svg'"
+                                        >
+                                        <span class="text-truncate" style="max-width: 200px;">
+                                            {{ other.inventory_item_name || other.market_hash_name }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span v-if="other.wear_name && other.wear_name !== 'Не указано'"
+                                        class="badge" :class="getWearBadgeClass(other.wear_name)">
+                                        {{ getWearLabel(other.wear_name) }}
+                                    </span>
                                     <span v-else class="text-muted">-</span>
                                 </td>
                                 <td>
                                     <span v-if="other.float_value">{{ parseFloat(other.float_value).toFixed(4) }}</span>
                                     <span v-else-if="other.wear_value">{{ parseFloat(other.wear_value).toFixed(4)
-                                    }}</span>
+                                        }}</span>
                                     <span v-else class="text-muted">-</span>
                                 </td>
+                                <td>{{ other.seller.name }}</td>
                                 <td><strong v-html="formatPrice(other.price, 'RUB')"></strong></td>
                                 <td>
                                     <a :href="`/marketplace/${other.id}`" class="btn btn-sm theme-outline">
@@ -258,14 +271,16 @@
         </div>
 
         <!-- Confirm Purchase modal -->
-        <div class="modal fade" id="confirmPurchaseModal" tabindex="-1" aria-labelledby="confirmPurchaseModalLabel" aria-hidden="true">
+        <div class="modal fade" id="confirmPurchaseModal" tabindex="-1" aria-labelledby="confirmPurchaseModalLabel"
+            aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header bg-warning text-white">
                         <h5 class="modal-title" id="confirmPurchaseModalLabel">
                             <i class="ri-question-line me-2"></i>Подтверждение покупки
                         </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
                     </div>
                     <div class="modal-body text-center">
                         <i class="ri-shopping-cart-line text-warning" style="font-size: 3rem;"></i>
@@ -278,7 +293,7 @@
                                     <span>
                                         <strong>{{ getItemName() }}</strong>
                                         <small class="text-muted d-block">{{ getItemNameEn() }}</small>
-                                        <small class="text-muted d-block">Продавец: {{ listing.seller?.name || 'Не указан' }}</small>
+                                        <small class="text-muted d-block">Продавец: {{ getSellerName(listing.seller) }}</small>
                                     </span>
                                     <strong class="text-primary" v-html="formatPrice(listing.price, 'RUB')"></strong>
                                 </div>
@@ -314,7 +329,7 @@
                     <div class="modal-body text-center">
                         <i class="ri-check-double-line text-success" style="font-size: 3rem;"></i>
                         <h4 class="mt-3">Товар успешно куплен!</h4>
-                        
+
                         <!-- Order details -->
                         <div v-if="purchasedOrder" class="mt-3">
                             <div class="border rounded p-3 text-start">
@@ -322,19 +337,21 @@
                                     <span>
                                         <strong>Заказ {{ purchasedOrder.order_number }}</strong>
                                         <small class="text-muted d-block">{{ getItemName() }}</small>
-                                        <small class="text-muted d-block">Продавец: {{ purchasedOrder.seller?.name || 'Не указан' }}</small>
+                                        <small class="text-muted d-block">
+                                            Продавец: {{ purchasedOrder.seller?.name || 'Не указан' }}</small>
                                     </span>
-                                    <strong class="text-primary" v-html="formatPrice(purchasedOrder.total_amount)"></strong>
+                                    <strong class="text-primary"
+                                        v-html="formatPrice(purchasedOrder.total_amount)"></strong>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <p class="text-muted mt-3">
-                            Заказ успешно оплачен и передан в обработку. 
+                            Заказ успешно оплачен и передан в обработку.
                             Вы получите уведомление, когда трейд-оффер будет отправлен.
                         </p>
                     </div>
-                    <div class="modal-footer">
+                    <div class="modal-footer d-flex justify-content-center">
                         <button type="button" class="btn theme-outline" @click="goToProfile">
                             Мои покупки
                         </button>
@@ -386,7 +403,9 @@ export default {
             showSuccessModal: false,
             purchasedOrder: null,
             currencySymbol: '₽', // Реактивная переменная для символа валюты
-            auctionState: null // Состояние аукциона от дочернего компонента
+            auctionState: null, // Состояние аукциона от дочернего компонента
+            otherSortKey: 'price',
+            otherSortAsc: true
         };
     },
     computed: {
@@ -394,17 +413,43 @@ export default {
             return this.currencySymbol;
         },
 
-        shouldShowQuickBuy() {
-            // Если нет активного аукциона - показываем кнопку
+        sortedOtherListings() {
+            if (this.otherListings.length === 0) return [];
+            const wearOrder = { 'fn': 1, 'mw': 2, 'ft': 3, 'ww': 4, 'bs': 5 };
+            const dir = this.otherSortAsc ? 1 : -1;
+            return [...this.otherListings].sort((a, b) => {
+                let cmp = 0;
+                switch (this.otherSortKey) {
+                    case 'wear_name':
+                        cmp = (wearOrder[a.wear_name] || 99) - (wearOrder[b.wear_name] || 99);
+                        break;
+                    case 'float':
+                        cmp = (parseFloat(a.float_value || a.wear_value) || 0) - (parseFloat(b.float_value || b.wear_value) || 0);
+                        break;
+                    case 'seller':
+                        cmp = (a.seller?.name || '').localeCompare(b.seller?.name || '');
+                        break;
+                    case 'price':
+                        cmp = a.price - b.price;
+                        break;
+                }
+                return cmp * dir;
+            });
+        },
+
+        canPurchase() {
+            // Если нет активного аукциона - покупка доступна
             if (!this.auctionState || !this.auctionState.isActive) {
                 return true;
             }
 
-            // Если есть аукцион - проверяем условия цены и времени
-            const priceCondition = this.listing.price > this.auctionState.currentPrice;
-            const timeCondition = this.auctionState.timeLeft > (this.auctionState.totalDuration / 2);
+            // Покупка недоступна когда:
+            // 1) Прошла половина времени аукциона ИЛИ
+            // 2) Текущая ставка >= цена маркетплейса
+            const pastHalf = this.auctionState.timeLeft <= (this.auctionState.totalDuration / 2);
+            const bidAbovePrice = this.auctionState.currentPrice >= this.listing.price;
 
-            return priceCondition && timeCondition;
+            return !(pastHalf || bidAbovePrice);
         },
 
         chartSeries() {
@@ -573,6 +618,10 @@ export default {
         window.removeEventListener('currency-changed', this.handleCurrencyChange);
     },
     methods: {
+        getSellerName(seller) {
+            return seller?.name || 'Не указан';
+        },
+
         onAuctionUpdated(auctionData) {
             this.auctionState = auctionData;
         },
@@ -754,7 +803,7 @@ export default {
 
             const screenshots = [];
             const urls = this.listing.screenshot_urls;
-            
+
             // Конфигурация скриншотов
             const screenshotConfig = [
                 { key: 'front', title: 'Передняя сторона' },
@@ -798,6 +847,47 @@ export default {
             if (this.otherListings.length > 0) {
                 this.otherListings = [...this.otherListings];
             }
+        },
+
+        getOtherImageUrl(other) {
+            if (other.inventory_icon_url) {
+                if (other.inventory_icon_url.startsWith('http')) {
+                    return other.inventory_icon_url;
+                }
+                return `https://community.steamstatic.com/economy/image/${other.inventory_icon_url}`;
+            }
+            return '/images/skin_no_image.svg';
+        },
+
+        sortOther(key) {
+            if (this.otherSortKey === key) {
+                this.otherSortAsc = !this.otherSortAsc;
+            } else {
+                this.otherSortKey = key;
+                this.otherSortAsc = true;
+            }
+        },
+
+        getWearLabel(wearName) {
+            const labels = {
+                'fn': 'FN',
+                'mw': 'MW',
+                'ft': 'FT',
+                'ww': 'WW',
+                'bs': 'BS'
+            };
+            return labels[wearName] || wearName;
+        },
+
+        getWearBadgeClass(wearName) {
+            const classes = {
+                'fn': 'bg-success',
+                'mw': 'bg-info',
+                'ft': 'bg-warning text-dark',
+                'ww': 'bg-secondary',
+                'bs': 'bg-danger'
+            };
+            return classes[wearName] || 'bg-secondary';
         },
 
         openScreenshotModal(screenshots) {

@@ -9,7 +9,7 @@
     <meta name="keywords" content="@yield('meta_keywords', 'cs2, skins, marketplace, торговля, скины')">
     <meta name="author" content="CS Skins">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="icon" href="{{ asset('images/favicon.png') }}" type="image/x-icon">
+    <link rel="icon" href="{{ asset('images/favicon_32x32.png') }}" type="image/x-icon">
     <title>@yield('title', 'CS2 Marketplace - Торговля скинами')</title>
     <link rel="apple-touch-icon" href="{{ asset('images/favicon.png') }}">
     <meta name="theme-color" content="#ff8d2f">

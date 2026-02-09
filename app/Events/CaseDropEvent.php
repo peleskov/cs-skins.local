@@ -36,6 +36,7 @@ class CaseDropEvent implements ShouldBroadcast
             ],
             'case' => [
                 'id' => $case->id,
+                'slug' => $case->slug,
                 'name' => $case->name,
                 'image' => $case->image_url,
             ],

@@ -121,15 +121,14 @@
 
 			</div>
 			<div class="col-md-4">
-				<div class="h-100 chance-slider d-flex flex-column justify-content-between"
+				<div class="h-100 chance-slider d-flex align-items-center"
 					:class="{ disabled: totalBet <= 0 }">
-					<div class="chance-labels d-flex justify-content-between align-items-center">
-						<span v-for="val in chanceSteps" :key="val" :class="{ active: selectedChance === val }"
-							@click="totalBet > 0 && selectChance(val)">{{ val }}%</span>
-					</div>
-					<div class="chance-track" ref="chanceTrack" @mousedown="totalBet > 0 && onTrackClick($event)">
-						<div class="chance-thumb" :style="{ left: chanceTrackWidth + '%' }"
-							@mousedown.stop="totalBet > 0 && startDrag($event)"></div>
+					<div class="chance-buttons d-flex align-items-center gap-2 w-100">
+						<button v-for="val in chanceSteps" :key="val"
+							class="chance-btn flex-fill"
+							:class="{ active: selectedChance === val }"
+							:disabled="totalBet <= 0"
+							@click="selectChance(val)">{{ val }}%</button>
 					</div>
 				</div>
 			</div>
@@ -150,11 +149,11 @@
 				</div>
 				<div class="case-content row g-4">
 					<div v-for="item in filteredInventory" :key="item.id" class="col-6">
-						<div class="h-100 case-content-item" :class="getRarityClass(item)">
+						<div class="h-100 case-content-item" :class="getRarityClass(item)" @click="toggleItem(item)" style="cursor: pointer;">
 							<div class="top-box">
 								<div class="btn-group" :class="isItemSelected(item.id) ? 'selected' : ''">
 									<span class="price" v-html="formatPrice(item.price)"></span>
-									<button class="btn btn-quinary btn-select" @click="toggleItem(item)">
+									<button class="btn btn-quinary btn-select">
 										{{ isItemSelected(item.id) ? 'Выбрано' : 'Выбрать' }}
 									</button>
 								</div>
@@ -201,11 +200,11 @@
 				</div>
 				<div v-else class="case-content row g-4">
 					<div v-for="target in filteredTargets" :key="target.id" class="col-6">
-						<div class="h-100 case-content-item" :class="getRarityClass(target)">
+						<div class="h-100 case-content-item" :class="getRarityClass(target)" @click="selectTarget(target)" style="cursor: pointer;">
 							<div class="top-box">
 								<div class="btn-group" :class="isTargetSelected(target.id) ? 'selected' : ''">
 									<span class="price" v-html="formatPrice(target.price)"></span>
-									<button class="btn btn-quinary btn-select" @click="selectTarget(target)">
+									<button class="btn btn-quinary btn-select">
 										{{ isTargetSelected(target.id) ? 'Выбрано' : 'Выбрать' }}
 									</button>
 								</div>
@@ -270,10 +269,9 @@ export default {
 			targetsPriceFrom: null,
 			targetsPriceTo: null,
 
-			// Ползунок шанса
-			chanceSteps: [1, 5, 10, 25, 50, 75, 90],
+			// Кнопки шанса
+			chanceSteps: [1, 5, 10, 25, 50, 75],
 			selectedChance: null,
-			isDragging: false,
 
 			// Апгрейд
 			upgradeLoading: false,
@@ -294,8 +292,6 @@ export default {
 	},
 
 	beforeUnmount() {
-		document.removeEventListener('mousemove', this.onDrag);
-		document.removeEventListener('mouseup', this.stopDrag);
 		if (this.animationFrame) {
 			cancelAnimationFrame(this.animationFrame);
 		}
@@ -367,14 +363,12 @@ export default {
 			return this.calculatedChance.toFixed(2).replace('.', ',');
 		},
 
-		chanceTrackWidth() {
-			if (!this.selectedChance) return 0;
-			const index = this.chanceSteps.indexOf(this.selectedChance);
-			if (index === -1) return 0;
-			return (index / (this.chanceSteps.length - 1)) * 100;
+		chanceMaxBound() {
+			const bounds = { 1: 1.5, 5: 5.5, 10: 12, 25: 27, 50: 55, 75: 100 };
+			return bounds[this.selectedChance] || null;
 		},
 
-		// Фильтрованные targets по шансу, поиску и цене
+		// Фильтрованные targets по шансу (ползунок)
 		filteredTargets() {
 			if (this.targets.length === 0) {
 				return this.targets;
@@ -382,26 +376,13 @@ export default {
 
 			let result = this.targets;
 
-			// Фильтр по шансу (ползунок)
-			if (this.selectedChance) {
-				result = result.filter(t => t.chance >= this.selectedChance);
+			// Фильтр по шансу (ползунок) — от 0 до верхней границы
+			if (this.selectedChance && this.chanceMaxBound) {
+				result = result.filter(t => t.chance <= this.chanceMaxBound);
 			}
 
-			// Фильтр по поиску
-			if (this.targetsSearch) {
-				const search = this.targetsSearch.toLowerCase();
-				result = result.filter(t => t.name.toLowerCase().includes(search));
-			}
-
-			// Фильтр по цене "От"
-			if (this.targetsPriceFrom) {
-				result = result.filter(t => t.price >= this.targetsPriceFrom);
-			}
-
-			// Фильтр по цене "До"
-			if (this.targetsPriceTo) {
-				result = result.filter(t => t.price <= this.targetsPriceTo);
-			}
+			// Сортировка от большего шанса к меньшему
+			result = [...result].sort((a, b) => b.chance - a.chance);
 
 			return result;
 		},
@@ -421,6 +402,19 @@ export default {
 		calculatedChance() {
 			this.pointerAngle = 0;
 		},
+		// Перезагружаем цели при изменении фильтров
+		targetsSearch() {
+			this.selectedChance = null;
+			if (this.totalBet > 0) this.debouncedLoadTargets();
+		},
+		targetsPriceFrom() {
+			this.selectedChance = null;
+			if (this.totalBet > 0) this.debouncedLoadTargets();
+		},
+		targetsPriceTo() {
+			this.selectedChance = null;
+			if (this.totalBet > 0) this.debouncedLoadTargets();
+		},
 	},
 
 	methods: {
@@ -434,6 +428,7 @@ export default {
 		},
 
 		toggleItem(item) {
+			if (this.upgradeLoading || this.isAnimating) return;
 			if (this.isItemSelected(item.id)) {
 				this.selectedGiveItems = this.selectedGiveItems.filter(i => i.id !== item.id);
 			} else if (this.selectedGiveItems.length < 4) {
@@ -445,6 +440,7 @@ export default {
 		},
 
 		toggleGetItem(item) {
+			if (this.upgradeLoading || this.isAnimating) return;
 			if (this.isGetItemSelected(item.id)) {
 				this.selectedGetItems = [];
 				this.targetItem = null;
@@ -481,9 +477,12 @@ export default {
 			this.targetsLoading = true;
 
 			try {
-				const response = await axios.get('/api/upgrade/targets', {
-					params: { bet_total: this.totalBet }
-				});
+				const params = { bet_total: this.totalBet };
+				if (this.targetsSearch) params.search = this.targetsSearch;
+				if (this.targetsPriceFrom) params.price_from = this.targetsPriceFrom;
+				if (this.targetsPriceTo) params.price_to = this.targetsPriceTo;
+
+				const response = await axios.get('/api/upgrade/targets', { params });
 
 				if (response.data.success) {
 					this.targets = response.data.targets;
@@ -510,11 +509,8 @@ export default {
 
 		// ==================== ПОЛЗУНОК ШАНСА ====================
 		selectChance(chance) {
+			if (this.upgradeLoading || this.isAnimating) return;
 			this.selectedChance = chance;
-			this.filterTargetsByChance();
-		},
-
-		onChanceChange(value) {
 			this.filterTargetsByChance();
 		},
 
@@ -522,42 +518,6 @@ export default {
 			// Сбрасываем выбор
 			this.selectedGetItems = [];
 			this.targetItem = null;
-		},
-
-		// ==================== DRAG ПОЛЗУНКА ====================
-		startDrag(e) {
-			this.isDragging = true;
-			document.addEventListener('mousemove', this.onDrag);
-			document.addEventListener('mouseup', this.stopDrag);
-		},
-
-		onDrag(e) {
-			if (!this.isDragging) return;
-			this.updateChanceFromPosition(e.clientX);
-		},
-
-		stopDrag() {
-			this.isDragging = false;
-			document.removeEventListener('mousemove', this.onDrag);
-			document.removeEventListener('mouseup', this.stopDrag);
-		},
-
-		onTrackClick(e) {
-			this.updateChanceFromPosition(e.clientX);
-		},
-
-		updateChanceFromPosition(clientX) {
-			const track = this.$refs.chanceTrack;
-			if (!track) return;
-
-			const rect = track.getBoundingClientRect();
-			const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-			const index = Math.round(percent * (this.chanceSteps.length - 1));
-			const newChance = this.chanceSteps[index];
-
-			if (newChance !== this.selectedChance) {
-				this.selectChance(newChance);
-			}
 		},
 
 		// ==================== АПГРЕЙД ====================
@@ -667,90 +627,40 @@ export default {
 			}));
 		},
 
-		// Анимация указателя - физическая симуляция с динамической пружиной
+		// Анимация указателя - вращение только по часовой стрелке с плавным замедлением
 		runPointerAnimation(finalAngle) {
 			return new Promise((resolve) => {
 				this.isAnimating = true;
 
-				// Цель - просто finalAngle (без кругов)
-				const targetAngle = finalAngle;
+				// Добавляем несколько полных оборотов для эффекта рулетки
+				const extraRotations = 3; // количество полных оборотов
+				const targetAngle = extraRotations * 360 + finalAngle;
 
-				// Физические параметры
-				let position = 0;
-				let velocity = 30; // начальная скорость
-				const friction = 0.994; // меньше трение = медленнее замедляется
-				const minSpring = 0.0002; // слабая пружина в начале
-				const maxSpring = 0.012; // сильная пружина в конце
-				const springDamping = 0.96;
-				const minVelocity = 0.1;
+				const duration = 4000; // длительность анимации в мс
+				const startTime = performance.now();
+				const startAngle = this.pointerAngle;
 
-				let lastTime = performance.now();
-				const startTime = lastTime;
+				// Easing функция - плавное замедление в конце
+				const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
 				const animate = (currentTime) => {
-					const deltaTime = Math.min((currentTime - lastTime) / 16.67, 3);
-					lastTime = currentTime;
+					const elapsed = currentTime - startTime;
+					const progress = Math.min(elapsed / duration, 1);
 
-					// Время с начала (для расчёта силы пружины)
-					const elapsed = (currentTime - startTime) / 1000; // в секундах
+					// Применяем easing для плавного замедления
+					const easedProgress = easeOutCubic(progress);
 
-					// Применяем трение
-					velocity *= Math.pow(friction, deltaTime);
+					// Вычисляем текущий угол
+					this.pointerAngle = startAngle + (targetAngle - startAngle) * easedProgress;
 
-					// Пружина усиливается со временем (слабая → сильная)
-					// Медленно в начале, резко усиливается в конце
-					const springProgress = Math.min(elapsed / 15, 1);
-					const easedProgress = Math.pow(springProgress, 4); // степень 4 - сильнее смещено к концу
-					const springStrength = minSpring + (maxSpring - minSpring) * easedProgress;
-
-					// Пружина тянет к цели
-					const distanceToTarget = position - targetAngle;
-					const springForce = distanceToTarget * springStrength * deltaTime;
-
-					// Дополнительное затухание амплитуды - ступенчатое
-					let dampingAmount = 0;
-					if (elapsed < 2) {
-						// Первые 2 сек - нет затухания
-						dampingAmount = 0;
-					} else if (elapsed < 4) {
-						// 2-4 сек - 20% затухания
-						dampingAmount = 0.2;
+					if (progress < 1) {
+						this.animationFrame = requestAnimationFrame(animate);
 					} else {
-						// После 4 сек - постепенно до 100%
-						const progress = Math.min((elapsed - 4) / 10, 1);
-						dampingAmount = 0.2 + 0.8 * progress;
-					}
-
-					if (dampingAmount > 0) {
-						const currentDamping = 1 - (1 - springDamping) * dampingAmount;
-						velocity *= Math.pow(currentDamping, deltaTime);
-					}
-
-					velocity -= springForce;
-
-					// Двигаем позицию
-					position += velocity * deltaTime;
-
-					this.pointerAngle = position;
-
-					// Проверяем остановку - когда движение почти незаметно
-					const distToTarget = Math.abs(position - targetAngle);
-					if (Math.abs(velocity) < 0.05 && distToTarget < 2) {
-						// Останавливаемся там где есть (без прыжка)
+						// Анимация завершена - устанавливаем финальный угол
+						this.pointerAngle = finalAngle; // нормализуем до 0-360
 						this.isAnimating = false;
 						resolve();
-						return;
 					}
-
-					// Защита от бесконечной анимации (макс 10 сек)
-					if (currentTime - lastTime > 10000) {
-						this.pointerAngle = targetAngle;
-						this.isAnimating = false;
-						resolve();
-						return;
-					}
-
-					this.animationFrame = requestAnimationFrame(animate);
 				};
 
 				this.animationFrame = requestAnimationFrame(animate);

@@ -105,7 +105,7 @@
 				<div class="profile-content">
 					<div class="d-flex align-items-center gap-sm-2 gap-1">
 						<i class="ri-telegram-fill"></i>
-						<span>Верификация :</span>
+						<span>Верификация для получение уведомлений о заказах :</span>
 					</div>
 					<h6>
 						<template v-if="client.is_verified && client.telegram_id">
@@ -232,7 +232,9 @@
 									placeholder="https://steamcommunity.com/tradeoffer/new/?partner=123456&token=abcdef"
 									required>
 								<small class="text-muted">
-									Найдите Trade URL в своем Steam: Мой профиль → Инвентарь → Предложения обмена → <a :href="`https://steamcommunity.com/profiles/${client.steam_id}/tradeoffers/privacy`" target="_blank">Кто может отправлять мне предложения обмена?</a>
+									Найдите Trade URL в своем Steam: Мой профиль → Инвентарь → Предложения обмена → <a
+										:href="`https://steamcommunity.com/profiles/${client.steam_id}/tradeoffers/privacy`"
+										target="_blank">Кто может отправлять мне предложения обмена?</a>
 								</small>
 							</div>
 						</div>

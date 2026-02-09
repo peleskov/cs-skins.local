@@ -15,10 +15,10 @@
       ></div>
       
       <!-- Значение float (показываем только если showValue true) -->
-      <div 
-        v-if="showValue && floatData.floatValue" 
+      <div
+        v-if="showValue && floatData.floatValue"
         class="wear-value"
-        :style="{ left: 'calc(' + floatData.markerPosition + '% - 10px)' }"
+        :style="{ left: floatData.markerPosition + '%', transform: 'translateX(-' + floatData.markerPosition + '%)' }"
       >
         {{ floatData.floatValue.toFixed(6) }}
       </div>

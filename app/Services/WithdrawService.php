@@ -42,7 +42,8 @@ class WithdrawService
 
         $query = Listing::where('market_hash_name', $virtualItem->market_hash_name)
             ->where('status', Listing::STATUS_ACTIVE)
-            ->whereIn('seller_id', $onlineSellerIds);
+            ->whereIn('seller_id', $onlineSellerIds)
+            ->where('seller_id', '!=', $item->client_id);
 
         if ($shortQuality) {
             $query->where(function ($q) use ($shortQuality) {
@@ -78,18 +79,16 @@ class WithdrawService
     /**
      * Найти замены для предмета
      *
-     * Алгоритм по ТЗ:
-     * 1. Ищем в ценовом диапазоне (приоритет - схожие по типу оружия)
-     * 2. Если не найдено → показываем более дешёвые предметы
+     * Ищем только в ценовом диапазоне согласно PRICE_RANGES
      */
     public function findReplacements(CaseInventoryItem $item, ?string $search = null): Collection
     {
         $range = $this->getPriceRange((float) $item->price);
         $onlineSellerIds = $this->getOnlineSellerIds();
 
-        // 1. Сначала ищем в ценовом диапазоне
         $query = Listing::where('status', Listing::STATUS_ACTIVE)
             ->whereIn('seller_id', $onlineSellerIds)
+            ->where('seller_id', '!=', $item->client_id)
             ->whereBetween('price', [$range['min'], $range['max']]);
 
         if ($search) {
@@ -99,26 +98,7 @@ class WithdrawService
             });
         }
 
-        $results = $query->orderBy('price', 'desc')->limit(50)->get();
-
-        // 2. Если в диапазоне ничего нет → fallback на более дешёвые
-        if ($results->isEmpty()) {
-            $fallbackQuery = Listing::where('status', Listing::STATUS_ACTIVE)
-                ->whereIn('seller_id', $onlineSellerIds)
-                ->where('price', '<', $range['min'])
-                ->where('price', '>', 0);
-
-            if ($search) {
-                $fallbackQuery->where(function ($q) use ($search) {
-                    $q->where('market_hash_name', 'like', "%{$search}%")
-                      ->orWhere('inventory_item_name', 'like', "%{$search}%");
-                });
-            }
-
-            $results = $fallbackQuery->orderBy('price', 'desc')->limit(50)->get();
-        }
-
-        return $results;
+        return $query->orderBy('price', 'desc')->limit(50)->get();
     }
 
     /**
@@ -182,7 +162,7 @@ class WithdrawService
                 ]);
             }
 
-            $item->update(['status' => CaseInventoryItem::STATUS_WITHDRAWN]);
+            $item->update(['status' => CaseInventoryItem::STATUS_PENDING_WITHDRAWAL]);
 
             return [
                 'success' => true,

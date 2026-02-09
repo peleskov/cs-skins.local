@@ -95,10 +95,14 @@ class UpgradeController extends Controller
     {
         $request->validate([
             'bet_total' => 'required|numeric|min:0.01',
+            'search' => 'nullable|string|max:100',
+            'price_from' => 'nullable|numeric|min:0',
+            'price_to' => 'nullable|numeric|min:0',
         ]);
 
         $betTotal = (float) $request->input('bet_total');
-        $targets = $this->upgradeService->getAvailableTargets($betTotal);
+        $filters = $request->only(['search', 'price_from', 'price_to']);
+        $targets = $this->upgradeService->getAvailableTargets($betTotal, $filters);
         $priceRange = $this->upgradeService->getPriceRange($betTotal);
 
         return response()->json([

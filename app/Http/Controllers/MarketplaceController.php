@@ -8,6 +8,7 @@ use App\Services\SkinScreenshotService;
 use App\Models\Listing;
 use App\Models\Tag;
 use App\Models\Favorite;
+use App\Models\Auction;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
@@ -83,9 +84,13 @@ class MarketplaceController extends Controller
             $listing->is_in_cart = !$listing->is_own_item && $cartItemIds->contains($listing->id);
             $listing->is_favorite = $favoriteItemIds->contains($listing->id);
         });
-            
+
+        // Помечаем листинги с заблокированной покупкой (аукцион)
+        $this->markAuctionBlockedListings($featuredListings);
+
         $totalListings = Listing::active()
             ->where('price', '>', 0)
+            ->whereIn('seller_id', $this->getOnlineSellerIds())
             ->count();
             
         $hasMorePages = $totalListings > 24;
@@ -396,6 +401,9 @@ class MarketplaceController extends Controller
             return $listing;
         });
 
+        // Помечаем листинги с заблокированной покупкой (аукцион)
+        $this->markAuctionBlockedListings($items);
+
         return response()->json([
             'data' => $items,
             'pagination' => [
@@ -414,15 +422,28 @@ class MarketplaceController extends Controller
     public function show(Listing $listing): View
     {
         $listing->load(['seller']);
-        
-        // Другие предложения этого же предмета
-        $otherListings = Listing::with(['seller'])
-            ->where('market_hash_name', $listing->market_hash_name)
-            ->where('id', '!=', $listing->id)
-            ->active()
-            ->orderBy('price')
-            ->limit(5)
-            ->get();
+
+        // Другие предложения этого же скина (включая другие качества/wear)
+        if ($listing->paint_index && $listing->def_index) {
+            $otherListings = Listing::with(['seller'])
+                ->where('paint_index', $listing->paint_index)
+                ->where('def_index', $listing->def_index)
+                ->where('is_stattrak', $listing->is_stattrak)
+                ->where('is_souvenir', $listing->is_souvenir)
+                ->where('id', '!=', $listing->id)
+                ->active()
+                ->orderBy('price')
+                ->limit(10)
+                ->get();
+        } else {
+            $otherListings = Listing::with(['seller'])
+                ->where('market_hash_name', $listing->market_hash_name)
+                ->where('id', '!=', $listing->id)
+                ->active()
+                ->orderBy('price')
+                ->limit(10)
+                ->get();
+        }
 
         // Добавляем статус корзины для основного товара и похожих
         $cartItemIds = collect(session()->get('shopping_cart', []))->keys();
@@ -946,15 +967,30 @@ class MarketplaceController extends Controller
     public function getListingDetails(Listing $listing): JsonResponse
     {
         $listing->load(['seller', 'inventoryItem.steamMarketItem.priceHistory']);
-        
-        // Другие предложения этого же предмета
-        $otherListings = Listing::with(['seller'])
-            ->where('market_hash_name', $listing->market_hash_name)
-            ->where('id', '!=', $listing->id)
-            ->active()
-            ->orderBy('price')
-            ->limit(5)
-            ->get();
+
+        // Другие предложения этого же скина (включая другие качества/wear)
+        if ($listing->paint_index && $listing->def_index) {
+            // Ищем тот же скин во всех качествах по paint_index + def_index
+            $otherListings = Listing::with(['seller'])
+                ->where('paint_index', $listing->paint_index)
+                ->where('def_index', $listing->def_index)
+                ->where('is_stattrak', $listing->is_stattrak)
+                ->where('is_souvenir', $listing->is_souvenir)
+                ->where('id', '!=', $listing->id)
+                ->active()
+                ->orderBy('price')
+                ->limit(10)
+                ->get();
+        } else {
+            // Фоллбэк для предметов без paint_index (стикеры, агенты и т.д.)
+            $otherListings = Listing::with(['seller'])
+                ->where('market_hash_name', $listing->market_hash_name)
+                ->where('id', '!=', $listing->id)
+                ->active()
+                ->orderBy('price')
+                ->limit(10)
+                ->get();
+        }
 
         // Добавляем статус корзины
         $cartItemIds = collect(session()->get('shopping_cart', []))->keys();
@@ -1000,6 +1036,7 @@ class MarketplaceController extends Controller
         return response()->json([
             'listing' => [
                 'id' => $listing->id,
+                'status' => $listing->status,
                 'price' => (float) $listing->price,
                 'wear_value' => (float) $listing->wear_value,
                 'wear_name' => $listing->wear_name,
@@ -1034,6 +1071,9 @@ class MarketplaceController extends Controller
             'otherListings' => $otherListings->map(function ($other) {
                 return [
                     'id' => $other->id,
+                    'market_hash_name' => $other->market_hash_name,
+                    'inventory_item_name' => $other->inventory_item_name,
+                    'inventory_icon_url' => $other->inventory_icon_url,
                     'price' => (float) $other->price,
                     'wear_value' => (float) $other->wear_value,
                     'wear_name' => $other->wear_name,
@@ -1089,6 +1129,29 @@ class MarketplaceController extends Controller
                 'contraband' => __('items.rarities.contraband'),
             ],
         ]);
+    }
+
+    /**
+     * Пометить листинги у которых аукцион заблокировал покупку
+     * (прошла половина времени ИЛИ ставка >= цена листинга)
+     */
+    private function markAuctionBlockedListings($listings)
+    {
+        $listingIds = collect($listings)->pluck('id');
+
+        $blockedIds = Auction::with('listing')
+            ->where('status', Auction::STATUS_ACTIVE)
+            ->where('ends_at', '>', now())
+            ->whereIn('listing_id', $listingIds)
+            ->get()
+            ->filter(fn ($auction) => $auction->isPurchaseBlocked())
+            ->pluck('listing_id');
+
+        foreach ($listings as $listing) {
+            $listing->purchase_blocked = $blockedIds->contains($listing->id);
+        }
+
+        return $listings;
     }
 
     /**

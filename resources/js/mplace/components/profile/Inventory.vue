@@ -5,7 +5,8 @@
 			<div class="d-flex justify-content-between align-items-center">
 				<h3>Steam Инвентарь</h3>
 				<div class="d-flex gap-2">
-					<a href="/trading-guide" target="_blank" class="btn theme-btn btn-sm" title="Руководство по торговле">
+					<a href="/trading-guide" target="_blank" class="btn theme-btn btn-sm"
+						title="Руководство по торговле">
 						<i class="ri-question-line me-1"></i>
 						<span>Как начать торговлю</span>
 					</a>
@@ -17,7 +18,8 @@
 						:disabled="isSyncing || syncCooldownRemaining > 0">
 						<i :class="['ri-refresh-line', 'me-1', { 'ri-spin': isSyncing }]"></i>
 						<span v-if="isSyncing">Обновление...</span>
-						<span v-else-if="syncCooldownRemaining > 0">Обновить через {{ getTimeRemaining(syncCooldownRemaining) }}</span>
+						<span v-else-if="syncCooldownRemaining > 0">Обновить через {{
+							getTimeRemaining(syncCooldownRemaining) }}</span>
 						<span v-else>Обновить инвентарь</span>
 					</button>
 				</div>
@@ -36,26 +38,32 @@
 			<!-- Tabs Navigation -->
 			<ul class="nav nav-tabs tab-style1 mb-4" id="inventoryTab" role="tablist">
 				<li class="nav-item" role="presentation">
-					<button class="nav-link" :class="{ active: activeInventoryTab === 'available' }" 
-					        id="available-tab" data-bs-toggle="tab" data-bs-target="#available"
-					        type="button" role="tab" @click="setActiveInventoryTab('available')">
-						Доступные для торговли 
+					<button class="nav-link" :class="{ active: activeInventoryTab === 'available' }" id="available-tab"
+						data-bs-toggle="tab" data-bs-target="#available" type="button" role="tab"
+						@click="setActiveInventoryTab('available')">
+						Доступные для торговли
 						<span class="badge bg-body-secondary ms-2">{{ availableItems.length }}</span>
 					</button>
 				</li>
 				<li class="nav-item" role="presentation">
-					<button class="nav-link" :class="{ active: activeInventoryTab === 'listed' }" 
-					        id="listed-tab" data-bs-toggle="tab" data-bs-target="#listed"
-					        type="button" role="tab" @click="setActiveInventoryTab('listed')">
-						В продаже 
+					<button class="nav-link" :class="{ active: activeInventoryTab === 'listed' }" id="listed-tab"
+						data-bs-toggle="tab" data-bs-target="#listed" type="button" role="tab"
+						@click="setActiveInventoryTab('listed')">
+						В продаже
 						<span class="badge bg-body-secondary ms-2">{{ listedItems.length }}</span>
 					</button>
 				</li>
 			</ul>
+			<div class="search-box mb-4">
+				<div class="form-input">
+					<input type="text" class="form-control search" placeholder="Поиск по названию..."
+						v-model="searchQuery">
+				</div>
+			</div>
 			<div class="tab-content product-details-content" id="inventoryTabContent">
 				<!-- Объединенный компонент для обеих вкладок -->
-				<div class="tab-pane fade" :class="{ 'show active': activeInventoryTab === 'available' }"
-				     id="available" role="tabpanel" aria-labelledby="available-tab" tabindex="0">
+				<div class="tab-pane fade" :class="{ 'show active': activeInventoryTab === 'available' }" id="available"
+					role="tabpanel" aria-labelledby="available-tab" tabindex="0">
 					<div v-if="currentItems.length === 0" class="text-center py-5">
 						<i class="ri-box-3-line display-4 text-muted mb-3"></i>
 						<h6>{{ getEmptyStateMessage() }}</h6>
@@ -65,7 +73,8 @@
 						<div class="col-lg-7 col-12">
 							<div class="mb-4">
 								<div class="row g-3">
-									<div v-for="item in currentItems" :key="item.steam_asset_id" class="col-lg-4 col-md-6">
+									<div v-for="item in currentItems" :key="item.steam_asset_id"
+										class="col-lg-4 col-md-6">
 										<div @click="selectItem(item)" :class="getItemClasses(item)">
 											<img class="img-fluid inventory-img h-auto" :src="getIconUrl(item)"
 												:alt="item.market_hash_name" @error="handleImageError">
@@ -77,20 +86,15 @@
 							</div>
 						</div>
 						<div class="col-lg-5 col-12" :id="getDetailsSectionId()">
-							<ItemDetails
-								:item="selectedItem"
-								:active-tab="activeInventoryTab"
-								:has-trade-url="hasTradeUrl"
-								:is-creating-listing="isCreatingListing"
-								:extension-active="extensionActive"
-								:extension-checked="extensionChecked"
-								@sell="openSellModal"
-							/>
+							<ItemDetails :item="selectedItem" :active-tab="activeInventoryTab"
+								:has-trade-url="hasTradeUrl" :is-creating-listing="isCreatingListing"
+								:extension-active="extensionActive" :extension-checked="extensionChecked"
+								@sell="openSellModal" />
 						</div>
 					</div>
 				</div>
-				<div class="tab-pane fade" :class="{ 'show active': activeInventoryTab === 'listed' }"
-				     id="listed" role="tabpanel" aria-labelledby="listed-tab" tabindex="0">
+				<div class="tab-pane fade" :class="{ 'show active': activeInventoryTab === 'listed' }" id="listed"
+					role="tabpanel" aria-labelledby="listed-tab" tabindex="0">
 					<div v-if="currentItems.length === 0" class="text-center py-5">
 						<i class="ri-box-3-line display-4 text-muted mb-3"></i>
 						<h6>{{ getEmptyStateMessage() }}</h6>
@@ -100,7 +104,8 @@
 						<div class="col-lg-7 col-12">
 							<div class="mb-4">
 								<div class="row g-3">
-									<div v-for="item in currentItems" :key="item.steam_asset_id" class="col-lg-4 col-md-6">
+									<div v-for="item in currentItems" :key="item.steam_asset_id"
+										class="col-lg-4 col-md-6">
 										<div @click="selectItem(item)" :class="getItemClasses(item)">
 											<img class="img-fluid inventory-img h-auto" :src="getIconUrl(item)"
 												:alt="item.market_hash_name" @error="handleImageError">
@@ -112,15 +117,10 @@
 							</div>
 						</div>
 						<div class="col-lg-5 col-12" :id="getDetailsSectionId()">
-							<ItemDetails
-								:item="selectedItem"
-								:active-tab="activeInventoryTab"
-								:has-trade-url="hasTradeUrl"
-								:is-creating-listing="isCreatingListing"
-								:extension-active="extensionActive"
-								:extension-checked="extensionChecked"
-								@sell="openSellModal"
-							/>
+							<ItemDetails :item="selectedItem" :active-tab="activeInventoryTab"
+								:has-trade-url="hasTradeUrl" :is-creating-listing="isCreatingListing"
+								:extension-active="extensionActive" :extension-checked="extensionChecked"
+								@sell="openSellModal" />
 						</div>
 					</div>
 				</div>
@@ -137,7 +137,8 @@
 
 
 		<!-- Sell Type Modal -->
-		<div class="modal fade" id="sellTypeModal" tabindex="-1" aria-labelledby="sellTypeModalLabel" aria-hidden="true">
+		<div class="modal fade" id="sellTypeModal" tabindex="-1" aria-labelledby="sellTypeModalLabel"
+			aria-hidden="true">
 			<div class="modal-dialog modal-dialog-centered">
 				<div class="modal-content">
 					<div class="modal-header">
@@ -149,22 +150,22 @@
 					<div class="modal-body">
 						<div v-if="itemToSell" class="mb-4">
 							<div class="d-flex align-items-center">
-								<img :src="getIconUrl(itemToSell)" :alt="itemToSell.market_hash_name" 
-									 class="me-3" style="width: 64px; height: 64px;" @error="handleImageError">
+								<img :src="getIconUrl(itemToSell)" :alt="itemToSell.market_hash_name" class="me-3"
+									style="width: 64px; height: 64px;" @error="handleImageError">
 								<div>
 									<h6 class="mb-1">{{ getItemName(itemToSell) }}</h6>
 									<small class="text-muted">{{ getItemType(itemToSell) }}</small>
 								</div>
 							</div>
 						</div>
-						
+
 						<div class="row g-3">
 							<!-- Продать боту -->
 							<div class="col-12">
-								<div class="card h-100 sell-option" 
-									 @click="itemToSell && itemToSell.buyout_price ? sellToBot() : null" 
-									 :class="{ 'opacity-50': !itemToSell || !itemToSell.buyout_price }"
-									 style="cursor: pointer;">
+								<div class="card h-100 sell-option"
+									@click="itemToSell && itemToSell.buyout_price ? sellToBot() : null"
+									:class="{ 'opacity-50': !itemToSell || !itemToSell.buyout_price }"
+									style="cursor: pointer;">
 									<div class="card-body d-flex align-items-center">
 										<div class="sell-icon me-3">
 											<i class="ri-robot-line text-primary" style="font-size: 2rem;"></i>
@@ -172,7 +173,8 @@
 										<div class="flex-grow-1">
 											<h6 class="card-title mb-1">
 												Быстрый выкуп
-												<span v-if="itemToSell && itemToSell.buyout_price" class="text-success ms-2">
+												<span v-if="itemToSell && itemToSell.buyout_price"
+													class="text-success ms-2">
 													<span v-html="formatPrice(itemToSell.buyout_price, 'USD')"></span>
 												</span>
 											</h6>
@@ -186,29 +188,32 @@
 											</p>
 										</div>
 										<div class="sell-arrow">
-											<i v-if="itemToSell && itemToSell.buyout_price" class="ri-arrow-right-line text-muted"></i>
+											<i v-if="itemToSell && itemToSell.buyout_price"
+												class="ri-arrow-right-line text-muted"></i>
 											<i v-else class="ri-close-line text-danger"></i>
 										</div>
 									</div>
 								</div>
 							</div>
-							
+
 							<!-- Добавить в маркетплейс -->
 							<div class="col-12">
-								<div class="card h-100 sell-option"
-									 :class="{ 'opacity-50': isCreatingListing }">
+								<div class="card h-100 sell-option" :class="{ 'opacity-50': isCreatingListing }">
 									<div class="card-body">
 										<div class="d-flex align-items-center mb-3">
 											<div class="sell-icon me-3">
-												<i v-if="isCreatingListing" class="ri-loader-4-line text-success ri-spin" style="font-size: 2rem;"></i>
-												<i v-else class="ri-store-2-line text-success" style="font-size: 2rem;"></i>
+												<i v-if="isCreatingListing"
+													class="ri-loader-4-line text-success ri-spin"
+													style="font-size: 2rem;"></i>
+												<i v-else class="ri-store-2-line text-success"
+													style="font-size: 2rem;"></i>
 											</div>
 											<div class="flex-grow-1">
 												<h6 class="card-title mb-1">
-													{{ isCreatingListing ? 'Создаем листинг...' : 'Добавить в маркетплейс' }}
+													{{ sellTitle }}
 												</h6>
 												<p class="card-text text-muted mb-0">
-													{{ isCreatingListing ? 'Получаем скриншот предмета' : 'Установите свою цену, комиссия 5%' }}
+													{{ sellDescription }}
 												</p>
 											</div>
 										</div>
@@ -217,23 +222,18 @@
 										<div v-if="!isCreatingListing" class="mb-3">
 											<label class="form-label small">Цена продажи</label>
 											<div class="input-group">
-												<input
-													type="number"
-													class="form-control"
-													id="marketplacePriceInput"
+												<input type="number" class="form-control" id="marketplacePriceInput"
 													v-model="marketplacePrice"
 													:placeholder="itemToSell && itemToSell.buyout_price ? Math.round(itemToSell.buyout_price * 1.3) : '100'"
-													min="1"
-													step="1">
+													min="1" step="1">
 												<span class="input-group-text">₽</span>
 											</div>
-											<small class="text-muted">Рекомендуемая цена: <span v-html="itemToSell && itemToSell.buyout_price ? formatPrice(itemToSell.buyout_price * 1.3, 'USD') : '100 ₽'"></span></small>
+											<small class="text-muted">Рекомендуемая цена: <span
+													v-html="itemToSell && itemToSell.buyout_price ? formatPrice(itemToSell.buyout_price * 1.3, 'USD') : '100 ₽'"></span></small>
 										</div>
 
 										<!-- Кнопка добавления -->
-										<button
-											v-if="!isCreatingListing"
-											class="btn btn-success w-100"
+										<button v-if="!isCreatingListing" class="btn btn-success w-100"
 											@click="addToMarketplace()"
 											:disabled="!marketplacePrice || marketplacePrice <= 0">
 											<i class="ri-add-line me-1"></i>Добавить за {{ marketplacePrice || '0' }} ₽
@@ -264,11 +264,13 @@
 						<p class="mb-3">{{ successModalData.message }}</p>
 						<div v-if="successModalData.order" class="alert alert-light">
 							<strong>Номер заказа:</strong> {{ successModalData.order.order_number }}<br>
-							<strong>Сумма:</strong> <span v-html="formatPrice(successModalData.order.total_amount, 'RUB')"></span>
+							<strong>Сумма:</strong> <span
+								v-html="formatPrice(successModalData.order.total_amount, 'RUB')"></span>
 						</div>
 					</div>
 					<div class="modal-footer border-0 justify-content-center">
-						<button type="button" class="btn theme-outline btn-sm me-2" data-bs-dismiss="modal">Закрыть</button>
+						<button type="button" class="btn theme-outline btn-sm me-2"
+							data-bs-dismiss="modal">Закрыть</button>
 						<button type="button" class="btn theme-btn btn-sm" @click="goToSales">
 							<i class="ri-eye-line me-1"></i>Посмотреть в продажах
 						</button>
@@ -320,18 +322,25 @@ export default {
 				order: null
 			},
 			extensionActive: false,
-			extensionChecked: false
+			extensionChecked: false,
+			searchQuery: ''
 		}
 	},
 	computed: {
 		availableItems() {
-			return this.items.filter(item => item.tradable && item.marketable && !item.is_listed);
+			return this.items.filter(item => item.tradable && item.marketable && !item.is_listed && this.matchesSearch(item));
 		},
 		listedItems() {
-			return this.items.filter(item => item.is_listed);
+			return this.items.filter(item => item.is_listed && this.matchesSearch(item));
 		},
 		currentItems() {
 			return this.activeInventoryTab === 'available' ? this.availableItems : this.listedItems;
+		},
+		sellTitle() {
+			return this.isCreatingListing ? 'Создаем листинг...' : 'Добавить в маркетплейс';
+		},
+		sellDescription() {
+			return this.isCreatingListing ? 'Получаем скриншот предмета' : 'Установите свою цену, комиссия 5%';
 		}
 	},
 	methods: {
@@ -372,9 +381,15 @@ export default {
 					}
 
 					if (data.data.items.length === 0) {
-						window.toast.info('Ваш Steam инвентарь пуст или приватный. Убедитесь, что инвентарь публичный в настройках Steam. После изменения настроек инвентаря в Steam попробуйте еще раз через 10-15 минут.', {
-							timeout: 10000
-						});
+						if (!this.hasTradeUrl) {
+							window.toast.warning('Укажите Steam Trade URL в настройках профиля для загрузки инвентаря', {
+								timeout: 10000
+							});
+						} else {
+							window.toast.info('Ваш Steam инвентарь пуст или приватный. Убедитесь, что инвентарь публичный в настройках Steam. После изменения настроек попробуйте еще раз через 10-15 минут.', {
+								timeout: 10000
+							});
+						}
 					}
 				} else {
 					// Если API вернул ошибку, устанавливаем пустой инвентарь
@@ -444,39 +459,69 @@ export default {
 
 		getTimeRemaining,
 
+		matchesSearch(item) {
+			if (!this.searchQuery) return true;
+			const query = this.searchQuery.toLowerCase();
+			const nameRu = (item.item?.name_ru || '').toLowerCase();
+			const nameEn = (item.market_hash_name || '').toLowerCase();
+			return nameRu.includes(query) || nameEn.includes(query);
+		},
+
 		setActiveInventoryTab(tab) {
 			this.activeInventoryTab = tab;
 			this.selectedItem = null;
 		},
-		
+
 		getItemClasses(item) {
 			const baseClasses = 'h-100 inventory-item text-center position-relative';
 			const activeClass = this.selectedItem && this.selectedItem.steam_asset_id === item.steam_asset_id ? 'active' : '';
 			const listedClass = this.activeInventoryTab === 'listed' ? 'item-listed' : '';
-			
-			return [baseClasses, activeClass, listedClass].filter(Boolean).join(' ');
+			const rarityClass = this.getRarityClass(item);
+
+			return [baseClasses, activeClass, listedClass, rarityClass].filter(Boolean).join(' ');
 		},
-		
+
+		getRarityClass(item) {
+			if (!item || !item.structured_tags) {
+				return '';
+			}
+
+			const rarityTag = item.structured_tags.find(tag => tag.category_code === 'rarity');
+			if (rarityTag) {
+				return `rarity-${rarityTag.normalized_value}`;
+			}
+
+			return '';
+		},
+
 		getDetailsSectionId() {
 			return this.activeInventoryTab === 'available' ? 'item-details-section' : 'listed-item-details-section';
 		},
-		
+
 		getEmptyStateMessage() {
-			return this.activeInventoryTab === 'available' 
-				? 'Нет доступных предметов для торговли' 
-				: 'Нет предметов в продаже';
+			if (this.activeInventoryTab === 'listed') {
+				return 'Нет предметов в продаже';
+			}
+			if (!this.hasTradeUrl) {
+				return 'Не указана Trade URL';
+			}
+			return 'Нет доступных предметов для торговли';
 		},
-		
+
 		getEmptyStateDescription() {
-			return this.activeInventoryTab === 'available' 
-				? 'Убедитесь, что ваш Steam инвентарь публичный и содержит торгуемые предметы' 
-				: 'Выставьте предметы на продажу в разделе "Доступные для торговли"';
+			if (this.activeInventoryTab === 'listed') {
+				return 'Выставьте предметы на продажу в разделе "Доступные для торговли"';
+			}
+			if (!this.hasTradeUrl) {
+				return 'Укажите вашу Steam Trade URL в настройках профиля, чтобы загрузить инвентарь';
+			}
+			return 'Убедитесь, что ваш Steam инвентарь публичный и содержит торгуемые предметы';
 		},
-		
+
 		getItemName(item) {
 			return item.item?.name_ru || item.market_hash_name;
 		},
-		
+
 		getItemType(item) {
 			if (item.structured_tags && item.structured_tags.length > 0) {
 				const typeTag = item.structured_tags.find(tag => tag.category_code === 'type');
@@ -484,7 +529,7 @@ export default {
 			}
 			return 'Предмет';
 		},
-		
+
 		getIconUrl(item) {
 			if (item.icon_url) {
 				if (item.icon_url.startsWith('http')) {
@@ -494,16 +539,16 @@ export default {
 			}
 			return '/images/skin_no_image.svg';
 		},
-		
+
 		handleImageError(event) {
 			event.target.src = '/images/skin_no_image.svg';
 		},
-		
+
 		selectItem(item) {
 			this.selectedItem = item;
 			this.scrollToDetailsOnMobile();
 		},
-		
+
 		scrollToDetailsOnMobile() {
 			this.$nextTick(() => {
 				if (window.innerWidth < 992) {
@@ -517,8 +562,8 @@ export default {
 				}
 			});
 		},
-		
-		
+
+
 		openSellModal(item) {
 			// Проверяем статус расширения перед открытием модала
 			if (!this.extensionActive) {
@@ -553,27 +598,27 @@ export default {
 
 			modal.show();
 		},
-		
+
 		async sellToBot() {
 			if (!this.itemToSell) return;
-			
+
 			// Закрываем модальное окно
 			const modal = bootstrap.Modal.getInstance(document.getElementById('sellTypeModal'));
 			if (modal) {
 				modal.hide();
 			}
-			
+
 			this.isCreatingListing = true;
-			
+
 			try {
 				// Показываем уведомление о начале процесса
 				window.toast.info('Продаем предмет боту...', {
 					timeout: 3000
 				});
-				
+
 				const { orderAPI } = await import('../../../shared/utils/api.js');
 				const result = await orderAPI.quickSell(this.itemToSell.steam_asset_id);
-				
+
 				if (result.success) {
 					// Показываем модальное окно с результатом
 					this.showSuccessModal(result.message, result.order);
@@ -581,7 +626,7 @@ export default {
 					// Ошибку уже покажет глобальный axios interceptor
 					console.error('Quick sell failed:', result.message);
 				}
-				
+
 			} catch (error) {
 				console.error('Error selling to bot:', error);
 				// Ошибку уже покажет глобальный axios interceptor
@@ -590,33 +635,33 @@ export default {
 				this.itemToSell = null;
 			}
 		},
-		
+
 		showSuccessModal(message, order) {
 			this.successModalData = {
 				message: message,
 				order: order
 			};
-			
+
 			// Показываем модальное окно
 			this.$nextTick(() => {
 				const modal = new bootstrap.Modal(document.getElementById('successModal'));
 				modal.show();
 			});
 		},
-		
+
 		goToSales() {
 			// Закрываем модальное окно
 			const modal = bootstrap.Modal.getInstance(document.getElementById('successModal'));
 			if (modal) {
 				modal.hide();
 			}
-			
+
 			// Переходим к продажам
 			window.location.hash = 'sales';
 			// Обновляем страницу для отображения продаж
 			window.location.reload();
 		},
-		
+
 		handleCurrencyChange() {
 			// Принудительно обновляем данные для пересчета цен
 			if (this.itemToSell) {
@@ -643,7 +688,7 @@ export default {
 				this.extensionChecked = true;
 			}
 		},
-		
+
 		async addToMarketplace() {
 			if (!this.itemToSell || !this.marketplacePrice || this.marketplacePrice <= 0) return;
 
@@ -656,10 +701,6 @@ export default {
 			this.isCreatingListing = true;
 
 			try {
-				// Показываем уведомление о начале процесса
-				window.toast.info('Создаем листинг и получаем скриншот предмета...', {
-					timeout: 3000
-				});
 
 				// Отправляем запрос на создание листинга с ценой
 				const response = await axios.post('/inventory/create-listing', {
@@ -667,17 +708,17 @@ export default {
 					price: this.marketplacePrice
 				});
 				const data = response.data;
-				
+
 				if (data.success) {
 					// Помечаем предмет как выставленный на продажу
 					this.itemToSell.is_listed = true;
-					
+
 					// Обновляем предмет в массиве items
 					const itemIndex = this.items.findIndex(item => item.steam_asset_id === this.itemToSell.steam_asset_id);
 					if (itemIndex !== -1) {
 						this.items[itemIndex].is_listed = true;
 					}
-					
+
 					// Если это был выбранный предмет, выбираем первый доступный или убираем выбор
 					if (this.selectedItem && this.selectedItem.steam_asset_id === this.itemToSell.steam_asset_id) {
 						if (this.availableItems.length > 0) {
@@ -686,7 +727,7 @@ export default {
 							this.selectedItem = null;
 						}
 					}
-					
+
 					window.toast.success('Предмет добавлен в торговлю!');
 				} else {
 					// Глобальный обработчик покажет toast автоматически
@@ -716,7 +757,7 @@ export default {
 		if (this.cooldownTimer) {
 			clearInterval(this.cooldownTimer);
 		}
-		
+
 		// Убираем слушатель при размонтировании
 		window.removeEventListener('currency-changed', this.handleCurrencyChange);
 	},

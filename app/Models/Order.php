@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use App\Models\Client;
+use App\Models\CaseInventoryItem;
 
 class Order extends Model
 {
@@ -114,7 +115,17 @@ class Order extends Model
                 'status' => self::STATUS_CANCELLED,
                 'system_remarks' => $order->system_remarks ?: $reason
             ]);
-            
+
+            // Возвращаем предметы инвентаря кейсов в доступные
+            $items = $order->items ?? [];
+            foreach ($items as $item) {
+                if (!empty($item['case_inventory_item_id'])) {
+                    CaseInventoryItem::where('id', $item['case_inventory_item_id'])
+                        ->where('status', CaseInventoryItem::STATUS_PENDING_WITHDRAWAL)
+                        ->update(['status' => CaseInventoryItem::STATUS_AVAILABLE]);
+                }
+            }
+
             // Обновляем текущий объект
             $this->refresh();
         });
@@ -123,13 +134,23 @@ class Order extends Model
     public function complete(): void
     {
         $this->update(['status' => self::STATUS_COMPLETED]);
-        
+
         // Помечаем зарезервированные листинги как проданные
         Listing::where('reserved_by_order_id', $this->id)->update([
             'status' => Listing::STATUS_SOLD,
             'sold_at' => now(),
             'buyer_id' => $this->buyer_id
         ]);
+
+        // Завершаем вывод предметов из инвентаря кейсов
+        $items = $this->items ?? [];
+        foreach ($items as $item) {
+            if (!empty($item['case_inventory_item_id'])) {
+                CaseInventoryItem::where('id', $item['case_inventory_item_id'])
+                    ->where('status', CaseInventoryItem::STATUS_PENDING_WITHDRAWAL)
+                    ->update(['status' => CaseInventoryItem::STATUS_WITHDRAWN]);
+            }
+        }
     }
 
     public function getTradeStatusHistoryAttribute(): array

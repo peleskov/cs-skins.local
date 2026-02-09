@@ -48,7 +48,8 @@
 			<!-- Любимый кейс -->
 			<div class="col-md-4">
 				<template v-if="favoriteCase">
-					<div class="w-100 h-100 card card-info-block best-case">
+					<a :href="`${routes.cases}/${favoriteCase.slug}`"
+						class="w-100 h-100 card card-info-block best-case text-decoration-none">
 						<div class="card-body d-flex flex-column align-items-center justify-content-center">
 							<img :src="getCaseImageUrl(favoriteCase)" :alt="favoriteCase.name"
 								class="favorite-case-img mb-1">
@@ -57,7 +58,7 @@
 						<div class="card-footer">
 							<h6 class="mb-0">Любимый кейс</h6>
 						</div>
-					</div>
+					</a>
 				</template>
 				<template v-else>
 					<div class="w-100 h-100 card card-info-block best-case empty">
@@ -76,7 +77,9 @@
 			<!-- Лучший предмет -->
 			<div class="col-md-4">
 				<template v-if="bestItem">
-					<div class="w-100 h-100 card card-info-block best-item" :class="getBestItemRarityClass()">
+					<a :href="`${routes.cases}/${favoriteCase.slug}`"
+						class="w-100 h-100 card card-info-block best-item text-decoration-none"
+						:class="getBestItemRarityClass()">
 						<div class="card-body d-flex flex-column align-items-center justify-content-center"
 							:class="getBestItemRarityClass()">
 							<div class="price" v-html="formatPrice(bestItem.price)"></div>
@@ -86,7 +89,7 @@
 						<div class="card-footer">
 							<h6 class="mb-0">Лучший предмет</h6>
 						</div>
-					</div>
+					</a>
 				</template>
 				<template v-else>
 					<div class="w-100 h-100 card card-info-block best-item empty">
@@ -197,10 +200,10 @@
 				<!-- Список апгрейдов -->
 				<div v-else class="row g-3">
 					<div v-for="upgrade in upgradeHistory" :key="upgrade.id" class="col-4">
-						<div class="h-100 upgrade-box">
+						<div class="h-100 upgrade-box d-flex flex-column">
 							<h4 class="text-center">ШАНС</h4>
 							<h5 class="text-center">{{ upgrade.chance.toFixed(2) }}%</h5>
-							<div class="row g-4">
+							<div class="flex-grow-1 row g-4">
 								<div class="col-6 d-flex flex-column">
 									<h5 class="text-center result-title">СТАВКА</h5>
 									<!-- Предметы ставки (до 4 шт) -->
@@ -391,7 +394,6 @@
 						</div>
 					</div>
 					<div class="modal-footer" v-if="replacements.length > 0">
-						<button type="button" class="btn btn-primary" data-bs-dismiss="modal">Отмена</button>
 						<button type="button" class="btn btn-secondary" @click="confirmReplacement"
 							:disabled="!selectedReplacementId || withdrawLoading">
 							<span v-if="withdrawLoading">
@@ -442,7 +444,7 @@ export default {
 			localItems: [],
 			localUser: null,
 			sellingIds: [],
-			showOnlyAvailable: true,
+			showOnlyAvailable: false,
 			// Trade URL
 			tradeUrlInput: '',
 			tradeUrlSaving: false,
@@ -663,11 +665,8 @@ export default {
 				const response = await axios.post(`/api/case-inventory/${itemId}/withdraw`);
 
 				if (response.data.success) {
-					// Успешный вывод
-					const item = this.localItems.find(i => i.id === itemId);
-					if (item) {
-						item.status = 'withdrawn';
-					}
+					// Успешный вывод - обновляем список с сервера
+					await this.refreshItems();
 				} else if (response.data.need_replacement) {
 					// Нужна замена - показываем модалку
 					await this.loadReplacements(itemId);
@@ -736,26 +735,42 @@ export default {
 			if (!this.withdrawingItemId) return;
 
 			this.withdrawLoading = true;
+			const itemId = this.withdrawingItemId;
 
 			try {
-				const response = await axios.post(`/api/case-inventory/${this.withdrawingItemId}/withdraw`, {
+				const response = await axios.post(`/api/case-inventory/${itemId}/withdraw`, {
 					listing_id: listingId
 				});
 
 				if (response.data.success) {
-					const item = this.localItems.find(i => i.id === this.withdrawingItemId);
+					// Сразу обновляем статус локально
+					const item = this.localItems.find(i => i.id === itemId);
 					if (item) {
-						item.status = 'withdrawn';
+						item.status = 'pending_withdrawal';
 					}
 
 					const modal = bootstrap.Modal.getInstance(document.getElementById('replacementModal'));
 					if (modal) modal.hide();
+
+					// Синхронизируем с сервером
+					await this.refreshItems();
 				}
 			} catch (error) {
 				console.error('Select replacement error:', error);
 			} finally {
 				this.withdrawLoading = false;
 				this.withdrawingItemId = null;
+			}
+		},
+
+		async refreshItems() {
+			try {
+				const response = await axios.get('/api/case-inventory');
+				if (response.data.success) {
+					this.localItems = response.data.data;
+				}
+			} catch (error) {
+				console.error('Refresh items error:', error);
 			}
 		},
 
@@ -855,6 +870,7 @@ export default {
 		getStatusLabel(status) {
 			const labels = {
 				'available': 'Доступен',
+				'pending_withdrawal': 'Ожидается вывод',
 				'sold': 'Продан',
 				'withdrawn': 'Выведен',
 				'upgraded': 'Использован в апгрейде'
@@ -865,6 +881,7 @@ export default {
 		getStatusBadgeClass(status) {
 			const classes = {
 				'available': 'bg-success',
+				'pending_withdrawal': 'bg-lime',
 				'sold': 'bg-secondary',
 				'withdrawn': 'bg-info',
 				'upgraded': 'bg-warning'

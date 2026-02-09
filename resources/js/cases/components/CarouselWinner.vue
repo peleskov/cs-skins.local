@@ -4,13 +4,13 @@
 			<div class="swiper" ref="swiperContainer">
 				<div class="swiper-wrapper">
 					<div v-for="drop in drops" :key="drop.id" class="swiper-slide">
-						<div class="item d-flex align-items-center justify-content-center" :class="getRarityClass(drop.item.rarity)">
+						<a :href="getCaseUrl(drop.case?.slug)" class="item d-flex align-items-center justify-content-center" :class="getRarityClass(drop.item.rarity)">
 							<div class="image" :style="{ backgroundImage: `url(${getItemImageUrl(drop.item.image_url)})` }"></div>
 							<div class="user d-flex flex-column align-items-start">
 								<img :src="drop.user.avatar" :alt="drop.user.name">
 								<p>{{ drop.user.name }}</p>
 							</div>
-						</div>
+						</a>
 					</div>
 				</div>
 			</div>
@@ -77,11 +77,9 @@ export default {
 				this.swiper = new Swiper(this.$refs.swiperContainer, {
 					slidesPerView: 8,
 					spaceBetween: 10,
-					loop: true,
-					autoplay: {
-						delay: 3000,
-						disableOnInteraction: false,
-					},
+					loop: false,
+					allowTouchMove: false,
+					simulateTouch: false,
 					breakpoints: {
 						0: { slidesPerView: 2, spaceBetween: 10 },
 						375: { slidesPerView: 3 },
@@ -153,6 +151,11 @@ export default {
 				'Contraband': 'rarity-contraband',
 			};
 			return rarityMap[rarity] || '';
+		},
+
+		getCaseUrl(slug) {
+			if (!slug) return '#';
+			return `/cases/${slug}`;
 		},
 	},
 };

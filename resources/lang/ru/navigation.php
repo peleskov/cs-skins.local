@@ -16,7 +16,7 @@ return [
     'footer' => [
         'documents' => 'Документы',
         'useful_links' => 'Полезные ссылки',
-        'copyright' => '© Copyright 2025 CS-SKINS.PRO. Все права защищены.',
+        'copyright' => '© Copyright :year CS-SKINS.PRO. Все права защищены.',
         'company_info' => [
             'name' => 'ОсОО "Кюльчоро"',
             'inn' => 'ИНН: 01104202510167',

@@ -71,15 +71,9 @@
 
                 <div v-else>
                     <div class="position-relative">
-                        <textarea
-                            v-model="newMessage"
-                            class="form-control form-control-sm"
-                            placeholder="Введите сообщение..."
-                            maxlength="500"
-                            :disabled="sending"
-                            rows="3"
-                            @keydown.enter.exact.prevent="sendMessage"
-                            style="padding-bottom: 20px; resize: none;">
+                        <textarea v-model="newMessage" class="form-control form-control-sm"
+                            placeholder="Введите сообщение..." maxlength="500" :disabled="sending" rows="3"
+                            @keydown.enter.exact.prevent="sendMessage" style="padding-bottom: 20px; resize: none;">
                         </textarea>
                         <small class="message-count text-muted position-absolute" style="bottom: 5px; right: 10px;">
                             {{ newMessage.length }}/500
@@ -87,17 +81,11 @@
                     </div>
 
                     <div class="d-flex flex-wrap justify-content-between gap-2 mt-2">
-                        <button
-                            @click="insertMarketplaceLink"
-                            class="btn theme-outline"
-                            type="button">
+                        <button @click="insertMarketplaceLink" class="btn theme-outline" type="button">
                             <i class="ri-link me-1"></i>
-                            Вставить ссылку
+                            Мой профиль
                         </button>
-                        <button
-                            @click="sendMessage"
-                            class="btn theme-btn"
-                            :disabled="!newMessage.trim() || sending"
+                        <button @click="sendMessage" class="btn theme-btn" :disabled="!newMessage.trim() || sending"
                             type="button">
                             <i v-if="sending" class="spinner-border spinner-border-sm"></i>
                             <i v-else class="ri-send-plane-line me-1"></i>

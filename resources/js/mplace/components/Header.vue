@@ -12,7 +12,7 @@
 					<img class="img-fluid logo" :src="logoUrl" alt="logo">
 				</a>
 				<!-- Main Navigation Menu (Desktop) -->
-				<ul class="navbar-nav d-none d-lg-flex mt-2 gap-0">
+				<ul class="navbar-nav d-none d-lg-flex gap-0">
 					<template v-for="(item, key) in mainNavigation" :key="key">
 						<li v-if="!item.auth_required || user" class="nav-item me-lg-3 me-xl-4">
 							<a class="nav-link" :href="getNavigationUrl(item.route)">{{ item.title }}</a>
@@ -88,10 +88,10 @@
 					</div>
 
 					<!-- User Balance -->
-					<div v-if="user && user.balance !== undefined" class="user-balance d-none d-md-block">
+					<div v-if="user && currentBalance !== undefined" class="user-balance d-none d-md-block">
 						<a :href="routes.profile + '#balance'" class="btn theme-btn text-decoration-none">
 							<i class="ri-add-circle-line me-1"></i>
-							<span class="balance-amount" v-html="formatPrice(user.balance, 'RUB')"></span>
+							<span class="balance-amount" v-html="formatPrice(currentBalance, 'RUB')"></span>
 						</a>
 					</div>
 
@@ -112,7 +112,8 @@
 								</li>
 							</ul>
 							<div class="bottom-btn">
-								<a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#extensionModal">
+								<a class="dropdown-item" href="#" data-bs-toggle="modal"
+									data-bs-target="#extensionModal">
 									<i class="ri-download-2-line me-2"></i>Расширение
 								</a>
 							</div>
@@ -150,7 +151,7 @@
 				<a :href="routes.profile + '#balance'" class="btn theme-outline btn-sm w-100 text-decoration-none"
 					@click="closeOffcanvas">
 					<i class="ri-add-circle-line me-1"></i>
-					<span v-html="formatPrice(user.balance, 'RUB')"></span>
+					<span v-html="formatPrice(currentBalance, 'RUB')"></span>
 				</a>
 			</div>
 
@@ -197,7 +198,8 @@
 					</a>
 				</li>
 				<li class="mb-1">
-					<a href="#" data-bs-toggle="modal" data-bs-target="#extensionModal" class="nav-link  mb-0 p-0 content-color">
+					<a href="#" data-bs-toggle="modal" data-bs-target="#extensionModal"
+						class="nav-link  mb-0 p-0 content-color">
 						<i class="ri-download-2-line me-2"></i>Расширение
 					</a>
 				</li>
@@ -294,6 +296,7 @@ export default {
 	},
 	data() {
 		return {
+			currentBalance: this.user ? this.user.balance : 0,
 			cartCount: this.initialCartCount,
 			favoritesCount: this.initialFavoritesCount,
 			cartItems: [],
@@ -373,6 +376,13 @@ export default {
 			if (this.cartItems.length > 0) {
 				this.cartItems = [...this.cartItems];
 			}
+			this.$forceUpdate();
+		},
+
+		handleBalanceUpdate(event) {
+			if (event.detail && event.detail.main !== undefined) {
+				this.currentBalance = event.detail.main;
+			}
 		},
 
 		closeOffcanvas() {
@@ -405,6 +415,9 @@ export default {
 
 		// Слушаем события смены валюты
 		window.addEventListener('currency-changed', this.handleCurrencyChange);
+
+		// Слушаем обновления баланса
+		window.addEventListener('balance-updated', this.handleBalanceUpdate);
 	},
 
 	beforeUnmount() {
@@ -412,6 +425,7 @@ export default {
 		window.removeEventListener('cart-updated', this.updateCartFromEvent);
 		window.removeEventListener('favorites-updated', this.updateFavoritesFromEvent);
 		window.removeEventListener('currency-changed', this.handleCurrencyChange);
+		window.removeEventListener('balance-updated', this.handleBalanceUpdate);
 	}
 }
 </script>

@@ -7,6 +7,7 @@
 @import "mplace/utils/variables";
 @import "mplace/utils/animation";
 @import "shared/utils/svg-url";
+@import "shared/utils/rarity-colors";
 
 /* base scss files */
 @import "mplace/base/reset";
@@ -28,6 +29,7 @@
 @import "mplace/components/loader";
 @import "mplace/components/inventory";
 @import "mplace/components/case-prize-slider";
+@import "mplace/components/carousel-winner";
 
 /* layout scss files */
 @import "mplace/layout/footer";

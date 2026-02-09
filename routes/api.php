@@ -27,7 +27,7 @@ Route::prefix('ext-api')->name('extension.')->middleware('extension.cors')->cont
     Route::post('/auth', 'authenticateExtension')->name('auth');
 
     // Эндпоинты требующие авторизации (через Bearer token)
-    Route::middleware(['throttle:60,1'])->group(function () {
+    Route::middleware(['throttle:api-read'])->group(function () {
         Route::get('/user', 'getUserInfo')->name('user');
         Route::post('/log-error', 'logError')->name('log-error');
         Route::post('/trade-status', 'updateTradeStatus')->name('trade-status');

@@ -61,5 +61,29 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('email-notifications', function () {
             return Limit::perMinute(100)->by('email');
         });
+
+        // GET-запросы (просмотр страниц, списки, детали) — общий лимит
+        RateLimiter::for('api-read', function ($request) {
+            $key = $request->user()?->id ?: $request->ip();
+            return Limit::perMinute(120)->by('api-read|' . $key);
+        });
+
+        // POST-запросы (действия: продажа, добавление в корзину и т.д.)
+        RateLimiter::for('api-action', function ($request) {
+            $key = $request->user()?->id ?: $request->ip();
+            return Limit::perMinute(30)->by('api-action|' . $key);
+        });
+
+        // Покупка/открытие кейсов — свой отдельный лимит
+        RateLimiter::for('case-purchase', function ($request) {
+            $key = $request->user()?->id ?: $request->ip();
+            return Limit::perMinute(10)->by('case-purchase|' . $key);
+        });
+
+        // Критические действия (создание заказов, платежи)
+        RateLimiter::for('api-critical', function ($request) {
+            $key = $request->user()?->id ?: $request->ip();
+            return Limit::perMinute(10)->by('api-critical|' . $key);
+        });
     }
 }

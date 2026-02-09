@@ -64,54 +64,54 @@ Route::prefix('api')->name('api.')->group(function () {
     // Публичные аукционы API
     Route::prefix('auctions')->name('auctions.')->controller(\App\Http\Controllers\AuctionController::class)->group(function () {
         Route::get('/', 'getAuctions')->name('index');
-        Route::get('/{auction}/bids', 'bidHistory')->name('bids')->middleware('throttle:60,1');
+        Route::get('/{auction}/bids', 'bidHistory')->name('bids')->middleware('throttle:api-read');
     });
 
     // Кейсы API
     Route::prefix('cases')->name('cases.')->controller(CaseController::class)->group(function () {
-        Route::get('/', 'list')->name('list')->middleware('throttle:60,1');
-        Route::get('/{slug}', 'detail')->name('detail')->middleware('throttle:60,1');
-        Route::post('/purchase', 'purchaseCase')->name('purchase')->middleware(['auth:client', 'throttle:10,1']);
+        Route::get('/', 'list')->name('list')->middleware('throttle:api-read');
+        Route::get('/{slug}', 'detail')->name('detail')->middleware('throttle:api-read');
+        Route::post('/purchase', 'purchaseCase')->name('purchase')->middleware(['auth:client', 'throttle:case-purchase']);
     });
 
     // Лайв-лента дропов
     Route::get('/live-feed', [CaseController::class, 'liveFeed'])
         ->name('live-feed')
-        ->middleware('throttle:30,1');
+        ->middleware('throttle:api-read');
 
     // Инвентарь кейсов API
     Route::get('/case-inventory', [CaseInventoryController::class, 'getItems'])
         ->name('case-inventory.items')
-        ->middleware(['auth:client', 'throttle:60,1']);
+        ->middleware(['auth:client', 'throttle:api-read']);
 
     Route::post('/case-inventory/sell', [CaseInventoryController::class, 'sell'])
         ->name('case-inventory.sell')
-        ->middleware(['auth:client', 'throttle:30,1']);
+        ->middleware(['auth:client', 'throttle:api-action']);
 
     Route::get('/case-inventory/{id}/replacements', [CaseInventoryController::class, 'getReplacements'])
         ->name('case-inventory.replacements')
-        ->middleware(['auth:client', 'throttle:60,1']);
+        ->middleware(['auth:client', 'throttle:api-read']);
 
     Route::post('/case-inventory/{id}/withdraw', [CaseInventoryController::class, 'withdraw'])
         ->name('case-inventory.withdraw')
-        ->middleware(['auth:client', 'throttle:60,1']);
+        ->middleware(['auth:client', 'throttle:api-action']);
 
     // Апгрейд API
     Route::get('/upgrade/targets', [\App\Http\Controllers\UpgradeController::class, 'getTargets'])
         ->name('upgrade.targets')
-        ->middleware(['auth:client', 'throttle:60,1']);
+        ->middleware(['auth:client', 'throttle:api-read']);
 
     Route::post('/upgrade/calculate', [\App\Http\Controllers\UpgradeController::class, 'calculate'])
         ->name('upgrade.calculate')
-        ->middleware(['auth:client', 'throttle:60,1']);
+        ->middleware(['auth:client', 'throttle:api-action']);
 
     Route::post('/upgrade/execute', [\App\Http\Controllers\UpgradeController::class, 'execute'])
         ->name('upgrade.execute')
-        ->middleware(['auth:client', 'throttle:10,1']);
+        ->middleware(['auth:client', 'throttle:api-critical']);
 
     Route::get('/upgrade/history', [\App\Http\Controllers\UpgradeController::class, 'history'])
         ->name('upgrade.history')
-        ->middleware(['auth:client', 'throttle:60,1']);
+        ->middleware(['auth:client', 'throttle:api-read']);
 
 
     // CSRF токен
@@ -131,22 +131,22 @@ Route::prefix('api')->name('api.')->group(function () {
 
     // Маршруты для корзины с rate limiting
     Route::prefix('cart')->name('cart.')->controller(CartController::class)->group(function () {
-        Route::get('/', 'getItems')->name('items')->middleware('throttle:60,1');
-        Route::post('/add', 'add')->name('add')->middleware('throttle:30,1'); // 30 добавлений в минуту
-        Route::delete('/{listingId}', 'destroy')->name('remove')->middleware('throttle:30,1');
-        Route::delete('/', 'clear')->name('clear')->middleware('throttle:30,1');
-        Route::get('/check/{listingId}', 'check')->name('check')->middleware('throttle:60,1');
-        Route::get('/count', 'count')->name('count')->middleware('throttle:60,1');
+        Route::get('/', 'getItems')->name('items')->middleware('throttle:api-read');
+        Route::post('/add', 'add')->name('add')->middleware('throttle:api-action');
+        Route::delete('/{listingId}', 'destroy')->name('remove')->middleware('throttle:api-action');
+        Route::delete('/', 'clear')->name('clear')->middleware('throttle:api-action');
+        Route::get('/check/{listingId}', 'check')->name('check')->middleware('throttle:api-read');
+        Route::get('/count', 'count')->name('count')->middleware('throttle:api-read');
     });
 
     // Маршруты для заказов
     Route::prefix('orders')->name('orders.')->controller(OrderController::class)->group(function () {
-        Route::post('/create', 'cartBuy')->name('create')->middleware(['auth:client', 'throttle:10,1']);
-        Route::post('/quick-buy', 'quickBuy')->name('quick-buy')->middleware(['auth:client', 'throttle:10,1']);
-        Route::post('/quick-sell', 'quickSell')->name('quick-sell')->middleware(['auth:client', 'throttle:10,1']);
-        Route::get('/purchases', 'getMyOrders')->name('purchases')->middleware(['auth:client', 'throttle:60,1']);
-        Route::get('/sales', 'getMySales')->name('sales')->middleware(['auth:client', 'throttle:60,1']);
-        Route::post('/{order}/cancel', 'cancel')->name('cancel')->middleware(['auth:client', 'throttle:10,1']);
+        Route::post('/create', 'cartBuy')->name('create')->middleware(['auth:client', 'throttle:api-critical']);
+        Route::post('/quick-buy', 'quickBuy')->name('quick-buy')->middleware(['auth:client', 'throttle:api-critical']);
+        Route::post('/quick-sell', 'quickSell')->name('quick-sell')->middleware(['auth:client', 'throttle:api-critical']);
+        Route::get('/purchases', 'getMyOrders')->name('purchases')->middleware(['auth:client', 'throttle:api-read']);
+        Route::get('/sales', 'getMySales')->name('sales')->middleware(['auth:client', 'throttle:api-read']);
+        Route::post('/{order}/cancel', 'cancel')->name('cancel')->middleware(['auth:client', 'throttle:api-critical']);
     });
 
 
@@ -164,41 +164,41 @@ Route::prefix('api')->name('api.')->group(function () {
 
         // Аукционы
         Route::prefix('auctions')->name('auctions.')->controller(AuctionController::class)->group(function () {
-            Route::post('/', 'create')->name('create')->middleware('throttle:10,1');
+            Route::post('/', 'create')->name('create')->middleware('throttle:api-critical');
             Route::get('/{auction}', 'show')->name('show');
-            Route::patch('/{auction}', 'update')->name('update')->middleware('throttle:10,1');
-            Route::delete('/{auction}', 'destroy')->name('destroy')->middleware('throttle:10,1');
-            Route::patch('/{auction}/activate', 'activate')->name('activate')->middleware('throttle:10,1');
-            Route::patch('/{auction}/deactivate', 'deactivate')->name('deactivate')->middleware('throttle:10,1');
-            Route::post('/{auction}/bid', 'bid')->name('bid')->middleware('throttle:30,1');
-            Route::patch('/{auction}/status', 'updateStatus')->name('update-status')->middleware('throttle:10,1');
+            Route::patch('/{auction}', 'update')->name('update')->middleware('throttle:api-critical');
+            Route::delete('/{auction}', 'destroy')->name('destroy')->middleware('throttle:api-critical');
+            Route::patch('/{auction}/activate', 'activate')->name('activate')->middleware('throttle:api-critical');
+            Route::patch('/{auction}/deactivate', 'deactivate')->name('deactivate')->middleware('throttle:api-critical');
+            Route::post('/{auction}/bid', 'bid')->name('bid')->middleware('throttle:api-action');
+            Route::patch('/{auction}/status', 'updateStatus')->name('update-status')->middleware('throttle:api-critical');
         });
 
         // Профиль API
         Route::prefix('profile')->name('profile.')->controller(ProfileController::class)->group(function () {
-            Route::get('/me', 'getCurrentUser')->name('me')->middleware('throttle:60,1');
-            Route::get('/transactions', 'getTransactions')->name('transactions')->middleware('throttle:60,1');
-            Route::get('/bonus-transactions', 'getBonusTransactions')->name('bonus-transactions')->middleware('throttle:60,1');
-            Route::get('/sales-stats', 'getSalesStats')->name('sales-stats')->middleware('throttle:60,1');
-            Route::get('/held-balance', 'getHeldBalance')->name('held-balance')->middleware('throttle:60,1');
+            Route::get('/me', 'getCurrentUser')->name('me')->middleware('throttle:api-read');
+            Route::get('/transactions', 'getTransactions')->name('transactions')->middleware('throttle:api-read');
+            Route::get('/bonus-transactions', 'getBonusTransactions')->name('bonus-transactions')->middleware('throttle:api-read');
+            Route::get('/sales-stats', 'getSalesStats')->name('sales-stats')->middleware('throttle:api-read');
+            Route::get('/held-balance', 'getHeldBalance')->name('held-balance')->middleware('throttle:api-read');
         });
 
         // Чат API
         Route::prefix('chat')->name('chat.')->controller(ChatController::class)->group(function () {
-            Route::get('/messages', 'getMessages')->name('messages')->middleware('throttle:60,1');
-            Route::post('/send', 'sendMessage')->name('send')->middleware('throttle:30,1');
-            Route::get('/ban-status', 'checkBanStatus')->name('ban-status')->middleware('throttle:60,1');
+            Route::get('/messages', 'getMessages')->name('messages')->middleware('throttle:api-read');
+            Route::post('/send', 'sendMessage')->name('send')->middleware('throttle:api-action');
+            Route::get('/ban-status', 'checkBanStatus')->name('ban-status')->middleware('throttle:api-read');
         });
 
         // Платежи API
         Route::prefix('deposit')->name('deposit.')->controller(\App\Http\Controllers\DepositController::class)->group(function () {
-            Route::post('/payment-form', 'createPaymentForm')->name('payment-form')->middleware('throttle:10,1'); // Payment form
-            Route::post('/validate-promocode', 'validatePromocode')->name('validate-promocode')->middleware('throttle:30,1');
-            Route::post('/activate-promocode', 'activatePromocode')->name('activate-promocode')->middleware('throttle:10,1');
-            Route::get('/status/{paymentId}', 'getPaymentStatus')->name('status')->middleware('throttle:60,1');
-            Route::post('/check-status/{paymentId}', 'checkPaymentStatus')->name('check-status')->middleware('throttle:30,1');
-            Route::get('/history', 'getPaymentsHistory')->name('history')->middleware('throttle:60,1');
-            Route::post('/cancel/{paymentId}', 'cancelPayment')->name('cancel')->middleware('throttle:10,1');
+            Route::post('/payment-form', 'createPaymentForm')->name('payment-form')->middleware('throttle:api-critical');
+            Route::post('/validate-promocode', 'validatePromocode')->name('validate-promocode')->middleware('throttle:api-action');
+            Route::post('/activate-promocode', 'activatePromocode')->name('activate-promocode')->middleware('throttle:api-critical');
+            Route::get('/status/{paymentId}', 'getPaymentStatus')->name('status')->middleware('throttle:api-read');
+            Route::post('/check-status/{paymentId}', 'checkPaymentStatus')->name('check-status')->middleware('throttle:api-action');
+            Route::get('/history', 'getPaymentsHistory')->name('history')->middleware('throttle:api-read');
+            Route::post('/cancel/{paymentId}', 'cancelPayment')->name('cancel')->middleware('throttle:api-critical');
         });
 
     });
@@ -206,7 +206,7 @@ Route::prefix('api')->name('api.')->group(function () {
 
 // Требуется авторизации
 Route::middleware(['auth:client'])->group(function () {
-    
+
     // Маршруты кейсов (только для авторизованных)
     Route::prefix('cases')->name('cases.')->controller(CaseController::class)->group(function () {
         Route::get('/', 'index')->name('index');
@@ -259,9 +259,9 @@ Route::middleware(['auth:client'])->group(function () {
 
     // Избранное
     Route::get('/favorites', [FavoritesController::class, 'index'])->name('favorites');
-    Route::get('/api/favorites', [FavoritesController::class, 'getFavorites'])->name('favorites.list')->middleware('throttle:60,1');
-    Route::post('/api/favorites/toggle', [FavoritesController::class, 'toggle'])->name('favorites.toggle')->middleware('throttle:30,1');
-    Route::get('/api/favorites/check/{listing}', [FavoritesController::class, 'check'])->name('favorites.check')->middleware('throttle:60,1');
+    Route::get('/api/favorites', [FavoritesController::class, 'getFavorites'])->name('favorites.list')->middleware('throttle:api-read');
+    Route::post('/api/favorites/toggle', [FavoritesController::class, 'toggle'])->name('favorites.toggle')->middleware('throttle:api-action');
+    Route::get('/api/favorites/check/{listing}', [FavoritesController::class, 'check'])->name('favorites.check')->middleware('throttle:api-read');
 });
 
 
@@ -283,7 +283,7 @@ Route::post('/api/telegram/webhook', [\App\Http\Controllers\TelegramWebhookContr
 // Chat API routes
 Route::middleware(['auth:client'])->prefix('api/chat')->name('api.chat.')->controller(\App\Http\Controllers\ChatController::class)->group(function () {
     Route::get('/messages', 'getMessages')->name('messages');
-    Route::post('/send', 'sendMessage')->name('send')->middleware('throttle:30,1');
+    Route::post('/send', 'sendMessage')->name('send')->middleware('throttle:api-action');
     Route::get('/ban-status', 'checkBanStatus')->name('ban-status');
 });
 

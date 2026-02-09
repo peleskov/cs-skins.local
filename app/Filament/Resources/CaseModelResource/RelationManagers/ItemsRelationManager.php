@@ -39,19 +39,6 @@ class ItemsRelationManager extends RelationManager
 
                 Select::make('virtual_item_id')
                     ->label('Предмет')
-                    ->options(function () {
-                        $existingIds = $this->getOwnerRecord()->items()->pluck('virtual_item_id')->toArray();
-                        return VirtualItem::query()
-                            ->whereNotNull('steam_price')
-                            ->where('steam_price', '>', 0)
-                            ->whereNotIn('id', $existingIds)
-                            ->orderBy('steam_price', 'desc')
-                            ->limit(1000)
-                            ->get()
-                            ->mapWithKeys(fn ($item) => [
-                                $item->id => "{$item->name} - \${$item->steam_price}"
-                            ]);
-                    })
                     ->searchable()
                     ->getSearchResultsUsing(function (string $search) {
                         $existingIds = $this->getOwnerRecord()->items()->pluck('virtual_item_id')->toArray();
@@ -71,8 +58,24 @@ class ItemsRelationManager extends RelationManager
                                 $item->id => "{$item->name} - \${$item->steam_price}"
                             ]);
                     })
-                    ->validationMessages([
-                        'in' => 'Выбранный предмет недоступен (нет цены или уже добавлен в кейс)',
+                    ->getOptionLabelUsing(function ($value): ?string {
+                        $item = VirtualItem::find($value);
+                        return $item ? "{$item->name} - \${$item->steam_price}" : null;
+                    })
+                    ->rules([
+                        function () {
+                            return function (string $attribute, $value, \Closure $fail) {
+                                $item = VirtualItem::find($value);
+                                if (!$item || !$item->steam_price || $item->steam_price <= 0) {
+                                    $fail('Выбранный предмет недоступен (нет цены).');
+                                    return;
+                                }
+                                $existingIds = $this->getOwnerRecord()->items()->pluck('virtual_item_id')->toArray();
+                                if (in_array((int) $value, array_map('intval', $existingIds))) {
+                                    $fail('Этот предмет уже добавлен в кейс.');
+                                }
+                            };
+                        },
                     ])
                     ->required()
                     ->live()

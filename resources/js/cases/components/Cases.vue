@@ -177,7 +177,11 @@ export default {
 
 			// Преобразуем Map в массив и сортируем по sort_order
 			return Array.from(categoriesMap.values())
-				.sort((a, b) => a.sort_order - b.sort_order);
+				.sort((a, b) => a.sort_order - b.sort_order)
+				.map(category => ({
+					...category,
+					cases: category.cases.slice().sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+				}));
 		},
 		hasActiveFilters() {
 			return !!(

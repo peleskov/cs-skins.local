@@ -30,6 +30,7 @@ class CaseController extends Controller
                 'image_url',
                 'accumulated_fund',
                 'category_id',
+                'sort_order',
                 'case_type',
                 'label_hot',
                 'label_new',
@@ -40,6 +41,7 @@ class CaseController extends Controller
             ->whereHas('tiers', function ($query) {
                 $query->whereHas('items');
             })
+            ->orderBy('sort_order')
             ->get();
 
         return view('cases.index', compact('cases'));
@@ -134,6 +136,7 @@ class CaseController extends Controller
                 'image_url',
                 'accumulated_fund',
                 'category_id',
+                'sort_order',
                 'case_type',
                 'label_hot',
                 'label_new',
@@ -141,6 +144,7 @@ class CaseController extends Controller
                 'label_free',
             ])
             ->with('category:id,name,icon,sort_order')
+            ->orderBy('sort_order')
             ->get();
 
         return response()->json([

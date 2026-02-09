@@ -25,6 +25,7 @@ class CaseModel extends Model
         'fund_percent',
         'is_active',
         'category_id',
+        'sort_order',
         // Новые поля
         'case_type',
         'free_min_deposit',
@@ -43,6 +44,7 @@ class CaseModel extends Model
         'accumulated_fund' => 'decimal:2',
         'fund_percent' => 'decimal:2',
         'is_active' => 'boolean',
+        'sort_order' => 'integer',
         // Новые поля
         'free_min_deposit' => 'decimal:2',
         'free_opens_count' => 'integer',
@@ -179,6 +181,11 @@ class CaseModel extends Model
                         });
                     });
             });
+    }
+
+    public function scopeOrdered($query)
+    {
+        return $query->orderBy('sort_order');
     }
 
     public function scopeByType($query, string $type)

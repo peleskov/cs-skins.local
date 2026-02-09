@@ -18,8 +18,11 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Actions\EditAction;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Illuminate\Support\Facades\DB;
+use Filament\Notifications\Notification;
 use App\Filament\Resources\CaseModelResource\RelationManagers\TiersRelationManager;
 use App\Filament\Resources\CaseModelResource\RelationManagers\ItemsRelationManager;
 use App\Filament\Resources\CaseModelResource\Pages\ListCaseModels;
@@ -107,6 +110,11 @@ class CaseModelResource extends Resource
                 // Настройки и метки
                 Grid::make(4)
                     ->schema([
+                        TextInput::make('sort_order')
+                            ->label('Порядок сортировки')
+                            ->numeric()
+                            ->default(0)
+                            ->columnSpanFull(),
                         Select::make('case_type')
                             ->label('Тип кейса')
                             ->options(CaseModel::getTypes())
@@ -156,7 +164,12 @@ class CaseModelResource extends Resource
     {
         return $table
             ->poll('10s')
+            ->defaultSort('sort_order', 'asc')
             ->columns([
+                TextColumn::make('sort_order')
+                    ->label('Сортировка')
+                    ->sortable(),
+
                 TextColumn::make('category.name')
                     ->label('Категория')
                     ->searchable()
@@ -230,6 +243,58 @@ class CaseModelResource extends Resource
             ])
             ->recordActions([
                 EditAction::make(),
+                Action::make('replicate')
+                    ->label('Копировать')
+                    ->icon('heroicon-o-document-duplicate')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Копировать кейс')
+                    ->modalDescription('Будет создана копия кейса со всеми уровнями и предметами. Копия будет неактивна.')
+                    ->modalSubmitActionLabel('Копировать')
+                    ->action(function (CaseModel $record) {
+                        $newCase = DB::transaction(function () use ($record) {
+                            $newCase = $record->replicate([
+                                'slug',
+                                'total_opens_count',
+                                'accumulated_fund',
+                                'tiers_count',
+                            ]);
+                            $newCase->name = $record->name . ' (копия)';
+                            $newCase->slug = Str::slug($record->name) . '-copy-' . time();
+                            $newCase->total_opens_count = 0;
+                            $newCase->accumulated_fund = 0;
+                            $newCase->is_active = false;
+                            $newCase->save();
+
+                            $record->load('tiers.items');
+
+                            foreach ($record->tiers as $tier) {
+                                $newTier = $tier->replicate(['case_id']);
+                                $newTier->case_id = $newCase->id;
+                                $newTier->save();
+
+                                foreach ($tier->items as $item) {
+                                    $newItem = $item->replicate([
+                                        'case_id',
+                                        'tier_id',
+                                        'inventory_item_id',
+                                    ]);
+                                    $newItem->case_id = $newCase->id;
+                                    $newItem->tier_id = $newTier->id;
+                                    $newItem->save();
+                                }
+                            }
+
+                            return $newCase;
+                        });
+
+                        Notification::make()
+                            ->title('Кейс скопирован')
+                            ->success()
+                            ->send();
+
+                        return redirect(CaseModelResource::getUrl('edit', ['record' => $newCase]));
+                    }),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

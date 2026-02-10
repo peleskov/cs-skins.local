@@ -14,16 +14,17 @@
 						<i class="ri-wallet-3-line display-4 text-primary mb-3"></i>
 						<h5 class="card-title">Основной баланс</h5>
 						<h2 class="text-primary" v-html="formatPrice(client.balance)"></h2>
-						<div class="d-flex justify-content-center gap-3 mt-3">
-							<button class="btn theme-btn" data-bs-toggle="modal" data-bs-target="#balance-refill"
+						<div class="d-flex flex-wrap justify-content-center gap-3 mt-3">
+							<button class="btn theme-btn ps-2" data-bs-toggle="modal" data-bs-target="#balance-refill"
 								:disabled="availablePaymentMethods.length === 0">
 								<i class="ri-add-line me-2"></i>
 								{{ availablePaymentMethods.length > 0 ? 'Пополнить' : 'Недоступно' }}
 							</button>
-							<button class="btn theme-outline" data-bs-toggle="modal" data-bs-target="#balance-withdraw">
+							<button class="btn theme-outline ps-2" data-bs-toggle="modal"
+								data-bs-target="#balance-withdraw">
 								<i class="ri-bank-card-line me-2"></i>Вывести
 							</button>
-							<button class="btn theme-outline" data-bs-toggle="modal"
+							<button class="btn theme-outline ps-2" data-bs-toggle="modal"
 								data-bs-target="#promocode-activate">
 								<i class="ri-coupon-line me-2"></i>Промокод
 							</button>

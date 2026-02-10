@@ -133,8 +133,8 @@ class ListingResource extends Resource
                     ->color(fn (Listing $record): string => $record->seller->isBot() ? 'warning' : 'primary'),
 
                 TextColumn::make('price')
-                    ->label('Цена')
-                    ->money('USD')
+                    ->label('Цена (₽)')
+                    ->money('RUB')
                     ->sortable()
                     ->weight(FontWeight::Bold),
 

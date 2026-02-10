@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\VirtualItems\Tables;
 
+use App\Models\Currency;
 use App\Models\VirtualItem;
 use Filament\Forms\Components\TextInput;
 use Filament\Support\Enums\FontWeight;
@@ -70,8 +71,8 @@ class VirtualItemsTable
                     ->sortable(),
 
                 TextColumn::make('steam_price')
-                    ->label('Цена Steam')
-                    ->money('USD')
+                    ->label('Цена Steam (₽)')
+                    ->formatStateUsing(fn ($state) => $state ? number_format(Currency::convert($state, 'USD', 'RUB'), 2, '.', ' ') . ' ₽' : null)
                     ->sortable()
                     ->weight(FontWeight::Bold)
                     ->placeholder('—'),
@@ -118,21 +119,21 @@ class VirtualItemsTable
                         TextInput::make('price_from')
                             ->label('Цена от')
                             ->numeric()
-                            ->prefix('$'),
+                            ->suffix('₽'),
                         TextInput::make('price_to')
                             ->label('Цена до')
                             ->numeric()
-                            ->prefix('$'),
+                            ->suffix('₽'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
                             ->when(
                                 $data['price_from'] ?? null,
-                                fn (Builder $query, $price): Builder => $query->where('steam_price', '>=', $price),
+                                fn (Builder $query, $price): Builder => $query->where('steam_price', '>=', Currency::convert((float) $price, 'RUB', 'USD')),
                             )
                             ->when(
                                 $data['price_to'] ?? null,
-                                fn (Builder $query, $price): Builder => $query->where('steam_price', '<=', $price),
+                                fn (Builder $query, $price): Builder => $query->where('steam_price', '<=', Currency::convert((float) $price, 'RUB', 'USD')),
                             );
                     }),
 

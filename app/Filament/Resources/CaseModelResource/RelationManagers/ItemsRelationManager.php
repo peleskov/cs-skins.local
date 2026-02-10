@@ -4,9 +4,11 @@ namespace App\Filament\Resources\CaseModelResource\RelationManagers;
 
 use App\Models\CaseItem;
 use App\Models\CaseTier;
+use App\Models\Currency;
 use App\Models\VirtualItem;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Group;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
@@ -44,18 +46,26 @@ class ItemsRelationManager extends RelationManager
             $query->where('weapon_type', $weaponType);
         }
         if ($priceFrom = $get('filter_price_from')) {
-            $query->where('steam_price', '>=', (float) $priceFrom);
+            $usdFrom = Currency::convert((float) $priceFrom, 'RUB', 'USD');
+            $query->where('steam_price', '>=', $usdFrom);
         }
         if ($priceTo = $get('filter_price_to')) {
-            $query->where('steam_price', '<=', (float) $priceTo);
+            $usdTo = Currency::convert((float) $priceTo, 'RUB', 'USD');
+            $query->where('steam_price', '<=', $usdTo);
         }
 
         return $query;
     }
 
+    protected function convertToRub(float $usdAmount): float
+    {
+        return round(Currency::convert($usdAmount, 'USD', 'RUB'), 2);
+    }
+
     protected function formatItemOption(VirtualItem $item): string
     {
-        return "{$item->name} — \${$item->steam_price}";
+        $rub = $this->convertToRub($item->steam_price);
+        return "{$item->name} — {$rub} ₽";
     }
 
     public function form(Schema $schema): Schema
@@ -103,7 +113,7 @@ class ItemsRelationManager extends RelationManager
                             ->hiddenOn('edit'),
 
                         TextInput::make('filter_price_from')
-                            ->label('Цена от ($)')
+                            ->label('Цена от (₽)')
                             ->numeric()
                             ->live(debounce: 500)
                             ->afterStateUpdated($filterStateUpdated)
@@ -111,7 +121,7 @@ class ItemsRelationManager extends RelationManager
                             ->hiddenOn('edit'),
 
                         TextInput::make('filter_price_to')
-                            ->label('Цена до ($)')
+                            ->label('Цена до (₽)')
                             ->numeric()
                             ->live(debounce: 500)
                             ->afterStateUpdated($filterStateUpdated)
@@ -119,6 +129,23 @@ class ItemsRelationManager extends RelationManager
                             ->hiddenOn('edit'),
                     ])
                     ->hiddenOn('edit'),
+
+                TextInput::make('price')
+                    ->label('Цена в кейсе (₽)')
+                    ->numeric()
+                    ->suffix('₽')
+                    ->required()
+                    ->helperText(function (Get $get) {
+                        if (!$get('virtual_item_id')) {
+                            return 'Выберите предмет';
+                        }
+                        $item = VirtualItem::find($get('virtual_item_id'));
+                        if (!$item?->steam_price) {
+                            return 'Steam цена неизвестна';
+                        }
+                        $rub = $this->convertToRub($item->steam_price);
+                        return "Справочная Steam цена: {$rub} ₽";
+                    }),
 
                 Select::make('virtual_item_id')
                     ->label('Предмет')
@@ -171,22 +198,6 @@ class ItemsRelationManager extends RelationManager
                     ->live()
                     ->disabledOn('edit')
                     ->hiddenOn('edit'),
-
-                TextInput::make('price')
-                    ->label('Цена в кейсе (₽)')
-                    ->numeric()
-                    ->suffix('₽')
-                    ->required()
-                    ->helperText(function (Get $get) {
-                        if (!$get('virtual_item_id')) {
-                            return 'Выберите предмет';
-                        }
-                        $item = VirtualItem::find($get('virtual_item_id'));
-                        if (!$item?->steam_price) {
-                            return 'Steam цена неизвестна';
-                        }
-                        return "Справочная Steam цена: \${$item->steam_price}";
-                    }),
             ]);
     }
 
@@ -231,8 +242,8 @@ class ItemsRelationManager extends RelationManager
                     }),
 
                 TextColumn::make('virtualItem.steam_price')
-                    ->label('Steam ($)')
-                    ->money('USD')
+                    ->label('Steam (₽)')
+                    ->formatStateUsing(fn ($state) => $state ? number_format(Currency::convert($state, 'USD', 'RUB'), 2, '.', ' ') . ' ₽' : '—')
                     ->sortable()
                     ->color('gray'),
 

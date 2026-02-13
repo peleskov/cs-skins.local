@@ -4,7 +4,7 @@ namespace App\Filament\Resources\SiteSettingResource\Pages;
 
 use Filament\Actions\DeleteAction;
 use App\Filament\Resources\SiteSettingResource;
-use Filament\Actions;
+use App\Models\SiteSetting;
 use Filament\Resources\Pages\EditRecord;
 
 class EditSiteSetting extends EditRecord
@@ -20,21 +20,28 @@ class EditSiteSetting extends EditRecord
 
     protected function mutateFormDataBeforeFill(array $data): array
     {
-        // Для boolean типа загружаем значение в boolean_value поле
-        if (isset($data['type']) && $data['type'] === 'boolean') {
-            $data['boolean_value'] = in_array($data['value'], ['1', 1, true, 'true'], true);
-        }
+        $value = $data['value'] ?? '';
+        $type = $data['type'] ?? SiteSetting::TYPE_STRING;
+
+        $data['value_text'] = in_array($type, [SiteSetting::TYPE_STRING, SiteSetting::TYPE_JSON]) ? $value : '';
+        $data['value_number'] = $type === SiteSetting::TYPE_NUMBER ? $value : '';
+        $data['value_bool'] = $type === SiteSetting::TYPE_BOOLEAN && in_array($value, ['1', 1, true, 'true'], true);
+
         return $data;
     }
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        // Если это boolean тип, переносим значение из boolean_value в value
-        if (isset($data['type']) && $data['type'] === 'boolean' && isset($data['boolean_value'])) {
-            $data['value'] = $data['boolean_value'] ? '1' : '0';
-            unset($data['boolean_value']);
-        }
+        $type = $data['type'] ?? SiteSetting::TYPE_STRING;
+
+        $data['value'] = match($type) {
+            SiteSetting::TYPE_BOOLEAN => ($data['value_bool'] ?? false) ? '1' : '0',
+            SiteSetting::TYPE_NUMBER => $data['value_number'] ?? '',
+            default => $data['value_text'] ?? '',
+        };
+
+        unset($data['value_text'], $data['value_number'], $data['value_bool']);
+
         return $data;
     }
-
 }

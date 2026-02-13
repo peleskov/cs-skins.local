@@ -388,6 +388,12 @@
                     .dig {
                         font: 600 28px / 121% "Inter", sans-serif;
                         color: #fff;
+
+                        &.result-win,
+                        &.result-lose {
+                            margin-top: 6px;
+                            text-shadow: 0 0 7px #dbdbdb, 0 0 15px #dbdbdb, 0 0 51px #dbdbdb, 0 0 102px #dbdbdb, 0 0 175px #dbdbdb, 0 0 250px #dbdbdb;
+                        }
                     }
 
                     .text {
@@ -395,6 +401,34 @@
                         color: #7d8091;
                     }
                 }
+
+                .win-ring,
+                .lose-ring {
+                    display: none;
+                }
+
+
+                &.result-win {
+                    .chance-ring {
+                        display: none;
+                    }
+
+                    .win-ring {
+                        display: block;
+                    }
+                }
+
+
+                &.result-lose {
+                    .chance-ring {
+                        display: none;
+                    }
+
+                    .lose-ring {
+                        display: block;
+                    }
+                }
+
             }
         }
 

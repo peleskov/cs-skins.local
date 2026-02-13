@@ -4,7 +4,7 @@
         <div class="container text-center">
             <div class="loader-gif">
                 <div class="radar-ring"></div>
-                <img src="{{ asset('images/logo_ico.svg') }}" alt="food-gif" class="img-fluid">
+                <img src="{{ asset('images/logo_ico.svg') }}?v={{ filemtime(public_path('images/logo_ico.svg')) }}" alt="food-gif" class="img-fluid">
             </div>
             <h2>{{ __('app.scanning_market') }}</h2>
         </div>

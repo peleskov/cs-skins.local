@@ -11,6 +11,7 @@ use App\Models\Doc;
 use App\Models\Listing;
 use App\Models\AdBanner;
 use App\Models\CaseModel;
+use App\Models\SiteSetting;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Redis;
@@ -134,15 +135,24 @@ class WebController extends Controller
         }
 
         try {
-            // Отправка email администратору
+            // Получаем список email из настроек
+            $emailsRaw = SiteSetting::get('contact_emails');
+            $emails = array_filter(array_map('trim', explode(',', $emailsRaw)));
+
+            if (empty($emails)) {
+                Log::warning('Contact form: настройка contact_emails пуста, письмо не отправлено');
+                return back()->with('success', 'Ваше сообщение успешно отправлено! Мы свяжемся с вами в ближайшее время.');
+            }
+
+            // Отправка email администраторам
             Mail::send('emails.contact', [
                 'firstName' => $request->first_name,
                 'lastName' => $request->last_name,
                 'userEmail' => $request->email,
                 'phone' => $request->phone,
                 'userMessage' => $request->message,
-            ], function ($message) use ($request) {
-                $message->to(config('mail.admin_email'))
+            ], function ($message) use ($request, $emails) {
+                $message->to($emails)
                         ->subject('Новое сообщение с сайта - от ' . $request->first_name . ' ' . $request->last_name)
                         ->replyTo($request->email, $request->first_name . ' ' . $request->last_name);
             });

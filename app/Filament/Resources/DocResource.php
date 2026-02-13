@@ -43,17 +43,13 @@ class DocResource extends Resource
                 TextInput::make('title')
                     ->label('Название')
                     ->required()
-                    ->maxLength(255)
-                    ->reactive()
-                    ->afterStateUpdated(function ($state, callable $set) {
-                        $set('slug', Str::slug($state));
-                    }),
-                
+                    ->maxLength(255),
+
                 TextInput::make('slug')
                     ->label('Slug')
-                    ->required()
                     ->unique(ignoreRecord: true)
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->placeholder('Генерируется автоматически из названия'),
                 
                 RichEditor::make('content')
                     ->label('Контент')

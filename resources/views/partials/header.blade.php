@@ -19,7 +19,7 @@
         'logout' => route('auth.logout')
         ]) 
     }}"
-    data-logo-url="{{ asset('images/logo_white.svg') }}"
+    data-logo-url="{{ asset('images/logo_white.svg') }}?v={{ filemtime(public_path('images/logo_white.svg')) }}"
     data-cart-count="{{ app('App\Services\CartService')->getCount() }}"
     data-favorites-count="{{ auth('client')->check() ? auth('client')->user()->favorites()->whereHas('listing', function($query) { $query->where('status', 'active'); })->count() : 0 }}"
     data-extension-download-url="{{ config('extension.download_url') }}">

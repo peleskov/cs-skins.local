@@ -70,26 +70,24 @@ class SiteSettingResource extends Resource
                     ->columnSpanFull(),
 
                 Group::make([
-                    Textarea::make('value')
+                    Textarea::make('value_text')
                         ->label('Значение')
                         ->required()
                         ->visible(fn ($get) => in_array($get('type'), [SiteSetting::TYPE_STRING, SiteSetting::TYPE_JSON]))
                         ->rows(4)
                         ->helperText('Введите значение'),
 
-                    TextInput::make('value')
+                    TextInput::make('value_number')
                         ->label('Значение')
                         ->required()
                         ->visible(fn ($get) => $get('type') === SiteSetting::TYPE_NUMBER)
                         ->numeric()
                         ->helperText('Введите число'),
 
-                    Toggle::make('value')
+                    Toggle::make('value_bool')
                         ->label('Значение')
                         ->visible(fn ($get) => $get('type') === SiteSetting::TYPE_BOOLEAN)
-                        ->helperText('Включить/выключить настройку')
-                        ->formatStateUsing(fn ($state) => (bool) $state)
-                        ->dehydrateStateUsing(fn ($state) => $state ? '1' : '0'),
+                        ->helperText('Включить/выключить настройку'),
                 ])
                 ->columnSpanFull(),
             ])

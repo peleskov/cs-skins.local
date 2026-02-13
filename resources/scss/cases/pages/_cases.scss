@@ -834,6 +834,7 @@
 
     .chance-slider {
         padding: 6px 13px;
+        position: relative;
         border-radius: 10px;
         box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.1);
         background-color: #171717;
@@ -869,8 +870,16 @@
             }
         }
 
-        &.disabled {
-            pointer-events: none;
+        .chance-info {
+            width: 20px;
+            height: 20px;
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: cover;
+            background-image: svg-url('<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 9C10.55 9.00002 11 9.45001 11 10V14C11 14.55 10.55 15 10 15C9.45 15 9 14.55 9 14V10C9 9.45 9.45 9 10 9Z" fill="#FF8C00" /><path d="M10 5C10.5522 5.00003 10.9999 5.44779 11 6C11 6.55226 10.5523 6.99997 10 7C9.44772 7 9 6.55228 9 6C9.00007 5.44777 9.44776 5 10 5Z" fill="#FF8C00" /><path fill-rule="evenodd" clip-rule="evenodd" d="M10.0098 0C15.5298 0 20 4.48 20 10C20 15.52 15.5298 20 10.0098 20C4.47987 19.9999 0 15.5199 0 10C0 4.48008 4.47987 0.000126704 10.0098 0ZM10 2C5.58004 2.00005 2 5.58003 2 10C2.00006 14.4199 5.58008 18 10 18C14.42 18 17.9999 14.4199 18 10C18 5.58 14.42 2 10 2Z" fill="#FF8C00" /></svg>');
         }
     }
 

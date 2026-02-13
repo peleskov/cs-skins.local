@@ -5,7 +5,7 @@
             <div class="row g-3">
                 <div class="col-xl-4 col-lg-12">
                     <div class="footer-logo-part">
-                        <img class="img-fluid logo" src="{{ asset('images/logo_white.svg') }}" alt="logo">
+                        <img class="img-fluid logo" src="{{ asset('images/logo_white.svg') }}?v={{ filemtime(public_path('images/logo_white.svg')) }}" alt="logo">
                         <p>{{ $footerData['company']['name'] }}</p>
                         <p>{{ $footerData['company']['inn'] }}</p>
                         <p>{{ $footerData['company']['address'] }}</p>

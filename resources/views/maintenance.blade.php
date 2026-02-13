@@ -85,7 +85,7 @@
 </head>
 <body>
     <div class="container">
-        <img src="/images/logo_white.svg" alt="CS-Skins" class="logo" onerror="this.style.display='none'">
+        <img src="/images/logo_white.svg?v={{ filemtime(public_path('images/logo_white.svg')) }}" alt="CS-Skins" class="logo" onerror="this.style.display='none'">
         <div class="icon">🔧</div>
         <h1>Технические работы</h1>
         <p>

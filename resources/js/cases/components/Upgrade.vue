@@ -37,7 +37,7 @@
 			<div class="col-md-4">
 				<div class="w-100 h-100 card card-upgrade-skins indicator">
 					<div class="card-body d-flex flex-column align-items-center justify-content-center">
-						<div class="chance-indicator">
+						<div class="chance-indicator" :class="resultStatus ? `result-${resultStatus}` : ''">
 							<svg class="chance-ring" viewBox="0 0 200 200" fill="none"
 								xmlns="http://www.w3.org/2000/svg">
 								<!-- Фоновая обводка -->
@@ -68,9 +68,43 @@
 									</linearGradient>
 								</defs>
 							</svg>
+							<svg class="win-ring" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<path
+									d="M189 100C189 149.153 149.153 189 100 189C50.8467 189 11 149.153 11 100C11 50.8467 50.8467 11 100 11C149.153 11 189 50.8467 189 100Z"
+									fill="#464646" />
+								<path
+									d="M189 100C189 149.153 149.153 189 100 189C50.8467 189 11 149.153 11 100C11 50.8467 50.8467 11 100 11C149.153 11 189 50.8467 189 100Z"
+									fill="#238829" fill-opacity="0.5" />
+								<circle cx="100" cy="100" r="99.6846" stroke="#616161" stroke-width="0.630758" />
+								<path
+									d="M100.5 36V164M36 99.5H164M163.5 107V92M158.5 104V95M152.5 106V93M146.5 104V95M36.5 92V107M41.4995 95.0664V104.066M47.499 93.147V106.147M53.4985 95.2271V104.227M108 35.5H93M104.87 40.4985H95.8704M106.714 46.4966H93.7141M107 58.5H94M104.558 52.4946H95.5582M105 64.5H96M107 70.5H94M105 76.5H96M107 82.5H94M108 117.5H93M104.87 122.499H95.8704M106.714 128.497H93.7141M107 140.5H94M104.558 134.495H95.5582M105 146.5H96M107 152.5H94M105 158.5H96M107 164.5H94"
+									stroke="#474747" />
+								<path d="M100.5 164V189M164 99.5H189M100.5 11V36M11 99.5H36" stroke="black" />
+							</svg>
+							<svg class="lose-ring" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<path
+									d="M189 100C189 149.153 149.153 189 100 189C50.8467 189 11 149.153 11 100C11 50.8467 50.8467 11 100 11C149.153 11 189 50.8467 189 100Z"
+									fill="#464646" />
+								<path
+									d="M189 100C189 149.153 149.153 189 100 189C50.8467 189 11 149.153 11 100C11 50.8467 50.8467 11 100 11C149.153 11 189 50.8467 189 100Z"
+									fill="#770303" fill-opacity="0.5" />
+								<circle cx="100" cy="100" r="99.6846" stroke="#616161" stroke-width="0.630758" />
+								<path
+									d="M100.5 36V164M36 99.5H164M163.5 107V92M158.5 104V95M152.5 106V93M146.5 104V95M36.5 92V107M41.4995 95.0664V104.066M47.499 93.147V106.147M53.4985 95.2271V104.227M108 35.5H93M104.87 40.4985H95.8704M106.714 46.4966H93.7141M107 58.5H94M104.558 52.4946H95.5582M105 64.5H96M107 70.5H94M105 76.5H96M107 82.5H94M108 117.5H93M104.87 122.499H95.8704M106.714 128.497H93.7141M107 140.5H94M104.558 134.495H95.5582M105 146.5H96M107 152.5H94M105 158.5H96M107 164.5H94"
+									stroke="#474747" />
+								<path d="M100.5 164V189M164 99.5H189M100.5 11V36M11 99.5H36" stroke="black" />
+							</svg>
 							<div class="chance d-flex flex-column justify-content-center text-center">
-								<span class="dig">{{ formattedChance }} %</span>
-								<span class="text">Шанс улучшения</span>
+								<template v-if="resultStatus === 'win'">
+									<span class="dig result-win">Успех</span>
+								</template>
+								<template v-else-if="resultStatus === 'lose'">
+									<span class="dig result-lose">Неудача</span>
+								</template>
+								<template v-else>
+									<span class="dig">{{ formattedChance }} %</span>
+									<span class="text">Шанс улучшения</span>
+								</template>
 							</div>
 						</div>
 					</div>
@@ -121,15 +155,15 @@
 
 			</div>
 			<div class="col-md-4">
-				<div class="h-100 chance-slider d-flex align-items-center"
-					:class="{ disabled: totalBet <= 0 }">
+				<div class="h-100 chance-slider d-flex align-items-center" :class="{ disabled: totalBet <= 0 }">
 					<div class="chance-buttons d-flex align-items-center gap-2 w-100">
-						<button v-for="val in chanceSteps" :key="val"
-							class="chance-btn flex-fill"
-							:class="{ active: selectedChance === val }"
-							:disabled="totalBet <= 0"
-							@click="selectChance(val)">{{ val }}%</button>
+						<button v-for="val in chanceSteps" :key="val" class="chance-btn flex-fill"
+							:class="{ active: selectedChance === val }" :disabled="totalBet <= 0"
+							@click="selectChance(val)">{{
+								val }}%</button>
 					</div>
+					<div class="chance-info" data-bs-toggle="tooltip" data-bs-placement="top"
+						title="Фильтр для предметов апгрейда"></div>
 				</div>
 			</div>
 		</div>
@@ -149,7 +183,8 @@
 				</div>
 				<div class="case-content row g-4">
 					<div v-for="item in filteredInventory" :key="item.id" class="col-6">
-						<div class="h-100 case-content-item" :class="getRarityClass(item)" @click="toggleItem(item)" style="cursor: pointer;">
+						<div class="h-100 case-content-item" :class="getRarityClass(item)" @click="toggleItem(item)"
+							style="cursor: pointer;">
 							<div class="top-box">
 								<div class="btn-group" :class="isItemSelected(item.id) ? 'selected' : ''">
 									<span class="price" v-html="formatPrice(item.price)"></span>
@@ -176,12 +211,12 @@
 							v-model="targetsSearch">
 					</div>
 					<div class="col-2">
-						<input type="number" class="form-control" placeholder="От"
-							v-model.number="targetsPriceFrom" min="0">
+						<input type="number" class="form-control" placeholder="От" v-model.number="targetsPriceFrom"
+							min="0">
 					</div>
 					<div class="col-2">
-						<input type="number" class="form-control" placeholder="До"
-							v-model.number="targetsPriceTo" min="0">
+						<input type="number" class="form-control" placeholder="До" v-model.number="targetsPriceTo"
+							min="0">
 					</div>
 					<div class="col-auto">
 						<button class="btn-clear" @click="clearTargetsFilter"
@@ -200,7 +235,8 @@
 				</div>
 				<div v-else class="case-content row g-4">
 					<div v-for="target in filteredTargets" :key="target.id" class="col-6">
-						<div class="h-100 case-content-item" :class="getRarityClass(target)" @click="selectTarget(target)" style="cursor: pointer;">
+						<div class="h-100 case-content-item" :class="getRarityClass(target)"
+							@click="selectTarget(target)" style="cursor: pointer;">
 							<div class="top-box">
 								<div class="btn-group" :class="isTargetSelected(target.id) ? 'selected' : ''">
 									<span class="price" v-html="formatPrice(target.price)"></span>
@@ -225,6 +261,12 @@
 <script>
 import axios from 'axios';
 import { formatPrice } from '../../shared/utils/helpers';
+
+const upgradeSounds = {
+	success: new Audio('/sounds/upgrade_success.mp3'),
+	error: new Audio('/sounds/upgrade_error.mp3'),
+};
+Object.values(upgradeSounds).forEach(s => s.load());
 
 export default {
 	name: 'Upgrade',
@@ -276,6 +318,8 @@ export default {
 			// Апгрейд
 			upgradeLoading: false,
 			upgradeResult: null,
+			resultStatus: null, // 'win' | 'lose' | null
+			resultTimeout: null,
 
 			// Анимация указателя
 			pointerAngle: 0,
@@ -291,9 +335,26 @@ export default {
 		this.availableItems = [...this.inventory];
 	},
 
+	mounted() {
+		if (window.bootstrap?.Tooltip) {
+			this.$el.querySelectorAll('[data-bs-toggle="tooltip"]')
+				.forEach(el => new window.bootstrap.Tooltip(el));
+		}
+	},
+
 	beforeUnmount() {
 		if (this.animationFrame) {
 			cancelAnimationFrame(this.animationFrame);
+		}
+		if (this.resultTimeout) {
+			clearTimeout(this.resultTimeout);
+		}
+		if (window.bootstrap?.Tooltip) {
+			this.$el.querySelectorAll('[data-bs-toggle="tooltip"]')
+				.forEach(el => {
+					const tooltip = window.bootstrap.Tooltip.getInstance(el);
+					if (tooltip) tooltip.dispose();
+				});
 		}
 	},
 
@@ -368,6 +429,11 @@ export default {
 			return bounds[this.selectedChance] || null;
 		},
 
+		chanceMinBound() {
+			const bounds = { 1: 0, 5: 1.5, 10: 5.5, 25: 12, 50: 27, 75: 55 };
+			return bounds[this.selectedChance] ?? null;
+		},
+
 		// Фильтрованные targets по шансу (ползунок)
 		filteredTargets() {
 			if (this.targets.length === 0) {
@@ -401,6 +467,10 @@ export default {
 		// Сбрасываем стрелку при смене шанса
 		calculatedChance() {
 			this.pointerAngle = 0;
+		},
+		// Перезагружаем цели при выборе шанса
+		selectedChance() {
+			if (this.totalBet > 0) this.debouncedLoadTargets();
 		},
 		// Перезагружаем цели при изменении фильтров
 		targetsSearch() {
@@ -481,6 +551,8 @@ export default {
 				if (this.targetsSearch) params.search = this.targetsSearch;
 				if (this.targetsPriceFrom) params.price_from = this.targetsPriceFrom;
 				if (this.targetsPriceTo) params.price_to = this.targetsPriceTo;
+				if (this.selectedChance && this.chanceMaxBound) params.chance_max = this.chanceMaxBound;
+				if (this.selectedChance && this.chanceMinBound > 0) params.chance_min = this.chanceMinBound;
 
 				const response = await axios.get('/api/upgrade/targets', { params });
 
@@ -544,6 +616,11 @@ export default {
 				// Переводим roll_value (0-100) в градусы (0-360°)
 				const finalAngle = (roll_value / 100) * 360;
 
+				// Звук результата параллельно с анимацией
+				const snd = upgradeSounds[is_win ? 'success' : 'error'];
+				snd.currentTime = 0;
+				snd.play().catch(() => {});
+
 				// Запускаем анимацию
 				await this.runPointerAnimation(finalAngle);
 
@@ -557,6 +634,9 @@ export default {
 
 				// Обновляем баланс
 				this.updateBalance(balance);
+
+				// Показываем результат на 3 секунды
+				this.showResult(is_win);
 
 				// Обрабатываем результат
 				if (is_win) {
@@ -600,6 +680,14 @@ export default {
 
 			// Сбрасываем выбор
 			this.resetSelection();
+		},
+
+		showResult(isWin) {
+			if (this.resultTimeout) clearTimeout(this.resultTimeout);
+			this.resultStatus = isWin ? 'win' : 'lose';
+			this.resultTimeout = setTimeout(() => {
+				this.resultStatus = null;
+			}, 3000);
 		},
 
 		/**

@@ -80,6 +80,22 @@ class UpgradeService
         $minPriceFloorUsd = 10 / $usdRate;
         $minPriceUsd = max($minPriceUsd, $minPriceFloorUsd);
 
+        // Фильтры по шансу (кнопки на фронтенде)
+        if (!empty($filters['chance_max'])) {
+            $chanceMax = (float) $filters['chance_max'];
+            if ($chanceMax > 0) {
+                // Меньший шанс = дороже предмет, поэтому chance_max задаёт нижнюю границу цены
+                $minPriceUsd = max($minPriceUsd, $betTotalUsd * $multiplier / ($chanceMax / 100));
+            }
+        }
+        if (!empty($filters['chance_min'])) {
+            $chanceMin = (float) $filters['chance_min'];
+            if ($chanceMin > 0) {
+                // Больший шанс = дешевле предмет, поэтому chance_min задаёт верхнюю границу цены
+                $maxPriceUsd = min($maxPriceUsd, $betTotalUsd * $multiplier / ($chanceMin / 100));
+            }
+        }
+
         // Применяем пользовательские фильтры цены (в рублях -> USD)
         if (!empty($filters['price_from'])) {
             $minPriceUsd = max($minPriceUsd, (float) $filters['price_from'] / $usdRate);

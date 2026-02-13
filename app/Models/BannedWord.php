@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class BannedWord extends Model
 {
@@ -10,20 +11,16 @@ class BannedWord extends Model
         'word',
     ];
 
-    protected static $cachedWords = null;
-
     public static function getCachedWords(): array
     {
-        if (self::$cachedWords === null) {
-            self::$cachedWords = self::pluck('word')->toArray();
-        }
-
-        return self::$cachedWords;
+        return Cache::remember('banned_words', 3600, function () {
+            return self::pluck('word')->toArray();
+        });
     }
 
     public static function clearCache(): void
     {
-        self::$cachedWords = null;
+        Cache::forget('banned_words');
     }
 
     protected static function booted()

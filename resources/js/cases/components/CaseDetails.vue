@@ -208,6 +208,14 @@ const ANIMATION_CONFIG = {
 	ROULETTE_DELAY: 500 // Задержка между запуском рулеток (мс)
 };
 
+// Preload sounds
+const dropSounds = {
+	fast: new Audio('/sounds/item_drop.mp3'),
+	slow: new Audio('/sounds/item_drop1_common.mp3'),
+	final: new Audio('/sounds/item_drop2_uncommon.mp3'),
+};
+Object.values(dropSounds).forEach(s => s.load());
+
 export default {
 	name: 'CaseDetails',
 
@@ -615,6 +623,14 @@ export default {
 			this.showResults = true;
 		},
 
+		playDropSound(type) {
+			const sound = dropSounds[type];
+			if (!sound) return;
+			const clone = sound.cloneNode();
+			clone.volume = sound.volume;
+			clone.play().catch(() => {});
+		},
+
 		spinSingleRoulette(rouletteIndex, fastMode = false) {
 			return new Promise(async (resolve) => {
 				const roulette = this.roulettes[rouletteIndex];
@@ -664,10 +680,16 @@ export default {
 				const maxSpeed = ANIMATION_CONFIG.MAX_SPEED * speedMultiplier;
 				const minSpeed = ANIMATION_CONFIG.MIN_SPEED * speedMultiplier;
 
+				// Sound tracking
+				const itemFullWidth = realItemWidth + realItemGap;
+				let lastSoundItemIndex = -1;
+				let isSlowing = false;
+
 				const spinInterval = setInterval(() => {
 					roulette.sliderOffset -= currentSpeed;
 
 					if (roulette.sliderOffset <= slowDownPoint) {
+						isSlowing = true;
 						const remainingDistance = Math.abs(roulette.sliderOffset - overshootTargetOffset);
 						const slowDownDistanceCalc = Math.abs(slowDownPoint - overshootTargetOffset);
 
@@ -675,6 +697,22 @@ export default {
 							const progress = remainingDistance / slowDownDistanceCalc;
 							const easedProgress = progress * progress;
 							currentSpeed = Math.max(minSpeed, easedProgress * (maxSpeed - minSpeed) + minSpeed);
+						}
+					}
+
+					// Detect which item is at center line (sound only from first roulette)
+					if (rouletteIndex === 0) {
+						const currentCenterItemIndex = Math.round((containerCenter - roulette.sliderOffset) / itemFullWidth - 0.5);
+						if (currentCenterItemIndex !== lastSoundItemIndex && currentCenterItemIndex >= 0) {
+							lastSoundItemIndex = currentCenterItemIndex;
+
+							if (currentCenterItemIndex === stopItemIndex) {
+								this.playDropSound('final');
+							} else if (isSlowing) {
+								this.playDropSound('slow');
+							} else {
+								this.playDropSound('fast');
+							}
 						}
 					}
 

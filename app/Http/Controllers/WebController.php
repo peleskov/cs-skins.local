@@ -47,8 +47,14 @@ class WebController extends Controller
         // Получаем активный баннер
         $adBanner = AdBanner::where('active', true)->first();
 
-        // Получаем активные кейсы
-        $cases = CaseModel::active()->limit(5)->get();
+        // Получаем активные кейсы (все, у которых есть тиры с предметами)
+        $cases = CaseModel::active()
+            ->with('category:id,name,icon,sort_order')
+            ->whereHas('tiers', function ($query) {
+                $query->whereHas('items');
+            })
+            ->orderBy('sort_order')
+            ->get();
 
         return view('home', compact('featuredListings', 'totalListings', 'hasMorePages', 'seller', 'sellerStats', 'adBanner', 'cases'));
     }

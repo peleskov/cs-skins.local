@@ -1,7 +1,7 @@
 <template>
     <div class="container-fluid">
         <div class="row justify-content-between align-items-stretch">
-            <div class="col-auto">
+            <div class="align-itmes-center col-auto d-flex justify-content-center">
                 <a :href="routes.home" class="logo my-3 mx-xxl-3">
                     <img :src="logoUrl" alt="logo" class="d-none d-lg-block">
                     <img :src="logoIco" alt="logo" class="d-lg-none">
@@ -30,7 +30,8 @@
                         <li class="list-group-item d-flex align-items-center gap-1" data-bs-toggle="tooltip"
                             data-bs-title="Основной баланс. Ваши реальные деньги. Используется, когда бонусные средства закончились.">
                             <span v-if="isRubleCurrency" class="ico ruble"></span>
-                            <span class="balance-amount" v-html="formatPrice(mainBalance, 'RUB', false, true, !isRubleCurrency)"></span>
+                            <span class="balance-amount"
+                                v-html="formatPrice(mainBalance, 'RUB', false, true, !isRubleCurrency)"></span>
                         </li>
                         <li class="list-group-item">
                             <span class="divider"></span>

@@ -29,6 +29,12 @@
     @vite([$viteStyles ?? 'resources/scss/mplace.scss'])
 
     @stack('styles')
+
+    {{-- Yandex Metrika --}}
+    @php($yandexMetrika = \App\Models\SiteSetting::get('yandex_metrika'))
+    @if($yandexMetrika)
+        {!! $yandexMetrika !!}
+    @endif
 </head>
 
 <body class="@yield('body_class', 'position-relative')">

@@ -9,7 +9,8 @@
 						<i class="ri-question-line me-1"></i>
 						<span>Как начать торговлю</span>
 					</a>
-					<a class="btn theme-outline" href="#" data-bs-toggle="modal" data-bs-target="#extensionModal"><i class="ri-download-2-line me-2"></i>Расширение </a>
+					<a v-if="isWebStoreExtension" :href="extensionDownloadUrl" target="_blank" rel="noopener" class="btn theme-outline"><i class="ri-chrome-line me-2"></i>Расширение </a>
+					<a v-else class="btn theme-outline" href="#" data-bs-toggle="modal" data-bs-target="#extensionModal"><i class="ri-download-2-line me-2"></i>Расширение </a>
 				</div>
 			</div>
 		</div>
@@ -442,6 +443,14 @@ export default {
 		client: {
 			type: Object,
 			required: true
+		}
+	},
+	computed: {
+		extensionDownloadUrl() {
+			return document.querySelector('[data-extension-download-url]')?.dataset.extensionDownloadUrl || '';
+		},
+		isWebStoreExtension() {
+			return this.extensionDownloadUrl.startsWith('https://chromewebstore.google.com/');
 		}
 	},
 	data() {

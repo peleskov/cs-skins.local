@@ -198,7 +198,11 @@
 					</a>
 				</li>
 				<li class="mb-1">
-					<a href="#" data-bs-toggle="modal" data-bs-target="#extensionModal"
+					<a v-if="isWebStoreExtension" :href="extensionDownloadUrl" target="_blank" rel="noopener"
+						class="nav-link  mb-0 p-0 content-color">
+						<i class="ri-chrome-line me-2"></i>Расширение
+					</a>
+					<a v-else href="#" data-bs-toggle="modal" data-bs-target="#extensionModal"
 						class="nav-link  mb-0 p-0 content-color">
 						<i class="ri-download-2-line me-2"></i>Расширение
 					</a>
@@ -310,6 +314,9 @@ export default {
 	computed: {
 		displayItems() {
 			return this.cartItems.slice(0, 3);
+		},
+		isWebStoreExtension() {
+			return this.extensionDownloadUrl && this.extensionDownloadUrl.startsWith('https://chromewebstore.google.com/');
 		}
 	},
 	methods: {

@@ -578,6 +578,109 @@ class TradeService
 
 
     /**
+     * Проверить и разрешить зависшие просроченные трейды продавца.
+     * Вызывается при получении свежей сессии от расширения.
+     */
+    public function resolveStuckTrades(int $sellerId): void
+    {
+        // Находим все трейды этого продавца где заказ просрочен и ещё не завершён
+        $stuckTrades = TradeOffer::where('seller_id', $sellerId)
+            ->whereIn('status', [
+                TradeOffer::STATUS_ACTIVE,
+                TradeOffer::STATUS_CREATED_NEEDS_CONFIRMATION,
+                TradeOffer::STATUS_PENDING,
+            ])
+            ->whereHas('order', function ($query) {
+                $query->where('status', 'processing')
+                    ->where('reserved_until', '<', now());
+            })
+            ->get();
+
+        if ($stuckTrades->isEmpty()) {
+            return;
+        }
+
+        Log::info('Resolving stuck trades for seller', [
+            'seller_id' => $sellerId,
+            'count' => $stuckTrades->count(),
+        ]);
+
+        foreach ($stuckTrades as $tradeOffer) {
+            try {
+                $this->resolveStuckTrade($tradeOffer);
+            } catch (\Exception $e) {
+                Log::error('Failed to resolve stuck trade', [
+                    'trade_offer_id' => $tradeOffer->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Разрешить один зависший трейд
+     */
+    private function resolveStuckTrade(TradeOffer $tradeOffer): void
+    {
+        // Трейд не был отправлен в Steam — просто отменяем заказ
+        if (!$tradeOffer->steam_trade_offer_id) {
+            $tradeOffer->order->cancel('Трейд не был создан в Steam, время резерва истекло');
+            return;
+        }
+
+        // Проверяем реальный статус в Steam
+        try {
+            $steamStatus = $this->checkTradeStatus(
+                $tradeOffer->steam_trade_offer_id,
+                $tradeOffer->seller_id
+            );
+        } catch (\Exception $e) {
+            Log::warning('Cannot check stuck trade status in Steam', [
+                'trade_offer_id' => $tradeOffer->id,
+                'error' => $e->getMessage(),
+            ]);
+            return;
+        }
+
+        $finalStatuses = ['Expired', 'Canceled', 'Declined', 'InvalidItems', 'CanceledBySecondFactor', 'Invalid'];
+
+        if (in_array($steamStatus, $finalStatuses)) {
+            // Steam уже завершил трейд — синхронизируем статус, Observer отменит заказ
+            $tradeOffer->update(['status' => $steamStatus]);
+            Log::info('Stuck trade synced from Steam', [
+                'trade_offer_id' => $tradeOffer->id,
+                'steam_status' => $steamStatus,
+            ]);
+            return;
+        }
+
+        if ($steamStatus === 'Accepted') {
+            // Покупатель уже принял — завершаем заказ
+            $tradeOffer->update(['status' => $steamStatus]);
+            Log::info('Stuck trade was already accepted in Steam', [
+                'trade_offer_id' => $tradeOffer->id,
+            ]);
+            return;
+        }
+
+        // Трейд всё ещё Active — отменяем в Steam
+        if (in_array($steamStatus, ['Active', 'CreatedNeedsConfirmation'])) {
+            try {
+                $result = $this->cancelTradeOffer($tradeOffer);
+                Log::info('Stuck trade cancelled in Steam', [
+                    'trade_offer_id' => $tradeOffer->id,
+                    'result' => $result,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Failed to cancel stuck trade in Steam', [
+                    'trade_offer_id' => $tradeOffer->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    /**
      * Маппинг числовых статусов Steam на текстовые (из steam-tradeoffer-manager)
      */
     private function mapTradeOfferState(int $state): string

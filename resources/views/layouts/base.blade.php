@@ -11,12 +11,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="icon" href="{{ asset('images/favicon_32x32.png') }}" type="image/x-icon">
     <title>@yield('title', 'CS2 Marketplace - Торговля скинами')</title>
-    <link rel="apple-touch-icon" href="{{ asset('images/favicon.png') }}">
     <meta name="theme-color" content="#ff8d2f">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="apple-mobile-web-app-title" content="CS Skins">
-    <meta name="msapplication-TileImage" content="{{ asset('images/favicon.png') }}">
-    <meta name="msapplication-TileColor" content="#FFFFFF">
 
     <!-- Google font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

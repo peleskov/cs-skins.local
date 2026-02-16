@@ -224,12 +224,12 @@
 											<div class="input-group">
 												<input type="number" class="form-control" id="marketplacePriceInput"
 													v-model="marketplacePrice"
-													:placeholder="itemToSell && itemToSell.buyout_price ? Math.round(itemToSell.buyout_price * 1.3) : '100'"
+													:placeholder="itemToSell && (itemToSell.recommended_price || itemToSell.buyout_price) ? Math.round((itemToSell.recommended_price || itemToSell.buyout_price) * 1.3) : '100'"
 													min="1" step="1">
 												<span class="input-group-text">₽</span>
 											</div>
 											<small class="text-muted">Рекомендуемая цена: <span
-													v-html="itemToSell && itemToSell.buyout_price ? formatPrice(itemToSell.buyout_price * 1.3, 'USD') : '100 ₽'"></span></small>
+													v-html="itemToSell && (itemToSell.recommended_price || itemToSell.buyout_price) ? formatPrice((itemToSell.recommended_price || itemToSell.buyout_price) * 1.3, 'USD') : '100 ₽'"></span></small>
 										</div>
 
 										<!-- Кнопка добавления -->
@@ -573,9 +573,10 @@ export default {
 
 			this.itemToSell = item;
 
-			// Устанавливаем рекомендуемую цену (на 30% выше цены выкупа)
-			if (item.buyout_price) {
-				this.marketplacePrice = Math.round(item.buyout_price * 1.3);
+			// Устанавливаем рекомендуемую цену (на 30% выше рыночной цены)
+			const refPrice = item.recommended_price || item.buyout_price;
+			if (refPrice) {
+				this.marketplacePrice = Math.round(refPrice * 1.3);
 			} else {
 				this.marketplacePrice = 100; // Базовая цена по умолчанию
 			}

@@ -403,6 +403,17 @@ class WebSocketServiceProvider extends ServiceProvider
                 'status' => 'success',
                 'expires_in' => $sessionCache->getExpiresInSeconds($sellerId)
             ], 'Steam сессия получена и кеширована');
+
+            // Проверяем и разрешаем зависшие просроченные трейды этого продавца
+            try {
+                $tradeService = app(\App\Services\Steam\TradeService::class);
+                $tradeService->resolveStuckTrades($sellerId);
+            } catch (\Exception $e) {
+                Log::error('Failed to resolve stuck trades on session refresh', [
+                    'seller_id' => $sellerId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         } else {
             Log::error('Failed to cache session data', ['seller_id' => $sellerId]);
         }

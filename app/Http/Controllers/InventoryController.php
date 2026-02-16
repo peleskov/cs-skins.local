@@ -46,10 +46,11 @@ class InventoryController extends Controller
             ->pluck('steam_asset_id')
             ->toArray();
 
-        // Добавляем флаг is_listed и цену выкупа к каждому предмету
+        // Добавляем флаг is_listed, цену выкупа и рекомендуемую цену к каждому предмету
         $inventoryItems->each(function ($item) use ($listedAssetIds) {
             $item->is_listed = in_array($item->steam_asset_id, $listedAssetIds);
             $item->buyout_price = $item->calculateBuyoutPrice();
+            $item->recommended_price = $item->calculateBuyoutPrice(checkBot: false);
         });
 
         // Убрали автоматическую синхронизацию - только по кнопке

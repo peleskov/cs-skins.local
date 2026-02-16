@@ -501,6 +501,7 @@ export default {
 		const createBaseParams = (excludeTypes = false, excludeTags = false) => {
 			const params = new URLSearchParams()
 
+			if (seller.value && seller.value.id) params.append('seller_id', seller.value.id)
 			if (filters.search) params.append('search', filters.search)
 			if (filters.minPrice) params.append('min_price', filters.minPrice)
 			if (filters.maxPrice) params.append('max_price', filters.maxPrice)

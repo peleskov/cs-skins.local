@@ -20,11 +20,11 @@ class AnalyticsStatsWidget extends BaseWidget
         $weekAgo = Carbon::now()->subWeek();
 
         // Пополнения
-        $depositsToday = Payment::where('status', 'completed')
-            ->whereDate('created_at', $today)
+        $depositsToday = Payment::where('status', Payment::STATUS_PAID)
+            ->whereDate('paid_at', $today)
             ->sum('amount');
-        $depositsWeek = Payment::where('status', 'completed')
-            ->where('created_at', '>=', $weekAgo)
+        $depositsWeek = Payment::where('status', Payment::STATUS_PAID)
+            ->where('paid_at', '>=', $weekAgo)
             ->sum('amount');
 
         // Кейсы

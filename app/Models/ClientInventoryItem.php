@@ -193,29 +193,43 @@ class ClientInventoryItem extends Model
     }
 
     /**
-     * Рассчитать цену выкупа для быстрой продажи боту
-     * @return float|null Цена выкупа в USD или null если предмет не востребован
+     * Рассчитать рыночную цену предмета с учётом коэффициента редкости
+     * @param bool $checkBot Проверять ли доступность бота (true для выкупа, false для рекомендуемой цены)
+     * @return float|null Цена в USD или null если нет данных
      */
-    public function calculateBuyoutPrice(): ?float
+    public function calculateBuyoutPrice(bool $checkBot = true): ?float
     {
         // Проверяем что предмет можно продать
         if (!$this->tradable || !$this->marketable) {
             return null;
         }
 
-        // Находим запись в steam_market_items
-        $steamMarketItem = SteamMarketItem::where('market_hash_name', $this->market_hash_name)->first();
-        if (!$steamMarketItem) {
-            return null;
+        // Получаем цену: сначала из virtual_items, затем fallback на steam_price_history
+        $priceUsd = null;
+
+        // 1. Ищем в virtual_items (актуальный каталог с ценами Steam)
+        $virtualItem = VirtualItem::where('market_hash_name', $this->market_hash_name)
+            ->where('steam_price', '>', 0)
+            ->first();
+
+        if ($virtualItem) {
+            $priceUsd = (float) $virtualItem->steam_price;
         }
 
-        // Получаем последнюю цену из истории
-        $latestPrice = SteamPriceHistory::where('steam_market_item_id', $steamMarketItem->id)
-            ->orderBy('date', 'desc')
-            ->first();
-        
-        // Проверяем наличие данных, цену и объем торгов
-        if (!$latestPrice || $latestPrice->price <= 0 || $latestPrice->volume < 200) {
+        // 2. Fallback: steam_price_history
+        if (!$priceUsd) {
+            $steamMarketItem = SteamMarketItem::where('market_hash_name', $this->market_hash_name)->first();
+            if ($steamMarketItem) {
+                $latestPrice = SteamPriceHistory::where('steam_market_item_id', $steamMarketItem->id)
+                    ->orderBy('date', 'desc')
+                    ->first();
+                if ($latestPrice && $latestPrice->price > 0 && $latestPrice->volume >= 200) {
+                    $priceUsd = (float) $latestPrice->price;
+                }
+            }
+        }
+
+        if (!$priceUsd) {
             return null;
         }
 
@@ -234,24 +248,26 @@ class ClientInventoryItem extends Model
 
         // Получаем коэффициент из БД
         $coefficient = RarityCoefficient::getCoefficientByName($rarityTag->normalized_value);
-        
+
         // Если коэффициент не найден - не выкупаем
         if (!$coefficient) {
             return null;
         }
 
         // Рассчитываем цену выкупа в USD
-        $buyoutPrice = round($latestPrice->price * $coefficient, 2);
-        
-        // Проверяем доступность бота для этой суммы (конвертируем в рубли для проверки)
-        $buyoutPriceRub = Currency::convert($buyoutPrice, 'USD', 'RUB');
-        $botService = new BotRotationService();
-        $availableBot = $botService->getNextAvailableBot($buyoutPriceRub);
-        
-        if (!$availableBot) {
-            return null;
+        $buyoutPrice = round($priceUsd * $coefficient, 2);
+
+        // Проверяем доступность бота только для реального выкупа
+        if ($checkBot) {
+            $buyoutPriceRub = Currency::convert($buyoutPrice, 'USD', 'RUB');
+            $botService = new BotRotationService();
+            $availableBot = $botService->getNextAvailableBot($buyoutPriceRub);
+
+            if (!$availableBot) {
+                return null;
+            }
         }
-        
+
         return $buyoutPrice;
     }
 }

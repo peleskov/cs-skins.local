@@ -44,7 +44,7 @@ class FreeCaseService
 
     /**
      * Сколько бесплатных открытий доступно для данного кейса
-     * earned_opens = floor(total_deposits / free_min_deposit) — личный лимит по депозитам
+     * earned_opens = (total_deposits >= free_min_deposit) ? 1 : 0 — максимум 1 открытие на кейс
      * free_opens_count — глобальный лимит на всех пользователей
      */
     public function getAvailableFreeOpens(Client $client, CaseModel $case): int
@@ -61,8 +61,8 @@ class FreeCaseService
             return 0;
         }
 
-        // Личный лимит: каждые free_min_deposit₽ = 1 открытие
-        $earnedOpens = (int) floor($totalDeposits / $minDeposit);
+        // Личный лимит: если депозит >= порога — 1 открытие
+        $earnedOpens = ($totalDeposits >= $minDeposit) ? 1 : 0;
 
         // Использовано лично за 24ч
         $usedOpens = $this->getUsedFreeOpens($client, $case);
@@ -110,11 +110,11 @@ class FreeCaseService
 
         $total = $payments->sum('amount');
         $usedOpens = $this->getUsedFreeOpens($client, $case);
-        $currentAvailable = max(0, (int) floor($total / $minDeposit) - $usedOpens);
+        $currentAvailable = max(0, (($total >= $minDeposit) ? 1 : 0) - $usedOpens);
 
         foreach ($payments as $payment) {
             $total -= $payment->amount;
-            $newAvailable = max(0, (int) floor($total / $minDeposit) - $usedOpens);
+            $newAvailable = max(0, (($total >= $minDeposit) ? 1 : 0) - $usedOpens);
             if ($newAvailable < $currentAvailable) {
                 return $payment->paid_at->addDay()->toIso8601String();
             }
@@ -146,8 +146,8 @@ class FreeCaseService
             ];
         }
 
-        // Личный лимит: каждые free_min_deposit₽ = 1 открытие
-        $earnedOpens = (int) floor($totalDeposits / $minDeposit);
+        // Личный лимит: если депозит >= порога — 1 открытие
+        $earnedOpens = ($totalDeposits >= $minDeposit) ? 1 : 0;
 
         if ($earnedOpens <= 0) {
             return [
@@ -155,7 +155,7 @@ class FreeCaseService
                 'reason' => 'insufficient_deposits',
                 'current_deposits' => $totalDeposits,
                 'required_deposits' => $minDeposit,
-                'remaining' => $minDeposit - fmod($totalDeposits, $minDeposit),
+                'remaining' => $minDeposit - $totalDeposits,
             ];
         }
 
@@ -171,14 +171,12 @@ class FreeCaseService
         }
 
         if ($personalAvailable <= 0) {
-            $remainder = fmod($totalDeposits, $minDeposit);
             return [
                 'available' => false,
                 'reason' => $globalRemaining === 0 ? 'global_limit_reached' : 'no_opens_left',
                 'earned_opens' => $earnedOpens,
                 'used_opens' => $usedOpens,
                 'required_deposits' => $minDeposit,
-                'remaining' => $minDeposit - $remainder,
             ];
         }
 

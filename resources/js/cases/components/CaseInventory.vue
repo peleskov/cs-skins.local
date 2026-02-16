@@ -208,7 +208,7 @@
 									<h5 class="text-center result-title">СТАВКА</h5>
 									<!-- Предметы ставки (до 4 шт) -->
 									<template v-if="upgrade.bet_items.length > 0">
-										<div class="row g-2 flex-grow-1 justify-content-center  position-relative"
+										<div class="row g-2 flex-grow-1 justify-content-center  align-items-center position-relative"
 											:class="{ 'bet-items-grid': upgrade.bet_items.length > 1 }">
 											<div v-for="(betItem, idx) in upgrade.bet_items" :key="idx"
 												:class="upgrade.bet_items.length === 1 ? 'col-12' : 'col-6'">

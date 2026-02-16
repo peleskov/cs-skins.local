@@ -8,8 +8,6 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Actions\EditAction;
 use Filament\Actions\Action;
 use Exception;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use App\Filament\Resources\ClientResource\Pages\ListClients;
 use App\Filament\Resources\ClientResource\Pages\CreateClient;
 use App\Filament\Resources\ClientResource\Pages\EditClient;
@@ -97,6 +95,11 @@ class ClientResource extends Resource
                     ->disabled()
                     ->dehydrated(false),
                     
+                TextInput::make('telegram_id')
+                    ->label('Telegram ID')
+                    ->maxLength(255)
+                    ->nullable(),
+
                 Toggle::make('is_verified')
                     ->label('Верифицирован'),
                     
@@ -393,11 +396,7 @@ class ClientResource extends Resource
                     ->modalDescription(fn ($record) => "Списание бонуса с клиента {$record->name}. Текущий бонусный баланс: {$record->bonus_balance} ₽"),
             ])
             ->recordActionsColumnLabel('Действия')
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ])
+            ->toolbarActions([])
             ->defaultSort('created_at', 'desc');
     }
 

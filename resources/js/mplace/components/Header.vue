@@ -112,7 +112,10 @@
 								</li>
 							</ul>
 							<div class="bottom-btn">
-								<a class="dropdown-item" href="#" data-bs-toggle="modal"
+								<a v-if="isWebStoreExtension" :href="extensionDownloadUrl" target="_blank" rel="noopener" class="dropdown-item">
+									<i class="ri-chrome-line me-2"></i>Расширение
+								</a>
+								<a v-else class="dropdown-item" href="#" data-bs-toggle="modal"
 									data-bs-target="#extensionModal">
 									<i class="ri-download-2-line me-2"></i>Расширение
 								</a>

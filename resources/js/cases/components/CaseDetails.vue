@@ -23,7 +23,7 @@
 			</div>
 			<div class="case-box mb-5">
 				<div class="case-box-images mb-3 d-flex justify-content-center align-items-center gap-3 flex-wrap"
-					v-if="!isSpinning && !showResults">
+					v-if="!isSpinning && !showResults && selectedMultiplier <= 1">
 					<div v-if="freeInfo && (freeInfo.reason === 'insufficient_deposits' || freeInfo.reason === 'no_opens_left')"
 						class="limit-box d-flex flex-column justify-content-center align-items-center">
 						<h2>До следующего кейса еще <span class="color"
@@ -39,12 +39,33 @@
 					</div>
 					<div v-for="n in selectedMultiplier" :key="`case-image-${n}`" class="case-box-image"
 						:class="{ 'case-box-image-small': selectedMultiplier > 3 }"
-						:style="{ backgroundImage: `url(/storage/${caseData.image_url})` }">
+						:style="{ backgroundImage: selectedMultiplier > 1 ? `url(/images/logo_white.svg?v=2)` : `url(/storage/${caseData.image_url})` }">
 					</div>
 				</div>
 
-				<!-- Слайдер для розыгрыша (один или несколько) -->
-				<div class="case-prize-slider" v-if="isSpinning || showResults">
+				<!-- Карточки с лого (множитель 2+, до и после открытия) -->
+				<div class="case-box-images mb-3 d-flex justify-content-center align-items-center gap-3 flex-wrap"
+					v-if="selectedMultiplier > 1">
+					<div v-for="(card, index) in cardFlips" :key="`card-${index}`"
+						class="case-box-image case-card-flip"
+						:class="[
+							{ 'case-box-image-small': selectedMultiplier > 3, 'flipped': card.flipped },
+							card.flipped ? card.rarityClass : ''
+						]">
+						<div class="case-card-inner">
+							<div class="case-card-front"
+								:style="{ backgroundImage: `url(/images/logo_white.svg?v=2)` }">
+							</div>
+							<div class="case-card-back">
+								<div class="image" :style="{ backgroundImage: `url(${getItemImageUrl(card.prize)})` }"></div>
+								<p>{{ getNameWithoutWear(card.prize.name) }}</p>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Слайдер для розыгрыша (только множитель 1) -->
+				<div class="case-prize-slider" v-if="selectedMultiplier <= 1 && (isSpinning || showResults)">
 					<!-- Рулетки для каждого приза -->
 					<div v-for="(roulette, rouletteIndex) in roulettes" :key="`roulette-${rouletteIndex}`"
 						class="case-roulette-container mb-3" :class="{ 'roulette-active': roulette.isActive }">
@@ -256,6 +277,9 @@ export default {
 			roulettes: [],
 			currentRouletteIndex: 0,
 
+			// Card flip (multiplier 2+)
+			cardFlips: [],
+
 			// Multiplier selection
 			allMultipliers: [1, 2, 3, 4, 5, 10],
 			selectedMultiplier: 1,
@@ -332,6 +356,14 @@ export default {
 		'caseData.available_until': {
 			handler() {
 				this.startLimitedCountdown();
+			},
+			immediate: true,
+		},
+		selectedMultiplier: {
+			handler(val) {
+				if (val > 1) {
+					this.initCardFlips(val);
+				}
 			},
 			immediate: true,
 		},
@@ -578,8 +610,12 @@ export default {
 
 					this.isProcessing = false;
 
-					// Запускаем анимацию для всех призов
-					await this.startMultipleRoulettes(prizes, fastMode);
+					// Запускаем анимацию
+					if (this.selectedMultiplier > 1) {
+						await this.startCardFlipAnimation(prizes, fastMode);
+					} else {
+						await this.startMultipleRoulettes(prizes, fastMode);
+					}
 				}
 			} catch (error) {
 				this.isProcessing = false;
@@ -619,6 +655,49 @@ export default {
 			await Promise.all(roulettePromises);
 
 			// Все рулетки завершены
+			this.isSpinning = false;
+			this.showResults = true;
+		},
+
+		initCardFlips(count) {
+			this.cardFlips = Array.from({ length: count }, () => ({
+				prize: { name: '', image_url: '' },
+				flipped: false,
+				rarityClass: '',
+			}));
+		},
+
+		async startCardFlipAnimation(prizes, fastMode = false) {
+			this.isSpinning = true;
+			this.showResults = false;
+
+			if (this.animationInterval) {
+				clearInterval(this.animationInterval);
+			}
+
+			// Заполняем карточки призами
+			this.cardFlips = prizes.map(prize => ({
+				prize: prize,
+				flipped: false,
+				rarityClass: this.getRarityClass(prize),
+			}));
+
+			await this.$nextTick();
+
+			if (fastMode) {
+				this.cardFlips.forEach(card => { card.flipped = true; });
+				this.playDropSound('final');
+			} else {
+				for (let i = 0; i < this.cardFlips.length; i++) {
+					this.cardFlips[i].flipped = true;
+					this.playDropSound(i === this.cardFlips.length - 1 ? 'final' : 'slow');
+					if (i < this.cardFlips.length - 1) {
+						await this.delay(500);
+					}
+				}
+			}
+
+			await this.delay(300);
 			this.isSpinning = false;
 			this.showResults = true;
 		},
@@ -826,7 +905,9 @@ export default {
 			this.showResults = false;
 			this.wonItems = [];
 			this.roulettes = [];
+			this.cardFlips = [];
 			this.currentRouletteIndex = 0;
+			this.selectedMultiplier = 1;
 
 			// Перезагружаем данные кейса для обновления множителей
 			this.loadCaseDetails();

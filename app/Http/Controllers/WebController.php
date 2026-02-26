@@ -150,13 +150,13 @@ class WebController extends Controller
                 return back()->with('success', 'Ваше сообщение успешно отправлено! Мы свяжемся с вами в ближайшее время.');
             }
 
-            // Отправка email администраторам
+            // Отправка email администраторам (strip_tags для защиты от XML/XSS инъекций)
             Mail::send('emails.contact', [
-                'firstName' => $request->first_name,
-                'lastName' => $request->last_name,
+                'firstName' => strip_tags($request->first_name),
+                'lastName' => strip_tags($request->last_name),
                 'userEmail' => $request->email,
-                'phone' => $request->phone,
-                'userMessage' => $request->message,
+                'phone' => strip_tags($request->phone),
+                'userMessage' => strip_tags($request->message),
             ], function ($message) use ($request, $emails) {
                 $message->to($emails)
                         ->subject('Новое сообщение с сайта - от ' . $request->first_name . ' ' . $request->last_name)

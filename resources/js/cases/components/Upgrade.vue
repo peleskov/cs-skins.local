@@ -797,7 +797,7 @@ export default {
 		// ==================== HELPERS ====================
 		getItemImageUrl(item) {
 			if (!item || !item.image_url) {
-				return '/images/item-placeholder.png';
+				return '/images/logo_ico.svg';
 			}
 
 			if (item.image_url.startsWith('http://') || item.image_url.startsWith('https://')) {

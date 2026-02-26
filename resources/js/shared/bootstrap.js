@@ -2,6 +2,14 @@ import axios from 'axios';
 import { handleApiError } from './utils/helpers';
 window.axios = axios;
 
+// Читаем данные из data-атрибутов body (вместо inline скрипта)
+const body = document.body;
+window.profileTabs = JSON.parse(body.dataset.profileTabs || '[]');
+window.mainNavigation = JSON.parse(body.dataset.mainNavigation || '[]');
+window.footerData = JSON.parse(body.dataset.footerData || '[]');
+window.translations = JSON.parse(body.dataset.translations || '[]');
+if (body.dataset.clientId) window.clientId = Number(body.dataset.clientId);
+
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
 // CSRF Token Interceptor - автоматически обновляет истекшие токены

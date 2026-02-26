@@ -14,12 +14,19 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // Настраиваем доверенные прокси для Cloudflare
-        $middleware->trustProxies(at: '*');
+        // X-Forwarded-Host не принимаем — защита от Host Header Injection
+        $middleware->trustProxies(
+            at: '*',
+            headers: \Illuminate\Http\Request::HEADER_X_FORWARDED_FOR |
+                     \Illuminate\Http\Request::HEADER_X_FORWARDED_PROTO |
+                     \Illuminate\Http\Request::HEADER_X_FORWARDED_PORT
+        );
 
-        // Добавляем middleware для установки локали и проверки режима тех. работ
+        // Добавляем middleware для установки локали, проверки режима тех. работ и CSP
         $middleware->web(append: [
             \App\Http\Middleware\CheckMaintenanceMode::class,
             \App\Http\Middleware\SetLocale::class,
+            \App\Http\Middleware\AddCspHeaders::class,
         ]);
 
         $middleware->alias([

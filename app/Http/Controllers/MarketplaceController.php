@@ -40,7 +40,9 @@ class MarketplaceController extends Controller
             $query->where('seller_id', $sellerId);
 
             // Получаем информацию о продавце
-            $seller = Client::find($sellerId);
+            $seller = Client::where('id', $sellerId)
+                ->select('id', 'name', 'steam_avatar')
+                ->first();
 
             if ($seller) {
                 // Получаем статистику продавца

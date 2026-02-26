@@ -230,7 +230,7 @@ Route::middleware(['auth:client'])->group(function () {
             ->header('Pragma', 'no-cache')
             ->header('Expires', '0');
     })->name('profile');
-    Route::prefix('profile')->name('profile.')->group(function () {
+    Route::prefix('profile')->name('profile.')->middleware('throttle:5,1')->group(function () {
         Route::post('/update-email', [ProfileController::class, 'updateEmail'])->name('update.email');
         Route::post('/update-trade-url', [ProfileController::class, 'updateTradeUrl'])->name('update.trade-url');
         Route::post('/telegram/generate-code', [ProfileController::class, 'generateTelegramVerificationCode'])->name('telegram.generate-code');

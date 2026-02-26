@@ -945,7 +945,7 @@ export default {
 
 		getItemImageUrl(item) {
 			if (!item.image_url) {
-				return '/images/item-placeholder.png';
+				return '/images/logo_ico.svg';
 			}
 
 			// Если URL уже полный (содержит http/https) - возвращаем как есть
@@ -958,7 +958,7 @@ export default {
 		},
 
 		handleImageError(event) {
-			event.target.src = '/images/item-placeholder.png';
+			event.target.src = '/images/logo_ico.svg';
 		},
 
 		getTierName(tierId) {

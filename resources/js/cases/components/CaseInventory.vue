@@ -543,7 +543,7 @@ export default {
 		},
 
 		getUpgradeItemImageUrl(item) {
-			if (!item || !item.image_url) return '/images/item-placeholder.png';
+			if (!item || !item.image_url) return '/images/logo_ico.svg';
 			if (item.image_url.startsWith('http')) return item.image_url;
 			return `https://community.steamstatic.com/economy/image/${item.image_url}`;
 		},
@@ -817,7 +817,7 @@ export default {
 
 		getItemImageUrl(item) {
 			if (!item || !item.image_url) {
-				return '/images/item-placeholder.png';
+				return '/images/logo_ico.svg';
 			}
 
 			if (item.image_url.startsWith('http://') || item.image_url.startsWith('https://')) {

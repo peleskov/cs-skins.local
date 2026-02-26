@@ -70,7 +70,7 @@ class ChatController extends Controller
             'message' => 'required|string|max:500',
         ]);
 
-        $messageText = $request->input('message');
+        $messageText = strip_tags($request->input('message'));
 
         // Валидация сообщения
         $errors = $this->chatService->validateMessage($messageText);

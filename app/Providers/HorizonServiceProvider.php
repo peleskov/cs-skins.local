@@ -15,9 +15,10 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
     {
         parent::boot();
 
-        // Horizon::routeSmsNotificationsTo('15556667777');
-        // Horizon::routeMailNotificationsTo('example@example.com');
-        // Horizon::routeSlackNotificationsTo('slack-webhook-url', '#channel');
+        // Принудительно включаем авторизацию даже в local окружении
+        Horizon::auth(function ($request) {
+            return Gate::check('viewHorizon', [$request->user()]);
+        });
     }
 
     /**
@@ -27,10 +28,9 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
      */
     protected function gate(): void
     {
-        Gate::define('viewHorizon', function ($user = null) {
-            return in_array(optional($user)->email, [
-                //
-            ]);
+        Gate::define('viewHorizon', function ($user) {
+            // Доступ только для admin-пользователей (модель User, панель Filament)
+            return $user instanceof \App\Models\User;
         });
     }
 }

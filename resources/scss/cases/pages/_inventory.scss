@@ -373,8 +373,6 @@
                     height: 100%;
 
                     .chance-ring-progress {
-                        transform: rotate(-89deg);
-                        transform-origin: center;
                         transition: stroke-dashoffset 0.5s ease;
                     }
                 }

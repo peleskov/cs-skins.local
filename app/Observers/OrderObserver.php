@@ -230,12 +230,26 @@ class OrderObserver
             return;
         }
 
-        // Проверяем есть ли холд Steam (delay_settlement)
+        // Всегда ставим холд на выплату продавцу
+        // По умолчанию — наш холд (из настроек), потом расширение пришлёт реальный от Steam
         $tradeOffer = $order->tradeOffer;
-        if ($tradeOffer && $tradeOffer->delay_settlement && $tradeOffer->settlement_date) {
+        if ($tradeOffer) {
+            if (!$tradeOffer->delay_settlement || !$tradeOffer->settlement_date) {
+                // Ставим дефолтный холд — расширение перезапишет реальным от Steam
+                $tradeOffer->update([
+                    'delay_settlement' => true,
+                    'settlement_date' => now()->addDays($this->getHoldDays()),
+                ]);
+
+                Log::info('Установлен дефолтный холд на выплату', [
+                    'order_id' => $order->id,
+                    'hold_days' => $this->getHoldDays(),
+                    'settlement_date' => $tradeOffer->settlement_date->toDateTimeString()
+                ]);
+            }
+
             if ($tradeOffer->settlement_date->isFuture()) {
-                // Холд активен - НЕ создаём транзакции, ждём окончания холда
-                Log::info('Order completion delayed due to Steam settlement hold', [
+                Log::info('Выплата отложена до окончания холда', [
                     'order_id' => $order->id,
                     'settlement_date' => $tradeOffer->settlement_date->toDateTimeString()
                 ]);
@@ -243,7 +257,7 @@ class OrderObserver
             }
         }
 
-        // Нет холда или холд закончился - выплачиваем продавцу сразу
+        // Холд закончился — выплачиваем продавцу
         $this->createSellerTransactions($order);
     }
 

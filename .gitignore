@@ -27,3 +27,6 @@ tmp
 .env.prod
 public/images/skins
 public/downloads/extension/cs-skins-extension-dev.zip
+CLAUDE.md
+.claude/
+browser-extension/v1/CLAUDE.md

@@ -49,14 +49,15 @@
 
 								<!-- Прогресс дуга -->
 								<circle class="chance-ring-progress" cx="100" cy="100" r="94" fill="none"
-									stroke="url(#chanceGradient)" stroke-width="12" stroke-linecap="round"
-									:stroke-dasharray="circumference" :stroke-dashoffset="progressOffset"
-									transform="rotate(-89 100 100)" />
+									stroke="url(#chanceGradient)" stroke-width="12"
+									:stroke-dasharray="circumference"
+									:stroke-dashoffset="progressOffset"
+									transform="rotate(-90 100 100)" />
 
 								<!-- Указатель (вращается при анимации) -->
 								<g :transform="`rotate(${pointerAngle} 100 100)`">
 									<path
-										d="M100.5 23L93 0.556008C98.8151 -0.187308 102.114 -0.18336 108 0.556009L100.5 23Z"
+										d="M100 11L92.5 33.5C97.5 34.2 102.5 34.2 107.5 33.5L100 11Z"
 										fill="#0A8210" />
 								</g>
 
@@ -326,6 +327,7 @@ export default {
 			isAnimating: false,
 			animationFrame: null,
 
+
 			// Дебаунс для загрузки целей
 			loadTargetsTimeout: null,
 		};
@@ -410,7 +412,6 @@ export default {
 				!this.upgradeLoading;
 		},
 
-		// Параметры для SVG кольца (r = 94)
 		circumference() {
 			return 2 * Math.PI * 94;
 		},
@@ -613,13 +614,13 @@ export default {
 
 				const { is_win, roll_value, chance, won_item, balance } = response.data;
 
-				// Переводим roll_value (0-100) в градусы (0-360°)
-				const finalAngle = (roll_value / 100) * 360;
+				// Вычисляем финальный угол стрелки с отступом от краёв дуги
+				const finalAngle = this.calcFinalAngle(is_win, roll_value, chance);
 
 				// Звук результата параллельно с анимацией
 				const snd = upgradeSounds[is_win ? 'success' : 'error'];
 				snd.currentTime = 0;
-				snd.play().catch(() => {});
+				snd.play().catch(() => { });
 
 				// Запускаем анимацию
 				await this.runPointerAnimation(finalAngle);
@@ -713,6 +714,33 @@ export default {
 			window.dispatchEvent(new CustomEvent('balance-updated', {
 				detail: { main: newBalance }
 			}));
+		},
+
+		// Вычисляет угол стрелки с отступом ±1% от краёв дуги
+		calcFinalAngle(isWin, rollValue, chance) {
+			const arcAngle = (chance / 100) * 360;
+			const margin = 3.6; // 1% от 360°
+			let angle = (rollValue / 100) * 360;
+
+			if (isWin) {
+				// Внутри дуги (0 .. arcAngle)
+				if (arcAngle < margin * 2) {
+					// Дуга слишком короткая — стрелка по центру
+					angle = arcAngle / 2;
+				} else {
+					angle = Math.max(margin, Math.min(arcAngle - margin, angle));
+				}
+			} else {
+				// Снаружи дуги (arcAngle .. 360)
+				const outsideAngle = 360 - arcAngle;
+				if (outsideAngle < margin * 2) {
+					angle = arcAngle + outsideAngle / 2;
+				} else {
+					angle = Math.max(arcAngle + margin, Math.min(360 - margin, angle));
+				}
+			}
+
+			return angle;
 		},
 
 		// Анимация указателя - вращение только по часовой стрелке с плавным замедлением

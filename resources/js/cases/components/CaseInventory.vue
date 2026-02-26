@@ -211,7 +211,7 @@
 										<div class="row g-2 flex-grow-1 justify-content-center  align-items-center position-relative"
 											:class="{ 'bet-items-grid': upgrade.bet_items.length > 1 }">
 											<div v-for="(betItem, idx) in upgrade.bet_items" :key="idx"
-												:class="upgrade.bet_items.length === 1 ? 'col-12' : 'col-6'">
+												:class="upgrade.bet_items.length === 1 ? 'col-12 align-self-stretch' : 'col-6'">
 												<div class="h-100 case-content-item"
 													:class="[getUpgradeRarityClass(betItem), { 'compact': upgrade.bet_items.length > 1 }]">
 													<!-- Цена и название только если 1 предмет -->

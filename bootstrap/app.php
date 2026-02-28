@@ -47,4 +47,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->dontReport([
             \Illuminate\Foundation\ViteManifestNotFoundException::class,
         ]);
+
+        // Корректный 429 ответ при срабатывании rate limit
+        $exceptions->render(function (\Illuminate\Http\Exceptions\ThrottleRequestsException $e, \Illuminate\Http\Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Слишком много запросов. Попробуйте позже.',
+                ], 429);
+            }
+
+            abort(429, 'Слишком много запросов. Попробуйте позже.');
+        });
     })->create();

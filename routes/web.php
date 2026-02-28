@@ -230,13 +230,14 @@ Route::middleware(['auth:client'])->group(function () {
             ->header('Pragma', 'no-cache')
             ->header('Expires', '0');
     })->name('profile');
-    Route::prefix('profile')->name('profile.')->middleware('throttle:5,1')->group(function () {
-        Route::post('/update-email', [ProfileController::class, 'updateEmail'])->name('update.email');
-        Route::post('/update-trade-url', [ProfileController::class, 'updateTradeUrl'])->name('update.trade-url');
-        Route::post('/telegram/generate-code', [ProfileController::class, 'generateTelegramVerificationCode'])->name('telegram.generate-code');
-        Route::post('/extension-token/generate', [ProfileController::class, 'generateExtensionToken'])->name('extension-token.generate');
-        Route::post('/extension-token/regenerate', [ProfileController::class, 'regenerateExtensionToken'])->name('extension-token.regenerate');
-        Route::post('/notification-settings', [ProfileController::class, 'updateNotificationSettings'])->name('notification-settings');
+    Route::prefix('profile')->name('profile.')->group(function () {
+        // POST-действия с rate limit (5 запросов в минуту)
+        Route::post('/update-email', [ProfileController::class, 'updateEmail'])->name('update.email')->middleware('throttle:5,1');
+        Route::post('/update-trade-url', [ProfileController::class, 'updateTradeUrl'])->name('update.trade-url')->middleware('throttle:5,1');
+        Route::post('/telegram/generate-code', [ProfileController::class, 'generateTelegramVerificationCode'])->name('telegram.generate-code')->middleware('throttle:5,1');
+        Route::post('/extension-token/generate', [ProfileController::class, 'generateExtensionToken'])->name('extension-token.generate')->middleware('throttle:5,1');
+        Route::post('/extension-token/regenerate', [ProfileController::class, 'regenerateExtensionToken'])->name('extension-token.regenerate')->middleware('throttle:5,1');
+        Route::post('/notification-settings', [ProfileController::class, 'updateNotificationSettings'])->name('notification-settings')->middleware('throttle:5,1');
         Route::get('/sales', [ProfileController::class, 'sales'])->name('sales');
 
         // Аукционы

@@ -63,6 +63,20 @@ class TradeOfferObserver
     private function processFinalizedStatus(TradeOffer $tradeOffer, string $newStatus): void
     {
         if (!isset(self::FINALIZING_STATUSES[$newStatus])) {
+            // Логируем неизвестные/необработанные статусы для мониторинга
+            $knownNonFinal = [
+                TradeOffer::STATUS_ACTIVE,
+                TradeOffer::STATUS_CREATED_NEEDS_CONFIRMATION,
+                TradeOffer::STATUS_IN_ESCROW,
+                TradeOffer::STATUS_PENDING,
+            ];
+            if (!in_array($newStatus, $knownNonFinal)) {
+                Log::warning('Неизвестный статус трейда', [
+                    'trade_offer_id' => $tradeOffer->id,
+                    'status' => $newStatus,
+                    'order_id' => $tradeOffer->order_id,
+                ]);
+            }
             return;
         }
 

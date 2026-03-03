@@ -164,13 +164,13 @@ class Listing extends Model
         ]);
     }
 
-    public function getWearNameAttribute(): string
+    public function getWearNameAttribute(): ?string
     {
-        // Приоритет: float_value -> wear_value -> "unknown"
+        // Приоритет: float_value -> wear_value -> null
         $floatValue = $this->float_value ?? $this->wear_value;
 
         if ($floatValue === null) {
-            return 'unknown';
+            return null;
         }
 
         // Преобразуем в число для корректного сравнения

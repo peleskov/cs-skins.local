@@ -62,7 +62,7 @@ async function getTradeOffersFromSteam(steamLoginSecure) {
         const params = new URLSearchParams({
             access_token: accessToken,
             get_sent_offers: '1',
-            active_only: '1',
+            active_only: '0',
             language: 'english'
         });
         

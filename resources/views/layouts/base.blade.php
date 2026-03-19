@@ -31,7 +31,7 @@
     @stack('styles')
 
     {{-- Yandex Metrika --}}
-    @php($yandexMetrikaId = \App\Models\SiteSetting::get('yandex_metrika_id'))
+    @php($yandexMetrikaId = \App\Models\SiteSetting::get('yandex_metrika'))
     @if($yandexMetrikaId)
         <script nonce="{{ app('csp-nonce') }}">
             (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};

@@ -34,7 +34,7 @@ class AddCspHeaders
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
                 "font-src 'self' data: https://fonts.gstatic.com",
                 "img-src 'self' data: https://*.steamstatic.com https://*.yandex.ru https://*.yandex.com https://steamcdn-a.akamaihd.net",
-                "connect-src 'self' wss://{$request->getHost()} https://*.yandex.ru https://*.yandex.com https://yastatic.net",
+                "connect-src 'self' wss://{$request->getHost()} https://*.yandex.ru https://*.yandex.com wss://*.yandex.com wss://*.yandex.ru https://yastatic.net",
                 "frame-src https://payment.arcopay.tech https://qr.nspk.ru",
                 "object-src 'none'",
                 "base-uri 'self'",

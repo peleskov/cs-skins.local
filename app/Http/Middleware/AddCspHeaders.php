@@ -30,12 +30,12 @@ class AddCspHeaders
         if (method_exists($response, 'header')) {
             $csp = implode('; ', [
                 "default-src 'self'",
-                "script-src 'self' 'nonce-{$nonce}' https://mc.yandex.ru https://yandex.ru",
+                "script-src 'self' 'nonce-{$nonce}' https://mc.yandex.ru https://yandex.ru https://yastatic.net",
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
                 "font-src 'self' data: https://fonts.gstatic.com",
                 "img-src 'self' data: https://*.steamstatic.com https://mc.yandex.ru https://steamcdn-a.akamaihd.net",
-                "connect-src 'self' wss://{$request->getHost()} https://mc.yandex.ru",
-                "frame-src 'none'",
+                "connect-src 'self' wss://{$request->getHost()} https://mc.yandex.ru https://yastatic.net",
+                "frame-src https://payment.arcopay.tech https://qr.nspk.ru",
                 "object-src 'none'",
                 "base-uri 'self'",
             ]);

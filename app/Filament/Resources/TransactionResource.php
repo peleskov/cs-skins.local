@@ -106,6 +106,11 @@ class TransactionResource extends Resource
                     ->searchable()
                     ->sortable(),
 
+                TextColumn::make('created_at')
+                    ->label('Создано')
+                    ->dateTime('d.m.Y H:i')
+                    ->sortable(),
+
                 TextColumn::make('client.name')
                     ->label('Клиент')
                     ->searchable()
@@ -167,16 +172,17 @@ class TransactionResource extends Resource
                     ->limit(50)
                     ->searchable(),
 
+                TextColumn::make('metadata')
+                    ->label('ID платежа')
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->where('metadata->order_id', 'like', "%{$search}%")),
+
                 TextColumn::make('hold_until')
                     ->label('Удерживать до')
                     ->dateTime('d.m.Y H:i')
                     ->placeholder('—')
                     ->sortable(),
 
-                TextColumn::make('created_at')
-                    ->label('Создано')
-                    ->dateTime('d.m.Y H:i')
-                    ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([

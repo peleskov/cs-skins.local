@@ -39,6 +39,16 @@ class Promocode extends Model
         return $this->hasMany(BonusTransaction::class);
     }
 
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function paidPayments(): HasMany
+    {
+        return $this->hasMany(Payment::class)->where('status', Payment::STATUS_PAID);
+    }
+
     /**
      * Проверка активности промокода
      */

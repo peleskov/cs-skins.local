@@ -17,6 +17,7 @@ class PromocodesTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->withSum('paidPayments', 'amount'))
             ->columns([
                 TextColumn::make('code')
                     ->label('Код')
@@ -57,6 +58,12 @@ class PromocodesTable
                             ? "{$record->used_count} / {$record->max_uses}"
                             : "{$record->used_count} / ∞"
                     ),
+
+                TextColumn::make('paid_payments_sum_amount')
+                    ->label('Сумма пополнений')
+                    ->money('RUB')
+                    ->sortable()
+                    ->default(0),
 
                 TextColumn::make('expires_at')
                     ->label('Истекает')

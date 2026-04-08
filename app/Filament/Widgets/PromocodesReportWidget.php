@@ -43,6 +43,7 @@ class PromocodesReportWidget extends BaseWidget implements HasActions, HasForms
                 Promocode::query()
                     ->withCount('bonusTransactions')
                     ->withSum('bonusTransactions', 'amount')
+                    ->withSum('paidPayments', 'amount')
                     ->orderByDesc('bonus_transactions_count')
             )
             ->columns([
@@ -64,6 +65,11 @@ class PromocodesReportWidget extends BaseWidget implements HasActions, HasForms
                     ->boolean(),
                 Tables\Columns\TextColumn::make('bonus_transactions_count')
                     ->label('Использований')
+                    ->sortable()
+                    ->default(0),
+                Tables\Columns\TextColumn::make('paid_payments_sum_amount')
+                    ->label('Сумма пополнений')
+                    ->money('RUB')
                     ->sortable()
                     ->default(0),
                 Tables\Columns\TextColumn::make('bonus_transactions_sum_amount')

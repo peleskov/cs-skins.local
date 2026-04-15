@@ -46,8 +46,7 @@
 				<!-- Карточки с лого (множитель 2+, до и после открытия) -->
 				<div class="case-box-images mb-3 d-flex justify-content-center align-items-center gap-3 flex-wrap"
 					v-if="selectedMultiplier > 1">
-					<div v-for="(card, index) in cardFlips" :key="`card-${index}`"
-						class="case-box-image case-card-flip"
+					<div v-for="(card, index) in cardFlips" :key="`card-${index}`" class="case-box-image case-card-flip"
 						:class="[
 							{ 'case-box-image-small': selectedMultiplier > 3, 'flipped': card.flipped },
 							card.flipped ? card.rarityClass : ''
@@ -57,7 +56,9 @@
 								:style="{ backgroundImage: `url(/images/logo_white.svg?v=2)` }">
 							</div>
 							<div class="case-card-back">
-								<div class="image" :style="{ backgroundImage: `url(${getItemImageUrl(card.prize)})` }"></div>
+								<span v-if="card.prize.is_anti_unluck" class="badge-anti-unluck">Анти-анлак</span>
+								<div class="image" :style="{ backgroundImage: `url(${getItemImageUrl(card.prize)})` }">
+								</div>
 								<p>{{ getNameWithoutWear(card.prize.name) }}</p>
 							</div>
 						</div>
@@ -85,6 +86,7 @@
 										},
 										getRarityClass(item)
 									]">
+									<span v-if="item.isWinner && roulette.prize.is_anti_unluck" class="badge-anti-unluck">Анти-анлак</span>
 									<div class="image" :style="{ backgroundImage: `url(${getItemImageUrl(item)})` }">
 									</div>
 									<div class="d-flex justify-content-center name-box">
@@ -133,14 +135,19 @@
 							<div class="col-6 d-flex justify-content-end">
 								<button type="button" class="btn btn-primary px-5"
 									:disabled="freeDisabled || limitedDisabled" @click="confirmPurchase">
-									Открыть за&nbsp;<span v-html="formatPrice(totalPrice, 'RUB', false, false)"></span>
+									Открыть за&nbsp;<span
+										v-html="formatPrice(totalPrice, 'RUB', false, false)"></span>&nbsp;<span
+										v-if="hasDiscount" class="original-price"
+										v-html="formatPrice(totalOriginalPrice, 'RUB', false, false)"></span>
 								</button>
 							</div>
 							<div class="col-6">
 								<button class="btn btn-tertiary px-4" :disabled="freeDisabled || limitedDisabled"
 									@click="openFast" v-if="!showResults && !isProcessing && !isSpinning">
 									Открыть быстро за&nbsp;<span
-										v-html="formatPrice(totalPrice, 'RUB', false, false)"></span>
+										v-html="formatPrice(totalPrice, 'RUB', false, false)"></span>&nbsp;<span
+										v-if="hasDiscount" class="original-price"
+										v-html="formatPrice(totalOriginalPrice, 'RUB', false, false)"></span>
 								</button>
 							</div>
 						</template>
@@ -307,6 +314,12 @@ export default {
 	computed: {
 		totalPrice() {
 			return this.caseData.price * this.selectedMultiplier;
+		},
+		totalOriginalPrice() {
+			return (this.caseData.original_price || this.caseData.price) * this.selectedMultiplier;
+		},
+		hasDiscount() {
+			return this.caseData.has_discount;
 		},
 		totalWonPrice() {
 			return this.wonItems.reduce((sum, item) => sum + item.price, 0);
@@ -707,7 +720,7 @@ export default {
 			if (!sound) return;
 			const clone = sound.cloneNode();
 			clone.volume = sound.volume;
-			clone.play().catch(() => {});
+			clone.play().catch(() => { });
 		},
 
 		spinSingleRoulette(rouletteIndex, fastMode = false) {

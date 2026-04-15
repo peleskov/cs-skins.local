@@ -21,7 +21,7 @@ class ChatMessage extends Model
         'created_at' => 'datetime',
     ];
 
-    protected $appends = ['client_name', 'client_avatar'];
+    protected $appends = ['client_name', 'client_avatar', 'client_avatar_border_color', 'client_nickname_color', 'client_is_premium'];
 
     public function client(): BelongsTo
     {
@@ -36,5 +36,20 @@ class ChatMessage extends Model
     public function getClientAvatarAttribute(): ?string
     {
         return $this->client->steam_avatar ?? null;
+    }
+
+    public function getClientAvatarBorderColorAttribute(): ?string
+    {
+        return $this->client->avatar_border_color ?? null;
+    }
+
+    public function getClientNicknameColorAttribute(): ?string
+    {
+        return $this->client->nickname_color ?? null;
+    }
+
+    public function getClientIsPremiumAttribute(): bool
+    {
+        return $this->client?->isPremium() ?? false;
     }
 }

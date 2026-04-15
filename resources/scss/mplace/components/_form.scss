@@ -82,10 +82,7 @@
 
       &.search {
         width: 596px;
-        padding: calc(10px + (17 - 10) * ((100vw - 320px) / (1920 - 320)))
-          calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320)))
-          calc(10px + (17 - 10) * ((100vw - 320px) / (1920 - 320)))
-          calc(40px + (50 - 40) * ((100vw - 320px) / (1920 - 320)));
+        padding: calc(10px + (17 - 10) * ((100vw - 320px) / (1920 - 320))) calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320))) calc(10px + (17 - 10) * ((100vw - 320px) / (1920 - 320))) calc(40px + (50 - 40) * ((100vw - 320px) / (1920 - 320)));
         border-radius: 4px;
         background-color: rgba(17, 17, 17, 1);
         color: rgba(var(--white), 1);
@@ -94,10 +91,7 @@
         border-radius: 100px;
 
         [dir="rtl"] & {
-          padding: calc(10px + (17 - 10) * ((100vw - 320px) / (1920 - 320)))
-            calc(40px + (50 - 40) * ((100vw - 320px) / (1920 - 320)))
-            calc(10px + (17 - 10) * ((100vw - 320px) / (1920 - 320)))
-            calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320)));
+          padding: calc(10px + (17 - 10) * ((100vw - 320px) / (1920 - 320))) calc(40px + (50 - 40) * ((100vw - 320px) / (1920 - 320))) calc(10px + (17 - 10) * ((100vw - 320px) / (1920 - 320))) calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320)));
         }
 
         &::placeholder {
@@ -145,6 +139,7 @@
   }
 
   .form-input {
+
     &::-webkit-outer-spin-button,
     &::-webkit-inner-spin-button {
       -webkit-appearance: none;
@@ -235,8 +230,7 @@
   .form-control {
     border: none;
     box-shadow: none;
-    padding: calc(6px + (12 - 6) * ((100vw - 320px) / (1920 - 320)))
-      calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320)));
+    padding: calc(6px + (12 - 6) * ((100vw - 320px) / (1920 - 320))) calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320)));
     font-size: calc(14px + (16 - 14) * ((100vw - 320px) / (1920 - 320)));
     background-color: rgba(var(--box-bg), 1);
 
@@ -258,5 +252,25 @@
     margin-top: calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320)));
     padding-top: calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320)));
     border-top: 1px dashed rgba(var(--dashed-line), 1);
+  }
+}
+
+.custom-radio {
+  .form-check-input[type=radio] {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #747474;
+    opacity: 0.7;
+    box-shadow: none;
+    background-color: white;
+    background-repeat: no-repeat;
+    background-size: 8px 8px;
+    background-position: center;
+
+    &:checked {
+      border-color: #F2A93E;
+      background-image: svg-url('<svg viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="4" cy="4" r="4" fill="#F2A93E" /></svg>');
+      opacity: 1;
+    }
   }
 }

@@ -10,6 +10,7 @@ use App\Models\CaseOpen;
 use App\Models\CaseTier;
 use App\Models\CaseItem;
 use App\Models\Client;
+use App\Models\SiteSetting;
 use App\Models\Transaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -38,7 +39,7 @@ class CaseService
 
             // 3. Пополнить фонд кейса (если платное открытие)
             if (!$payment['is_free']) {
-                $fundAmount = $case->price * ($case->fund_percent / 100) * $count;
+                $fundAmount = $payment['price_per_case'] * ($case->fund_percent / 100) * $count;
                 $case->increment('accumulated_fund', $fundAmount);
             }
 
@@ -52,6 +53,14 @@ class CaseService
 
             // 5. Открываем $count раз
             for ($i = 0; $i < $count; $i++) {
+                // Проверяем анти-анлак перед каждым открытием
+                $isAntiUnluck = !$payment['is_free'] && $this->checkAntiUnluck($client, $case);
+
+                if ($isAntiUnluck) {
+                    // Возвращаем стоимость одного открытия на баланс
+                    $this->refundOneOpen($client, $payment, $count);
+                }
+
                 // Получить доступные тиры (с учётом текущего фонда)
                 $availableTiers = $this->getAvailableTiers($case);
 
@@ -71,6 +80,8 @@ class CaseService
                     $case->decrement('accumulated_fund', $prizePrice);
                 }
 
+                $isFree = $payment['is_free'] || $isAntiUnluck;
+
                 // Создать запись в инвентаре
                 $inventoryItem = $caseInventoryService->addItem(
                     $client,
@@ -81,20 +92,27 @@ class CaseService
                 );
 
                 // Создать запись в истории
+                // Помечаем предмет инвентаря как анти-анлак
+                if ($isAntiUnluck) {
+                    $inventoryItem->update(['is_anti_unluck' => true]);
+                }
+
                 $caseOpen = CaseOpen::create([
                     'client_id' => $client->id,
                     'case_id' => $case->id,
                     'case_inventory_item_id' => $inventoryItem->id,
-                    'price_paid' => $payment['is_free'] ? 0 : $case->price,
-                    'balance_used' => $payment['is_free'] ? 0 : ($payment['balance_used'] / $count),
-                    'bonus_balance_used' => $payment['is_free'] ? 0 : ($payment['bonus_used'] / $count),
-                    'is_free' => $payment['is_free'],
+                    'price_paid' => $isFree ? 0 : $payment['price_per_case'],
+                    'balance_used' => $isFree ? 0 : ($payment['balance_used'] / $count),
+                    'bonus_balance_used' => $isFree ? 0 : ($payment['bonus_used'] / $count),
+                    'is_free' => $isFree,
+                    'is_anti_unluck' => $isAntiUnluck,
                 ]);
 
                 $items[] = [
                     'case_item' => $caseItem,
                     'inventory_item' => $inventoryItem,
                     'case_open' => $caseOpen,
+                    'is_anti_unluck' => $isAntiUnluck,
                 ];
 
                 // Отправляем событие в лайв-ленту (afterCommit задан в самом событии)
@@ -107,7 +125,8 @@ class CaseService
                     'tier_id' => $tier->id,
                     'case_item_id' => $caseItem->id,
                     'prize_price' => $prizePrice,
-                    'is_free' => $payment['is_free'],
+                    'is_free' => $isFree,
+                    'is_anti_unluck' => $isAntiUnluck,
                     'open_number' => $i + 1,
                     'total_opens' => $count,
                 ]);
@@ -128,7 +147,8 @@ class CaseService
      */
     private function processPayment(CaseModel $case, Client $client, int $count): array
     {
-        $totalPrice = $case->price * $count;
+        $pricePerCase = $this->getCasePrice($case, $client);
+        $totalPrice = $pricePerCase * $count;
 
         // Бесплатный кейс
         if ($case->isFree()) {
@@ -142,6 +162,7 @@ class CaseService
                     'bonus_used' => 0,
                     'is_free' => true,
                     'count' => $count,
+                    'price_per_case' => 0,
                 ];
             }
 
@@ -162,6 +183,7 @@ class CaseService
             'bonus_used' => $result['bonus_used'],
             'is_free' => false,
             'count' => $count,
+            'price_per_case' => $pricePerCase,
         ];
     }
 
@@ -175,40 +197,57 @@ class CaseService
             return;
         }
 
+        // Считаем анти-анлак открытия для корректировки суммы
+        $antiUnluckCount = collect($items)->filter(fn($item) => $item['is_anti_unluck'] ?? false)->count();
+        $paidCount = $payment['count'] - $antiUnluckCount;
+
+        if ($paidCount <= 0) {
+            return;
+        }
+
+        $paidRatio = $paidCount / $payment['count'];
+        $actualBalanceUsed = round($payment['balance_used'] * $paidRatio, 2);
+        $actualBonusUsed = round($payment['bonus_used'] * $paidRatio, 2);
+        $actualTotal = round($payment['total'] * $paidRatio, 2);
+
         // Собираем ID всех полученных предметов инвентаря
         $inventoryItemIds = array_map(fn($item) => $item['inventory_item']->id, $items);
 
+        $countLabel = $paidCount > 1 ? " x{$paidCount}" : '';
+        $antiUnluckLabel = $antiUnluckCount > 0 ? " ({$antiUnluckCount} бесплатно по анти-анлак)" : '';
+
         // Транзакция основного баланса (покупка кейса)
-        if ($payment['balance_used'] > 0) {
+        if ($actualBalanceUsed > 0) {
             Transaction::create([
                 'client_id' => $client->id,
                 'type' => Transaction::TYPE_CASE_PURCHASE,
-                'amount' => $payment['balance_used'],
+                'amount' => $actualBalanceUsed,
                 'status' => Transaction::STATUS_COMPLETED,
-                'description' => "Открытие кейса \"{$case->name}\"" . ($payment['count'] > 1 ? " x{$payment['count']}" : ''),
+                'description' => "Открытие кейса \"{$case->name}\"{$countLabel}{$antiUnluckLabel}",
                 'metadata' => [
                     'case_id' => $case->id,
                     'case_inventory_item_ids' => $inventoryItemIds,
-                    'count' => $payment['count'],
+                    'count' => $paidCount,
+                    'anti_unluck_count' => $antiUnluckCount,
                 ],
             ]);
         }
 
         // Транзакция бонусного баланса
-        if ($payment['bonus_used'] > 0) {
+        if ($actualBonusUsed > 0) {
             BonusTransaction::create([
                 'client_id' => $client->id,
                 'type' => BonusTransaction::TYPE_DEBIT,
-                'amount' => $payment['bonus_used'],
-                'description' => "Открытие кейса \"{$case->name}\"" . ($payment['count'] > 1 ? " x{$payment['count']}" : ''),
+                'amount' => $actualBonusUsed,
+                'description' => "Открытие кейса \"{$case->name}\"{$countLabel}{$antiUnluckLabel}",
                 'case_id' => $case->id,
             ]);
         }
 
         // Транзакция дохода сайта (для аналитики)
-        if ($payment['total'] > 0) {
-            $fundAmount = $case->price * ($case->fund_percent / 100) * $payment['count'];
-            $siteRevenue = $payment['total'] - $fundAmount;
+        if ($actualTotal > 0) {
+            $fundAmount = $payment['price_per_case'] * ($case->fund_percent / 100) * $paidCount;
+            $siteRevenue = $actualTotal - $fundAmount;
 
             if ($siteRevenue > 0) {
                 $systemClient = Client::where('email', 'system@cs-skins.local')->first();
@@ -218,13 +257,13 @@ class CaseService
                     'type' => Transaction::TYPE_FEE,
                     'amount' => $siteRevenue,
                     'status' => Transaction::STATUS_COMPLETED,
-                    'description' => "Доход с кейса \"{$case->name}\"" . ($payment['count'] > 1 ? " x{$payment['count']}" : ''),
+                    'description' => "Доход с кейса \"{$case->name}\"{$countLabel}",
                     'metadata' => [
                         'case_id' => $case->id,
                         'buyer_id' => $client->id,
                         'fund_percent' => $case->fund_percent,
                         'source' => 'case_revenue',
-                        'count' => $payment['count'],
+                        'count' => $paidCount,
                     ],
                 ]);
             }
@@ -309,7 +348,7 @@ class CaseService
 
         // Обычный кейс — ограничен балансом
         $totalBalance = (float) $client->balance + (float) $client->bonus_balance;
-        $price = (float) $case->price;
+        $price = (float) $this->getCasePrice($case, $client);
 
         if ($price <= 0) {
             return $maxMultiplier;
@@ -354,6 +393,80 @@ class CaseService
 
         // Для платного - проверяем общий баланс
         $totalBalance = (float) $client->balance + (float) $client->bonus_balance;
-        return $totalBalance >= $case->price;
+        return $totalBalance >= $this->getCasePrice($case, $client);
+    }
+
+    /**
+     * Проверить анти-анлак: 10 последних открытий — один кейс, все неокуп, ни одно не бесплатное
+     */
+    private function checkAntiUnluck(Client $client, CaseModel $case): bool
+    {
+        if (!$client->premiumFeatureEnabled('anti_unluck')) {
+            return false;
+        }
+
+        $threshold = (int) SiteSetting::get('anti_unluck_threshold', 10);
+
+        $lastOpens = CaseOpen::where('client_id', $client->id)
+            ->latest('id')
+            ->limit($threshold)
+            ->with('inventoryItem')
+            ->get();
+
+        if ($lastOpens->count() < $threshold) {
+            return false;
+        }
+
+        foreach ($lastOpens as $open) {
+            // Все должны быть тот же кейс
+            if ($open->case_id !== $case->id) {
+                return false;
+            }
+            // Ни одно не бесплатное
+            if ($open->is_free) {
+                return false;
+            }
+            // Все неокуп: цена предмета < цена открытия
+            if (!$open->inventoryItem || (float) $open->inventoryItem->price >= (float) $open->price_paid) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Вернуть стоимость одного открытия на баланс (анти-анлак)
+     */
+    private function refundOneOpen(Client $client, array $payment, int $count): void
+    {
+        $balancePerOpen = $payment['balance_used'] / $count;
+        $bonusPerOpen = $payment['bonus_used'] / $count;
+
+        if ($balancePerOpen > 0) {
+            $client->increment('balance', $balancePerOpen);
+        }
+        if ($bonusPerOpen > 0) {
+            $client->increment('bonus_balance', $bonusPerOpen);
+        }
+    }
+
+    /**
+     * Получить цену кейса с учётом PREMIUM-скидки
+     */
+    public function getCasePrice(CaseModel $case, Client $client): float
+    {
+        $price = (float) $case->price;
+
+        if (!$client->premiumFeatureEnabled('case_discount')) {
+            return $price;
+        }
+
+        $threshold = (float) SiteSetting::get('premium_case_discount_threshold', 500);
+        $discountPercent = $price <= $threshold
+            ? (float) SiteSetting::get('premium_case_discount_low', 10)
+            : (float) SiteSetting::get('premium_case_discount_high', 5);
+
+        return round($price * (1 - $discountPercent / 100), 2);
     }
 }

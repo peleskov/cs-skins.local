@@ -151,6 +151,14 @@ return [
             'replace_placeholders' => true,
         ],
 
+        'losreferidos' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/losreferidos.log'),
+            'level' => 'debug',
+            'days' => 30,
+            'replace_placeholders' => true,
+        ],
+
     ],
 
 ];

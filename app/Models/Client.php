@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -38,12 +39,18 @@ class Client extends Authenticatable
         'extension_token',
         'extension_token_generated_at',
         'notification_settings',
+        'trial_used',
+        'pin_code',
+        'pin_verified_at',
+        'avatar_border_color',
+        'nickname_color',
     ];
 
     protected $hidden = [
         'payment_password',
         'remember_token',
         'extension_token',
+        'pin_code',
     ];
 
     protected $casts = [
@@ -56,6 +63,8 @@ class Client extends Authenticatable
         'verification_expires_at' => 'datetime',
         'extension_token_generated_at' => 'datetime',
         'notification_settings' => 'array',
+        'trial_used' => 'boolean',
+        'pin_verified_at' => 'datetime',
     ];
 
     /**
@@ -529,5 +538,52 @@ class Client extends Authenticatable
             })
             ->with(['tradeOffer', 'seller'])
             ->get();
+    }
+
+    public function loginHistories(): HasMany
+    {
+        return $this->hasMany(LoginHistory::class)->orderByDesc('created_at');
+    }
+
+    // ========== PREMIUM-подписка ==========
+
+    public function subscription(): HasOne
+    {
+        return $this->hasOne(Subscription::class)->where('is_active', true)->latest();
+    }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    public function hasActiveSubscription(): bool
+    {
+        $subscription = $this->subscription;
+
+        return $subscription && $subscription->isValid();
+    }
+
+    public function isPremium(): bool
+    {
+        return $this->hasActiveSubscription();
+    }
+
+    public function premiumFeatureEnabled(string $feature): bool
+    {
+        $subscription = $this->subscription;
+
+        if (!$subscription || !$subscription->isValid()) {
+            return false;
+        }
+
+        return $subscription->isFeatureEnabled($feature);
+    }
+
+    // ========== Реферальная система ==========
+
+    public function referral(): HasOne
+    {
+        return $this->hasOne(Referral::class);
     }
 }

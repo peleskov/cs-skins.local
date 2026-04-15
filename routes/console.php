@@ -80,3 +80,16 @@ Schedule::job(new \App\Jobs\ReleaseSettledOrders())
     ->everyFiveMinutes()
     ->onOneServer()
     ->withoutOverlapping();
+
+// Деактивация просроченных PREMIUM-подписок каждую минуту
+Schedule::job(new \App\Jobs\ExpireSubscriptions())
+    ->everyMinute()
+    ->onOneServer()
+    ->withoutOverlapping();
+
+// Обработка автопродлений подписок ежедневно
+Schedule::command('subscriptions:process-renewals')
+    ->daily()
+    ->onOneServer()
+    ->withoutOverlapping()
+    ->runInBackground();

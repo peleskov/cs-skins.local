@@ -19,6 +19,8 @@ class Payment extends Model
         'currency',
         'payment_type',
         'promocode_id',
+        'payable_id',
+        'payable_type',
         'payment_url',
         'status',
         'webhook_data',
@@ -46,6 +48,14 @@ class Payment extends Model
     const TYPE_CARD = 'card';
     const TYPE_SBP = 'sbp';
     const TYPE_TEST = 'test'; // For testing in dev environment
+
+    /**
+     * Полиморфная связь (SubscriptionPlan и т.д.)
+     */
+    public function payable()
+    {
+        return $this->morphTo();
+    }
 
     /**
      * Relationship with Client

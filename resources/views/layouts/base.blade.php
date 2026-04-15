@@ -54,6 +54,9 @@
 >
     @yield('body')
 
+    <!-- UTM-трекинг партнёрской программы -->
+    <script src="{{ asset('js/lr-tracking.js') }}"></script>
+
     <!-- Scripts -->
     <script src="{{ asset('js/vendors/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('js/swiper-bundle.min.js') }}"></script>

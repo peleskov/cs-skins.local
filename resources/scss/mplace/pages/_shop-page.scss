@@ -133,15 +133,11 @@
             .checkbox-animated {
               cursor: pointer;
               position: relative;
-              margin-right: calc(
-                6px + (16 - 6) * ((100vw - 992px) / (1920 - 992))
-              );
+              margin-right: calc(6px + (16 - 6) * ((100vw - 992px) / (1920 - 992)));
               height: 100%;
 
               [dir="rtl"] & {
-                margin-left: calc(
-                  6px + (16 - 6) * ((100vw - 992px) / (1920 - 992))
-                );
+                margin-left: calc(6px + (16 - 6) * ((100vw - 992px) / (1920 - 992)));
                 margin-right: unset;
               }
 
@@ -208,9 +204,7 @@
               }
 
               .name {
-                font-size: calc(
-                  15px + (17 - 15) * ((100vw - 320px) / (1920 - 320))
-                );
+                font-size: calc(15px + (17 - 15) * ((100vw - 320px) / (1920 - 320)));
                 color: rgba(var(--dark-text), 1);
                 -webkit-line-clamp: 1;
                 -webkit-box-orient: vertical;
@@ -221,9 +215,7 @@
 
               .number {
                 color: rgba(var(--content-color), 1);
-                font-size: calc(
-                  14px + (16 - 14) * ((100vw - 320px) / (1920 - 320))
-                );
+                font-size: calc(14px + (16 - 14) * ((100vw - 320px) / (1920 - 320)));
               }
 
               .rating {
@@ -503,6 +495,7 @@
         &:focus {
           color: rgba(var(--theme-color), 1);
           box-shadow: none;
+          color: #fff;
         }
       }
     }

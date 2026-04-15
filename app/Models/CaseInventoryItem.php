@@ -23,10 +23,12 @@ class CaseInventoryItem extends Model
         'source_type',
         'source_id',
         'status',
+        'is_anti_unluck',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'is_anti_unluck' => 'boolean',
     ];
 
     public function client(): BelongsTo

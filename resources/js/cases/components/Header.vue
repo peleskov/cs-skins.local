@@ -47,7 +47,8 @@
                     <a :href="routes.profile + '#balance'" class="btn-add_balance"></a>
                 </div>
                 <div class="col-auto">
-                    <a :href="routes.caseInventory" class="avatar">
+                    <a :href="routes.caseInventory" class="avatar"
+                        :style="user.avatar_border_color ? { border: '2px solid ' + user.avatar_border_color } : {}">
                         <img class="img-fluid" :src="user.steam_avatar" alt="profile">
                     </a>
                 </div>

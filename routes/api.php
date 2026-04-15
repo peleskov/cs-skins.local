@@ -22,6 +22,10 @@ Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle'])
 // Payment webhook (не требует авторизации и CSRF)
 Route::post('/webhook/payment', [\App\Http\Controllers\DepositController::class, 'handleWebhook'])->name('webhook.payment');
 
+// Партнёрская программа — API создания партнёра (LR → мы)
+Route::post('/partners', [\App\Http\Controllers\PartnerController::class, 'store'])
+    ->middleware('throttle:api-action');
+
 // API для браузерного расширения (без web middleware)
 Route::prefix('ext-api')->name('extension.')->middleware('extension.cors')->controller(ExtensionController::class)->group(function () {
     Route::post('/auth', 'authenticateExtension')->name('auth');

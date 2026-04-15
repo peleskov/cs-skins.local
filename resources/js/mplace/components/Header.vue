@@ -97,11 +97,15 @@
 
 					<!-- Профиль или вход -->
 					<div v-if="user" class="profile-part dropdown-button order-md-2">
-						<img class="img-fluid profile-pic" :src="user.steam_avatar" alt="profile"
-							style="width: 40px; height: 40px; border-radius: 50%;">
+						<div class="position-relative">
+							<img class="img-fluid profile-pic" :src="user.steam_avatar" alt="profile"
+								:style="{ width: '40px', height: '40px', borderRadius: '50%', border: user.avatar_border_color ? '2px solid ' + user.avatar_border_color : '' }">
+						</div>
 						<div>
 							<h6 class="fw-normal">{{ translate('auth.hello') }}</h6>
-							<h5 class="fw-medium">{{ user.name }}</h5>
+							<h5 class="fw-medium" :style="user.nickname_color ? { color: user.nickname_color } : {}">{{
+								user.name }}
+							</h5>
 						</div>
 						<div class="onhover-box onhover-sm">
 							<ul class="menu-list">
@@ -112,7 +116,8 @@
 								</li>
 							</ul>
 							<div class="bottom-btn">
-								<a v-if="isWebStoreExtension" :href="extensionDownloadUrl" target="_blank" rel="noopener" class="dropdown-item">
+								<a v-if="isWebStoreExtension" :href="extensionDownloadUrl" target="_blank"
+									rel="noopener" class="dropdown-item">
 									<i class="ri-chrome-line me-2"></i>Расширение
 								</a>
 								<a v-else class="dropdown-item" href="#" data-bs-toggle="modal"
@@ -144,9 +149,11 @@
 			<div v-if="user" class="mb-3 pb-3 border-bottom">
 				<div class="d-flex align-items-center mb-3">
 					<img class="rounded-circle me-2" :src="user.steam_avatar" alt="profile"
-						style="width: 50px; height: 50px;">
+						:style="{ width: '50px', height: '50px', border: user.avatar_border_color ? '2px solid ' + user.avatar_border_color : '' }">
 					<div class="flex-grow-1">
-						<div class="fw-medium content-color">{{ user.name }}</div>
+						<div class="fw-medium content-color"
+							:style="user.nickname_color ? { color: user.nickname_color } : {}">{{ user.name }} <span
+								v-if="user.is_premium" class="badge-premium">VIP</span></div>
 						<small class="text-muted">{{ user.email || 'Email не указан' }}</small>
 					</div>
 				</div>

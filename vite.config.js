@@ -48,6 +48,7 @@ export default defineConfig({
             output: {
                 manualChunks: {
                     vue: ['vue'],
+                    'date-fns': ['date-fns', '@vuepic/vue-datepicker'],
                 }
             }
         }

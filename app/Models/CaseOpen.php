@@ -17,6 +17,7 @@ class CaseOpen extends Model
         'balance_used',
         'bonus_balance_used',
         'is_free',
+        'is_anti_unluck',
     ];
 
     protected $casts = [
@@ -24,6 +25,7 @@ class CaseOpen extends Model
         'balance_used' => 'decimal:2',
         'bonus_balance_used' => 'decimal:2',
         'is_free' => 'boolean',
+        'is_anti_unluck' => 'boolean',
         'created_at' => 'datetime',
     ];
 

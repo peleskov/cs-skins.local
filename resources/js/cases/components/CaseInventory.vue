@@ -5,11 +5,16 @@
 			<div class="col-md-4">
 				<div class="w-100 h-100 card card-info-block">
 					<div class="card-header d-flex align-items-center gap-2">
-						<div class="avatar">
+						<div class="avatar position-relative"
+							:style="user.avatar_border_color ? { 'border-color': user.avatar_border_color } : {}">
 							<img class="img-fluid" :src="user.avatar" alt="profile">
+							<!--
+							<span v-if="user.is_premium" class="badge-premium">VIP</span>
+							-->
 						</div>
 						<div>
-							<p class="mb-2">{{ user.name }}</p>
+							<p class="mb-2" :style="user.nickname_color ? { color: user.nickname_color } : {}">{{
+								user.name }}</p>
 							<span>ID #{{ user.id }}</span>
 						</div>
 					</div>
@@ -162,7 +167,10 @@
 											<i class="ico withdraw"></i>Вывести
 										</button>
 									</div>
-									<span class="price align-self-start" v-html="formatPrice(item.price)"></span>
+									<div class="d-flex align-items-center justify-content-between">
+										<span class="price align-self-start" v-html="formatPrice(item.price)"></span>
+										<span v-if="item.is_anti_unluck" class="badge-anti-unluck">Анти-анлак</span>
+									</div>
 								</template>
 								<template v-else>
 									<div class="badge" :class="item.status">

@@ -341,7 +341,12 @@ class OrderObserver
             return (float) $this->getSetting('auction_fee_percent', 5);
         }
 
-        // P2P маркетплейс (по умолчанию)
+        // P2P маркетплейс — проверяем PREMIUM продавца
+        $seller = $order->seller;
+        if ($seller && $seller->premiumFeatureEnabled('marketplace_fee')) {
+            return (float) $this->getSetting('premium_marketplace_fee', 6);
+        }
+
         return (float) $this->getSetting('marketplace_fee_percent', 5);
     }
 

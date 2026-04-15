@@ -70,7 +70,8 @@
 								:class="sidebarCollapsed ? 'col-lg-4 col-xl-3' : 'col-6 col-lg-4 col-xl-2'">
 								<div class="category-case-box d-flex flex-column align-items-center h-100">
 									<!-- Бейджи -->
-									<div class="case-badges" v-if="case_item.label_hot || case_item.label_new || case_item.label_limited || case_item.label_free">
+									<div class="case-badges"
+										v-if="case_item.label_hot || case_item.label_new || case_item.label_limited || case_item.label_free">
 										<span v-if="case_item.label_hot" class="case-badge case-badge-hot">
 											<i class="case-badge-icon case-badge-icon-hot"></i>
 											<span>HOT</span>
@@ -96,8 +97,17 @@
 									<a :href="`/cases/${case_item.slug}`" class="mb-4 flex-fill">
 										<h3 class="text-white text-center">{{ case_item.name }}</h3>
 									</a>
-									<a :href="`/cases/${case_item.slug}`" class="btn btn-quaternary"
-										v-html="formatPrice(case_item.price, 'RUB', false, false)"></a>
+									<a :href="`/cases/${case_item.slug}`" class="btn btn-quaternary">
+										<span
+											v-if="case_item.premium_price && case_item.premium_price < case_item.price"
+											class="case-discount-price">
+											<span
+												v-html="formatPrice(case_item.premium_price, 'RUB', false, false)"></span>
+											<span class="original-price"
+												v-html="formatPrice(case_item.price, 'RUB', false, false)"></span>
+										</span>
+										<span v-else v-html="formatPrice(case_item.price, 'RUB', false, false)"></span>
+									</a>
 								</div>
 							</div>
 						</div>

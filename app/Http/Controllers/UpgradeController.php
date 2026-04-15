@@ -53,6 +53,9 @@ class UpgradeController extends Controller
             'avatar' => $client->steam_avatar,
             'balance' => (float) $client->balance,
             'bonus_balance' => (float) $client->bonus_balance,
+            'avatar_border_color' => $client->avatar_border_color,
+            'nickname_color' => $client->nickname_color,
+            'is_premium' => $client->isPremium(),
         ];
 
         // Настройки апгрейда из сервиса

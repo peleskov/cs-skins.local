@@ -4,7 +4,44 @@
 			<div class="loader-line"></div>
 			<h3>Информация профиля</h3>
 		</div>
-		<ul class="profile-details-list">
+
+		<!-- Под-вкладки -->
+		<ul class="nav nav-tabs tab-style1 mb-4 pe-4" role="tablist">
+			<li class="nav-item" role="presentation">
+				<button class="nav-link" :class="{ active: subTab === 'main' }" type="button" role="tab"
+					@click="subTab = 'main'">
+					Основное
+				</button>
+			</li>
+			<li class="nav-item" role="presentation">
+				<button class="nav-link" :class="{ active: subTab === 'premium' }" type="button" role="tab"
+					@click="subTab = 'premium'">
+					Премиум
+				</button>
+			</li>
+			<li class="nav-item" role="presentation">
+				<button class="nav-link" :class="{ active: subTab === 'history' }" type="button" role="tab"
+					@click="subTab = 'history'">
+					История заходов
+				</button>
+			</li>
+			<li v-if="subTab === 'history'" class="nav-item ms-auto align-self-center" role="presentation">
+				<VueDatePicker v-model="historyDateRange" range :enable-time-picker="false" auto-apply :locale="ruLocale" >
+					<template #trigger>
+						<button class="btn-calendar" type="button"></button>
+					</template>
+				</VueDatePicker>
+			</li>
+		</ul>
+
+		<!-- Контент под-вкладки "Премиум" -->
+		<ProfilePremium v-if="subTab === 'premium'" :client="client" @update-client="$emit('update-client', $event)" />
+
+		<!-- Контент под-вкладки "История заходов" -->
+		<ProfileLoginHistory v-if="subTab === 'history'" :client="client" :date-range="historyDateRange" />
+
+		<!-- Контент под-вкладки "Основное" -->
+		<ul v-show="subTab === 'main'" class="profile-details-list">
 			<!-- Name -->
 			<li>
 				<div class="profile-content">
@@ -332,9 +369,18 @@
 <script>
 import axios from 'axios';
 import { formatPrice, getTimeRemaining, copyToClipboard } from '../../../shared/utils/helpers';
+import ProfilePremium from './Premium.vue';
+import ProfileLoginHistory from './LoginHistory.vue';
+import { VueDatePicker } from '@vuepic/vue-datepicker';
+import '@vuepic/vue-datepicker/dist/main.css';
 
 export default {
 	name: 'ProfileInfo',
+	components: {
+		ProfilePremium,
+		ProfileLoginHistory,
+		VueDatePicker
+	},
 	props: {
 		client: {
 			type: Object,
@@ -347,6 +393,10 @@ export default {
 	},
 	data() {
 		return {
+			subTab: 'main',
+			historyDateRange: null,
+			ruLocale: null,
+
 			// Email
 			emailForm: {
 				email: ''
@@ -729,7 +779,10 @@ export default {
 		}
 	},
 
-	mounted() {
+	async mounted() {
+		const { ru } = await import('date-fns/locale/ru');
+		this.ruLocale = ru;
+
 		// Initialize email resend timer if needed
 		if (this.client.email && !this.client.email_verified_at && this.client.email_verification_sent_at) {
 			const sentAt = new Date(this.client.email_verification_sent_at);

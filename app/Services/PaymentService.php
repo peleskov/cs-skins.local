@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Models\Client;
 use App\Models\Payment;
 use App\Models\Promocode;
+use App\Models\SubscriptionPlan;
 use App\Models\Transaction;
+use App\Services\LosReferidosService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -117,6 +119,129 @@ class PaymentService
             return [
                 'success' => false,
                 'message' => 'Ошибка создания платежа. Попробуйте позже.'
+            ];
+        }
+    }
+
+    /**
+     * Создать платёж за PREMIUM-подписку
+     */
+    public function createSubscriptionPayment(Client $client, SubscriptionPlan $plan): array
+    {
+        try {
+            // Проверка триала
+            if ($plan->is_trial && $client->trial_used) {
+                return [
+                    'success' => false,
+                    'message' => 'Триал уже использован',
+                ];
+            }
+
+            // Тестовый платёж — сразу завершаем без эквайринга
+            if (\App\Models\SiteSetting::get('test_payment_enabled', false)) {
+                return $this->createTestSubscriptionPayment($client, $plan);
+            }
+
+            if (!$this->isPaymentTypeEnabled('card')) {
+                return [
+                    'success' => false,
+                    'message' => 'Оплата картой временно недоступна',
+                ];
+            }
+
+            $orderId = Payment::generateOrderId();
+
+            $data = [
+                'order_id' => $orderId,
+                'amount' => (float) $plan->price,
+                'currency' => config('payment.default_currency', 'RUB'),
+            ];
+
+            $acquiringResult = $this->createAcquiringOrderIsForm($data);
+
+            if (!$acquiringResult['success']) {
+                return $acquiringResult;
+            }
+
+            $payment = Payment::create([
+                'client_id' => $client->id,
+                'order_id' => $orderId,
+                'merchant_order_id' => $acquiringResult['OrderId'],
+                'amount' => $plan->price,
+                'currency' => config('payment.default_currency', 'RUB'),
+                'status' => Payment::STATUS_CREATED,
+                'payment_type' => Payment::TYPE_CARD,
+                'payable_type' => SubscriptionPlan::class,
+                'payable_id' => $plan->id,
+                'expires_at' => now()->addMinutes(config('payment.form_lifetime_minutes', 30)),
+            ]);
+
+            Log::info('Платёж за подписку создан', [
+                'client_id' => $client->id,
+                'plan' => $plan->name,
+                'payment_id' => $payment->id,
+            ]);
+
+            return [
+                'success' => true,
+                'payment_id' => $payment->id,
+                'payment_form_url' => $acquiringResult['payment_form_url'],
+                'order_id' => $payment->merchant_order_id,
+                'amount' => $payment->amount,
+                'expires_at' => $payment->expires_at,
+            ];
+        } catch (Exception $e) {
+            Log::error('Ошибка создания платежа за подписку', [
+                'client_id' => $client->id,
+                'plan_id' => $plan->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Ошибка создания платежа. Попробуйте позже.',
+            ];
+        }
+    }
+
+    /**
+     * Тестовый платёж за подписку — сразу завершается без эквайринга
+     */
+    private function createTestSubscriptionPayment(Client $client, SubscriptionPlan $plan): array
+    {
+        try {
+            $orderId = Payment::generateOrderId();
+
+            $payment = Payment::create([
+                'client_id' => $client->id,
+                'order_id' => $orderId,
+                'merchant_order_id' => 'TEST_' . $orderId,
+                'amount' => $plan->price,
+                'currency' => config('payment.default_currency', 'RUB'),
+                'status' => Payment::STATUS_CREATED,
+                'payment_type' => Payment::TYPE_TEST,
+                'payable_type' => SubscriptionPlan::class,
+                'payable_id' => $plan->id,
+            ]);
+
+            $this->completePurchase($payment);
+
+            return [
+                'success' => true,
+                'payment_id' => $payment->id,
+                'test_payment' => true,
+                'message' => 'Тестовый платеж за подписку выполнен',
+            ];
+        } catch (Exception $e) {
+            Log::error('Test subscription payment failed', [
+                'client_id' => $client->id,
+                'plan_id' => $plan->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Ошибка тестового платежа: ' . $e->getMessage(),
             ];
         }
     }
@@ -416,26 +541,71 @@ class PaymentService
     }
 
     /**
-     * Complete purchase and credit client balance
+     * Complete purchase — различаем по payable_type
      */
     private function completePurchase(Payment $payment): void
     {
         if ($payment->isPaid()) {
-            return; // Already processed
+            return;
         }
 
+        // Платёж за подписку
+        if ($payment->payable instanceof SubscriptionPlan) {
+            $this->completeSubscriptionPurchase($payment);
+            return;
+        }
+
+        // Пополнение баланса (как раньше)
+        $this->completeDepositPurchase($payment);
+    }
+
+    /**
+     * Активация подписки после успешной оплаты
+     */
+    private function completeSubscriptionPurchase(Payment $payment): void
+    {
         DB::transaction(function () use ($payment) {
-            // Credit client balance
+            $subscriptionService = app(SubscriptionService::class);
+            $subscription = $subscriptionService->purchase($payment->client, $payment->payable, $payment->id);
+
+            $payment->markAsPaid();
+
+            // Запускаем получение токена подписки через 10 сек
+            if (!$subscription->subscription_token) {
+                \App\Jobs\FetchSubscriptionToken::dispatch($subscription)
+                    ->delay(now()->addSeconds(10));
+            }
+
+            // LR-события для подписки: subscription или rebill
+            $referral = $payment->client->referral;
+            if ($referral && $referral->is_active) {
+                $lrService = app(LosReferidosService::class);
+                $hadSubscription = $payment->client->subscription
+                    && $payment->client->subscription->id !== $subscription->id;
+
+                if ($hadSubscription) {
+                    $lrService->sendRebill($referral, $payment);
+                } else {
+                    $lrService->sendSubscription($referral, $payment);
+                }
+            }
+        });
+    }
+
+    /**
+     * Зачисление на баланс после успешной оплаты
+     */
+    private function completeDepositPurchase(Payment $payment): void
+    {
+        DB::transaction(function () use ($payment) {
             $payment->client->credit($payment->amount);
 
-            // Determine payment method description
             $paymentMethodName = match ($payment->payment_type) {
                 Payment::TYPE_TEST => 'тестовый платеж',
                 Payment::TYPE_SBP => 'СБП',
                 default => 'картой',
             };
 
-            // Create transaction record
             Transaction::create([
                 'client_id' => $payment->client_id,
                 'type' => Transaction::TYPE_DEPOSIT,
@@ -450,7 +620,6 @@ class PaymentService
                 ],
             ]);
 
-            // Apply promocode if exists
             if ($payment->promocode_id) {
                 $promocode = Promocode::find($payment->promocode_id);
                 if ($promocode) {
@@ -459,8 +628,14 @@ class PaymentService
                 }
             }
 
-            // Mark payment as paid
             $payment->markAsPaid();
+
+            // LR-событие: deposit (пополнение баланса)
+            $referral = $payment->client->referral;
+            if ($referral && $referral->is_active) {
+                $lrService = app(LosReferidosService::class);
+                $lrService->sendDeposit($referral, $payment);
+            }
         });
     }
 
@@ -531,6 +706,180 @@ class PaymentService
                 'error' => $e->getMessage(),
             ]);
             return false;
+        }
+    }
+
+    /**
+     * Получить данные подписки (SubscriptionToken, MemberId) по OrderId
+     */
+    public function getSubscriptionDetails(string $orderId): ?array
+    {
+        try {
+            $response = Http::timeout(30)
+                ->withToken($this->bearerToken)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'x-api-key' => $this->apiKey,
+                ])
+                ->post($this->baseUrl . '/payments/ips/subscription', [
+                    'OrderId' => $orderId,
+                ]);
+
+            if ($response->failed()) {
+                Log::error('Ошибка получения данных подписки', [
+                    'order_id' => $orderId,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                return null;
+            }
+
+            $data = $response->json();
+            $details = $data['SubscriptionDetails'] ?? [];
+            $subscriptionToken = $details['SubscriptionToken'] ?? null;
+            $memberId = $details['MemberId'] ?? null;
+
+            // Проверяем на placeholder-значения
+            $isFakeToken = $subscriptionToken && preg_match('/^0+$/', $subscriptionToken);
+            $isFakeMemberId = $memberId == 4294967295;
+
+            if ($isFakeToken || $isFakeMemberId) {
+                Log::warning('Получены placeholder данные подписки', [
+                    'order_id' => $orderId,
+                    'subscription_token' => $subscriptionToken,
+                    'member_id' => $memberId,
+                ]);
+                $subscriptionToken = null;
+                $memberId = null;
+            }
+
+            Log::info('Данные подписки получены', [
+                'order_id' => $orderId,
+                'token_received' => !empty($subscriptionToken),
+                'member_id_received' => !empty($memberId),
+            ]);
+
+            return [
+                'subscription_token' => $subscriptionToken,
+                'member_id' => $memberId,
+            ];
+        } catch (Exception $e) {
+            Log::error('Ошибка получения данных подписки', [
+                'order_id' => $orderId,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Автоматическое списание для продления подписки по SubscriptionToken
+     */
+    public function chargeSubscriptionRenewal(\App\Models\Subscription $subscription): Payment
+    {
+        $client = $subscription->client;
+        $plan = $subscription->plan;
+
+        if (!$subscription->subscription_token) {
+            throw new Exception('Отсутствует токен подписки для автоматического списания');
+        }
+
+        if (!$plan) {
+            throw new Exception('Не найден тарифный план подписки');
+        }
+
+        $orderId = Payment::generateOrderId();
+
+        $payment = Payment::create([
+            'client_id' => $client->id,
+            'order_id' => $orderId,
+            'amount' => $plan->price,
+            'currency' => config('payment.default_currency', 'RUB'),
+            'status' => Payment::STATUS_CREATED,
+            'payment_type' => Payment::TYPE_CARD,
+            'payable_type' => SubscriptionPlan::class,
+            'payable_id' => $plan->id,
+            'expires_at' => now()->addMinutes(15),
+        ]);
+
+        try {
+            // Шаг 1: Создаём заказ в эквайринге
+            $createResponse = Http::timeout(30)
+                ->withToken($this->bearerToken)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'x-api-key' => $this->apiKey,
+                ])
+                ->post($this->baseUrl . '/payments/create', [
+                    'MerchantOrderId' => $orderId,
+                    'Currency' => config('payment.default_currency', 'RUB'),
+                    'Amount' => (int) round($plan->price * 100),
+                    'Type' => 'PayIn',
+                    'PaymentTypes' => [],
+                    'CallbackUrl' => route('webhook.payment'),
+                    'LifeTime' => 900,
+                    'IsForm' => false,
+                ]);
+
+            if ($createResponse->failed()) {
+                throw new Exception('Ошибка создания заказа для продления: ' . $createResponse->body());
+            }
+
+            $createData = $createResponse->json();
+            $acquiringOrderId = $createData['Order']['OrderId'] ?? null;
+
+            if (!$acquiringOrderId) {
+                throw new Exception('Не получен OrderId для продления подписки');
+            }
+
+            // Шаг 2: Автоматическое списание по токену подписки
+            $chargeResponse = Http::timeout(30)
+                ->withToken($this->bearerToken)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'x-api-key' => $this->apiKey,
+                ])
+                ->post($this->baseUrl . '/payments/ips/qrcData', [
+                    'OrderId' => $acquiringOrderId,
+                    'QrcType' => '02',
+                    'TemplateVersion' => '01',
+                    'QrTtl' => '15',
+                    'Description' => "Автопродление PREMIUM-подписки «{$plan->name}»",
+                    'SubscriptionDetails' => [
+                        'NeedSubscription' => false,
+                        'SubscriptionToken' => $subscription->subscription_token,
+                    ],
+                ]);
+
+            if ($chargeResponse->failed()) {
+                throw new Exception('Ошибка автоматического списания: ' . $chargeResponse->body());
+            }
+
+            $payment->update([
+                'merchant_order_id' => $acquiringOrderId,
+                'status' => Payment::STATUS_CREATED, // Ожидаем webhook
+            ]);
+
+            Log::info('Автоматическое списание за подписку инициировано', [
+                'subscription_id' => $subscription->id,
+                'client_id' => $client->id,
+                'payment_id' => $payment->id,
+                'order_id' => $acquiringOrderId,
+            ]);
+
+            return $payment;
+        } catch (Exception $e) {
+            Log::error('Ошибка автоматического списания за подписку', [
+                'subscription_id' => $subscription->id,
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            $payment->markAsFailed();
+            throw $e;
         }
     }
 }

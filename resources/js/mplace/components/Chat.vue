@@ -40,16 +40,21 @@
                 </div>
 
                 <div v-else>
-                    <div v-for="(message, index) in messages" :key="index" class="mb-2">
+                    <div v-for="message in messages" :key="message.id" class="mb-2">
                         <div class="message-wrap d-flex align-items-start">
-                            <img :src="message.client_avatar || '/images/default-avatar.png'"
-                                class="rounded-circle me-2" style="width: 30px; height: 30px; object-fit: cover;"
-                                :alt="message.client_name">
+                            <div class="position-relative me-2">
+                                <img :src="message.client_avatar || '/images/default-avatar.png'"
+                                    class="rounded-circle"
+                                    :style="{ width: '30px', height: '30px', objectFit: 'cover', border: message.client_avatar_border_color ? '2px solid ' + message.client_avatar_border_color : '' }"
+                                    :alt="message.client_name">
+                                <span v-if="message.client_is_premium" class="badge-premium">VIP</span>
+                            </div>
                             <div class="flex-grow-1">
-                                <strong class="client-name me-2 text-truncate d-block" style="max-width: 250px;">
+                                <strong class="client-name me-2 text-truncate d-block"
+                                    :style="{ maxWidth: '250px', color: message.client_nickname_color || '' }">
                                     {{ message.client_name }}
                                 </strong>
-                                <div class="message-text text-break" v-html="message.message"></div>
+                                <div class="message-text text-break" v-html="formatMessage(message)"></div>
                             </div>
                         </div>
                     </div>
@@ -180,6 +185,10 @@ export default {
 
             // Listen for new messages
             channel.listen('.message.sent', (e) => {
+                // Дедупликация по id — исключаем дубли от гонки WS/GET
+                if (e.id && this.messages.some((m) => m.id === e.id)) {
+                    return;
+                }
                 this.messages.push(e);
                 if (this.isCollapsed) {
                     this.unreadCount++;
@@ -202,7 +211,11 @@ export default {
             this.loading = true;
             try {
                 const response = await axios.get('/api/chat/messages');
-                this.messages = response.data.messages;
+                const loaded = response.data.messages || [];
+                // Мерж с уже накопленными WS-сообщениями (защита от гонки)
+                const loadedIds = new Set(loaded.map((m) => m.id));
+                const extras = this.messages.filter((m) => m.id && !loadedIds.has(m.id));
+                this.messages = [...loaded, ...extras];
             } catch (error) {
                 console.error('Failed to load messages:', error);
             } finally {
@@ -217,13 +230,6 @@ export default {
 
             this.sending = true;
             let message = this.newMessage;
-
-            // Заменяем эмодзи 🔗 на HTML ссылку на профиль
-            if (message.includes('🔗') && window.clientId) {
-                const profileLink = `<a href="/marketplace?seller_id=${window.clientId}" target="_blank">Мой профиль</a>`;
-                message = message.replace(/🔗/g, profileLink);
-            }
-
             this.newMessage = '';
 
             try {
@@ -304,6 +310,14 @@ export default {
                 day: 'numeric',
                 month: 'short'
             });
+        },
+        formatMessage(message) {
+            let text = message.message;
+            if (text.includes('🔗')) {
+                const profileLink = `<a href="/marketplace?seller_id=${message.client_id}" target="_blank">Мой профиль</a>`;
+                text = text.replace(/🔗/g, profileLink);
+            }
+            return text;
         },
         scrollToBottom() {
             if (this.$refs.messagesContainer) {

@@ -117,7 +117,7 @@ class ChatService
     public function getMessages(int $limit = 200): array
     {
         return Cache::remember('chat_messages', 10, function () use ($limit) {
-            return ChatMessage::with('client:id,name,steam_avatar')
+            return ChatMessage::with('client:id,name,steam_avatar,avatar_border_color,nickname_color')
                 ->orderBy('created_at', 'desc')
                 ->limit($limit)
                 ->get()

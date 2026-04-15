@@ -13,9 +13,11 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\FavoritesController;
 use App\Http\Controllers\ExtensionController;
 use App\Http\Controllers\AuctionController;
+use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\CaseController;
 use App\Http\Controllers\CaseInventoryController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\PartnerController;
 use App\Models\Currency;
 
 // Публичные маршруты
@@ -190,6 +192,23 @@ Route::prefix('api')->name('api.')->group(function () {
             Route::get('/ban-status', 'checkBanStatus')->name('ban-status')->middleware('throttle:api-read');
         });
 
+        // Подписка API
+        Route::prefix('subscription')->name('subscription.')->controller(SubscriptionController::class)->group(function () {
+            Route::get('/plans', 'plans')->name('plans')->middleware('throttle:api-read');
+            Route::get('/status', 'status')->name('status')->middleware('throttle:api-read');
+            Route::post('/purchase', 'purchase')->name('purchase')->middleware('throttle:api-critical');
+            Route::get('/payment-status/{paymentId}', 'paymentStatus')->name('payment-status')->middleware('throttle:api-read');
+            Route::post('/toggle-feature', 'toggleFeature')->name('toggle-feature')->middleware('throttle:api-action');
+            Route::post('/avatar-border-color', 'setAvatarBorderColor')->name('avatar-border-color')->middleware('throttle:api-action');
+            Route::post('/nickname-color', 'setNicknameColor')->name('nickname-color')->middleware('throttle:api-action');
+            Route::post('/pin-code', 'setPinCode')->name('pin-code.set')->middleware('throttle:api-action');
+            Route::delete('/pin-code', 'removePinCode')->name('pin-code.remove')->middleware('throttle:api-action');
+            Route::post('/pin-code-cooldown', 'setPinCodeCooldown')->name('pin-code-cooldown')->middleware('throttle:api-action');
+            Route::get('/login-history', 'loginHistory')->name('login-history')->middleware('throttle:api-read');
+            Route::post('/cancel', 'cancel')->name('cancel')->middleware('throttle:api-action');
+            Route::post('/toggle-auto-renewal', 'toggleAutoRenewal')->name('toggle-auto-renewal')->middleware('throttle:api-action');
+        });
+
         // Платежи API
         Route::prefix('deposit')->name('deposit.')->controller(\App\Http\Controllers\DepositController::class)->group(function () {
             Route::post('/payment-form', 'createPaymentForm')->name('payment-form')->middleware('throttle:api-critical');
@@ -265,6 +284,30 @@ Route::middleware(['auth:client'])->group(function () {
     Route::get('/api/favorites/check/{listing}', [FavoritesController::class, 'check'])->name('favorites.check')->middleware('throttle:api-read');
 });
 
+
+// Код-пароль при входе
+Route::get('/pin-code', function () {
+    if (!session('pin_code_pending')) {
+        return auth('client')->check()
+            ? redirect()->route('profile')
+            : redirect()->route('home');
+    }
+    return response()
+        ->view('auth.pin-code')
+        ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        ->header('Pragma', 'no-cache');
+})->name('pin-code.form');
+
+Route::post('/api/pin-code/verify', [SubscriptionController::class, 'verifyPinCode'])
+    ->name('pin-code.verify')
+    ->middleware('throttle:api-action');
+
+// Партнёрская программа — лендинги и оплата подписки
+Route::get('/l/{slug}', [PartnerController::class, 'landing'])->name('partner.landing');
+Route::post('/api/partner/purchase', [PartnerController::class, 'purchase'])->name('partner.purchase');
+Route::get('/api/partner/payment-status/{paymentId}', [PartnerController::class, 'checkPaymentStatus'])
+    ->name('partner.payment-status')
+    ->middleware('throttle:api-read');
 
 // Маршруты авторизации
 Route::prefix('auth')->name('auth.')->controller(AuthController::class)->group(function () {

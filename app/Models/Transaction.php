@@ -36,6 +36,7 @@ class Transaction extends Model
     const TYPE_VIRTUAL_ITEM_SALE = 'virtual_item_sale';
     const TYPE_UPGRADE_BET = 'upgrade_bet';
     const TYPE_PROMOCODE = 'promocode';
+    const TYPE_SUBSCRIPTION = 'subscription';
 
     const STATUS_PENDING = 'pending';
     const STATUS_COMPLETED = 'completed';

@@ -113,6 +113,24 @@ class ClientResource extends Resource
                         'en' => 'English',
                     ])
                     ->default('ru'),
+
+                \Filament\Schemas\Components\Section::make('Партнёр (LosReferidos)')
+                    ->schema([
+                        Forms\Components\Placeholder::make('partner_email')
+                            ->label('Email партнёра')
+                            ->content(fn (?Client $record): string => $record?->referral?->partner?->email ?? 'Нет'),
+                        Forms\Components\Placeholder::make('partner_link_id')
+                            ->label('Link ID')
+                            ->content(fn (?Client $record): string => $record?->referral?->link_id ?? '-'),
+                        Forms\Components\Placeholder::make('referral_external_id')
+                            ->label('External ID')
+                            ->content(fn (?Client $record): string => $record?->referral?->id ? (string) $record->referral->id : '-'),
+                        Forms\Components\Placeholder::make('referral_status')
+                            ->label('Статус')
+                            ->content(fn (?Client $record): string => $record?->referral ? ($record->referral->is_active ? 'Активен' : 'Неактивен') : 'Нет'),
+                    ])
+                    ->visibleOn('edit')
+                    ->collapsed(),
             ]);
     }
 

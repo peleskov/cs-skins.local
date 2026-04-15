@@ -4,7 +4,10 @@
         'id' => auth('client')->user()->id,
         'name' => auth('client')->user()->name,
         'steam_avatar' => auth('client')->user()->steam_avatar,
-        'balance' => auth('client')->user()->balance ?? 0
+        'balance' => auth('client')->user()->balance ?? 0,
+        'avatar_border_color' => auth('client')->user()->avatar_border_color,
+        'nickname_color' => auth('client')->user()->nickname_color,
+        'is_premium' => auth('client')->user()->isPremium()
      ]) : 'null' }}"
     data-routes="{{ json_encode([
         'home' => route('home'),

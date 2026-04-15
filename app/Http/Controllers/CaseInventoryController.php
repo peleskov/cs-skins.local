@@ -44,6 +44,7 @@ class CaseInventoryController extends Controller
                 'weapon_type' => $virtual->weapon_type,
                 'status' => $item->status,
                 'source_type' => $item->source_type,
+                'is_anti_unluck' => $item->is_anti_unluck,
                 'created_at' => $item->created_at->toISOString(),
             ];
         });
@@ -57,6 +58,9 @@ class CaseInventoryController extends Controller
             'balance' => (float) $client->balance,
             'bonus_balance' => (float) $client->bonus_balance,
             'trade_url' => $client->steam_trade_url,
+            'avatar_border_color' => $client->avatar_border_color,
+            'nickname_color' => $client->nickname_color,
+            'is_premium' => $client->isPremium(),
         ];
 
         // Любимый кейс (самый часто открываемый)
@@ -145,6 +149,7 @@ class CaseInventoryController extends Controller
                 'weapon_type' => $virtual->weapon_type,
                 'status' => $item->status,
                 'source_type' => $item->source_type,
+                'is_anti_unluck' => $item->is_anti_unluck,
                 'created_at' => $item->created_at->toISOString(),
             ];
         });

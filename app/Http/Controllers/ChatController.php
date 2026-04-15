@@ -86,23 +86,21 @@ class ChatController extends Controller
 
         // Отправка события через WebSocket
         $messageData = [
+            'id' => $message->id,
             'message' => $message->message,
             'client_id' => $message->client_id,
             'client_name' => $message->client_name,
             'client_avatar' => $message->client_avatar,
+            'client_avatar_border_color' => $message->client_avatar_border_color,
+            'client_nickname_color' => $message->client_nickname_color,
+            'client_is_premium' => $message->client_is_premium,
             'created_at' => $message->created_at->toISOString(),
         ];
         broadcast(new ChatMessageSent($messageData));
 
         return response()->json([
             'success' => true,
-            'message' => [
-                'message' => $message->message,
-                'client_id' => $message->client_id,
-                'client_name' => $message->client_name,
-                'client_avatar' => $message->client_avatar,
-                'created_at' => $message->created_at->toISOString(),
-            ],
+            'message' => $messageData,
         ]);
     }
 

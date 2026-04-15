@@ -44,6 +44,15 @@ class CaseController extends Controller
             ->orderBy('sort_order')
             ->get();
 
+        /** @var Client|null $client */
+        $client = Auth::guard('client')->user();
+        if ($client && $client->premiumFeatureEnabled('case_discount')) {
+            $caseService = app(CaseService::class);
+            $cases->each(function ($case) use ($client, $caseService) {
+                $case->premium_price = $caseService->getCasePrice($case, $client);
+            });
+        }
+
         return view('cases.index', compact('cases'));
     }
 
@@ -65,12 +74,15 @@ class CaseController extends Controller
         $caseService = app(CaseService::class);
 
         // Формируем данные для передачи в компонент
+        $premiumPrice = $client ? (float) $caseService->getCasePrice($case, $client) : null;
         $caseData = [
             'id' => $case->id,
             'name' => $case->name,
             'slug' => $case->slug,
             'description' => $case->description,
-            'price' => (float) $case->price,
+            'price' => $premiumPrice ?? (float) $case->price,
+            'original_price' => (float) $case->price,
+            'has_discount' => $premiumPrice !== null && $premiumPrice < (float) $case->price,
             'image_url' => $case->image_url,
             'case_type' => $case->case_type,
             'tiers' => $case->tiers->map(function ($tier) {
@@ -147,6 +159,15 @@ class CaseController extends Controller
             ->orderBy('sort_order')
             ->get();
 
+        /** @var Client|null $client */
+        $client = Auth::guard('client')->user();
+        if ($client && $client->premiumFeatureEnabled('case_discount')) {
+            $caseService = app(CaseService::class);
+            $cases->each(function ($case) use ($client, $caseService) {
+                $case->premium_price = $caseService->getCasePrice($case, $client);
+            });
+        }
+
         return response()->json([
             'data' => $cases
         ]);
@@ -192,12 +213,15 @@ class CaseController extends Controller
             ];
         });
 
+        $premiumPrice = $client ? (float) $caseService->getCasePrice($case, $client) : null;
         $data = [
             'id' => $case->id,
             'name' => $case->name,
             'slug' => $case->slug,
             'description' => $case->description,
-            'price' => (float) $case->price,
+            'price' => $premiumPrice ?? (float) $case->price,
+            'original_price' => (float) $case->price,
+            'has_discount' => $premiumPrice !== null && $premiumPrice < (float) $case->price,
             'image_url' => $case->image_url,
             'case_type' => $case->case_type,
             'tiers' => $tiers,
@@ -285,6 +309,7 @@ class CaseController extends Controller
                     'image_url' => $virtual->image_url,
                     'rarity' => $virtual->rarity,
                     'rarity_color' => $virtual->rarity_color,
+                    'is_anti_unluck' => $item['is_anti_unluck'] ?? false,
                 ];
             });
 

@@ -27,6 +27,8 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\CheckMaintenanceMode::class,
             \App\Http\Middleware\SetLocale::class,
             \App\Http\Middleware\AddCspHeaders::class,
+            \App\Http\Middleware\CheckPinCode::class,
+            \App\Http\Middleware\TrackPartnerAttribution::class,
         ]);
 
         $middleware->alias([
@@ -35,12 +37,17 @@ return Application::configure(basePath: dirname(__DIR__))
             'extension.cors' => \App\Http\Middleware\ExtensionCors::class,
         ]);
 
+        // Исключаем партнёрские cookies из шифрования (нужен доступ из JS)
+        $middleware->encryptCookies(except: ['lr_partner_id', 'lr_link_id']);
+
         // Отключаем CSRF для API расширения, Telegram webhook и payment webhook
         $middleware->validateCsrfTokens(except: [
             'api/extension/*',
             'api/ext-api/*',
             'api/telegram/webhook',
-            'api/webhook/payment'
+            'api/webhook/payment',
+            'api/pin-code/verify',
+            'api/partners',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

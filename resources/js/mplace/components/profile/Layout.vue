@@ -4,12 +4,17 @@
 			<!-- Profile Sidebar -->
 			<div class="col-lg-3">
 				<div class="profile-sidebar sticky-top">
-					<div class="profile-cover">
-						<img class="img-fluid profile-pic" :src="client.steam_avatar || '/images/icons/p5.png'"
-							alt="profile">
+					<div class="profile-cover d-flex align-items-end justify-content-center">
+						<dvi class="position-relative" style="transform: translateY(45px);">
+							<img class="img-fluid profile-pic" :src="client.steam_avatar || '/images/icons/p5.png'"
+								alt="profile"
+								:style="client.avatar_border_color ? { 'background-color': client.avatar_border_color } : {}">
+							<span v-if="client.is_premium" class="badge-premium">VIP</span>
+						</dvi>
 					</div>
 					<div class="profile-name">
-						<h5 class="user-name">{{ client.name }}</h5>
+						<h5 class="user-name" :style="client.nickname_color ? { color: client.nickname_color } : {}">{{
+							client.name }}</h5>
 						<h6>{{ client.email || 'Email не указан' }}</h6>
 					</div>
 					<ul class="profile-list">
@@ -28,44 +33,34 @@
 			<!-- Profile Content -->
 			<div class="col-lg-9">
 				<!-- Profile Info Tab -->
-				<ProfileInfo v-if="activeTab === 'profile'" 
-					:client="client" 
-					:telegramBotName="telegramBotName"
+				<ProfileInfo v-if="activeTab === 'profile'" :client="client" :telegramBotName="telegramBotName"
 					@update-client="updateClient" />
 
 				<!-- Trading Tab -->
-				<ProfileTrading v-else-if="activeTab === 'trading'" 
-					:client="client" />
+				<ProfileTrading v-else-if="activeTab === 'trading'" :client="client" />
 
 				<!-- Inventory Tab -->
-				<ProfileInventory v-else-if="activeTab === 'inventory'" 
-					:client="client" 
+				<ProfileInventory v-else-if="activeTab === 'inventory'" :client="client"
 					@switch-to-trading="setActiveTab('trading')" />
 
 				<!-- Favorites Tab -->
-				<ProfileFavorites v-else-if="activeTab === 'favorites'" 
-					:client="client" />
+				<ProfileFavorites v-else-if="activeTab === 'favorites'" :client="client" />
 
 				<!-- Orders Tab -->
-				<ProfileOrders v-else-if="activeTab === 'orders'" 
-					:client="client" />
+				<ProfileOrders v-else-if="activeTab === 'orders'" :client="client" />
 
 				<!-- Sales Tab -->
-				<ProfileSales v-else-if="activeTab === 'sales'" 
-					:client="client" />
+				<ProfileSales v-else-if="activeTab === 'sales'" :client="client" />
 
 				<!-- Auctions Tab -->
-				<ProfileAuctions v-else-if="activeTab === 'auctions'" 
-					:client="client" />
+				<ProfileAuctions v-else-if="activeTab === 'auctions'" :client="client" />
 
 				<!-- Balance Tab -->
-				<ProfileBalance v-else-if="activeTab === 'balance'"
-					:client="client"
+				<ProfileBalance v-else-if="activeTab === 'balance'" :client="client"
 					:deposit-settings="depositSettings" />
 
 				<!-- Notifications Tab -->
-				<ProfileNotifications v-else-if="activeTab === 'notifications'"
-					:client="client"
+				<ProfileNotifications v-else-if="activeTab === 'notifications'" :client="client"
 					@update-client="updateClient" />
 
 				<!-- Other Tabs Placeholder -->
@@ -88,7 +83,6 @@ import ProfileSales from './Sales.vue';
 import ProfileAuctions from './Auctions.vue';
 import ProfileBalance from './Balance.vue';
 import ProfileNotifications from './Notifications.vue';
-
 export default {
 	name: 'ProfileLayout',
 	components: {
@@ -124,7 +118,7 @@ export default {
 	data() {
 		const profileTabs = window.profileTabs || {};
 		const validTabs = Object.keys(profileTabs);
-		
+
 		// Получаем начальную вкладку
 		const getInitialTab = () => {
 			// Проверяем, что мы в браузере

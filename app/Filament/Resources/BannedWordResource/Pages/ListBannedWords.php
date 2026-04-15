@@ -28,6 +28,7 @@ class ListBannedWords extends ListRecords
                         ->helperText('Файл с запрещёнными словами — по одному слову на строку или через запятую/точку с запятой'),
                 ])
                 ->action(function (array $data) {
+                    @set_time_limit(300);
                     $path = storage_path('app/public/' . $data['csv_file']);
 
                     if (!file_exists($path)) {
@@ -40,16 +41,18 @@ class ListBannedWords extends ListRecords
                     $words = preg_split('/[\r\n,;]+/', $content);
                     $words = array_filter(array_map('trim', $words));
                     $words = array_unique(array_map('mb_strtolower', $words));
+                    // Отфильтровываем по длине
+                    $words = array_filter($words, fn ($w) => mb_strlen($w) > 0 && mb_strlen($w) <= 100);
 
-                    $existing = BannedWord::pluck('word')->map(fn ($w) => mb_strtolower($w))->toArray();
-                    $new = array_diff($words, $existing);
+                    $existing = BannedWord::pluck('word')->map(fn ($w) => mb_strtolower($w))->all();
+                    $new = array_values(array_diff($words, $existing));
 
+                    $now = now();
                     $inserted = 0;
-                    foreach ($new as $word) {
-                        if (mb_strlen($word) > 0 && mb_strlen($word) <= 100) {
-                            BannedWord::create(['word' => $word]);
-                            $inserted++;
-                        }
+                    foreach (array_chunk($new, 500) as $chunk) {
+                        $rows = array_map(fn ($w) => ['word' => $w, 'created_at' => $now, 'updated_at' => $now], $chunk);
+                        BannedWord::insert($rows);
+                        $inserted += count($rows);
                     }
 
                     BannedWord::clearCache();

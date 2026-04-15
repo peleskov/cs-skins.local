@@ -57,4 +57,14 @@ return [
         'bot_name' => env('TELEGRAM_BOT_NAME'),
     ],
 
+    'losreferidos' => [
+        'adv_id' => env('LR_ADV_ID'),
+        'hash' => env('LR_HASH'),
+        'base_url' => env('LR_BASE_URL', 'https://app.losreferidos.com/adv_api'),
+    ],
+
+    'partner_api' => [
+        'secret' => env('PARTNER_API_SECRET'),
+    ],
+
 ];

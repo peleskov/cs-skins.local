@@ -86,7 +86,6 @@ class ChatController extends Controller
 
         // Отправка события через WebSocket
         $messageData = [
-            'id' => $message->id,
             'message' => $message->message,
             'client_id' => $message->client_id,
             'client_name' => $message->client_name,

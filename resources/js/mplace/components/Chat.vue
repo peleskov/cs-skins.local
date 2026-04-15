@@ -40,7 +40,7 @@
                 </div>
 
                 <div v-else>
-                    <div v-for="message in messages" :key="message.id" class="mb-2">
+                    <div v-for="message in messages" :key="messageFingerprint(message)" class="mb-2">
                         <div class="message-wrap d-flex align-items-start">
                             <div class="position-relative me-2">
                                 <img :src="message.client_avatar || '/images/default-avatar.png'"
@@ -185,8 +185,9 @@ export default {
 
             // Listen for new messages
             channel.listen('.message.sent', (e) => {
-                // Дедупликация по id — исключаем дубли от гонки WS/GET
-                if (e.id && this.messages.some((m) => m.id === e.id)) {
+                // Дедупликация по fingerprint — исключаем дубли от гонки WS/GET
+                const fp = this.messageFingerprint(e);
+                if (this.messages.some((m) => this.messageFingerprint(m) === fp)) {
                     return;
                 }
                 this.messages.push(e);
@@ -213,8 +214,8 @@ export default {
                 const response = await axios.get('/api/chat/messages');
                 const loaded = response.data.messages || [];
                 // Мерж с уже накопленными WS-сообщениями (защита от гонки)
-                const loadedIds = new Set(loaded.map((m) => m.id));
-                const extras = this.messages.filter((m) => m.id && !loadedIds.has(m.id));
+                const loadedFps = new Set(loaded.map((m) => this.messageFingerprint(m)));
+                const extras = this.messages.filter((m) => !loadedFps.has(this.messageFingerprint(m)));
                 this.messages = [...loaded, ...extras];
             } catch (error) {
                 console.error('Failed to load messages:', error);
@@ -318,6 +319,9 @@ export default {
                 text = text.replace(/🔗/g, profileLink);
             }
             return text;
+        },
+        messageFingerprint(m) {
+            return `${m.client_id}|${m.created_at}|${m.message}`;
         },
         scrollToBottom() {
             if (this.$refs.messagesContainer) {

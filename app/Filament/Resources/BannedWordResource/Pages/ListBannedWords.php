@@ -37,10 +37,13 @@ class ListBannedWords extends ListRecords
                     }
 
                     $content = file_get_contents($path);
+                    // Убираем UTF-8 BOM, если он есть в начале файла
+                    $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
                     // Разделители: перенос строки, запятая, точка с запятой
                     $words = preg_split('/[\r\n,;]+/', $content);
-                    $words = array_filter(array_map('trim', $words));
-                    $words = array_unique(array_map('mb_strtolower', $words));
+                    // Чистим невидимые символы (BOM, zero-width) и пробелы
+                    $words = array_map(fn ($w) => trim(preg_replace('/[\x{FEFF}\x{200B}-\x{200D}]/u', '', $w)), $words);
+                    $words = array_unique(array_map('mb_strtolower', array_filter($words)));
                     // Отфильтровываем по длине
                     $words = array_filter($words, fn ($w) => mb_strlen($w) > 0 && mb_strlen($w) <= 100);
 
@@ -51,8 +54,7 @@ class ListBannedWords extends ListRecords
                     $inserted = 0;
                     foreach (array_chunk($new, 500) as $chunk) {
                         $rows = array_map(fn ($w) => ['word' => $w, 'created_at' => $now, 'updated_at' => $now], $chunk);
-                        BannedWord::insert($rows);
-                        $inserted += count($rows);
+                        $inserted += BannedWord::insertOrIgnore($rows);
                     }
 
                     BannedWord::clearCache();

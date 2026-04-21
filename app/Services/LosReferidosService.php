@@ -10,7 +10,9 @@ use Illuminate\Support\Facades\Log;
 class LosReferidosService
 {
     protected string $advId;
+
     protected string $hash;
+
     protected string $baseUrl;
 
     public function __construct()
@@ -67,12 +69,13 @@ class LosReferidosService
     {
         $partner = $referral->partner;
 
-        if (!$partner || !$partner->is_active) {
+        if (! $partner || ! $partner->is_active) {
             Log::channel('losreferidos')->info('Событие не отправлено: партнёр неактивен', [
                 'referral_id' => $referral->id,
                 'partner_id' => $partner?->id,
                 'goal_name' => $goalName,
             ]);
+
             return;
         }
 
@@ -86,13 +89,22 @@ class LosReferidosService
 
         $params['order_id'] = $payment ? $payment->id : 0;
 
+        // Промокод, если был применён в этом платеже
+        if ($payment && $payment->promocode_id) {
+            $promocode = $payment->promocode;
+            if ($promocode) {
+                $params['promo_code'] = $promocode->code;
+                $params['amount'] = (float) $payment->amount;
+            }
+        }
+
         // Опциональные данные клиента
         $client = $referral->client;
         if ($client) {
             $params['client_name'] = $client->name ?? '';
         }
 
-        $url = "{$this->baseUrl}/{$this->advId}/?" . http_build_query($params);
+        $url = "{$this->baseUrl}/{$this->advId}/?".http_build_query($params);
 
         Log::channel('losreferidos')->info('Создание задачи на отправку события в LR', [
             'referral_id' => $referral->id,

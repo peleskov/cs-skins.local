@@ -39,7 +39,7 @@ class PromocodeForm
                                     ->hidden(fn ($record) => $record !== null)
                                     ->action(function ($set, $get) {
                                         $prefix = $get('code') ?? '';
-                                        $set('code', $prefix . Str::upper(Str::random(6)));
+                                        $set('code', $prefix.Str::upper(Str::random(6)));
                                     })
                             ),
 
@@ -113,6 +113,22 @@ class PromocodeForm
                 Toggle::make('is_active')
                     ->label('Активен')
                     ->default(true),
+
+                Section::make('LosReferidos')
+                    ->schema([
+                        TextInput::make('partner_id')
+                            ->label('ID партнёра')
+                            ->numeric()
+                            ->disabled()
+                            ->dehydrated(false),
+
+                        TextInput::make('lr_offer_id')
+                            ->label('ID оффера в LR')
+                            ->numeric()
+                            ->disabled()
+                            ->dehydrated(false),
+                    ])
+                    ->visible(fn ($record) => $record?->partner_id !== null),
             ]);
     }
 }

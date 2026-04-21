@@ -25,6 +25,12 @@ class PromocodesTable
                     ->sortable()
                     ->copyable(),
 
+                TextColumn::make('partner_id')
+                    ->label('Источник')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => $state ? "LR #{$state}" : 'Ручной')
+                    ->color(fn ($state) => $state ? 'warning' : 'gray'),
+
                 TextColumn::make('type')
                     ->label('Тип')
                     ->badge()
@@ -39,10 +45,9 @@ class PromocodesTable
 
                 TextColumn::make('value')
                     ->label('Значение')
-                    ->formatStateUsing(fn ($state, $record): string =>
-                        $record->type === Promocode::TYPE_PERCENT
+                    ->formatStateUsing(fn ($state, $record): string => $record->type === Promocode::TYPE_PERCENT
                             ? "{$state}%"
-                            : number_format($state, 0, '.', ' ') . ' ₽'
+                            : number_format($state, 0, '.', ' ').' ₽'
                     )
                     ->sortable(),
 
@@ -53,8 +58,7 @@ class PromocodesTable
 
                 TextColumn::make('usage')
                     ->label('Использовано')
-                    ->state(fn ($record): string =>
-                        $record->max_uses
+                    ->state(fn ($record): string => $record->max_uses
                             ? "{$record->used_count} / {$record->max_uses}"
                             : "{$record->used_count} / ∞"
                     ),

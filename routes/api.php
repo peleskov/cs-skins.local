@@ -26,6 +26,10 @@ Route::post('/webhook/payment', [\App\Http\Controllers\DepositController::class,
 Route::post('/partners', [\App\Http\Controllers\PartnerController::class, 'store'])
     ->middleware('throttle:api-action');
 
+// Партнёрская программа — webhook создания промокода (LR → мы)
+Route::post('/lr/promo-codes', [\App\Http\Controllers\LrPromoCodeWebhookController::class, 'store'])
+    ->middleware('throttle:api-action');
+
 // API для браузерного расширения (без web middleware)
 Route::prefix('ext-api')->name('extension.')->middleware('extension.cors')->controller(ExtensionController::class)->group(function () {
     Route::post('/auth', 'authenticateExtension')->name('auth');

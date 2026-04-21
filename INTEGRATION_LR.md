@@ -62,3 +62,27 @@ https://cs-skins.s1temaker.ru/l/premium?utm_medium=cpa&utm_source=partners&utm_c
 ```
 https://cs-skins.s1temaker.ru/cases?utm_medium=cpa&utm_source=partners&utm_content=1&utm_campaign=100
 ```
+
+---
+
+## 4. Webhook создания промокодов (LR → мы)
+
+**URL для кабинета LR (опция «Отправлять новые промокоды на URL»):**
+```
+https://cs-skins.s1temaker.ru/api/lr/promo-codes
+```
+
+**Headers:**
+```
+Content-Type: application/json
+X-Adv-Hash: <ваш API-hash>
+```
+
+**Формат тела** — как в документации API LR (`promo_code_created`).
+
+**Ответы:**
+- `200` — промокод создан
+- `403` — неверный `X-Adv-Hash`
+- `422` — ошибка валидации (дубликат кода, неизвестный партнёр и т.д.), тело содержит `message` + `errors`
+
+Таймаут обработки — до 10 секунд.

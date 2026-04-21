@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Promocode extends Model
 {
     const TYPE_PERCENT = 'percent';
+
     const TYPE_FIXED = 'fixed';
 
     protected $fillable = [
@@ -21,6 +23,8 @@ class Promocode extends Model
         'starts_at',
         'expires_at',
         'is_active',
+        'partner_id',
+        'lr_offer_id',
     ];
 
     protected $casts = [
@@ -44,6 +48,11 @@ class Promocode extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function partner(): BelongsTo
+    {
+        return $this->belongsTo(Partner::class);
+    }
+
     public function paidPayments(): HasMany
     {
         return $this->hasMany(Payment::class)->where('status', Payment::STATUS_PAID);
@@ -54,7 +63,7 @@ class Promocode extends Model
      */
     public function isActive(): bool
     {
-        if (!$this->is_active) {
+        if (! $this->is_active) {
             return false;
         }
 

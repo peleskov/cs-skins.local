@@ -24,17 +24,11 @@
 		left: 20px;
 	}
 
-	@media (max-width: 767px) {
-		bottom: 90px;
-	}
 
 	.arrow {
 		color: rgba(var(--white), 1);
 	}
 
 	&.menu-page {
-		@media (max-width: 991px) {
-			bottom: 70px;
-		}
 	}
 }

@@ -1,7 +1,7 @@
 @if(isset($cases) && $cases->count() > 0)
 <section class="banner-section section-b-space">
     <div class="container">
-        <div class="title text-center">
+        <div class="title text-center d-none d-lg-block">
             <h2>{{ __('home.cases') }}</h2>
             <div class="loader-line" style="left: calc(50% - 40px);"></div>
         </div>

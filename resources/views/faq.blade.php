@@ -13,12 +13,12 @@
             <p>Ответы на самые популярные вопросы</p>
         </div>
         <div class="row g-4">
-            <div class="col-xl-4">
+            <div class="col-xl-4 d-none d-lg-block">
                 <div class="side-img">
                     <img class="img-fluid img" src="{{ asset('images/faq.svg') }}" alt="faq">
                 </div>
             </div>
-            <div class="col-xl-8">
+            <div class="col col-xl-8">
                 <div class="accordion accordion-flush help-accordion" id="accordionFlushExample">
                     @php $counter = 1; @endphp
                     
@@ -72,6 +72,9 @@
                     @endforeach
 
             </div>
+        </div>
+        <div class="side-img d-lg-none">
+            <img class="img-fluid img" src="{{ asset('images/faq.svg') }}" alt="faq">
         </div>
     </div>
 </section>

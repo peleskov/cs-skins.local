@@ -1,10 +1,13 @@
 <template>
-	<section class="popular-restaurant banner-section section-b-space ratio3_2 overflow-hidden bg-white">
+	<section id="Checkout" class="popular-restaurant banner-section section-b-space ratio3_2 overflow-hidden bg-white">
 		<div class="container">
 			<div class="change-profile-content">
 				<div class="title">
-					<div class="loader-line"></div>
+					<div class="loader-line d-none d-lg-block"></div>
 					<h3>Оформление заказа</h3>
+					<p class="mp-cart-subtitle d-lg-none">{{ cartItems.length }} {{ pluralItems(cartItems.length) }} к
+						оплате</p>
+
 				</div>
 
 				<!-- Loading state -->
@@ -28,8 +31,45 @@
 
 				<!-- Checkout content -->
 				<div v-else class="product-box-section section-b-space">
+					<!-- Mobile: список карточек -->
+					<div class="mp-cart-list d-lg-none d-flex flex-column gap-3 mb-4">
+						<div v-for="item in cartItems" :key="'m-' + item.listing_id" class="mp-cart-card"
+							:class="item.item?.rarity ? 'mp-rarity-' + item.item.rarity : ''">
+							<div class="mp-cart-img"
+								:style="{ backgroundImage: 'url(' + (item.item?.image_url || '/images/skin_no_image.svg') + ')' }">
+							</div>
+							<div class="mp-cart-info">
+								<div class="mp-cart-top">
+									<h6 class="mp-cart-name">{{ item.item?.name }}</h6>
+								</div>
+								<div class="mp-cart-meta">
+									<span v-if="item.item?.rarity_translated">{{ item.item.rarity_translated }}</span>
+									<span v-if="item.wear_name">| {{ item.wear_name }}</span>
+								</div>
+								<div class="mp-cart-bottom">
+									<span class="mp-cart-price" v-html="formatPrice(item.price)"></span>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Mobile: итоги + оплата -->
+					<div class="mp-cart-summary d-lg-none">
+						<div class="mp-cart-row"><span>Предметы ({{ cartItems.length }})</span><strong
+								v-html="formatPrice(cartTotal)"></strong></div>
+						<div class="mp-cart-row"><span>Скидка</span><strong class="text-success"
+								v-html="formatPrice(0)"></strong></div>
+						<div class="mp-cart-row mp-cart-row-total"><span>СУММА</span><strong
+								v-html="formatPrice(cartTotal)"></strong></div>
+						<button class="mp-cart-pay" :class="{ disabled: isProcessing }" @click="placeOrder"
+							:disabled="isProcessing">
+							<i class="m-ico m-ico-pay"></i>
+							<span>{{ isProcessing ? 'ОБРАБАТЫВАЕМ…' : 'ОПЛАТИТЬ' }}</span>
+						</button>
+					</div>
+
 					<!-- Order summary -->
-					<div class="cart-summary mb-4 p-3 bg-light rounded">
+					<div class="cart-summary mb-4 p-3 bg-light rounded d-none d-lg-block">
 						<div class="row align-items-center">
 							<div class="col-md-8 mb-2 mb-md-0">
 								<h5 class="mb-1">Заказ на сумму: <strong class="text-primary"
@@ -47,7 +87,7 @@
 					</div>
 
 					<!-- Order items -->
-					<div class="product-details-box-list">
+					<div class="product-details-box-list d-none d-lg-block">
 						<div v-for="item in cartItems" :key="item.listing_id" class="product-details-box gap-2">
 							<div class="product-img"
 								:style="{ backgroundImage: 'url(' + (item.item?.image_url || '/images/skin_no_image.svg') + ')' }">
@@ -78,7 +118,7 @@
 						</div>
 					</div>
 
-					</div>
+				</div>
 			</div>
 		</div>
 	</section>
@@ -104,7 +144,7 @@
 								<span>
 									<strong>Заказ {{ order.order_number }}</strong>
 									<small class="text-muted d-block">Продавец: {{ order.seller?.name || 'Не указан'
-										}}</small>
+									}}</small>
 								</span>
 								<strong class="text-primary" v-html="formatPrice(order.total_amount)"></strong>
 							</div>
@@ -243,6 +283,13 @@ export default {
 
 		goToMarketplace() {
 			window.location.href = '/marketplace';
+		},
+
+		pluralItems(n) {
+			const mod10 = n % 10, mod100 = n % 100;
+			if (mod10 === 1 && mod100 !== 11) return 'предмет';
+			if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'предмета';
+			return 'предметов';
 		}
 	}
 }

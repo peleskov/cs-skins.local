@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 import path from 'path';
 
 export default defineConfig({
@@ -8,15 +9,25 @@ export default defineConfig({
         laravel({
             input: [
                 'resources/scss/mplace.scss',
+                'resources/scss/mplace-mobile.scss',
                 'resources/scss/cases.scss',
                 'resources/js/mplace.js',
+                'resources/js/mplace-mobile.js',
                 'resources/js/cases.js'
             ],
             refresh: ['resources/views/**'],
         }),
         vue(),
+        basicSsl(),
     ],
     server: {
+        https: true,
+        host: '0.0.0.0',
+        port: 5173,
+        cors: true,
+        hmr: {
+            host: 'localhost',
+        },
         watch: {
             ignored: ['**/node_modules/**', '**/vendor/**', '**/storage/**', '**/.git/**'],
         },
@@ -25,10 +36,9 @@ export default defineConfig({
         include: ['vue', 'axios', 'bootstrap'],
     },
     css: {
-        devSourcemap: false,
+        devSourcemap: true,
         preprocessorOptions: {
             scss: {
-                api: 'modern-compiler',
                 quietDeps: true,
                 silenceDeprecations: ['import'],
                 additionalData: `$public-path: '/';`
@@ -41,7 +51,7 @@ export default defineConfig({
         }
     },
     build: {
-        sourcemap: false,
+        sourcemap: true,
         minify: 'esbuild',
         target: 'es2020',
         rollupOptions: {

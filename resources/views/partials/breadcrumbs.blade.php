@@ -1,5 +1,5 @@
 <!-- page head section starts -->
-<section class="page-head-section">
+<section class="page-head-section d-none d-lg-block">
     <div class="container page-heading">
         <h2 class="h3 mb-3 text-white text-center">{{ $title }}</h2>
         <nav aria-label="breadcrumb">

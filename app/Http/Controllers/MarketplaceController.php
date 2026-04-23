@@ -369,7 +369,7 @@ class MarketplaceController extends Controller
         }
 
         // Пагинация
-        $perPage = min($request->get('per_page', 24), 50); // Максимум 50 за раз
+        $perPage = min((int) $request->get('per_page', 25), 100); // Максимум 100 за раз
         $listings = $query->paginate($perPage);
 
         // Добавляем переведённые значения редкости, wear_name и статусы корзины/избранного

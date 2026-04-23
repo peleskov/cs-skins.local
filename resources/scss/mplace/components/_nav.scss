@@ -40,23 +40,6 @@
     }
 
     .navbar-collapse {
-      @media (max-width: 767px) {
-        position: absolute;
-        top: 30px;
-        left: 0;
-        width: 100%;
-        padding: 10px 15px;
-        margin-top: 10px;
-        color: rgba(var(--white), 1);
-        background-color: rgba(var(--white), 1);
-        box-shadow: 0px 0px 15px 0px rgba(0, 0, 0, 0.04);
-        border-radius: 8px;
-
-        [dir="rtl"] & {
-          left: unset;
-          right: 0;
-        }
-      }
 
       @media (min-width: 767px) {
         display: flex;
@@ -147,23 +130,6 @@
     }
 
     .navbar-collapse {
-      @media (max-width: 992px) {
-        position: absolute;
-        top: 30px;
-        left: 0;
-        width: 100%;
-        padding: 10px 15px;
-        margin-top: 40px;
-        color: rgba(var(--white), 1);
-        background-color: rgba(var(--theme-color), 1);
-        box-shadow: 0px 0px 15px 0px rgba(0, 0, 0, 0.04);
-        border-radius: 8px;
-
-        [dir="rtl"] & {
-          left: unset;
-          right: 0;
-        }
-      }
 
       @media (min-width: 992px) {
         display: flex;
@@ -221,9 +187,6 @@
         margin-right: auto;
       }
 
-      @media (max-width: 767px) {
-        display: none;
-      }
     }
 
     .hot-deals {
@@ -273,9 +236,6 @@
     width: 100%;
     margin: 0 auto;
 
-    @media (max-width: 767px) {
-      width: 100%;
-    }
 
     li {
       width: 100%;
@@ -342,10 +302,6 @@
     background-color: rgba(var(--white), 1);
     box-shadow: 0px 0px 30px 4px rgb(0 0 0 / 8%);
 
-    @media (max-width:991px) {
-      background-color: transparent;
-      box-shadow: none;
-    }
 
     li {
       display: block;

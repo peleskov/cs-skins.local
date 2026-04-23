@@ -1,10 +1,13 @@
 <template>
-	<section class="popular-restaurant banner-section section-b-space ratio3_2 overflow-hidden">
+	<section id="Cart" class="popular-restaurant banner-section section-b-space ratio3_2 overflow-hidden">
 		<div class="container">
 			<div class="change-profile-content">
 				<div class="title">
-					<div class="loader-line"></div>
+					<div class="loader-line d-none d-lg-block"></div>
 					<h3>Корзина</h3>
+					<p class="mp-cart-subtitle d-lg-none mt-2">{{ cartItems.length }} {{ pluralItems(cartItems.length)
+					}}
+						готовы к выводу</p>
 				</div>
 
 				<!-- Loading state -->
@@ -18,8 +21,54 @@
 
 				<!-- Cart items -->
 				<div v-else-if="cartItems.length > 0" class="product-box-section section-b-space">
+
+					<!-- Mobile: список карточек -->
+					<div class="mp-cart-list d-lg-none d-flex flex-column gap-3 mb-4">
+						<div v-for="item in cartItems" :key="'m-' + item.listing_id" class="mp-cart-card"
+							:class="item.item?.rarity ? 'mp-rarity-' + item.item.rarity : ''">
+							<a :href="`/marketplace/${item.listing_id}`" class="mp-cart-img"
+								:style="{ backgroundImage: 'url(' + (item.item?.image_url || '/images/skin_no_image.svg') + ')' }"></a>
+							<div class="mp-cart-info">
+								<div class="mp-cart-top">
+									<h6 class="mp-cart-name">{{ item.item?.name }}</h6>
+									<button class="mp-cart-del" @click="removeFromCart(item.listing_id)"
+										title="Удалить">
+										<i class="ri-delete-bin-line"></i>
+									</button>
+								</div>
+								<div class="mp-cart-meta">
+									<span v-if="item.item?.rarity_translated">{{ item.item.rarity_translated }}</span>
+									<span v-if="item.wear_name">| {{ item.wear_name }}</span>
+								</div>
+								<div class="mp-cart-bottom">
+									<span class="mp-cart-price" v-html="formatPrice(item.price, 'RUB')"></span>
+									<button class="mp-cart-select"
+										:class="{ 'is-selected': isItemSelected(item.listing_id) }"
+										@click="toggleItemSelection(item.listing_id)">
+										{{ isItemSelected(item.listing_id) ? 'Выбрано' : 'Выбрать' }}
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Mobile: итоги + оплата -->
+					<div class="mp-cart-summary d-lg-none">
+						<div class="mp-cart-row"><span>Предметы ({{ selectedCount }})</span><strong
+								v-html="formatPrice(selectedTotal, 'RUB')"></strong></div>
+						<div class="mp-cart-row"><span>Скидка</span><strong class="text-success"
+								v-html="formatPrice(0, 'RUB')"></strong></div>
+						<div class="mp-cart-row mp-cart-row-total"><span>СУММА</span><strong
+								v-html="formatPrice(selectedTotal, 'RUB')"></strong></div>
+						<button class="mp-cart-pay" :class="{ disabled: selectedCount === 0 }"
+							@click="proceedToCheckout">
+							<i class="m-ico m-ico-pay"></i>
+							<span>Оформить заказ</span>
+						</button>
+					</div>
+
 					<!-- Cart summary -->
-					<div class="cart-summary mb-4 p-3 bg-color rounded">
+					<div class="cart-summary mb-4 p-3 bg-color rounded d-none d-lg-block">
 						<div class="row align-items-center">
 							<div class="col-md-6">
 								<div class="form-check p-0 mb-2">
@@ -30,11 +79,12 @@
 									</label>
 								</div>
 								<h5 class="mb-1">Выбрано: {{ selectedCount }} из {{ cartItems.length }}</h5>
-								<p class="text-muted mb-0">К оплате: <strong v-html="formatPrice(selectedTotal, 'RUB')"></strong></p>
+								<p class="text-muted mb-0">К оплате: <strong
+										v-html="formatPrice(selectedTotal, 'RUB')"></strong></p>
 							</div>
 							<div class="col-md-6 text-end">
 								<button class="btn theme-btn me-2" @click="proceedToCheckout"
-								   :class="{ disabled: selectedCount === 0 }">
+									:class="{ disabled: selectedCount === 0 }">
 									<i class="ri-shopping-cart-line me-1"></i>Оформить заказ
 								</button>
 								<button class="btn theme-outline theme-outline-danger" @click="clearCart">
@@ -45,22 +95,24 @@
 					</div>
 
 					<!-- Cart items list -->
-					<div class="cart-items-box product-details-box-list">
+					<div class="cart-items-box product-details-box-list d-none d-lg-block">
 						<div v-for="item in cartItems" :key="item.listing_id" class="product-details-box gap-2">
 							<div class="form-check me-2">
-								<input type="checkbox" class="checkbox-animated"
-									:id="'item-' + item.listing_id"
+								<input type="checkbox" class="checkbox-animated" :id="'item-' + item.listing_id"
 									:checked="isItemSelected(item.listing_id)"
 									@change="toggleItemSelection(item.listing_id)">
 								<label class="form-check-label" :for="'item-' + item.listing_id"></label>
 							</div>
-							<a :href="`/marketplace/${item.listing_id}`" class="product-img" :style="{ backgroundImage: 'url(' + (item.item?.image_url || '/images/skin_no_image.svg') + ')' }" title="Перейти к товару">
+							<a :href="`/marketplace/${item.listing_id}`" class="product-img"
+								:style="{ backgroundImage: 'url(' + (item.item?.image_url || '/images/skin_no_image.svg') + ')' }"
+								title="Перейти к товару">
 							</a>
 							<div
 								class="description d-flex flex-column flex-lg-row align-items-center justify-content-between flex-grow-1 gap-3">
 								<div>
 									<div class="d-flex align-items-center gap-2">
-										<a :href="`/marketplace/${item.listing_id}`" class="product-name-link" title="Перейти к товару">
+										<a :href="`/marketplace/${item.listing_id}`" class="product-name-link"
+											title="Перейти к товару">
 											<h6 class="product-name">{{ item.item?.name }}</h6>
 										</a>
 										<span v-if="item.is_stattrak" class="badge bg-warning">StatTrak™</span>
@@ -100,7 +152,8 @@
 					<a :href="routes.marketplace" class="btn theme-outline me-sm-2 mb-2 mb-sm-0">
 						<i class="ri-store-2-line me-2"></i>Перейти в маркетплейс
 					</a>
-					<a v-if="!user" :href="routes.login" class="btn theme-btn"><i class="ri-steam-fill me-1"></i>Войти через Steam</a>
+					<a v-if="!user" :href="routes.login" class="btn theme-btn"><i class="ri-steam-fill me-1"></i>Войти
+						через Steam</a>
 				</div>
 			</div>
 		</div>
@@ -355,6 +408,13 @@ export default {
 		},
 
 
+		pluralItems(n) {
+			const mod10 = n % 10, mod100 = n % 100;
+			if (mod10 === 1 && mod100 !== 11) return 'предмет';
+			if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'предмета';
+			return 'предметов';
+		},
+
 		formatDate(dateString) {
 			return new Date(dateString).toLocaleDateString('ru-RU', {
 				day: '2-digit',
@@ -375,11 +435,11 @@ export default {
 
 	mounted() {
 		this.loadCart();
-		
+
 		// Слушаем события смены валюты
 		window.addEventListener('currency-changed', this.handleCurrencyChange);
 	},
-	
+
 	beforeUnmount() {
 		// Убираем слушатель при размонтировании
 		window.removeEventListener('currency-changed', this.handleCurrencyChange);

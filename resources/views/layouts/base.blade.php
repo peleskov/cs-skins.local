@@ -26,7 +26,7 @@
     <link rel="stylesheet" type="text/css" href="{{ asset('css/fancybox.css') }}">
 
     <!-- Theme CSS -->
-    @vite([$viteStyles ?? 'resources/scss/mplace.scss'])
+    @vite(is_array($viteStyles ?? null) ? $viteStyles : [$viteStyles ?? 'resources/scss/mplace.scss'])
 
     @stack('styles')
 
@@ -61,7 +61,7 @@
     <script src="{{ asset('js/vendors/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('js/swiper-bundle.min.js') }}"></script>
 
-    @vite([$viteScripts ?? 'resources/js/mplace.js'])
+    @vite(is_array($viteScripts ?? null) ? $viteScripts : [$viteScripts ?? 'resources/js/mplace.js'])
 
     @stack('scripts')
 </body>

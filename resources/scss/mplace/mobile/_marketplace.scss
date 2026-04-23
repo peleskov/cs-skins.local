@@ -1,0 +1,39 @@
+/* Мобильный маркетплейс: скрываем десктопный сайдбар, показываем кнопку-фильтр (шторка — в _filter-drawer.scss) */
+
+.mp-filter-sidebar {
+	display: none !important;
+}
+
+/* Родительский .section у маркета имеет overflow:hidden, что ломает sticky — снимаем на мобиле */
+.popular-restaurant.overflow-hidden {
+	overflow: visible !important;
+}
+
+/* На мобиле скрываем сортировку/счётчик над листингом — кнопка фильтров выравнивается с верхом сетки */
+.col-md-8.col-lg-9.col-xl-10 > .row.mb-4:first-of-type {
+	display: none;
+}
+
+/* Кнопка-триггер фильтров: sticky в левом верхнем углу блока со скинами */
+.col-md-8.col-lg-9.col-xl-10 {
+	position: relative;
+}
+
+.mp-mobile-filter-btn {
+	display: flex !important; /* перебиваем d-inline-flex чтобы margin-bottom работал блочно */
+	position: sticky;
+	top: 64px; /* под мобильным хедером */
+	z-index: 5;
+	width: 56px;
+	height: 56px;
+	margin-bottom: -80px; /* верх кнопки совпадает с верхом первой карточки */
+	background: #ff8d2f;
+	color: #fff;
+	border-radius: 16px;
+	box-shadow: 0 8px 20px rgba(255, 141, 47, 0.4);
+
+	i {
+		font-size: 24px;
+		line-height: 1;
+	}
+}

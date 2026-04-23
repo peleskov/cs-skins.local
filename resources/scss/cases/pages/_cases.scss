@@ -653,33 +653,7 @@
 
 
             // Адаптивность
-            @media (max-width: 768px) {
-                .case-roulette-container {
-                    height: 180px;
-                }
 
-                .roulette-item {
-                    flex: 0 0 150px;
-                    height: 150px;
-                    margin: 0 5px;
-                }
-            }
-
-            @media (max-width: 480px) {
-                .case-roulette-container {
-                    height: 150px;
-                }
-
-                .roulette-item {
-                    flex: 0 0 120px;
-                    height: 120px;
-                    margin: 0 5px;
-                }
-
-                .roulette-mask {
-                    width: 20%;
-                }
-            }
         }
 
         .case-box-footer {
@@ -954,16 +928,8 @@
             }
 
             // md: 5 колонок
-            @media (max-width: 991px) {
-                flex: 0 0 33.33%;
-                max-width: 33.33%;
-            }
 
             // sm: 4 колонки
-            @media (max-width: 767px) {
-                flex: 0 0 50%;
-                max-width: 50%;
-            }
         }
     }
 

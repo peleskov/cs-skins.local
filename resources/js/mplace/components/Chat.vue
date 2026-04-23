@@ -3,7 +3,7 @@
         <!-- Collapsed state -->
         <div v-if="isCollapsed" class="chat-collapsed">
             <button @click="toggleChat"
-                class="btn theme-btn rounded-circle position-relative d-flex justify-content-center align-items-center"
+                class="btn-toggle btn theme-btn rounded-circle position-relative d-flex justify-content-center align-items-center"
                 style="width: 60px; height: 60px;">
                 <i class="ri-message-3-line fs-2"></i>
                 <span v-if="unreadCount > 0"
@@ -43,8 +43,7 @@
                     <div v-for="message in messages" :key="messageFingerprint(message)" class="mb-2">
                         <div class="message-wrap d-flex align-items-start">
                             <div class="position-relative me-2">
-                                <img :src="message.client_avatar || '/images/default-avatar.png'"
-                                    class="rounded-circle"
+                                <img :src="message.client_avatar || '/images/default-avatar.png'" class="rounded-circle"
                                     :style="{ width: '30px', height: '30px', objectFit: 'cover', border: message.client_avatar_border_color ? '2px solid ' + message.client_avatar_border_color : '' }"
                                     :alt="message.client_name">
                                 <span v-if="message.client_is_premium" class="badge-premium">VIP</span>
@@ -131,7 +130,7 @@ export default {
     computed: {
         chatStyle() {
             return {
-                right: '70px',
+                right: '15px',
                 bottom: '20px',
                 zIndex: 1040 // Ниже чем offcanvas (1045), но выше обычного контента
             };

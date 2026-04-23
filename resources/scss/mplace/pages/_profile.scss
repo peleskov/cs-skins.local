@@ -57,12 +57,6 @@
 				padding-right: calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320)));
 			}
 
-			@media (max-width: 991px) {
-				display: flex;
-				gap: 15px;
-				overflow: auto;
-				margin: calc(10px + 20 * (100vw - 320px) / 1600) 10px 0;
-			}
 
 			li {
 				width: 100%;
@@ -104,10 +98,6 @@
 					border-bottom: none;
 				}
 
-				@media (max-width: 991px) {
-					padding: 0;
-					border: none;
-				}
 
 				a {
 					width: 100%;
@@ -142,9 +132,6 @@
 							border-left: 3px solid rgba(var(--theme-color), 1);
 						}
 
-						@media (max-width: 991px) {
-							display: none;
-						}
 					}
 
 					i {
@@ -187,11 +174,6 @@
 				margin-bottom: calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320)));
 
 				// Адаптация для мобильных - кнопки под контентом
-				@media (max-width: 767px) {
-					flex-direction: column;
-					align-items: flex-start;
-					gap: 15px;
-				}
 
 				&:last-child {
 					margin-bottom: 0;
@@ -200,9 +182,6 @@
 				.profile-content {
 
 					// На мобильных занимаем всю ширину
-					@media (max-width: 767px) {
-						width: 100%;
-					}
 
 					i {
 						font-size: calc(16px + (20 - 16) * ((100vw - 320px) / (1920 - 320)));
@@ -233,12 +212,6 @@
 						}
 
 						// Ограничение ширины на мобильных для длинных строк
-						@media (max-width: 767px) {
-							max-width: 100%;
-							overflow: hidden;
-							text-overflow: ellipsis;
-							word-break: break-all;
-						}
 					}
 
 					.trade-url-text,
@@ -253,10 +226,6 @@
 						max-width: 100%;
 
 						// На мобильных переносим длинный текст
-						@media (max-width: 767px) {
-							word-break: break-all;
-							white-space: normal;
-						}
 					}
 
 				}
@@ -267,14 +236,6 @@
 
 				// Контейнер с кнопками на мобильных
 				>.d-flex {
-					@media (max-width: 767px) {
-						width: 100%;
-						flex-direction: column;
-
-						.btn {
-							width: 100%;
-						}
-					}
 				}
 			}
 		}
@@ -334,9 +295,6 @@
 				.order-box {
 					position: relative;
 
-					@media (max-width: 430px) {
-						display: block;
-					}
 
 					.order-box-content {
 						display: flex;
@@ -345,9 +303,6 @@
 						padding-bottom: calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320)));
 						border-bottom: 1px dashed rgba(var(--dashed-line), 1);
 
-						@media (max-width: 375px) {
-							flex-wrap: wrap;
-						}
 
 						.brand-icon {
 							.icon {
@@ -360,17 +315,8 @@
 						.order-details {
 							width: calc(100% - calc(60px + (70 - 60) * ((100vw - 320px) / (1920 - 320))) - 10px);
 
-							@media (max-width: 430px) {
-								margin-top: 5px;
-								width: 100%;
-							}
 
 							.details-btn {
-								@media (max-width: 375px) {
-									position: absolute;
-									top: 20px;
-									right: 10px;
-								}
 							}
 						}
 					}
@@ -527,9 +473,6 @@
 				padding: 20px;
 			}
 
-			@media (max-width: 575px) {
-				padding: 70px;
-			}
 
 			.add-icon {
 				font-size: 25px;
@@ -557,9 +500,6 @@
 				padding: 15px;
 
 				.new-address-btn {
-					@media (max-width: 767px) {
-						width: 100%;
-					}
 				}
 			}
 
@@ -692,9 +632,6 @@
 			h3 {
 				margin-bottom: calc(10px + (15 - 10) * ((100vw - 320px) / (1920 - 320)));
 
-				@media (max-width: 375px) {
-					margin-bottom: 10px;
-				}
 			}
 		}
 	}

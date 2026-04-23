@@ -547,9 +547,6 @@
 					max-width: 56px;
 				}
 
-				@media (max-width: 768px) and (min-width: 576px) {
-					max-width: 56px;
-				}
 
 				&::after {
 					content: "";
@@ -1077,9 +1074,6 @@
 						padding-left: 5px;
 					}
 
-					@media (max-width: 375px) {
-						display: none;
-					}
 				}
 			}
 
@@ -1101,9 +1095,6 @@
 		border-radius: 10px;
 		z-index: 1;
 
-		@media (max-width: 576px) {
-			display: none;
-		}
 
 		[dir="rtl"] & {
 			right: 12px;
@@ -1155,9 +1146,6 @@
 				left: 10px;
 			}
 
-			@media (max-width: 425px) {
-				display: none;
-			}
 
 			h5 {
 				font-weight: 500;
@@ -1222,9 +1210,6 @@
 			.icon {
 				padding-right: 5px;
 
-				@media (max-width: 375px) {
-					display: none;
-				}
 
 				[dir="rtl"] & {
 					padding-right: unset;

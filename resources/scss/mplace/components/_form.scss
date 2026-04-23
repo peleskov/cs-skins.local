@@ -98,9 +98,6 @@
           color: rgba(var(--white), 0.6);
         }
 
-        @media (max-width: 991px) {
-          width: 100%;
-        }
       }
     }
   }
@@ -134,9 +131,6 @@
     font-weight: 500;
   }
 
-  @media (max-width: 600px) {
-    gap: calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320)));
-  }
 
   .form-input {
 

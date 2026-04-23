@@ -214,9 +214,6 @@
           padding-bottom: calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320)));
           border-bottom: 1px dashed rgba(var(--dashed-line), 1);
 
-          @media (max-width: 450px) {
-            display: block;
-          }
 
           .delivery-list {
             width: 100%;

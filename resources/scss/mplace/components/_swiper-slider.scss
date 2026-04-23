@@ -43,17 +43,8 @@
             left: calc(40px + (50 - 40) * ((100vw - 320px) / (1920 - 320)));
         }
 
-        @media (max-width: 767px) {
-            top: -60px;
-        }
 
-        @media (max-width: 493px) {
-            top: -65px;
-        }
 
-        @media (max-width: 465px) {
-            top: -75px;
-        }
 
         &::after {
             content: "\ea6e";
@@ -70,18 +61,8 @@
             left: 0;
         }
 
-        @media (max-width: 767px) {
-            top: -60px;
-        }
 
-        @media (max-width: 493px) {
-            top: -65px;
-            right: 40px;
-        }
 
-        @media (max-width: 465px) {
-            top: -75px;
-        }
 
         &::after {
             content: "\ea64";

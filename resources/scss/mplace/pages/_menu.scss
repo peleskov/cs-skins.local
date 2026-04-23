@@ -87,9 +87,6 @@
         background-color: rgba(var(--white), 1);
         border-top: 1px solid rgba(var(--dark-text), 0.15);
 
-        @media (max-width: 385px) {
-          display: block;
-        }
 
         .product-img {
 
@@ -99,9 +96,6 @@
             object-fit: cover;
             border-radius: 4px;
 
-            @media (max-width: 385px) {
-              width: 100%;
-            }
           }
         }
 
@@ -109,10 +103,6 @@
           width: calc(100% - calc(75px + (95 - 75) * ((100vw - 320px) / (1920 - 320))) - 10px);
           position: relative;
 
-          @media (max-width: 385px) {
-            width: 100%;
-            margin-top: 10px;
-          }
 
           h5 {
             color: rgba(var(--dark-text), 1);

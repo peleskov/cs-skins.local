@@ -449,21 +449,9 @@
           width: 170px;
         }
 
-        @media (max-width: 766px) {
-          width: 120px;
-        }
 
-        @media (max-width: 470px) {
-          width: 100px;
-        }
 
-        @media (max-width: 410px) {
-          width: 80px;
-        }
 
-        @media (max-width: 345px) {
-          width: 60px;
-        }
       }
 
       a {
@@ -587,16 +575,8 @@
       height: 100%;
       padding: 15px;
 
-      @media (max-width: 767px) {
-        padding: 0;
-        border: none;
-      }
 
       .new-address-btn {
-        @media (max-width: 767px) {
-          display: block;
-          width: 100%;
-        }
       }
     }
 

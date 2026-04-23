@@ -1,7 +1,7 @@
 <template>
 	<section class="popular-restaurant banner-section section-b-space ratio3_2 overflow-hidden bg-white">
 		<div class="container-fluid">
-			<div class="title text-center">
+			<div class="title text-center d-none d-lg-block">
 				<h2>{{ translate('marketplace.title') }}</h2>
 				<div class="loader-line" style="left: calc(50% - 40px);"></div>
 				<div class="sub-title">
@@ -10,53 +10,55 @@
 			</div>
 
 			<div class="row g-4">
-				<!-- Sidebar -->
-				<div class="col-md-4 col-lg-3 col-xl-2">
+				<!-- Sidebar (desktop only, скрыт на мобиле через CSS) -->
+				<div class="col-md-4 col-lg-3 col-xl-2 mp-filter-sidebar">
 					<div class="left-box wow fadeInUp">
 						<div class="shop-left-sidebar">
 							<!-- Карточка продавца -->
 							<div v-if="seller && sellerStats" class="mb-3">
-								<div class="accordion-body" style="background: var(--bs-light); border-radius: 8px; padding: 1rem;">
-										<div class="text-center mb-3">
-											<img :src="seller.steam_avatar || '/images/default-avatar.png'"
-												 :alt="seller.name"
-												 class="rounded-circle mb-2"
-												 style="width: 50px; height: 50px; object-fit: cover;">
-											<h6 class="mb-0">{{ seller.name }}</h6>
-										</div>
-										<ul class="category-list custom-padding">
-											<li>
-												<div class="d-flex justify-content-between">
-													<span class="name">{{ translate('marketplace.seller_listings') }}</span>
-													<span class="number">({{ sellerStats.total_listings }})</span>
-												</div>
-											</li>
-											<li>
-												<div class="d-flex justify-content-between">
-													<span class="name">{{ translate('marketplace.seller_sales') }}</span>
-													<span class="number">({{ sellerStats.total_sales }})</span>
-												</div>
-											</li>
-											<li>
-												<div class="d-flex justify-content-between">
-													<span class="name">{{ translate('marketplace.seller_purchases') }}</span>
-													<span class="number">({{ sellerStats.total_purchases }})</span>
-												</div>
-											</li>
-										</ul>
-										<div class="mt-3">
-											<a href="/marketplace" class="btn theme-outline w-100">
-												<i class="ri-store-line"></i>
-												{{ translate('marketplace.marketplace_link') }}
-											</a>
-										</div>
+								<div class="accordion-body"
+									style="background: var(--bs-light); border-radius: 8px; padding: 1rem;">
+									<div class="text-center mb-3">
+										<img :src="seller.steam_avatar || '/images/default-avatar.png'"
+											:alt="seller.name" class="rounded-circle mb-2"
+											style="width: 50px; height: 50px; object-fit: cover;">
+										<h6 class="mb-0">{{ seller.name }}</h6>
+									</div>
+									<ul class="category-list custom-padding">
+										<li>
+											<div class="d-flex justify-content-between">
+												<span class="name">{{ translate('marketplace.seller_listings') }}</span>
+												<span class="number">({{ sellerStats.total_listings }})</span>
+											</div>
+										</li>
+										<li>
+											<div class="d-flex justify-content-between">
+												<span class="name">{{ translate('marketplace.seller_sales') }}</span>
+												<span class="number">({{ sellerStats.total_sales }})</span>
+											</div>
+										</li>
+										<li>
+											<div class="d-flex justify-content-between">
+												<span class="name">{{ translate('marketplace.seller_purchases')
+												}}</span>
+												<span class="number">({{ sellerStats.total_purchases }})</span>
+											</div>
+										</li>
+									</ul>
+									<div class="mt-3">
+										<a href="/marketplace" class="btn theme-outline w-100">
+											<i class="ri-store-line"></i>
+											{{ translate('marketplace.marketplace_link') }}
+										</a>
+									</div>
 								</div>
 							</div>
 
 							<!-- Поиск -->
 							<div v-if="!seller" class="search-box">
 								<div class="form-input position-relative">
-									<input type="text" class="form-control search" :placeholder="translate('marketplace.search_placeholder')"
+									<input type="text" class="form-control search"
+										:placeholder="translate('marketplace.search_placeholder')"
 										v-model="filters.search" @input="debouncedSearch">
 									<i class="ri-search-line search-icon"></i>
 								</div>
@@ -77,14 +79,16 @@
 												<div class="row g-2">
 													<div class="col-6">
 														<div class="form-input">
-															<input type="number" class="form-control" :placeholder="translate('marketplace.price_min')"
+															<input type="number" class="form-control"
+																:placeholder="translate('marketplace.price_min')"
 																min="0" v-model="filters.minPrice"
 																@change="applyFilters">
 														</div>
 													</div>
 													<div class="col-6">
 														<div class="form-input">
-															<input type="number" class="form-control" :placeholder="translate('marketplace.price_max')"
+															<input type="number" class="form-control"
+																:placeholder="translate('marketplace.price_max')"
 																min="0" v-model="filters.maxPrice"
 																@change="applyFilters">
 														</div>
@@ -138,7 +142,8 @@
 														:class="{ active: filters.wearConditions[quality.value] }">
 														<div class="form-check ps-0 m-0 category-list-box">
 															<div class="form-check-label">
-																<span class="name">{{ translate('tags.values.' + quality.value) }}</span>
+																<span class="name">{{ translate('tags.values.' +
+																	quality.value) }}</span>
 															</div>
 														</div>
 													</a>
@@ -164,7 +169,8 @@
 														:class="{ active: filters.rarities[rarity.value] }">
 														<div class="form-check ps-0 m-0 category-list-box">
 															<div class="form-check-label">
-																<span class="name">{{ translate('tags.values.' + rarity.value) }}</span>
+																<span class="name">{{ translate('tags.values.' +
+																	rarity.value) }}</span>
 															</div>
 														</div>
 													</a>
@@ -188,14 +194,16 @@
 												<div class="row g-2">
 													<div class="col-6">
 														<div class="form-input">
-															<input type="number" class="form-control" :placeholder="translate('marketplace.price_min')"
+															<input type="number" class="form-control"
+																:placeholder="translate('marketplace.price_min')"
 																min="0" max="1" step="0.001" v-model="filters.minFloat"
 																@change="applyFilters">
 														</div>
 													</div>
 													<div class="col-6">
 														<div class="form-input">
-															<input type="number" class="form-control" :placeholder="translate('marketplace.price_max')"
+															<input type="number" class="form-control"
+																:placeholder="translate('marketplace.price_max')"
 																min="0" max="1" step="0.001" v-model="filters.maxFloat"
 																@change="applyFilters">
 														</div>
@@ -272,7 +280,7 @@
 				<!-- Основной контент -->
 				<div class="col-md-8 col-lg-9 col-xl-10 ratio3_2">
 					<!-- Сортировка и количество -->
-					<div class="row mb-4 justify-content-between align-items-center">
+					<div class="row mb-4 justify-content-between align-items-center d-none d-lg-flex">
 						<div class="col-auto">
 							<div class="d-flex align-items-center justify-content-end">
 								<label class="me-2">{{ translate('ui.sort') }}</label>
@@ -288,18 +296,161 @@
 						</div>
 						<div class="col-auto">
 							<p class="small mb-0">
-								{{ translate('ui.total_listings').replace(':total', pagination.total).replace(':shown', shownCount) }}
+								{{ translate('ui.total_listings').replace(':total', pagination.total).replace(':shown',
+									shownCount) }}
 							</p>
 						</div>
 					</div>
 
+					<!-- Mobile filter button -->
+					<button type="button"
+						class="mp-mobile-filter-btn d-lg-none d-inline-flex align-items-center justify-content-center border-0"
+						@click="mobileFiltersOpen = true" aria-label="Фильтры">
+						<i class="ri-equalizer-line"></i>
+					</button>
+
+					<!-- Mobile filter drawer -->
+					<div class="mp-filter-backdrop d-lg-none" :class="{ 'is-open': mobileFiltersOpen }"
+						@click="mobileFiltersOpen = false"></div>
+					<aside class="mp-filter-drawer d-lg-none position-fixed" :class="{ 'is-open': mobileFiltersOpen }">
+						<div class="mp-filter-head d-flex align-items-center justify-content-between">
+							<div class="mp-filter-title d-flex align-items-center gap-2">
+								<i class="m-ico m-ico-filter-title"></i>
+								<span>Фильтр</span>
+							</div>
+							<button type="button"
+								class="mp-filter-close d-inline-flex align-items-center justify-content-center border-0"
+								@click="mobileFiltersOpen = false" aria-label="Закрыть">
+								<i class="m-ico m-ico-close"></i>
+							</button>
+						</div>
+
+						<div class="mp-filter-body flex-grow-1 overflow-y-auto px-3 pb-3">
+							<div class="mp-filter-search mb-3">
+								<input type="search" class="w-100" v-model="filters.search" @input="debouncedSearch"
+									placeholder="Поиск по скинам" autocomplete="off">
+							</div>
+
+							<div class="mp-filter-group mb-3">
+								<div class="mp-filter-label">ЦЕНА</div>
+								<div class="d-flex align-items-center gap-2">
+									<input type="number" class="mp-filter-input flex-grow-1" placeholder="₽ Min"
+										v-model="filters.minPrice" @change="applyFilters">
+									<span class="mp-filter-dash">—</span>
+									<input type="number" class="mp-filter-input flex-grow-1" placeholder="₽ Max"
+										v-model="filters.maxPrice" @change="applyFilters">
+								</div>
+							</div>
+
+							<div class="mp-filter-group mb-3">
+								<div class="mp-filter-label">КАТЕГОРИИ</div>
+								<div class="d-flex flex-wrap gap-2">
+									<button type="button" class="mp-pill" :class="{ active: !filters.types }"
+										@click="filters.types && toggleCategory(filters.types)">Все</button>
+									<button v-for="c in categories" :key="c.type" type="button" class="mp-pill"
+										:class="{ active: filters.types === c.type }" @click="toggleCategory(c.type)">{{
+											c.name }}</button>
+								</div>
+							</div>
+
+							<div class="mp-filter-group mb-3">
+								<div class="mp-filter-label">КАЧЕСТВО</div>
+								<div class="d-flex flex-wrap gap-2">
+									<button type="button" class="mp-pill"
+										:class="{ active: !Object.values(filters.wearConditions).some(v => v) }"
+										@click="clearWearConditions">Все</button>
+									<button v-for="quality in qualityOptions" :key="quality.value" type="button"
+										class="mp-pill" :class="{ active: filters.wearConditions[quality.value] }"
+										@click="toggleQuality(quality.value)">
+										{{ translate('tags.values.' + quality.value) }}
+									</button>
+								</div>
+							</div>
+
+							<div class="mp-filter-group mb-3">
+								<div class="mp-filter-label">РАРИТЕТНОСТЬ</div>
+								<div class="mp-rarity-grid">
+									<button v-for="rarity in rarityOptions" :key="rarity.value" type="button"
+										class="mp-rarity-pill"
+										:class="['mp-rarity-' + rarity.value, { active: filters.rarities[rarity.value] }]"
+										@click="toggleRarity(rarity.value)">
+										<span>{{ translate('tags.values.' + rarity.value) }}</span>
+									</button>
+								</div>
+							</div>
+
+							<div class="mp-filter-group mb-3">
+								<div class="mp-filter-label">ДИАПАЗОН FLOAT</div>
+								<div class="d-flex align-items-center gap-2">
+									<input type="number" class="mp-filter-input flex-grow-1" placeholder="Min" min="0"
+										max="1" step="0.001" v-model="filters.minFloat" @change="applyFilters">
+									<span class="mp-filter-dash">—</span>
+									<input type="number" class="mp-filter-input flex-grow-1" placeholder="Max" min="0"
+										max="1" step="0.001" v-model="filters.maxFloat" @change="applyFilters">
+								</div>
+							</div>
+
+							<div class="mp-filter-group mb-3">
+								<div class="mp-filter-label">ФАЗЫ</div>
+								<div class="d-flex flex-wrap gap-2">
+									<button v-for="phase in phaseOptions" :key="phase.value" type="button"
+										class="mp-pill" :class="{ active: filters.phases[phase.value] }"
+										@click="togglePhase(phase.value)">{{ phase.label }}</button>
+								</div>
+							</div>
+						</div>
+
+						<div class="mp-filter-footer p-3">
+							<button type="button"
+								class="mp-filter-clear w-100 d-flex align-items-center justify-content-center"
+								@click="clearAllFilters">
+								<span class="text-center me-2">Очистить все</span>
+								<span class="mp-filter-count">{{ pagination.total }} ITEMS</span>
+							</button>
+						</div>
+					</aside>
+
 					<!-- Контейнер для товаров -->
 					<div class="row g-4">
-						<div v-for="listing in listings" :key="listing.id" class="col-xxl-2 col-xl-3 col-lg-4 col-md-5">
-							<div class="vertical-product-box h-100 d-flex flex-column" :class="getRarityClass(listing)">
+						<div v-for="listing in listings" :key="listing.id" class="col-xxl-2 col-xl-3 col-lg-4 col-6">
+							<!-- Мобильная карточка -->
+							<div class="m-listing-card d-lg-none h-100" :class="getRarityClass(listing)">
+								<a :href="`/marketplace/${listing.id}`" class="m-lc-img">
+									<img class="w-100" :src="getListingImageUrl(listing)"
+										:alt="listing.item?.name_ru || listing.inventory_item_name || 'Неизвестный предмет'"
+										@error="handleImageError">
+								</a>
+								<div class="m-lc-divider"></div>
+								<div class="px-3 mt-2">
+									<h4 class="m-lc-price m-0" v-html="formatPrice(listing.price, 'RUB')"></h4>
+								</div>
+								<a :href="`/marketplace/${listing.id}`" class="m-lc-title px-3 mt-1">
+									{{ listing.item?.name_ru || listing.inventory_item_name || 'Неизвестный предмет' }}
+								</a>
+								<div class="m-lc-wear px-3">
+									{{ translate('tags.values.' + listing.wear_name) }}
+								</div>
+								<div class="px-3 mt-1">
+									<FloatBar :item="listing" :show-value="false" />
+								</div>
+								<div
+									class="m-lc-actions d-flex align-items-center justify-content-between gap-2 px-3 pb-3 pt-2">
+									<div v-if="!listing.is_own_item && !listing.purchase_blocked" data-cart-button
+										:data-listing-id="listing.id" :data-is-in-cart="listing.is_in_cart"
+										data-size="small" data-variant="outline"
+										class="cart-button-placeholder m-lc-cart flex-grow-lg-1">
+									</div>
+									<div data-favorite-button :data-listing-id="listing.id"
+										:data-is-favorite="listing.is_favorite"
+										class="favorite-button-placeholder m-lc-fav">
+									</div>
+								</div>
+							</div>
+
+							<div class="vertical-product-box h-100 d-none d-lg-flex flex-column"
+								:class="getRarityClass(listing)">
 								<div v-if="listing.is_stattrak" class="seller-badge new-badge">
-									<img class="img-fluid badge"
-										src="/images/svg/star-white.svg" alt="medal">
+									<img class="img-fluid badge" src="/images/svg/star-white.svg" alt="medal">
 									<h6>ST</h6>
 								</div>
 								<div class="vertical-product-box-img">
@@ -316,28 +467,28 @@
 									</div>
 								</div>
 								<div class="vertical-product-body d-flex flex-column flex-grow-1">
-									<div class="d-flex flex-column flex-grow-1 mt-sm-3 mt-2 mb-2">
+									<div class="d-flex flex-column flex-grow-lg-1 mt-sm-3 mt-2 mb-2">
 										<a :href="`/marketplace/${listing.id}`">
 											<h4 class="vertical-product-title">{{ listing.item?.name_ru ||
 												listing.inventory_item_name || 'Неизвестный предмет' }}</h4>
 										</a>
-										<div v-if="listing.wear_value !== null && listing.wear_value !== undefined" class="text-muted small mb-1">
+										<div v-if="listing.wear_value !== null && listing.wear_value !== undefined"
+											class="text-muted small mb-1">
 											{{ listing.wear_value.toFixed(4) }}
 										</div>
-										<h5 class="product-items mb-2">{{ translate('tags.values.' + listing.wear_name) }} {{
-											listing.item?.rarity_translated || '' }}</h5>
-										<FloatBar 
-											:item="listing" 
-											:show-value="false" 
-										/>
+										<h5 class="product-items mb-2">{{ translate('tags.values.' + listing.wear_name)
+										}} {{
+												listing.item?.rarity_translated || '' }}</h5>
+										<FloatBar :item="listing" :show-value="false" />
 										<p class="text-muted small">от {{ listing.seller?.name || 'Неизвестный продавец'
-											}}</p>
+										}}</p>
 									</div>
 									<div
 										class="location-distance d-flex align-items-center justify-content-between gap-2 pt-sm-3 pt-2">
-										<div v-if="!listing.is_own_item && !listing.purchase_blocked" data-cart-button :data-listing-id="listing.id"
-											:data-is-in-cart="listing.is_in_cart" data-size="small"
-											data-variant="outline" class="cart-button-placeholder flex-fill">
+										<div v-if="!listing.is_own_item && !listing.purchase_blocked" data-cart-button
+											:data-listing-id="listing.id" :data-is-in-cart="listing.is_in_cart"
+											data-size="small" data-variant="outline"
+											class="cart-button-placeholder flex-fill">
 										</div>
 										<div data-favorite-button :data-listing-id="listing.id"
 											:data-is-favorite="listing.is_favorite" class="favorite-button-placeholder">
@@ -356,11 +507,39 @@
 						<p class="mt-2 text-muted">Загрузка предложений...</p>
 					</div>
 
-					<!-- Кнопка "Загрузить еще" -->
-					<div v-if="!isLoading && pagination.hasMorePages" class="text-center mt-4">
-						<button class="btn theme-outline cart-btn" @click="loadMore">
-							Загрузить еще
-						</button>
+					<!-- Пагинация -->
+					<div v-if="!isLoading && lastPage > 1"
+						class="mp-pagination d-flex flex-wrap align-items-center justify-content-center justify-content-lg-between gap-3 mt-4">
+						<ul class="mp-pagination-pages d-flex align-items-center gap-1 list-unstyled m-0 p-0">
+							<li>
+								<button type="button" class="mp-page-btn" :disabled="currentPage === 1"
+									@click="goToPage(currentPage - 1)" aria-label="Prev">
+									<i class="ri-arrow-left-s-line"></i>
+								</button>
+							</li>
+							<li v-for="(p, idx) in pageNumbers" :key="idx">
+								<button v-if="typeof p === 'number'" type="button" class="mp-page-btn"
+									:class="{ active: p === currentPage }" @click="goToPage(p)">
+									{{ p }}
+								</button>
+								<span v-else class="mp-page-ellipsis">…</span>
+							</li>
+							<li>
+								<button type="button" class="mp-page-btn" :disabled="currentPage === lastPage"
+									@click="goToPage(currentPage + 1)" aria-label="Next">
+									<i class="ri-arrow-right-s-line"></i>
+								</button>
+							</li>
+						</ul>
+						<div class="mp-pagination-perpage d-none d-lg-flex align-items-center gap-2">
+							<span class="small text-muted">На странице:</span>
+							<select class="form-select form-select-sm" style="width: auto;" :value="perPage"
+								@change="changePerPage($event.target.value)">
+								<option :value="25">25</option>
+								<option :value="50">50</option>
+								<option :value="100">100</option>
+							</select>
+						</div>
 					</div>
 
 					<!-- Сообщение об отсутствии товаров -->
@@ -415,16 +594,46 @@ export default {
 		// Состояние данных
 		const listings = ref([...props.initialListings])
 		const categories = ref([])
+		const mobileFiltersOpen = ref(false)
+		const clearWearConditions = () => {
+			Object.keys(filters.wearConditions).forEach(k => {
+				filters.wearConditions[k] = false
+			})
+			applyFilters()
+		}
 		const seller = ref(props.initialSeller)
 		const sellerStats = ref(props.initialSellerStats)
 		const tags = ref([])
 		const isLoading = ref(false)
-		const currentPage = ref(2)
+		const currentPage = ref(1)
+		const perPage = ref(25)
 		const searchTimeout = ref(null)
 
 		const pagination = reactive({
 			total: props.initialTotal,
 			hasMorePages: props.initialHasMore
+		})
+
+		const lastPage = computed(() => {
+			if (!pagination.total || !perPage.value) return 1
+			return Math.max(1, Math.ceil(pagination.total / perPage.value))
+		})
+
+		const pageNumbers = computed(() => {
+			// Возвращает массив страниц для рендера: [1, 2, 3, '...', 10]
+			const total = lastPage.value
+			const current = currentPage.value
+			if (total <= 7) {
+				return Array.from({ length: total }, (_, i) => i + 1)
+			}
+			const pages = [1]
+			if (current > 4) pages.push('...')
+			const start = Math.max(2, current - 1)
+			const end = Math.min(total - 1, current + 1)
+			for (let i = start; i <= end; i++) pages.push(i)
+			if (current < total - 3) pages.push('...')
+			pages.push(total)
+			return pages
 		})
 
 		const filters = reactive({
@@ -573,29 +782,24 @@ export default {
 			}
 		}
 
-		const loadListings = async (append = false) => {
+		const loadListings = async (resetPage = true) => {
 			if (isLoading.value) return
+
+			if (resetPage) currentPage.value = 1
 
 			isLoading.value = true
 
 			try {
 				const params = createBaseParams()
-				params.append('page', append ? currentPage.value : 1)
-				params.append('per_page', 24)
+				params.append('page', currentPage.value)
+				params.append('per_page', perPage.value)
 				params.append('sort_by', filters.sortBy)
 				params.append('sort_order', filters.sortOrder)
 
 				const response = await axios.get(`/api/marketplace/listings?${params}`)
 				const data = response.data
 
-				if (append) {
-					listings.value.push(...data.data)
-					currentPage.value++
-				} else {
-					listings.value = data.data
-					currentPage.value = 2
-				}
-
+				listings.value = data.data
 				pagination.total = data.pagination.total
 				pagination.hasMorePages = data.pagination.has_more_pages
 
@@ -610,6 +814,21 @@ export default {
 			}
 		}
 
+		const goToPage = (page) => {
+			if (typeof page !== 'number' || page < 1 || page > lastPage.value || page === currentPage.value) return
+			currentPage.value = page
+			loadListings(false)
+			nextTick(() => {
+				const el = document.querySelector('.popular-restaurant')
+				if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+			})
+		}
+
+		const changePerPage = (value) => {
+			perPage.value = parseInt(value) || 25
+			loadListings(true)
+		}
+
 		// Функции фильтрации
 		const debouncedSearch = () => {
 			clearTimeout(searchTimeout.value)
@@ -622,7 +841,7 @@ export default {
 			saveFiltersToStorage()
 			loadCategories()
 			loadTags()
-			loadListings(false)
+			loadListings(true)
 		}
 
 		const toggleCategory = (type) => {
@@ -630,7 +849,7 @@ export default {
 			saveFiltersToStorage()
 			loadCategories()
 			loadTags()
-			loadListings(false)
+			loadListings(true)
 		}
 
 		const toggleTag = (tag) => {
@@ -752,12 +971,9 @@ export default {
 
 			loadCategories()
 			loadTags()
-			loadListings(false)
-		}
-
-		const loadMore = () => {
 			loadListings(true)
 		}
+
 
 		// Функции хранения
 		const saveFiltersToStorage = () => {
@@ -801,7 +1017,7 @@ export default {
 				if (hasActiveFilters.value || filters.types) {
 					loadCategories()
 					loadTags()
-					loadListings(false)
+					loadListings(true)
 				}
 			} catch (error) {
 				console.error('Ошибка восстановления фильтров:', error)
@@ -976,9 +1192,16 @@ export default {
 			togglePhase,
 			isTagActive,
 			handleSortChange,
-			loadMore,
+			lastPage,
+			pageNumbers,
+			perPage,
+			currentPage,
+			goToPage,
+			changePerPage,
 			formatPrice,
 			clearAllFilters,
+			clearWearConditions,
+			mobileFiltersOpen,
 			handleImageError,
 			getListingImageUrl,
 			getRarityClass,
@@ -987,3 +1210,55 @@ export default {
 	}
 }
 </script>
+
+<style scoped>
+.mp-pagination {
+	padding-top: 8px;
+}
+
+.mp-pagination-pages {
+	flex-wrap: wrap;
+}
+
+.mp-page-btn {
+	min-width: 36px;
+	height: 36px;
+	padding: 0 10px;
+	background: #fff;
+	border: 1px solid #e2e8f0;
+	border-radius: 8px;
+	color: #475569;
+	font: 600 13px "Inter", sans-serif;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.mp-page-btn:hover:not(:disabled):not(.active) {
+	background: #f1f5f9;
+	color: #0f172a;
+}
+
+.mp-page-btn.active,
+.mp-page-btn.active:hover {
+	background: #ff8d2f !important;
+	border-color: #ff8d2f !important;
+	color: #fff !important;
+}
+
+.mp-page-btn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.mp-page-btn i {
+	font-size: 18px;
+	line-height: 1;
+}
+
+.mp-page-ellipsis {
+	padding: 0 6px;
+	color: #94a3b8;
+}
+</style>

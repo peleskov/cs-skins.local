@@ -44,9 +44,6 @@
 			justify-content: space-between;
 			gap: calc(40px + (240 - 40) * ((100vw - 320px) / (1920 - 320)));
 
-			@media (max-width: 991px) {
-				display: block;
-			}
 
 			h5 {
 				color: rgba(255, 255, 255, 0.8);
@@ -54,10 +51,6 @@
 				line-height: 1.7;
 				width: 90%;
 
-				@media (max-width: 991px) {
-					width: 100%;
-					margin-bottom: 15px;
-				}
 			}
 
 			.subscribe-form-control {
@@ -203,9 +196,6 @@
 			.social-media-part {
 				padding: calc(10px + (30 - 10) * ((100vw - 320px) / (1920 - 320))) 0 0;
 
-				@media (max-width: 576px) {
-					margin-bottom: 10px;
-				}
 
 				.social-icon {
 					display: flex;
@@ -285,9 +275,6 @@
 				padding: 0;
 			}
 
-			@media (max-width: 576px) {
-				display: none;
-			}
 
 			li {
 				display: block;

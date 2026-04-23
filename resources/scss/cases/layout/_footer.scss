@@ -72,9 +72,6 @@
             }
 
             .content {
-                @media (max-width: 576px) {
-                    display: none;
-                }
 
                 li {
                     display: block;

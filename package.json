@@ -10,6 +10,7 @@
     "devDependencies": {
         "@laravel/echo-vue": "^2.1.7",
         "@tailwindcss/vite": "^4.0.0",
+        "@vitejs/plugin-basic-ssl": "^2.3.0",
         "axios": "^1.8.2",
         "concurrently": "^9.0.1",
         "laravel-echo": "^2.2.0",

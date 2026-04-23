@@ -16,9 +16,6 @@
 		top: -62%;
 		right: 0;
 
-		@media (max-width: 991px) {
-			display: none;
-		}
 	}
 
 	&.home2 {
@@ -53,16 +50,9 @@
 				text-align: right;
 			}
 
-			@media (max-width: 992px) {
-				line-height: 1.2;
-			}
 		}
 	}
 
-	@media (max-width: 991px) {
-		height: auto;
-		padding: calc(120px + (154 - 120) * ((100vw - 320px) / (1920 - 320))) 0 calc(80px + (100 - 80) * ((100vw - 320px) / (1920 - 320))) !important;
-	}
 
 	h1 {
 		text-align: center;
@@ -101,9 +91,6 @@
 			padding: calc(8px + (15 - 8) * ((100vw - 320px) / (1920 - 320))) calc(20px + (50 - 20) * ((100vw - 320px) / (1920 - 320)));
 			font-size: calc(15px + (16 - 15) * ((100vw - 320px) / (1920 - 320)));
 
-			@media (max-width: 425px) {
-				margin-top: 10px;
-			}
 		}
 
 		.dropdown {
@@ -122,9 +109,6 @@
 					rgba(226, 232, 255, 0.02);
 				border: 1px solid rgba(226, 232, 255, 0.1);
 
-				@media (max-width: 991px) {
-					width: 100%;
-				}
 
 				&.show {
 					border: transparent;
@@ -265,14 +249,8 @@
 						right: 30px;
 					}
 
-					@media (max-width: 991px) {
-						display: none;
-					}
 				}
 
-				@media (max-width: 991px) {
-					display: none;
-				}
 			}
 
 			.dots-chain4 {
@@ -303,14 +281,8 @@
 						right: 30px;
 					}
 
-					@media (max-width: 991px) {
-						display: none;
-					}
 				}
 
-				@media (max-width: 991px) {
-					display: none;
-				}
 			}
 		}
 	}
@@ -324,10 +296,6 @@
 		width: 100%;
 		height: 100%;
 
-		@media (max-width: 576px) {
-			object-fit: none;
-			border-radius: 10px;
-		}
 	}
 
 	.home-content {
@@ -340,13 +308,7 @@
 			width: 81%;
 			line-height: 1.6;
 
-			@media (max-width: 767px) {
-				width: 100%;
-			}
 
-			@media (max-width: 576px) {
-				display: none;
-			}
 		}
 
 		label {
@@ -376,18 +338,12 @@
 		.auth-form {
 			margin-bottom: calc(10px + (40 - 10) * ((100vw - 320px) / (1920 - 320)));
 
-			@media (max-width: 576px) {
-				width: 100%;
-			}
 
 			.form-group {
 				.form-input {
 					input {
 						width: 100%;
 
-						@media (max-width: 576px) {
-							padding-block: 8px;
-						}
 					}
 				}
 			}
@@ -413,9 +369,6 @@
 				width: 70%;
 			}
 
-			@media (max-width: 767px) {
-				width: 100%;
-			}
 		}
 
 		.food1,
@@ -433,15 +386,7 @@
 				top: 22%;
 			}
 
-			@media (max-width: 991px) {
-				top: 32%;
-			}
 
-			@media (max-width: 767px) {
-				top: 46%;
-				width: 33%;
-				left: -2%;
-			}
 		}
 
 		.food2 {
@@ -455,16 +400,7 @@
 				top: -10%;
 			}
 
-			@media (max-width: 991px) {
-				top: -2%;
-				right: 44%;
-			}
 
-			@media (max-width: 767px) {
-				top: 16%;
-				right: 39%;
-				width: 29%;
-			}
 		}
 
 		.food3 {
@@ -476,15 +412,7 @@
 				top: 26%;
 			}
 
-			@media (max-width: 991px) {
-				top: 45%;
-			}
 
-			@media (max-width: 767px) {
-				top: 48%;
-				right: 16%;
-				width: 21%;
-			}
 		}
 	}
 }
@@ -502,9 +430,6 @@
 		align-items: center;
 		justify-content: center;
 
-		@media (max-width: 576px) {
-			height: 100%;
-		}
 
 		h1 {
 			font-size: calc(25px + (55 - 25) * ((100vw - 320px) / (1920 - 320)));
@@ -512,9 +437,6 @@
 			width: 90%;
 			color: white;
 
-			@media (max-width: 768px) {
-				width: 100%;
-			}
 
 			span {
 				@include gradient-text;
@@ -527,9 +449,6 @@
 			width: 80%;
 			margin-inline: auto;
 
-			@media (max-width: 768px) {
-				width: 100%;
-			}
 		}
 
 		form {
@@ -593,9 +512,6 @@
 			justify-content: center;
 			gap: calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320)));
 
-			@media (max-width: 575px) {
-				justify-content: flex-start;
-			}
 
 			img {
 				background-color: rgba(var(--white), 1);
@@ -669,9 +585,6 @@
 			right: -40px;
 		}
 
-		@media (max-width: 930px) {
-			display: none;
-		}
 	}
 
 	.brands-logo {
@@ -778,18 +691,11 @@
 		transform: scaleX(-1);
 	}
 
-	@media (max-width: 991px) {
-		background-image: url(/images/background/sm-app-bg.jpg);
-		padding-top: 0;
-	}
 
 	.app-img {
 		.phone {
 			width: 500px;
 
-			@media (max-width: 991px) {
-				display: none;
-			}
 		}
 	}
 
@@ -801,16 +707,6 @@
 			padding-right: 154px;
 		}
 
-		@media (max-width: 991px) {
-			padding-left: 0;
-			padding-block: calc(20px + (40 - 20) * ((100vw - 320px) / (1920 - 320)));
-			width: 100%;
-
-			[dir="rtl"] & {
-				padding-left: unset;
-				padding-right: 0;
-			}
-		}
 
 		h2 {
 			font-size: calc(24px + (36 - 24) * ((100vw - 320px) / (1920 - 320)));
@@ -860,9 +756,6 @@
 		padding: calc(20px + (80 - 20) * ((100vw - 320px) / (1920 - 320))) calc(20px + (80 - 20) * ((100vw - 320px) / (1920 - 320))) 0;
 		border-radius: calc(20px + (40 - 20) * ((100vw - 320px) / (1920 - 320)));
 
-		@media (max-width: 991px) {
-			padding-top: 0;
-		}
 
 		.app-content {
 			padding-left: calc(30px + (104 - 30) * ((100vw - 320px) / (1920 - 320)));
@@ -873,14 +766,6 @@
 				padding-right: calc(30px + (104 - 30) * ((100vw - 320px) / (1920 - 320)));
 			}
 
-			@media (max-width: 991px) {
-				margin-top: 0;
-				padding-left: 0;
-
-				[dir="rtl"] & {
-					padding-right: 0;
-				}
-			}
 
 			h5 {
 				width: 80%;
@@ -899,13 +784,6 @@
 	position: relative;
 
 	.theme-arrow {
-		@media (max-width: 375px) {
-
-			.swiper-button-next,
-			.swiper-button-prev {
-				display: none;
-			}
-		}
 	}
 
 	.item-5 {
@@ -919,9 +797,6 @@
 			right: unset;
 		}
 
-		@media (max-width: 991px) {
-			display: none;
-		}
 	}
 }
 
@@ -1009,14 +884,6 @@
 	box-shadow: 0 0 21px 0 rgba(61, 61, 61, 0.1);
 	transition: 0.4s ease;
 
-	@media (max-width: 991px) {
-		transform: translateX(-320px);
-
-		.sidebar-back {
-			border-bottom: 1px solid #505050;
-			padding-bottom: 10px;
-		}
-	}
 
 	&.show {
 		display: block;
@@ -1026,12 +893,6 @@
 		left: 0;
 		top: 0;
 
-		@media (max-width: 991px) {
-			position: fixed;
-			top: 0;
-			z-index: 9;
-			border: none;
-		}
 	}
 
 	.sidebar-logo {
@@ -1079,11 +940,6 @@
 	}
 
 	&.close-shop-sidebar {
-		@media (max-width: 767px) {
-			width: 280px;
-			transform: translate(-285px);
-			transition: all 0.3s ease;
-		}
 	}
 }
 
@@ -1109,9 +965,6 @@
 	padding-top: calc(100px + (110 - 100) * ((100vw - 991px) / (1920 - 991)));
 	padding-right: calc(12px + (25 - 12) * ((100vw - 320px) / (991 - 320)));
 
-	@media (max-width: 991px) {
-		padding-left: calc(12px + (25 - 12) * ((100vw - 320px) / (991 - 320)));
-	}
 
 	.top-section {
 		background-image: url(/images/home-bg.png);
@@ -1127,17 +980,6 @@
 			direction: ltr;
 		}
 
-		@media (max-width: 767px) {
-			&::after {
-				content: "";
-				position: absolute;
-				top: 0;
-				left: 0;
-				width: 100%;
-				height: 100%;
-				background-color: rgba(var(--content-color), 0.1);
-			}
-		}
 
 		.banner-content {
 			padding: calc(30px + (80 - 30) * ((100vw - 320px) / (1920 - 320))) calc(20px + (60 - 20) * ((100vw - 320px) / (1920 - 320)));

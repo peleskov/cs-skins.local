@@ -24,14 +24,8 @@
     position: relative;
 
     h2 {
-      @media (max-width: 768px) {
-        margin-bottom: 10px;
-      }
     }
 
-    @media (max-width: 768px) {
-      display: block;
-    }
 
     .loader-line {
       width: 90px;
@@ -68,9 +62,6 @@
       &:first-child {
         width: 70%;
 
-        @media (max-width: 500px) {
-          width: 100%;
-        }
       }
     }
   }
@@ -212,9 +203,6 @@
     font-weight: 400;
     color: rgba(var(--content-color), 1);
 
-    @media (max-width: 768px) {
-      width: 100%;
-    }
   }
 
   .sub-title {

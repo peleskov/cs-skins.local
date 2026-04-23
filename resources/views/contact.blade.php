@@ -8,10 +8,10 @@
 @include('partials.breadcrumbs', ['title' => 'Связаться с нами'])
 
 <!-- contact section starts -->
-<section class="section-b-space">
+<section class="section-b-space" id="Contacts">
     <div class="container">
         <div class="title animated-title">
-            <div class="loader-line"></div>
+            <div class="loader-line d-none d-lg-block"></div>
             <div class="d-flex align-items-center justify-content-between flex-wrap w-100">
                 <div>
                     <h2>Контактная информация</h2>
@@ -70,6 +70,13 @@
         <div class="row g-4">
             <div class="col-xl-8">
                 <div class="contact-form">
+                    <div class="d-lg-none">
+                        <h4 class="contact-form-title d-flex align-items-center mb-3">
+                            <i class="m-ico m-ico-send me-3"></i>
+                            Send a Message
+                        </h4>
+                    </div>
+
                     @if(session('success'))
                         <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
                             {{ session('success') }}
@@ -139,7 +146,7 @@
                     </form>
                 </div>
             </div>
-            <div class="col-xl-4">
+            <div class="col col-xl-4">
                 <iframe
                     src="{{ SiteSetting::get('iframe_map') }}"
                     width="600" height="450" class="contact-map border-0 w-100 h-100" allowfullscreen=""

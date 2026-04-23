@@ -1,4 +1,7 @@
-@extends('layouts.base')
+@extends('layouts.base', [
+    'viteStyles' => ['resources/scss/mplace.scss', 'resources/scss/mplace-mobile.scss'],
+    'viteScripts' => ['resources/js/mplace.js', 'resources/js/mplace-mobile.js']
+])
 
 @section('body')
     <!-- Skeleton loader -->
@@ -8,6 +11,9 @@
 
     <!-- Header -->
     @include('partials.header')
+
+    <!-- Mobile Header & Bottom Nav (≤1023px) -->
+    @include('partials.mobile-nav')
 
     <!-- Main content -->
     <main>

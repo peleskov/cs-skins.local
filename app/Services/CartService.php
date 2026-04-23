@@ -177,7 +177,9 @@ class CartService
             }
 
             $listing = $listings->get($listingId);
-            
+
+            $rarityTag = $listing->structured_tags->firstWhere('category_code', 'rarity');
+
             return [
                 'listing_id' => $listing->id,
                 'item' => [
@@ -186,6 +188,8 @@ class CartService
                     'type' => $listing->inventory_type,
                     'market_hash_name' => $listing->market_hash_name,
                     'steam_asset_id' => $listing->steam_asset_id,
+                    'rarity' => $rarityTag['normalized_value'] ?? null,
+                    'rarity_translated' => $rarityTag['display_name'] ?? null,
                 ],
                 'price' => (float) $listing->price,
                 'wear_name' => $listing->wear_name,

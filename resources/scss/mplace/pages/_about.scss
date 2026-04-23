@@ -6,17 +6,10 @@
   border-bottom: 1px solid rgba(var(--dashed-line), 1);
   transition: 0.4s ease;
 
-  @media (max-width: 991px) {
-    border-bottom: none;
-    border-top: none;
-  }
 
   .about-images {
     padding: calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320))) 0;
 
-    @media (max-width: 991px) {
-      padding-block: 0;
-    }
 
     .img {
       width: 100%;

@@ -1,0 +1,233 @@
+/* Мобильная корзина — дублированные блоки рядом с десктоп-версткой */
+
+#Cart,
+#Checkout {
+	.product-box-section {
+		padding: 0 !important;
+	}
+}
+
+.mp-cart-subtitle {
+	font: 500 14px / 143% "Inter", sans-serif;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: #565f68;
+}
+
+.mp-cart-card {
+	display: flex;
+	gap: 12px;
+	padding: 12px;
+	background: #fff;
+	border-radius: 12px;
+	box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.04);
+	position: relative;
+	overflow: hidden;
+
+	&::after {
+		display: none;
+	}
+}
+
+.mp-cart-img {
+	flex-shrink: 0;
+	width: 88px;
+	height: 88px;
+	display: block;
+	position: relative;
+	background-color: #f1f5f9;
+	background-position: center;
+	background-repeat: no-repeat;
+	background-size: contain;
+	border-radius: 10px;
+	border-bottom: 4px solid transparent;
+}
+
+.mp-rarity-consumer {
+	.mp-cart-img {
+		border-bottom-color: #b0c3d9;
+	}
+}
+
+.mp-rarity-industrial {
+	.mp-cart-img {
+		border-bottom-color: #5e98d9;
+	}
+}
+
+.mp-rarity-milspec {
+	.mp-cart-img {
+		border-bottom-color: #4b69ff;
+	}
+}
+
+.mp-rarity-restricted {
+	.mp-cart-img {
+		border-bottom-color: #8847ff;
+	}
+}
+
+.mp-rarity-classified {
+	.mp-cart-img {
+		border-bottom-color: #d32ce6;
+	}
+}
+
+.mp-rarity-covert {
+	.mp-cart-img {
+		border-bottom-color: #eb4b4b;
+	}
+}
+
+.mp-rarity-contraband {
+	.mp-cart-img {
+		border-bottom-color: #e4ae39;
+	}
+}
+
+.mp-cart-info {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.mp-cart-top {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 8px;
+}
+
+.mp-cart-name {
+	font: 700 14px / 130% "Poppins", sans-serif;
+	color: #191c1e;
+	margin: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.mp-cart-del {
+	flex-shrink: 0;
+	width: 28px;
+	height: 28px;
+	background: transparent;
+	border: 0 none;
+	color: #94a3b8;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	i {
+		font-size: 18px;
+		line-height: 1;
+	}
+}
+
+.mp-cart-meta {
+	font: 500 10px / 150% "Inter", sans-serif;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: #565f68;
+	display: flex;
+	gap: 4px;
+}
+
+.mp-cart-bottom {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-top: auto;
+	padding-top: 4px;
+}
+
+.mp-cart-price {
+	font: 800 18px / 156% "Inter", sans-serif;
+	color: #954a00;
+}
+
+.mp-cart-select {
+	padding: 6px 14px;
+	background: #f1f5f9;
+	border: 0 none;
+	border-radius: 8px;
+	font: 500 12px "Inter", sans-serif;
+	color: #475569;
+	transition: background 0.15s ease, color 0.15s ease;
+
+	&.is-selected {
+		background: #ff8d2f;
+		color: #fff;
+		font-weight: 700;
+	}
+}
+
+.mp-cart-summary {
+	padding: 20px 16px;
+	background: #fff;
+	border-radius: 16px;
+	box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.04);
+	margin-bottom: 24px;
+}
+
+.mp-cart-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 8px 0;
+	font: 500 14px "Inter", sans-serif;
+	color: #475569;
+
+	strong {
+		font: 700 14px "Poppins", sans-serif;
+		color: #191c1e;
+	}
+
+	&.mp-cart-row-total {
+		margin-top: 8px;
+		padding-top: 16px;
+		border-top: 1px solid #e2e8f0;
+
+		span {
+			font: 700 14px "Inter", sans-serif;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			color: #191c1e;
+		}
+
+		strong {
+			font: 700 20px "Poppins", sans-serif;
+			color: #954a00;
+		}
+	}
+}
+
+.mp-cart-pay {
+	width: 100%;
+	height: 56px;
+	margin-top: 16px;
+	background: linear-gradient(90deg, #f2a93e 0%, #f07054 100%);
+	border: 0 none;
+	border-radius: 14px;
+	font: 700 14px / 143% "Inter", sans-serif;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: #663000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+
+	i {
+		font-size: 20px;
+		line-height: 1;
+	}
+
+	&.disabled {
+		opacity: 0.5;
+		pointer-events: none;
+	}
+}

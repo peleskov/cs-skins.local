@@ -9,6 +9,7 @@ use App\Models\Faq;
 use App\Models\FaqCategory;
 use App\Models\Doc;
 use App\Models\Listing;
+use App\Models\Favorite;
 use App\Models\AdBanner;
 use App\Models\CaseModel;
 use App\Models\SiteSetting;
@@ -32,6 +33,22 @@ class WebController extends Controller
             ->inRandomOrder()
             ->limit(12)
             ->get();
+
+        // Маркируем статусы корзины / избранного / собственных листингов (как в MarketplaceController)
+        $cartItemIds = collect(session()->get('shopping_cart', []))->keys();
+        $favoriteItemIds = collect();
+        if (auth('client')->check()) {
+            $favoriteItemIds = Favorite::where('client_id', auth('client')->id())
+                ->whereIn('listing_id', $featuredListings->pluck('id'))
+                ->pluck('listing_id');
+        }
+        $currentUserId = auth('client')->id();
+
+        $featuredListings->each(function ($listing) use ($cartItemIds, $favoriteItemIds, $currentUserId) {
+            $listing->is_own_item = $currentUserId && $listing->seller_id === $currentUserId;
+            $listing->is_in_cart = !$listing->is_own_item && $cartItemIds->contains($listing->id);
+            $listing->is_favorite = $favoriteItemIds->contains($listing->id);
+        });
 
         $totalListings = Listing::active()
             ->where('price', '>', 0)

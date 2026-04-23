@@ -16,28 +16,14 @@
 		border-left: 1px solid rgba(var(--dashed-line), 1);
 		border-right: none;
 
-		@media (max-width: 991px) {
-			border-left: none;
-		}
 
 		[dir="rtl"] & {
 			border-left: none;
 			border-right: 1px solid rgba(var(--dashed-line), 1);
 
-			@media (max-width: 991px) {
-				border-right: none;
-			}
 		}
 	}
 
-	@media (max-width: 991px) {
-		border-right: none;
-		display: block;
-
-		[dir="rtl"] & {
-			border-left: none;
-		}
-	}
 
 	.search-box {
 		margin-bottom: calc(15px + (30 - 15) * ((100vw - 320px) / (1920 - 320)));
@@ -82,36 +68,22 @@
 		top: 25px;
 		z-index: 1;
 
-		@media (max-width: 991px) {
-			padding-right: 0;
-			order: 2;
-			display: block;
-		}
 
 		[dir="rtl"] & {
 			padding-right: 0;
 			padding-left: calc(16px + (20 - 16) * ((100vw - 320px) / (1920 - 320)));
 
-			@media (max-width:991px) {
-				padding-left: 0;
-			}
 		}
 
 		&.shop-right-sidebar {
 			padding-left: calc(16px + (20 - 16) * ((100vw - 320px) / (1920 - 320)));
 			padding-right: 0;
 
-			@media (max-width: 991px) {
-				padding-left: 0;
-			}
 
 			[dir="rtl"] & {
 				padding-right: calc(16px + (20 - 16) * ((100vw - 320px) / (1920 - 320)));
 				padding-left: 0;
 
-				@media (max-width: 991px) {
-					padding-right: 0;
-				}
 			}
 		}
 
@@ -573,11 +545,6 @@
 		.replay-form {
 			.post-button {
 				margin-left: auto;
-
-				@media only screen and (max-width: 475px) {
-					width: 100%;
-					justify-content: center;
-				}
 			}
 		}
 	}
@@ -741,9 +708,6 @@
 		align-items: center;
 		transition: all 0.5s ease-in-out;
 
-		@media (max-width: 768px) {
-			display: block;
-		}
 
 		.blog-image {
 			.bg-size {
@@ -775,9 +739,6 @@
 			border-radius: 8px;
 			width: 45%;
 
-			@media (max-width: 768px) {
-				width: 100%;
-			}
 
 			.img {
 				transition: all 0.5s ease-in-out;
@@ -788,10 +749,6 @@
 			padding: calc(8px + (20 - 8) * ((100vw - 320px) / (1920 - 320)));
 			width: calc(100% - 300px - calc(8px + (15 - 8) * ((100vw - 320px) / (1920 - 320))));
 
-			@media (max-width: 768px) {
-				width: 100%;
-				padding: calc(10px + (20 - 10) * ((100vw - 320px) / (1920 - 320)));
-			}
 
 			h6 {
 				margin-top: 18px;

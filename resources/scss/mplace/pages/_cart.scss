@@ -7,10 +7,6 @@
   justify-content: center;
   gap: calc(10px + (280 - 10) * ((100vw - 320px) / (1920 - 320)));
 
-  @media (max-width: 425px) {
-    display: block !important;
-    text-align: center;
-  }
 
   .plus-minus {
     border: 1px solid rgba(var(--dark-text), 0.15);

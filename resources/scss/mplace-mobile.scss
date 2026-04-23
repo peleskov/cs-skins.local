@@ -1,0 +1,21 @@
+/*-----------------------------------------------------------------------------------
+    Mplace Mobile Styles (изолированный слой, ≤1023px)
+    Выделено в отдельный бандл для быстрой пересборки при правке мобилки.
+----------------------------------------------------------------------------------- */
+
+@import "shared/utils/svg-url";
+
+@import "mplace/mobile/base";
+
+@media (max-width: 1023px) {
+	@import "mplace/mobile/icons";
+	@import "mplace/mobile/header";
+	@import "mplace/mobile/drawer";
+	@import "mplace/mobile/bottom-nav";
+	@import "mplace/mobile/search";
+	@import "mplace/mobile/marketplace";
+	@import "mplace/mobile/filter-drawer";
+	@import "mplace/mobile/listing-card";
+	@import "mplace/mobile/cart";
+	@import "mplace/mobile/profile";
+}

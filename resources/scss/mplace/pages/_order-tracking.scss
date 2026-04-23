@@ -100,17 +100,8 @@
           calc(10px + (15 - 10) * ((100vw - 320px) / (1920 - 320)))
       );
 
-      @media (max-width: 440px) {
-        display: block;
-      }
 
       .driver-info {
-        @media (max-width: 440px) {
-          display: flex;
-          flex-wrap: wrap;
-          align-items: center;
-          gap: calc(5px + (10 - 5) * ((100vw - 320px) / (1920 - 320)));
-        }
 
         h6 {
           font-weight: 400;

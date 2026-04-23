@@ -2,15 +2,15 @@
 	<div class="profile-container">
 		<div class="row g-3">
 			<!-- Profile Sidebar -->
-			<div class="col-lg-3">
+			<div class="col-lg-3 d-none d-lg-block">
 				<div class="profile-sidebar sticky-top">
 					<div class="profile-cover d-flex align-items-end justify-content-center">
-						<dvi class="position-relative" style="transform: translateY(45px);">
+						<div class="position-relative" style="transform: translateY(45px);">
 							<img class="img-fluid profile-pic" :src="client.steam_avatar || '/images/icons/p5.png'"
 								alt="profile"
 								:style="client.avatar_border_color ? { 'background-color': client.avatar_border_color } : {}">
 							<span v-if="client.is_premium" class="badge-premium">VIP</span>
-						</dvi>
+						</div>
 					</div>
 					<div class="profile-name">
 						<h5 class="user-name" :style="client.nickname_color ? { color: client.nickname_color } : {}">{{
@@ -31,10 +31,11 @@
 			</div>
 
 			<!-- Profile Content -->
-			<div class="col-lg-9">
+			<div class="col col-lg-9">
 				<!-- Profile Info Tab -->
 				<ProfileInfo v-if="activeTab === 'profile'" :client="client" :telegramBotName="telegramBotName"
-					@update-client="updateClient" />
+					:profileTabs="profileTabs" :activeTab="activeTab"
+					@update-client="updateClient" @set-tab="setActiveTab" @logout="logout" />
 
 				<!-- Trading Tab -->
 				<ProfileTrading v-else-if="activeTab === 'trading'" :client="client" />
@@ -198,6 +199,10 @@ export default {
 	},
 
 	mounted() {
+		// Если hash отсутствует — ставим текущую активную вкладку в URL
+		if (!window.location.hash) {
+			window.history.replaceState(null, null, '#' + this.activeTab);
+		}
 		// Слушаем изменения хэша в URL
 		window.addEventListener('hashchange', this.handleHashChange);
 	},

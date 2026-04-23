@@ -1,32 +1,43 @@
 <template>
 	<div class="change-profile-content">
-		<div class="title">
+		<div class="title  d-none d-lg-block">
 			<div class="loader-line"></div>
 			<h3>Информация профиля</h3>
 		</div>
 
+		<div class="mprf-avatar d-flex flex-column align-items-center justify-content-center d-lg-none mb-4">
+			<div class="mprf-avatar-wrap mb-2">
+				<img class="img-fluid profile-pic" :src="client.steam_avatar || '/images/icons/p5.png'" alt="profile"
+					:style="client.avatar_border_color ? { 'background-color': client.avatar_border_color } : {}">
+			</div>
+			<p class="mprf-avatar-name">{{ client.name }}</p>
+			<p v-if="client.is_premium && client.premium_expires_at" class="mprf-avatar-date">Премиум активно до {{
+				formatDate(client.premium_expires_at) }}</p>
+		</div>
+
 		<!-- Под-вкладки -->
-		<ul class="nav nav-tabs tab-style1 mb-4 pe-4" role="tablist">
-			<li class="nav-item" role="presentation">
+		<ul class="nav nav-tabs tab-style1 mb-4 pe-lg-4" role="tablist">
+			<li class="nav-item flex-fill" role="presentation">
 				<button class="nav-link" :class="{ active: subTab === 'main' }" type="button" role="tab"
 					@click="subTab = 'main'">
 					Основное
 				</button>
 			</li>
-			<li class="nav-item" role="presentation">
+			<li class="nav-item flex-fill" role="presentation">
 				<button class="nav-link" :class="{ active: subTab === 'premium' }" type="button" role="tab"
 					@click="subTab = 'premium'">
 					Премиум
 				</button>
 			</li>
-			<li class="nav-item" role="presentation">
+			<li v-if="client.is_premium" class="nav-item flex-fill" role="presentation">
 				<button class="nav-link" :class="{ active: subTab === 'history' }" type="button" role="tab"
 					@click="subTab = 'history'">
 					История заходов
 				</button>
 			</li>
 			<li v-if="subTab === 'history'" class="nav-item ms-auto align-self-center" role="presentation">
-				<VueDatePicker v-model="historyDateRange" range :enable-time-picker="false" auto-apply :locale="ruLocale" >
+				<VueDatePicker v-model="historyDateRange" range :enable-time-picker="false" auto-apply
+					:locale="ruLocale">
 					<template #trigger>
 						<button class="btn-calendar" type="button"></button>
 					</template>
@@ -42,8 +53,85 @@
 
 		<!-- Контент под-вкладки "Основное" -->
 		<ul v-show="subTab === 'main'" class="profile-details-list">
+			<!-- Mobile version -->
+			<li class="m-balance align-items-start flex-column gap-2 d-lg-none">
+				<div class="w-100 d-flex align-items-center justify-content-between">
+					<p class="label mb-0">Баланс</p>
+					<svg width="19" height="18" viewBox="0 0 19 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+						<path
+							d="M2 16V16V16V16V16V16V16V16V2V2V2V2V2V2V2V2C2 2 2 2.37083 2 3.1125C2 3.85417 2 4.81667 2 6V12C2 13.1833 2 14.1458 2 14.8875C2 15.6292 2 16 2 16V16M2 18C1.45 18 0.979167 17.8042 0.5875 17.4125C0.195833 17.0208 0 16.55 0 16V2C0 1.45 0.195833 0.979167 0.5875 0.5875C0.979167 0.195833 1.45 0 2 0H16C16.55 0 17.0208 0.195833 17.4125 0.5875C17.8042 0.979167 18 1.45 18 2V4.5H16V2V2V2H2V2V2V16V16V16H16V16V16V13.5H18V16C18 16.55 17.8042 17.0208 17.4125 17.4125C17.0208 17.8042 16.55 18 16 18H2V18M10 14C9.45 14 8.97917 13.8042 8.5875 13.4125C8.19583 13.0208 8 12.55 8 12V6C8 5.45 8.19583 4.97917 8.5875 4.5875C8.97917 4.19583 9.45 4 10 4H17C17.55 4 18.0208 4.19583 18.4125 4.5875C18.8042 4.97917 19 5.45 19 6V12C19 12.55 18.8042 13.0208 18.4125 13.4125C18.0208 13.8042 17.55 14 17 14H10V14M17 12V12V12V6V6V6H10V6V6V12V12V12H17V12M13 10.5C13.4167 10.5 13.7708 10.3542 14.0625 10.0625C14.3542 9.77083 14.5 9.41667 14.5 9C14.5 8.58333 14.3542 8.22917 14.0625 7.9375C13.7708 7.64583 13.4167 7.5 13 7.5C12.5833 7.5 12.2292 7.64583 11.9375 7.9375C11.6458 8.22917 11.5 8.58333 11.5 9C11.5 9.41667 11.6458 9.77083 11.9375 10.0625C12.2292 10.3542 12.5833 10.5 13 10.5V10.5"
+							fill="#954A00" />
+					</svg>
+				</div>
+				<p class="balance" v-html="formatPrice(client.balance)"></p>
+				<a href="/profile#balance" class="w-100 m-btn gap-1"><i class="m-ico m-ico-plus"></i>Пополнить</a>
+			</li>
+			<li class="align-items-start flex-column gap-2 d-lg-none">
+				<div class="w-100 d-flex flex-column gap-3">
+					<div class="w-100 d-flex gap-2 align-items-center justify-content-between">
+						<div class="ico-wrap"><i class="m-ico m-ico-email"></i></div>
+						<div class="flex-grow-1">
+							<p class="label">Email</p>
+							<p class="value">{{ client.email || 'Не указан' }}</p>
+						</div>
+						<div>
+							<a v-if="canResendVerification" href="#email" class="m-btn-link" data-bs-toggle="modal">
+								{{ client.email ? 'Изменить' : 'Добавить' }}
+							</a>
+							<div v-if="client.email && !client.email_verified_at" class="d-flex flex-column gap-1">
+								<button class="m-btn-link" ref="resendEmailBtn" @click="resendVerification"
+									:disabled="!canResendVerification || isResendingEmail">
+									<span class="btn-text">
+										<span v-if="isResendingEmail">
+											<span class="spinner-border spinner-border-sm me-1" role="status"></span>
+											Отправка...
+										</span>
+										<span v-else-if="canResendVerification">Отправить письмо</span>
+										<span v-else>Отправить повторно через {{ timeUntilCanResend }}</span>
+									</span>
+								</button>
+							</div>
+						</div>
+					</div>
+					<div class="w-100 d-flex gap-2 align-items-center justify-content-between">
+						<div class="ico-wrap"><i class="m-ico m-ico-email"></i></div>
+						<div class="flex-grow-1">
+							<p class="label">STEAM ID</p>
+							<p class="value">{{ client.steam_id }}</p>
+						</div>
+					</div>
+				</div>
+			</li>
+			<li class="align-items-start flex-column gap-3 d-lg-none">
+				<div class="w-100 m-trade-url">
+					<div class="w-100 d-flex align-items-center justify-content-between mb-2">
+						<p class="label mb-0">TRADE URL</p>
+						<a href="https://steamcommunity.com/my/tradeoffers/privacy" target="_blank" rel="noopener"
+							class="m-link-ext">
+							Где он?<i class="m-ico m-ico-ext"></i>
+						</a>
+					</div>
+					<div class="m-trade-url-row">
+						<div class="m-trade-url-input" @click="client.steam_trade_url ? copyTradeUrl($event) : null">
+							<span v-if="client.steam_trade_url" class="trade-url-text"
+								:data-url="client.steam_trade_url">
+								{{ limitString(client.steam_trade_url, 40) }}
+							</span>
+							<span v-else class="placeholder">Не указан</span>
+						</div>
+						<a href="#trade-url" class="m-trade-url-btn" data-bs-toggle="modal">
+							<i class="m-ico m-ico-link"></i>
+						</a>
+					</div>
+				</div>
+				<div class="w-100">
+					<p class="label mb-1">ДАТА РЕГИСТРАЦИИ</p>
+					<p class="m-date-value mb-0">{{ formatDate(client.created_at) }}</p>
+				</div>
+			</li>
+
 			<!-- Name -->
-			<li>
+			<li class="d-none d-lg-flex">
 				<div class="profile-content">
 					<div class="d-flex align-items-center gap-sm-2 gap-1">
 						<i class="ri-user-3-fill"></i>
@@ -54,7 +142,7 @@
 			</li>
 
 			<!-- Email -->
-			<li>
+			<li class="d-none d-lg-flex">
 				<div class="profile-content">
 					<div class="d-flex align-items-center gap-sm-2 gap-1">
 						<i class="ri-mail-fill"></i>
@@ -91,7 +179,7 @@
 			</li>
 
 			<!-- Steam ID -->
-			<li>
+			<li class="d-none d-lg-flex">
 				<div class="profile-content">
 					<div class="d-flex align-items-center gap-sm-2 gap-1">
 						<i class="ri-gamepad-line"></i>
@@ -102,7 +190,7 @@
 			</li>
 
 			<!-- Trade URL -->
-			<li>
+			<li class="d-none d-lg-flex">
 				<div class="profile-content">
 					<div class="d-flex align-items-center gap-sm-2 gap-1">
 						<i class="ri-exchange-line"></i>
@@ -126,7 +214,7 @@
 			</li>
 
 			<!-- Balance -->
-			<li>
+			<li class="d-none d-lg-flex">
 				<div class="profile-content">
 					<div class="d-flex align-items-center gap-sm-2 gap-1">
 						<i class="ri-wallet-3-line"></i>
@@ -138,7 +226,7 @@
 			</li>
 
 			<!-- Verification -->
-			<li>
+			<li class="d-none d-lg-flex">
 				<div class="profile-content">
 					<div class="d-flex align-items-center gap-sm-2 gap-1">
 						<i class="ri-telegram-fill"></i>
@@ -171,7 +259,7 @@
 			</li>
 
 			<!-- Extension Token -->
-			<li>
+			<li class="d-none d-lg-flex">
 				<div class="profile-content">
 					<div class="d-flex align-items-center gap-sm-2 gap-1">
 						<i class="ri-key-2-line"></i>
@@ -206,7 +294,7 @@
 			</li>
 
 			<!-- Registration Date -->
-			<li>
+			<li class="d-none d-lg-flex">
 				<div class="profile-content">
 					<div class="d-flex align-items-center gap-sm-2 gap-1">
 						<i class="ri-calendar-check-line"></i>
@@ -214,6 +302,18 @@
 					</div>
 					<h6>{{ formatDate(client.created_at) }}</h6>
 				</div>
+			</li>
+		</ul>
+		<ul v-show="subTab === 'main'" class="m-profile-menu d-lg-none">
+			<template v-for="(tab, key) in profileTabs" :key="key">
+				<li v-if="key !== 'profile'" :class="{ active: activeTab === key }">
+					<i class="m-ico" :class="`m-ico-menu-${key}`"></i>
+					<a href="#" @click.prevent="$emit('set-tab', key)">{{ tab.title }}</a>
+				</li>
+			</template>
+			<li>
+				<i class="m-ico m-ico-menu-logout"></i>
+				<a href="#" @click.prevent="$emit('logout')">Выйти</a>
 			</li>
 		</ul>
 
@@ -389,6 +489,14 @@ export default {
 		telegramBotName: {
 			type: String,
 			default: ''
+		},
+		profileTabs: {
+			type: Object,
+			default: () => ({})
+		},
+		activeTab: {
+			type: String,
+			default: 'profile'
 		}
 	},
 	data() {

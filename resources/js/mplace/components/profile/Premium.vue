@@ -7,8 +7,90 @@
 
 		<!-- Если подписка НЕ активна — промо -->
 		<div v-else-if="!subscription.is_active">
-			<!-- Преимущества -->
-			<div class="row g-3 mb-4">
+			<!-- Mobile промо-шапка -->
+			<div class="m-premium-head d-lg-none text-center mb-4">
+				<span class="m-premium-pill mb-3">ЭКСКЛЮЗИВНЫЙ ДОСТУП</span>
+				<h2 class="m-premium-title mb-2">Премиум-статус</h2>
+				<p class="m-premium-sub">Поднимите управление инвентарем на новый уровень с помощью самых эксклюзивных
+					функций для участников нашей программы.</p>
+			</div>
+
+			<!-- Mobile промо-сетка -->
+			<div class="row g-3 mb-4 d-lg-none m-premium-grid">
+				<div class="col-6">
+					<div class="m-pcard h-100">
+						<i class="m-ico m-ico-pm-cases"></i>
+						<p class="value">-{{ ps.case_discount_low }}%</p>
+						<p class="label">ЦЕНА КЕЙСОВ</p>
+					</div>
+				</div>
+				<div class="col-6">
+					<div class="m-pcard h-100">
+						<i class="m-ico m-ico-pm-commission"></i>
+						<p class="value">{{ ps.marketplace_fee }}%</p>
+						<p class="label">КОМИССИЯ</p>
+					</div>
+				</div>
+				<div class="col-12">
+					<div class="m-pcard m-pcard-avatar">
+						<i class="m-ico m-ico-pm-avatar"></i>
+						<p class="title">Обводка Аватара</p>
+						<p class="desc">Эффектная золотая рамка для вашего профиля</p>
+					</div>
+				</div>
+				<div class="col-6">
+					<div class="m-pcard h-100">
+						<i class="m-ico m-ico-pm-withdraw"></i>
+						<p class="value">{{ ps.withdraw_fee }}%</p>
+						<p class="label">Переводы</p>
+					</div>
+				</div>
+				<div class="col-6">
+					<div class="m-pcard m-pcard-accent h-100">
+						<i class="m-ico m-ico-pm-luck"></i>
+						<p class="title">Anti-luck</p>
+						<p class="label">Защита</p>
+					</div>
+				</div>
+				<div class="col-12">
+					<div class="m-pcard d-flex flex-row align-items-center gap-3">
+						<div class="ico-boxed d-flex align-items-center justify-content-center">
+							<i class="m-ico m-ico-pm-nick"></i>
+						</div>
+						<div class="flex-grow-1">
+							<p class="title mb-0">Особый никнейм</p>
+							<p class="desc mb-0">Уникальный стиль в глобальных чатах</p>
+						</div>
+						<span class="m-pcard-preview">@pro_user</span>
+					</div>
+				</div>
+				<div class="col-6">
+					<div class="m-pcard h-100">
+						<i class="m-ico m-ico-pm-support"></i>
+						<p class="title">Поддержка</p>
+						<p class="label">24/7 доступно</p>
+					</div>
+				</div>
+				<div class="col-6">
+					<div class="m-pcard h-100">
+						<i class="m-ico m-ico-pm-history"></i>
+						<p class="title">История</p>
+						<p class="label">Полный лог</p>
+					</div>
+				</div>
+				<div class="col-12">
+					<div class="m-pcard m-pcard-fast d-flex flex-row align-items-center gap-3">
+						<i class="m-ico m-ico-pm-fast"></i>
+						<div>
+							<p class="title mb-0">Fast login</p>
+							<p class="desc mb-0">Избегайте очередей в часы пиковой торговли.</p>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Преимущества (desktop) -->
+			<div class="row g-3 mb-4 d-none d-lg-flex">
 				<div class="col-md-4">
 					<div class="card benefit h-100">
 						<div class="card-body d-flex gap-3">

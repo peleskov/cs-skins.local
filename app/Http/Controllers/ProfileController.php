@@ -36,6 +36,7 @@ class ProfileController extends Controller
         // Делаем extension_token видимым для владельца профиля
         $client->makeVisible(['extension_token']);
         $client->setAttribute('is_premium', $client->isPremium());
+        $client->setAttribute('premium_expires_at', optional($client->subscription)->expires_at);
 
         // Переводы для табов профиля
         $profileTabs = __('profile.tabs');

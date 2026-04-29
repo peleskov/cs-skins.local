@@ -420,14 +420,13 @@
 										:alt="listing.item?.name_ru || listing.inventory_item_name || 'Неизвестный предмет'"
 										@error="handleImageError">
 								</a>
-								<div class="m-lc-divider"></div>
 								<div class="px-3 mt-2">
 									<h4 class="m-lc-price m-0" v-html="formatPrice(listing.price, 'RUB')"></h4>
 								</div>
 								<a :href="`/marketplace/${listing.id}`" class="m-lc-title px-3 mt-1">
 									{{ listing.item?.name_ru || listing.inventory_item_name || 'Неизвестный предмет' }}
 								</a>
-								<div class="m-lc-wear px-3">
+								<div v-if="listing.wear_name" class="m-lc-wear px-3">
 									{{ translate('tags.values.' + listing.wear_name) }}
 								</div>
 								<div class="px-3 mt-1">
@@ -476,8 +475,8 @@
 											class="text-muted small mb-1">
 											{{ listing.wear_value.toFixed(4) }}
 										</div>
-										<h5 class="product-items mb-2">{{ translate('tags.values.' + listing.wear_name)
-										}} {{
+										<h5 class="product-items mb-2">{{ listing.wear_name ? translate('tags.values.' +
+										listing.wear_name) : '' }} {{
 												listing.item?.rarity_translated || '' }}</h5>
 										<FloatBar :item="listing" :show-value="false" />
 										<p class="text-muted small">от {{ listing.seller?.name || 'Неизвестный продавец'

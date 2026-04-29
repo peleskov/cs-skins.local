@@ -9,8 +9,10 @@
 
 	.m-lc-img {
 		display: block;
-		padding: 12px 12px 0;
+		padding: 12px 12px 10px;
+		margin: 0 12px;
 		background: linear-gradient(135deg, #f8fafc 0%, #fff 100%);
+		border-bottom: 3px solid #475569;
 
 		img {
 			border-radius: 12px;
@@ -19,11 +21,32 @@
 		}
 	}
 
-	.m-lc-divider {
-		height: 3px;
-		margin: 10px 12px 0;
-		border-radius: 2px;
-		background: #475569;
+	&.rarity-consumer .m-lc-img {
+		border-bottom-color: rgba(var(--rarity-consumer), 1);
+	}
+
+	&.rarity-industrial .m-lc-img {
+		border-bottom-color: rgba(var(--rarity-industrial), 1);
+	}
+
+	&.rarity-milspec .m-lc-img {
+		border-bottom-color: rgba(var(--rarity-milspec), 1);
+	}
+
+	&.rarity-restricted .m-lc-img {
+		border-bottom-color: rgba(var(--rarity-restricted), 1);
+	}
+
+	&.rarity-classified .m-lc-img {
+		border-bottom-color: rgba(var(--rarity-classified), 1);
+	}
+
+	&.rarity-covert .m-lc-img {
+		border-bottom-color: rgba(var(--rarity-covert), 1);
+	}
+
+	&.rarity-contraband .m-lc-img {
+		border-bottom-color: rgba(var(--rarity-contraband), 1);
 	}
 
 	.m-lc-price {

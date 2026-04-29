@@ -25,8 +25,9 @@ export default defineConfig({
         host: '0.0.0.0',
         port: 5173,
         cors: true,
+        origin: 'https://100.67.243.55:5173',
         hmr: {
-            host: 'localhost',
+            host: '100.67.243.55',
         },
         watch: {
             ignored: ['**/node_modules/**', '**/vendor/**', '**/storage/**', '**/.git/**'],

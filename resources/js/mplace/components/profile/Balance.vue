@@ -1,12 +1,55 @@
 <template>
-	<div class="change-profile-content">
+	<div id="Balance" class="change-profile-content position-relative">
+		<a href="/profile#profile" class="btn-to-profile d-lg-none"><i class="m-ico m-ico-back"></i>Назад</a>
 		<div class="title">
-			<div class="loader-line"></div>
-			<h3>Управление балансом</h3>
+			<div class="loader-line d-none d-lg-block"></div>
+			<h3 class="mb-4 mb-lg-0">Управление балансом</h3>
 		</div>
 
-		<!-- Балансы -->
-		<div class="row g-4 mb-4">
+		<!-- Мобильная версия балансов -->
+		<div class="d-lg-none m-balance-block">
+			<div class="row g-3 mb-3">
+				<div class="col-6">
+					<div class="m-balance-card m-balance-card--main">
+						<div class="m-balance-card__head">
+							<i class="m-ico m-ico-balance-main"></i>
+							<span class="m-balance-card__label">Основной баланс</span>
+						</div>
+						<div class="m-balance-card__value" v-html="formatPrice(client.balance)"></div>
+					</div>
+				</div>
+				<div class="col-6">
+					<div class="m-balance-card m-balance-card--bonus">
+						<div class="m-balance-card__head">
+							<i class="m-ico m-ico-balance-bonus"></i>
+							<span class="m-balance-card__label">Бонусный баланс</span>
+						</div>
+						<div class="m-balance-card__value" v-html="formatPrice(client.bonus_balance || 0)"></div>
+					</div>
+				</div>
+			</div>
+			<button class="btn m-balance-btn-primary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#balance-refill"
+				:disabled="availablePaymentMethods.length === 0">
+				<i class="ri-add-circle-line me-2"></i>Пополнить
+			</button>
+			<div class="row g-2">
+				<div class="col-6">
+					<button class="btn m-balance-btn-outline w-100" data-bs-toggle="modal"
+						data-bs-target="#balance-withdraw">
+						<i class="m-ico m-ico-balance-withdraw me-2"></i>Вывести
+					</button>
+				</div>
+				<div class="col-6">
+					<button class="btn m-balance-btn-outline w-100" data-bs-toggle="modal"
+						data-bs-target="#promocode-activate">
+						<i class="m-ico m-ico-balance-promo me-2"></i>Промокод
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Балансы (десктоп) -->
+		<div class="row g-4 mb-4 d-none d-lg-flex">
 			<!-- Основной баланс -->
 			<div class="col-md-6">
 				<div class="card h-100">
@@ -73,22 +116,24 @@
 
 		<!-- История операций с табами -->
 		<ul class="nav nav-tabs tab-style1 mb-4" role="tablist">
-			<li class="nav-item" role="presentation">
-				<button class="nav-link" :class="{ active: historyTab === 'transactions' }" type="button" role="tab"
+			<li class="flex-fill flex-lg-grow-0 flex-lg-shrink-0 nav-item" role="presentation">
+				<button class="nav-link d-flex align-items-center justify-content-center"
+					:class="{ active: historyTab === 'transactions' }" type="button" role="tab"
 					@click="historyTab = 'transactions'">
-					<i class="ri-history-line me-2"></i>История операций
+					<i class="ri-history-line me-2 d-none d-lg-inline"></i>Операции
 				</button>
 			</li>
-			<li class="nav-item" role="presentation">
-				<button class="nav-link" :class="{ active: historyTab === 'bonus' }" type="button" role="tab"
+			<li class="flex-fill flex-lg-grow-0 flex-lg-shrink-0 nav-item" role="presentation">
+				<button class="nav-link d-flex align-items-center justify-content-center"
+					:class="{ active: historyTab === 'bonus' }" type="button" role="tab"
 					@click="historyTab = 'bonus'; loadBonusTransactions()">
-					<i class="ri-gift-line me-2"></i>История бонусов
+					<i class="ri-gift-line me-2 d-none d-lg-inline"></i>Бонусы
 				</button>
 			</li>
-			<li class="nav-item" role="presentation">
-				<button class="nav-link" :class="{ active: historyTab === 'held' }" type="button" role="tab"
-					@click="historyTab = 'held'">
-					<i class="ri-time-line me-2"></i>На удержании
+			<li class="flex-fill flex-lg-grow-0 flex-lg-shrink-0 nav-item" role="presentation">
+				<button class="nav-link d-flex align-items-center justify-content-center"
+					:class="{ active: historyTab === 'held' }" type="button" role="tab" @click="historyTab = 'held'">
+					<i class="ri-time-line me-2 d-none d-lg-inline"></i>Удержание
 					<span v-if="heldOrders.seller.length + heldOrders.buyer.length > 0"
 						class="badge bg-warning text-dark ms-1">
 						{{ heldOrders.seller.length + heldOrders.buyer.length }}
@@ -116,8 +161,32 @@
 					<p class="text-muted mb-0">Здесь будут отображаться все ваши финансовые операции</p>
 				</div>
 
-				<!-- Transactions List -->
-				<div v-else class="table-responsive">
+				<!-- Мобильный список транзакций -->
+				<template v-else>
+				<div class="d-lg-none m-tx-list">
+					<div v-for="transaction in transactions" :key="`m-${transaction.id}`" class="m-tx-item">
+						<div class="m-tx-icon">
+							<i :class="getTransactionIcon(transaction.type)"></i>
+						</div>
+						<div class="m-tx-body">
+							<div class="m-tx-title">{{ getTransactionTypeText(transaction.type) }}</div>
+							<div v-if="transaction.description" class="m-tx-desc">{{ transaction.description }}</div>
+							<div class="m-tx-date">{{ formatDate(transaction.created_at) }}</div>
+						</div>
+						<div class="m-tx-meta">
+							<div class="m-tx-amount" :class="getTransactionColor(transaction.type)">
+								<strong
+									v-html="getTransactionSign(transaction.type) + formatPrice(Math.abs(transaction.amount))"></strong>
+							</div>
+							<span class="badge bg-warning"
+								v-if="['pending', 'on_hold'].includes(transaction.status)">…</span>
+							<span class="badge bg-danger" v-else-if="transaction.status === 'failed'">!</span>
+						</div>
+					</div>
+				</div>
+
+				<!-- Transactions List (десктоп) -->
+				<div class="table-responsive d-none d-lg-block">
 					<table class="table table-hover">
 						<thead>
 							<tr class="text-muted">
@@ -156,6 +225,7 @@
 						</tbody>
 					</table>
 				</div>
+				</template>
 			</div>
 
 			<!-- Таб: На удержании -->
@@ -176,8 +246,39 @@
 					<p class="text-muted mb-0">Все ваши средства доступны</p>
 				</div>
 
-				<!-- Held Orders List -->
-				<div v-else class="table-responsive">
+				<!-- Held Orders (мобиль) -->
+				<template v-else>
+				<div class="d-lg-none m-tx-list">
+					<div v-for="order in heldOrders.seller" :key="`m-s-${order.id}`" class="m-tx-item">
+						<div class="m-tx-icon"><i class="ri-money-dollar-circle-line"></i></div>
+						<div class="m-tx-body">
+							<div class="m-tx-title">Продажа · #{{ order.order_number }}</div>
+							<div class="m-tx-desc">{{ order.buyer_name || '—' }}</div>
+							<div class="m-tx-date">До {{ formatSettlementDate(order.settlement_date) }}</div>
+						</div>
+						<div class="m-tx-meta">
+							<div class="m-tx-amount text-success">
+								<strong v-html="'+&nbsp;' + formatPrice(order.total_amount)"></strong>
+							</div>
+						</div>
+					</div>
+					<div v-for="order in heldOrders.buyer" :key="`m-b-${order.id}`" class="m-tx-item">
+						<div class="m-tx-icon"><i class="ri-shopping-cart-line"></i></div>
+						<div class="m-tx-body">
+							<div class="m-tx-title">Покупка · #{{ order.order_number }}</div>
+							<div class="m-tx-desc">{{ order.seller_name || '—' }}</div>
+							<div class="m-tx-date">До {{ formatSettlementDate(order.settlement_date) }}</div>
+						</div>
+						<div class="m-tx-meta">
+							<div class="m-tx-amount text-danger">
+								<strong v-html="'−&nbsp;' + formatPrice(order.total_amount)"></strong>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Held Orders List (десктоп) -->
+				<div class="table-responsive d-none d-lg-block">
 					<table class="table table-hover">
 						<thead>
 							<tr class="text-muted">
@@ -226,6 +327,7 @@
 						</tbody>
 					</table>
 				</div>
+				</template>
 			</div>
 
 			<!-- Таб: История бонусов -->
@@ -245,8 +347,29 @@
 					<p class="text-muted mb-0">Здесь будут отображаться все операции с бонусным балансом</p>
 				</div>
 
-				<!-- Bonus Transactions List -->
-				<div v-else class="table-responsive">
+				<!-- Bonus Transactions (мобиль) -->
+				<template v-else>
+				<div class="d-lg-none m-tx-list">
+					<div v-for="tx in bonusTransactions" :key="`m-${tx.id}`" class="m-tx-item">
+						<div class="m-tx-icon">
+							<i :class="tx.type === 'credit' ? 'ri-add-circle-line' : 'ri-indeterminate-circle-line'"></i>
+						</div>
+						<div class="m-tx-body">
+							<div class="m-tx-title">{{ tx.type === 'credit' ? 'Начисление' : 'Списание' }}</div>
+							<div v-if="tx.description" class="m-tx-desc">{{ tx.description }}</div>
+							<div class="m-tx-date">{{ formatDate(tx.created_at) }}</div>
+						</div>
+						<div class="m-tx-meta">
+							<div class="m-tx-amount" :class="tx.type === 'credit' ? 'text-success' : 'text-danger'">
+								<strong
+									v-html="(tx.type === 'credit' ? '+&nbsp;' : '−&nbsp;') + formatPrice(Math.abs(tx.amount))"></strong>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Bonus Transactions List (десктоп) -->
+				<div class="table-responsive d-none d-lg-block">
 					<table class="table table-hover">
 						<thead>
 							<tr class="text-muted">
@@ -273,6 +396,7 @@
 						</tbody>
 					</table>
 				</div>
+				</template>
 			</div>
 		</div>
 

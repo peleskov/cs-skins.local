@@ -1,8 +1,9 @@
 <template>
-	<div class="change-profile-content">
+	<div id="Auctions" class="change-profile-content position-relative">
+		<a href="/profile#profile" class="btn-to-profile d-lg-none"><i class="m-ico m-ico-back"></i>Назад</a>
 		<div class="title">
-			<div class="loader-line"></div>
-			<h3>Мои аукционы</h3>
+			<div class="loader-line d-none d-lg-block"></div>
+			<h3 class="mb-4 mb-lg-0">Мои аукционы</h3>
 		</div>
 
 		<!-- Loading state -->
@@ -18,31 +19,34 @@
 		<div v-else-if="auctions.length > 0" class="auction-listings">
 			<!-- Tabs Navigation -->
 			<ul class="nav nav-tabs tab-style1 mb-4" id="auctionTab" role="tablist">
-				<li class="nav-item" role="presentation">
+				<li class="flex-fill nav-item" role="presentation">
 					<button class="nav-link" :class="{ active: activeAuctionTab === 'pending' }" id="pending-tab"
 						data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab"
 						@click="setActiveAuctionTab('pending')">
 						Черновики
-						<span v-if="pendingAuctions.length > 0" class="badge bg-body-secondary ms-1">{{
-							pendingAuctions.length }}</span>
+						<span v-if="pendingAuctions.length > 0"
+							class="badge bg-body-secondary ms-1 d-none d-leg-block">{{
+								pendingAuctions.length }}</span>
 					</button>
 				</li>
-				<li class="nav-item" role="presentation">
+				<li class="flex-fill nav-item" role="presentation">
 					<button class="nav-link" :class="{ active: activeAuctionTab === 'active' }" id="active-tab"
 						data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab"
 						@click="setActiveAuctionTab('active')">
 						Активные
-						<span v-if="activeAuctions.length > 0" class="badge bg-body-secondary ms-1">{{
-							activeAuctions.length }}</span>
+						<span v-if="activeAuctions.length > 0"
+							class="badge bg-body-secondary ms-1 d-none d-leg-block">{{
+								activeAuctions.length }}</span>
 					</button>
 				</li>
-				<li class="nav-item" role="presentation">
+				<li class="flex-fill nav-item" role="presentation">
 					<button class="nav-link" :class="{ active: activeAuctionTab === 'completed' }" id="completed-tab"
 						data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab"
 						@click="setActiveAuctionTab('completed')">
 						Завершенные
-						<span v-if="completedAuctions.length > 0" class="badge bg-body-secondary ms-1">{{
-							completedAuctions.length }}</span>
+						<span v-if="completedAuctions.length > 0"
+							class="badge bg-body-secondary ms-1 d-none d-leg-block">{{
+								completedAuctions.length }}</span>
 					</button>
 				</li>
 			</ul>
@@ -61,7 +65,7 @@
 									:style="{ backgroundImage: 'url(' + getItemImage(auction.listing) + ')' }">
 								</div>
 								<div
-									class="description d-flex align-items-center justify-content-between flex-grow-1 gap-3">
+									class="description d-flex flex-column flex-lg-row align-items-center justify-content-between flex-grow-1 gap-3">
 									<div>
 										<div class="d-flex align-items-center gap-2">
 											<h6 class="product-name">{{ getItemName(auction.listing) }}</h6>
@@ -159,25 +163,16 @@
 						</div>
 					</div>
 					<!-- Empty state для каждого таба -->
-					<div v-else-if="activeAuctionTab === tabId" class="text-center py-5">
-						<i class="ri-auction-line display-4 text-muted mb-3"></i>
-						<h5>{{ getEmptyMessage(tabId) }}</h5>
-						<p class="text-muted">{{ getEmptyDescription(tabId) }}</p>
-					</div>
+					<EmptyState v-else-if="activeAuctionTab === tabId" icon="m-ico m-ico-empty-box"
+						:title="getEmptyMessage(tabId)" :description="getEmptyDescription(tabId)" />
 				</div>
 			</div>
 		</div>
 
 		<!-- Empty state when no auctions -->
-		<div v-else class="text-center py-5">
-			<i class="ri-auction-line display-4 text-muted mb-3"></i>
-			<h4>У вас пока нет аукционов</h4>
-			<p class="text-muted mb-4">Создать новый аукцион можно в разделе "Торговля" для любого активного листинга.
-			</p>
-			<a href="/profile#trading" class="btn theme-btn">
-				<i class="ri-store-2-line me-2"></i>Перейти к торговле
-			</a>
-		</div>
+		<EmptyState v-else icon="m-ico m-ico-empty-box" title="У вас пока нет аукционов"
+			description="Создать новый аукцион можно в разделе «Торговля» для любого активного листинга."
+			button-text="Перейти к торговле" button-href="/profile#trading" />
 	</div>
 
 	<!-- Модальное окно редактирования аукциона -->
@@ -303,7 +298,8 @@
 							}"></div>
 							<div>
 								<h6 class="mb-1">{{ getItemName(auctionToDelete.listing) }}</h6>
-								<small class="text-muted">Стартовая цена: <span v-html="formatPrice(auctionToDelete.starting_price)"></span></small>
+								<small class="text-muted">Стартовая цена: <span
+										v-html="formatPrice(auctionToDelete.starting_price)"></span></small>
 								<div class="mt-1">
 									<span class="badge bg-warning">{{ getStatusText(auctionToDelete.status) }}</span>
 								</div>
@@ -406,9 +402,13 @@
 <script>
 import { formatPrice } from '../../../shared/utils/helpers';
 import axios from 'axios';
+import EmptyState from '../EmptyState.vue';
 
 export default {
 	name: 'ProfileAuctions',
+	components: {
+		EmptyState
+	},
 	setup() {
 		return { formatPrice };
 	},

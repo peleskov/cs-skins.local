@@ -10,4 +10,28 @@
         text-align: center;
         color: #663000;
     }
+
+    .btn-to-profile {
+        position: absolute;
+        top: 15px;
+        right: 0;
+        z-index: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border-radius: 8px;
+        padding: 8px 10px;
+        font: 700 12px / 133% "Inter", sans-serif;
+        text-align: center;
+        color: #663000;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        background: #ff8d2f;
+
+        .m-ico {
+            color: #663000;
+            width: 14px;
+            height: 10px;
+        }
+    }
 }

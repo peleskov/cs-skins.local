@@ -1,9 +1,10 @@
 <template>
-	<div class="change-profile-content">
+	<div id="Favorites" class="change-profile-content position-relative">
+		<a href="/profile#profile" class="btn-to-profile d-lg-none"><i class="m-ico m-ico-back"></i>Назад</a>
 		<div class="title">
-			<div class="loader-line"></div>
-			<div class="d-flex justify-content-between align-items-end gap-2">
-				<h3>Избранное</h3>
+			<div class="loader-line d-none d-lg-block"></div>
+			<div class="d-flex flex-column flex-lg-row justify-content-lg-between align-items-lg-end gap-2">
+				<h3 class="mb-4 mb-lg-0">Избранное</h3>
 				<p class="text-muted fs-6 mb-0" v-if="favorites.length > 0">{{ favorites.length }} товар(ов)</p>
 			</div>
 		</div>
@@ -22,38 +23,74 @@
 				<div class="col-lg-7 col-12">
 					<div class="mb-4">
 						<div class="row g-3">
-							<div v-for="favorite in favorites" :key="favorite.id" class="col-lg-4 col-md-6">
-								<div @click="selectFavorite(favorite)" 
-									:class="['h-100 inventory-item text-center position-relative', 
-									{ 'active': selectedFavorite && selectedFavorite.id === favorite.id },
-									{ 'item-unavailable': favorite.listing.status !== 'active' }]">
-									
-									<!-- Бейдж статуса -->
-									<div v-if="favorite.listing.status !== 'active'" class="status-badge position-absolute" style="top: 8px; left: 8px; z-index: 10;">
+							<div v-for="favorite in favorites" :key="favorite.id" class="col-lg-4 col-6">
+								<!-- Мобильная карточка -->
+								<div class="m-listing-card d-lg-none h-100 d-flex flex-column position-relative"
+									:class="getRarityClass(favorite.listing)">
+									<div v-if="favorite.listing.status !== 'active'" class="status-badge position-absolute"
+										style="top: 8px; left: 8px; z-index: 10;">
 										<span v-if="favorite.listing.status === 'sold'" class="badge bg-secondary">Продан</span>
 										<span v-else-if="favorite.listing.status === 'cancelled'" class="badge bg-warning">Снят</span>
 										<span v-else-if="favorite.listing.status === 'pending'" class="badge bg-info">Ожидает</span>
 									</div>
-									
-									<div 
-										data-favorite-button 
-										:data-listing-id="favorite.listing.id"
+									<div data-favorite-button :data-listing-id="favorite.listing.id"
 										:data-is-favorite="favorite.listing.is_favorite"
 										class="favorite-button-placeholder position-absolute"
-										style="top: 8px; right: 8px; z-index: 10;"
-										title="Удалить из избранного"
+										style="top: 8px; right: 8px; z-index: 10;" title="Удалить из избранного"
+										@click.stop>
+									</div>
+									<div class="m-lc-img">
+										<img class="w-100" :src="getIconUrl(favorite.listing)"
+											:alt="getItemName(favorite.listing)" @error="handleImageError">
+									</div>
+									<div class="px-3 mt-2">
+										<h4 class="m-lc-price m-0" v-html="formatPrice(favorite.listing.price)"></h4>
+									</div>
+									<div class="px-3 mt-1 m-lc-title">{{ getItemName(favorite.listing) }}</div>
+									<div class="px-3 m-lc-wear">{{ getWearCondition(favorite.listing.wear_value) ||
+										favorite.listing.wear_name || '—' }}</div>
+									<div class="m-lc-actions px-3 pb-3 pt-2 mt-auto">
+										<a v-if="favorite.listing.status === 'active'"
+											:href="`/marketplace/${favorite.listing.id}`"
+											class="btn m-trade-btn-outline w-100">
+											<i class="ri-eye-line me-1"></i>Посмотреть
+										</a>
+									</div>
+								</div>
+								<!-- Десктоп -->
+								<div @click="selectFavorite(favorite)"
+									:class="['d-none d-lg-block h-100 inventory-item text-center position-relative',
+									{ 'active': selectedFavorite && selectedFavorite.id === favorite.id },
+									{ 'item-unavailable': favorite.listing.status !== 'active' }]">
+
+									<div v-if="favorite.listing.status !== 'active'"
+										class="status-badge position-absolute"
+										style="top: 8px; left: 8px; z-index: 10;">
+										<span v-if="favorite.listing.status === 'sold'"
+											class="badge bg-secondary">Продан</span>
+										<span v-else-if="favorite.listing.status === 'cancelled'"
+											class="badge bg-warning">Снят</span>
+										<span v-else-if="favorite.listing.status === 'pending'"
+											class="badge bg-info">Ожидает</span>
+									</div>
+
+									<div data-favorite-button :data-listing-id="favorite.listing.id"
+										:data-is-favorite="favorite.listing.is_favorite"
+										class="favorite-button-placeholder position-absolute"
+										style="top: 8px; right: 8px; z-index: 10;" title="Удалить из избранного"
 										@click.stop>
 									</div>
 									<img class="img-fluid inventory-img h-auto" :src="getIconUrl(favorite.listing)"
 										:alt="getItemName(favorite.listing)" @error="handleImageError">
 									<h6 class="mt-2">{{ getItemName(favorite.listing) }}</h6>
-									<small class="text-muted">{{ getWearCondition(favorite.listing.wear_value) || favorite.listing.wear_name || 'Состояние неизвестно' }}</small>
+									<small class="text-muted">{{ getWearCondition(favorite.listing.wear_value) ||
+										favorite.listing.wear_name || 'Состояние неизвестно' }}</small>
 								</div>
 							</div>
 						</div>
 					</div>
 				</div>
-				<div class="col-lg-5 col-12" id="favorite-details-section">
+				<div class="col-lg-5 col-12 d-none d-lg-block" id="favorite-details-section">
 					<ItemDetails 
 						v-if="selectedFavorite"
 						:item="selectedFavorite.listing"
@@ -124,14 +161,9 @@
 		</div>
 
 		<!-- Empty State -->
-		<div v-else class="text-center py-5">
-			<i class="ri-heart-line display-4 text-muted mb-3"></i>
-			<h4 class="text-muted">Избранное пусто</h4>
-			<p class="text-muted">Добавьте товары в избранное, чтобы легко находить их потом</p>
-			<a href="/marketplace" class="btn theme-btn mt-3">
-				<i class="ri-shopping-bag-line me-1"></i>Перейти в маркетплейс
-			</a>
-		</div>
+		<EmptyState v-else icon="m-ico m-ico-empty-heart" title="Избранное пусто"
+			description="Добавьте товары в избранное, чтобы легко находить их потом"
+			button-text="Перейти в маркетплейс" button-href="/marketplace" />
 	</div>
 </template>
 
@@ -142,12 +174,14 @@ import { createApp } from 'vue';
 import FavoriteButton from '../FavoriteButton.vue';
 import CartButton from '../CartButton.vue';
 import ItemDetails from './ItemDetails.vue';
+import EmptyState from '../EmptyState.vue';
 
 export default {
 	name: 'ProfileFavorites',
 	components: {
 		CartButton,
-		ItemDetails
+		ItemDetails,
+		EmptyState
 	},
 	setup() {
 		return { formatPrice };
@@ -166,6 +200,11 @@ export default {
 		}
 	},
 	methods: {
+		getRarityClass(listing) {
+			if (!listing || !listing.structured_tags) return '';
+			const tag = listing.structured_tags.find(t => t.category_code === 'rarity');
+			return tag ? `rarity-${tag.normalized_value}` : '';
+		},
 		async loadFavorites() {
 			this.isLoading = true;
 			try {

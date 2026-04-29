@@ -1,27 +1,28 @@
 <template>
-	<div class="setting-content">
+	<div id="Notifications" class="setting-content position-relative">
+		<a href="/profile#profile" class="btn-to-profile d-lg-none"><i class="m-ico m-ico-back"></i>Назад</a>
 		<div class="title">
-			<div class="loader-line"></div>
-			<h3>Уведомления</h3>
+			<div class="loader-line d-none d-lg-block"></div>
+			<h3 class="mb-4 mb-lg-0">Уведомления</h3>
 		</div>
 
 		<ul class="notification-setting">
 			<li>
 				<div class="notification">
-					<h6>Всплывающие уведомления</h6>
+					<span class="m-notif-ico d-lg-none"><i class="m-ico m-ico-notif-toast"></i></span><h6>Всплывающие уведомления</h6>
 					<input type="checkbox" :checked="isToastNotificationsEnabled" @change="toggleToastNotifications">
 				</div>
 			</li>
 			<li>
 				<div class="notification">
-					<h6>Email уведомления</h6>
+					<span class="m-notif-ico d-lg-none"><i class="m-ico m-ico-notif-email"></i></span><h6>Email уведомления</h6>
 					<input type="checkbox" :checked="isEmailNotificationsEnabled" @change="toggleEmailNotifications"
 						:disabled="!client.email || !client.email_verified_at">
 				</div>
 			</li>
 			<li>
 				<div class="notification">
-					<h6>Telegram уведомления</h6>
+					<span class="m-notif-ico d-lg-none"><i class="m-ico m-ico-notif-telegram"></i></span><h6>Telegram уведомления</h6>
 					<input type="checkbox" :checked="isTelegramNotificationsEnabled" @change="toggleTelegramNotifications"
 						:disabled="!client.telegram_id">
 				</div>
@@ -29,44 +30,44 @@
 		</ul>
 
 		<div class="title mt-5">
-			<div class="loader-line"></div>
-			<h3>Звуковые уведомления</h3>
+			<div class="loader-line d-none d-lg-block"></div>
+			<h3 class="mb-4 mb-lg-0">Звуковые уведомления</h3>
 		</div>
 
 		<ul class="notification-setting">
 			<li>
 				<div class="notification">
-					<h6>Продажа (передача предмета)</h6>
+					<span class="m-notif-ico d-lg-none"><i class="m-ico m-ico-notif-sale"></i></span><h6>Продажа (передача предмета)</h6>
 					<input type="checkbox" v-model="soundSettings.saleTransfer" @change="saveSoundSettings">
 				</div>
 			</li>
 			<li>
 				<div class="notification">
-					<h6>Покупка (получение предмета)</h6>
+					<span class="m-notif-ico d-lg-none"><i class="m-ico m-ico-notif-cart"></i></span><h6>Покупка (получение предмета)</h6>
 					<input type="checkbox" v-model="soundSettings.purchaseReceive" @change="saveSoundSettings">
 				</div>
 			</li>
 			<li>
 				<div class="notification">
-					<h6>Успешная продажа/покупка</h6>
+					<span class="m-notif-ico d-lg-none"><i class="m-ico m-ico-notif-success"></i></span><h6>Успешная продажа/покупка</h6>
 					<input type="checkbox" v-model="soundSettings.success" @change="saveSoundSettings">
 				</div>
 			</li>
 			<li>
 				<div class="notification">
-					<h6>Неудачная покупка</h6>
+					<span class="m-notif-ico d-lg-none"><i class="m-ico m-ico-notif-fail"></i></span><h6>Неудачная покупка</h6>
 					<input type="checkbox" v-model="soundSettings.failed" @change="saveSoundSettings">
 				</div>
 			</li>
 			<li>
 				<div class="notification">
-					<h6>Продажа аукциона</h6>
+					<span class="m-notif-ico d-lg-none"><i class="m-ico m-ico-notif-auction"></i></span><h6>Продажа аукциона</h6>
 					<input type="checkbox" v-model="soundSettings.auction" @change="saveSoundSettings">
 				</div>
 			</li>
 			<li>
 				<div class="notification">
-					<h6>Другие уведомления</h6>
+					<span class="m-notif-ico d-lg-none"><i class="m-ico m-ico-notif-other"></i></span><h6>Другие уведомления</h6>
 					<input type="checkbox" v-model="soundSettings.other" @change="saveSoundSettings">
 				</div>
 			</li>

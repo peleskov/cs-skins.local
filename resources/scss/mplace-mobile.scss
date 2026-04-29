@@ -7,8 +7,11 @@
 
 @import "mplace/mobile/base";
 
+/* Универсальные стили (работают и на десктопе) */
+@import "mplace/mobile/icons";
+@import "mplace/mobile/empty-state";
+
 @media (max-width: 1023px) {
-	@import "mplace/mobile/icons";
 	@import "mplace/mobile/buttons";
 	@import "mplace/mobile/header";
 	@import "mplace/mobile/drawer";

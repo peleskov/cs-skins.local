@@ -5,28 +5,39 @@
 			<div class="d-flex align-items-center justify-content-between">
 				<div class="d-flex align-items-center gap-3">
 					<div class="d-flex flex-column gap-2">
-						<div class="col d-flex align-items-center gap-2">
-							<div>
-								<button class="btn btn-link p-0 text-decoration-none fw-bold"
-									data-bs-toggle="collapse" :data-bs-target="`#order-${order.id}`"
-									:aria-expanded="false" :aria-controls="`order-${order.id}`">
-									<i class="ri-arrow-right-s-line me-1"></i>
-									Заказ {{ order.order_number }}
-								</button>
+						<div class="col d-flex flex-column flex-lg-row align-items-lg-center gap-2">
+							<div class="d-flex justify-content-between">
+								<div>
+									<div class="mb-1">
+										<button class="btn btn-link p-0 text-decoration-none fw-bold"
+											data-bs-toggle="collapse" :data-bs-target="`#order-${order.id}`"
+											:aria-expanded="false" :aria-controls="`order-${order.id}`">
+											<i class="ri-arrow-right-s-line me-1"></i>
+											Заказ {{ order.order_number }}
+										</button>
+									</div>
+									<span v-if="order.reserved_until && order.status === 'processing'"
+										class="badge bg-warning text-dark ms-2">
+										⏰ Резерв: {{ getTimeRemaining(order.reserved_until) }}
+									</span>
+									<small class="text-muted ms-2">
+										{{ userLabel }}: <span class="fw-medium">{{ getUserName() }}</span>
+									</small>
+								</div>
+								<div class="order-meta text-end d-lg-none">
+									<div class="order-amount mb-1">
+										<strong class="fs-5 text-primary"
+											v-html="formatPrice(order.total_amount)"></strong>
+									</div>
+									<small class="text-muted">{{ formatDate(order.created_at) }}</small>
+								</div>
 							</div>
-							<span v-if="order.reserved_until && order.status === 'processing'"
-								class="badge bg-warning text-dark ms-2">
-								⏰ Резерв: {{ getTimeRemaining(order.reserved_until) }}
-							</span>
-							<small class="text-muted ms-2">
-								{{ userLabel }}: <span class="fw-medium">{{ getUserName() }}</span>
-							</small>
 						</div>
 						<!-- Progress bar -->
 						<div class="col border-top pt-2 mt-2">
 							<div class="d-flex flex-wrap overflow-hidden align-items-start progress-bar-container">
-								<div v-for="step in getProgressSteps(order)" :key="step.id"
-									class="progress-step" :class="step.cssClass">
+								<div v-for="step in getProgressSteps(order)" :key="step.id" class="progress-step"
+									:class="step.cssClass">
 									<i class="step-ico"></i>
 									{{ step.title }}
 								</div>
@@ -34,7 +45,7 @@
 						</div>
 					</div>
 				</div>
-				<div class="order-meta text-end">
+				<div class="order-meta d-none d-lg-block text-end">
 					<div class="order-amount mb-1">
 						<strong class="fs-5 text-primary" v-html="formatPrice(order.total_amount)"></strong>
 					</div>
@@ -84,7 +95,8 @@
 				</div>
 
 				<!-- Actions section -->
-				<div v-if="showCancelButton && canCancelOrder(order)" class="d-flex justify-content-end mt-3 pt-3 border-top">
+				<div v-if="showCancelButton && canCancelOrder(order)"
+					class="d-flex justify-content-end mt-3 pt-3 border-top">
 					<button @click="$emit('cancel-order', order)" class="btn btn-danger btn-sm">
 						<i class="ri-close-circle-line"></i> Отменить заказ
 					</button>
@@ -147,7 +159,7 @@ export default {
 					// Если статус изменился на processing и есть резерв - запускаем таймер
 					if (newOrder.status === 'processing' && newOrder.reserved_until) {
 						this.startTimer();
-					} 
+					}
 					// Если статус больше не processing - останавливаем таймер
 					else if (newOrder.status !== 'processing') {
 						this.stopTimer();
@@ -175,7 +187,7 @@ export default {
 		startTimer() {
 			// Останавливаем предыдущий таймер если был
 			this.stopTimer();
-			
+
 			// Запускаем только если есть активный резерв
 			if (this.order.reserved_until && this.order.status === 'processing') {
 				// Обновляем таймер каждую секунду
@@ -183,7 +195,7 @@ export default {
 					// Проверяем, не истек ли резерв
 					const remaining = this.getTimeRemaining(this.order.reserved_until);
 					this.$forceUpdate(); // Обновляем отображение таймера
-					
+
 					if (remaining === 'Истек') {
 						this.stopTimer(); // Останавливаем после обновления
 					}
@@ -219,7 +231,7 @@ export default {
 			});
 
 			// Шаг 2: "Создан в Steam" если есть история трейда или заказ в процессе
-			if (order.status === 'processing' || 
+			if (order.status === 'processing' ||
 				(order.trade_status_history && order.trade_status_history.length > 0)) {
 				steps.push({
 					id: ++stepId,
@@ -233,10 +245,10 @@ export default {
 				order.trade_status_history.forEach(history => {
 					// Пропускаем CreatedSteam если он есть в истории - мы его уже добавили выше
 					if (history.status === 'CreatedSteam') return;
-					
+
 					const title = TRADE_STATUS_TITLES[history.status] || history.status;
 					// Все статусы из истории трейда - не финальные
-					
+
 					steps.push({
 						id: ++stepId,
 						title: title,

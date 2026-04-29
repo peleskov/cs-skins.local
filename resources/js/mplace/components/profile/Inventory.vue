@@ -1,10 +1,11 @@
 <template>
-	<div class="change-profile-content">
+	<div id="Inventory" class="change-profile-content position-relative">
+		<a href="/profile#profile" class="btn-to-profile d-lg-none"><i class="m-ico m-ico-back"></i>Назад</a>
 		<div class="title">
-			<div class="loader-line"></div>
-			<div class="d-flex justify-content-between align-items-center">
-				<h3>Steam Инвентарь</h3>
-				<div class="d-flex gap-2">
+			<div class="loader-line d-none d-lg-block"></div>
+			<div class="d-flex flex-column flex-lg-row justify-content-lg-between align-items-lg-center">
+				<h3 class="mb-4 mb-lg-0">Инвентарь</h3>
+				<div class="btn-group d-flex gap-2">
 					<a href="/trading-guide" target="_blank" class="btn theme-btn btn-sm"
 						title="Руководство по торговле">
 						<i class="ri-question-line me-1"></i>
@@ -37,20 +38,21 @@
 		<div v-else-if="inventoryData" class="inventory-items">
 			<!-- Tabs Navigation -->
 			<ul class="nav nav-tabs tab-style1 mb-4" id="inventoryTab" role="tablist">
-				<li class="nav-item" role="presentation">
-					<button class="nav-link" :class="{ active: activeInventoryTab === 'available' }" id="available-tab"
-						data-bs-toggle="tab" data-bs-target="#available" type="button" role="tab"
+				<li class="flex-fill flex-lg-grow-0 flex-lg-shrink-0 nav-item" role="presentation">
+					<button class="nav-link d-flex align-items-center justify-content-center"
+						:class="{ active: activeInventoryTab === 'available' }" id="available-tab" data-bs-toggle="tab"
+						data-bs-target="#available" type="button" role="tab"
 						@click="setActiveInventoryTab('available')">
 						Доступные для торговли
-						<span class="badge bg-body-secondary ms-2">{{ availableItems.length }}</span>
+						<span class="d-none d-lg-flex badge bg-body-secondary ms-2">{{ availableItems.length }}</span>
 					</button>
 				</li>
-				<li class="nav-item" role="presentation">
-					<button class="nav-link" :class="{ active: activeInventoryTab === 'listed' }" id="listed-tab"
-						data-bs-toggle="tab" data-bs-target="#listed" type="button" role="tab"
-						@click="setActiveInventoryTab('listed')">
+				<li class="flex-fill flex-lg-grow-0 flex-lg-shrink-0 nav-item" role="presentation">
+					<button class="nav-link d-flex align-items-center justify-content-center"
+						:class="{ active: activeInventoryTab === 'listed' }" id="listed-tab" data-bs-toggle="tab"
+						data-bs-target="#listed" type="button" role="tab" @click="setActiveInventoryTab('listed')">
 						В продаже
-						<span class="badge bg-body-secondary ms-2">{{ listedItems.length }}</span>
+						<span class="d-none d-lg-flex badge bg-body-secondary ms-2">{{ listedItems.length }}</span>
 					</button>
 				</li>
 			</ul>
@@ -64,18 +66,35 @@
 				<!-- Объединенный компонент для обеих вкладок -->
 				<div class="tab-pane fade" :class="{ 'show active': activeInventoryTab === 'available' }" id="available"
 					role="tabpanel" aria-labelledby="available-tab" tabindex="0">
-					<div v-if="currentItems.length === 0" class="text-center py-5">
-						<i class="ri-box-3-line display-4 text-muted mb-3"></i>
-						<h6>{{ getEmptyStateMessage() }}</h6>
-						<p class="text-muted mb-0">{{ getEmptyStateDescription() }}</p>
-					</div>
+					<EmptyState v-if="currentItems.length === 0" icon="m-ico m-ico-empty-box"
+						:title="getEmptyStateMessage()" :description="getEmptyStateDescription()" />
 					<div v-else class="row g-4 d-flex flex-lg-row flex-column-reverse">
 						<div class="col-lg-7 col-12">
 							<div class="mb-4">
 								<div class="row g-3">
-									<div v-for="item in currentItems" :key="item.steam_asset_id"
-										class="col-lg-4 col-md-6">
-										<div @click="selectItem(item)" :class="getItemClasses(item)">
+									<div v-for="item in currentItems" :key="item.steam_asset_id" class="col-lg-4 col-6">
+										<!-- Мобильная карточка — стиль маркетплейса -->
+										<div class="m-listing-card d-lg-none h-100 d-flex flex-column" :class="getRarityClass(item)">
+											<div class="m-lc-img">
+												<img class="w-100" :src="getIconUrl(item)" :alt="item.market_hash_name"
+													@error="handleImageError">
+											</div>
+											<div class="px-3 mt-2 m-lc-title">{{ getItemName(item) }}</div>
+											<div class="px-3 m-lc-wear">{{ getItemType(item) }}</div>
+											<div class="m-lc-actions px-3 pb-3 pt-2 mt-auto">
+												<button v-if="!item.is_listed" type="button"
+													class="btn m-inv-sell w-100" @click="openSellModal(item)">
+													Продать
+												</button>
+												<div v-else class="alert alert-info mb-0 m-inv-status">
+													<i class="ri-information-line me-2"></i>Этот предмет выставлен на
+													продажу
+												</div>
+											</div>
+										</div>
+										<!-- Десктоп -->
+										<div class="d-none d-lg-block" @click="selectItem(item)"
+											:class="getItemClasses(item)">
 											<img class="img-fluid inventory-img h-auto" :src="getIconUrl(item)"
 												:alt="item.market_hash_name" @error="handleImageError">
 											<h6 class="mt-2">{{ getItemName(item) }}</h6>
@@ -85,7 +104,7 @@
 								</div>
 							</div>
 						</div>
-						<div class="col-lg-5 col-12" :id="getDetailsSectionId()">
+						<div class="col-lg-5 col-12 d-none d-lg-block" :id="getDetailsSectionId()">
 							<ItemDetails :item="selectedItem" :active-tab="activeInventoryTab"
 								:has-trade-url="hasTradeUrl" :is-creating-listing="isCreatingListing"
 								:extension-active="extensionActive" :extension-checked="extensionChecked"
@@ -95,18 +114,36 @@
 				</div>
 				<div class="tab-pane fade" :class="{ 'show active': activeInventoryTab === 'listed' }" id="listed"
 					role="tabpanel" aria-labelledby="listed-tab" tabindex="0">
-					<div v-if="currentItems.length === 0" class="text-center py-5">
-						<i class="ri-box-3-line display-4 text-muted mb-3"></i>
-						<h6>{{ getEmptyStateMessage() }}</h6>
-						<p class="text-muted mb-0">{{ getEmptyStateDescription() }}</p>
-					</div>
+					<EmptyState v-if="currentItems.length === 0" icon="m-ico m-ico-empty-box"
+						:title="getEmptyStateMessage()" :description="getEmptyStateDescription()"
+						button-text="Перейти к доступным" @action="setActiveInventoryTab('available')" />
 					<div v-else class="row g-4 d-flex flex-lg-row flex-column-reverse">
 						<div class="col-lg-7 col-12">
 							<div class="mb-4">
 								<div class="row g-3">
-									<div v-for="item in currentItems" :key="item.steam_asset_id"
-										class="col-lg-4 col-md-6">
-										<div @click="selectItem(item)" :class="getItemClasses(item)">
+									<div v-for="item in currentItems" :key="item.steam_asset_id" class="col-lg-4 col-6">
+										<!-- Мобильная карточка — стиль маркетплейса -->
+										<div class="m-listing-card d-lg-none h-100 d-flex flex-column" :class="getRarityClass(item)">
+											<div class="m-lc-img">
+												<img class="w-100" :src="getIconUrl(item)" :alt="item.market_hash_name"
+													@error="handleImageError">
+											</div>
+											<div class="px-3 mt-2 m-lc-title">{{ getItemName(item) }}</div>
+											<div class="px-3 m-lc-wear">{{ getItemType(item) }}</div>
+											<div class="m-lc-actions px-3 pb-3 pt-2 mt-auto">
+												<button v-if="!item.is_listed" type="button"
+													class="btn m-inv-sell w-100" @click="openSellModal(item)">
+													Продать
+												</button>
+												<div v-else class="alert alert-info mb-0 m-inv-status">
+													<i class="ri-information-line me-2"></i>Этот предмет выставлен на
+													продажу
+												</div>
+											</div>
+										</div>
+										<!-- Десктоп -->
+										<div class="d-none d-lg-block" @click="selectItem(item)"
+											:class="getItemClasses(item)">
 											<img class="img-fluid inventory-img h-auto" :src="getIconUrl(item)"
 												:alt="item.market_hash_name" @error="handleImageError">
 											<h6 class="mt-2">{{ getItemName(item) }}</h6>
@@ -116,7 +153,7 @@
 								</div>
 							</div>
 						</div>
-						<div class="col-lg-5 col-12" :id="getDetailsSectionId()">
+						<div class="col-lg-5 col-12 d-none d-lg-block" :id="getDetailsSectionId()">
 							<ItemDetails :item="selectedItem" :active-tab="activeInventoryTab"
 								:has-trade-url="hasTradeUrl" :is-creating-listing="isCreatingListing"
 								:extension-active="extensionActive" :extension-checked="extensionChecked"
@@ -126,11 +163,8 @@
 				</div>
 
 				<!-- Global Empty State - показывается только когда инвентарь вообще не загружен -->
-				<div v-if="!inventoryData && !isLoading" class="text-center py-5">
-					<i class="ri-box-3-line display-4 text-muted mb-3"></i>
-					<h6>Инвентарь пуст</h6>
-					<p class="text-muted mb-0">Убедитесь, что ваш Steam инвентарь публичный</p>
-				</div>
+				<EmptyState v-if="!inventoryData && !isLoading" icon="m-ico m-ico-empty-box" title="Инвентарь пуст"
+					description="Убедитесь, что ваш Steam инвентарь публичный" />
 			</div>
 		</div>
 
@@ -286,11 +320,13 @@
 import axios from 'axios';
 import { formatPrice, handleApiError, getTimeRemaining } from '../../../shared/utils/helpers';
 import ItemDetails from './ItemDetails.vue';
+import EmptyState from '../EmptyState.vue';
 
 export default {
 	name: 'ProfileInventory',
 	components: {
-		ItemDetails
+		ItemDetails,
+		EmptyState
 	},
 	setup() {
 		return { formatPrice };

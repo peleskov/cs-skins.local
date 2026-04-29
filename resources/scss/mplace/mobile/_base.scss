@@ -15,6 +15,10 @@
 		overflow-x: clip;
 	}
 
+	section {
+		padding-top: 0;
+	}
+
 	#mobile-header-app,
 	#mobile-bottom-nav-app {
 		display: block;
@@ -100,6 +104,7 @@
 
 	.faq-title {
 		h2 {
+			padding-top: 30px;
 			font: 800 30px / 120% "Poppins", sans-serif;
 			letter-spacing: -0.03em;
 			text-align: center;

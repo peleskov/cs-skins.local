@@ -29,7 +29,7 @@ class AddCspHeaders
 
         if (method_exists($response, 'header')) {
             // В локальной разработке разрешаем vite dev-server (порт 5173) как источник скриптов/стилей
-            $viteDev = app()->environment('local') ? ' https://localhost:5173 http://localhost:5173 wss://localhost:5173 ws://localhost:5173' : '';
+            $viteDev = app()->environment('local') ? ' https://localhost:5173 http://localhost:5173 wss://localhost:5173 ws://localhost:5173 https://100.67.243.55:5173 wss://100.67.243.55:5173' : '';
 
             $csp = implode('; ', [
                 "default-src 'self'",

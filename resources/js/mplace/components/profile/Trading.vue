@@ -1,16 +1,19 @@
 <template>
-	<div class="change-profile-content">
+	<div id="Trading" class="change-profile-content position-relative">
+		<a href="/profile#profile" class="btn-to-profile d-lg-none"><i class="m-ico m-ico-back"></i>Назад</a>
 		<div class="title">
-			<div class="loader-line"></div>
-			<div class="d-flex justify-content-between align-items-center">
-				<h3>Торговля</h3>
+			<div class="loader-line d-none d-lg-block"></div>
+			<div class="d-flex flex-column flex-lg-row justify-content-lg-between align-items-lg-center">
+				<h3 class="mb-4 mb-lg-0">Торговля</h3>
 				<div class="btn-group">
 					<a href="/rukovodstvo-po-torgovle" class="btn theme-outline" title="Руководство по торговле">
 						<i class="ri-question-line me-1"></i>
 						<span>Как начать торговлю</span>
 					</a>
-					<a v-if="isWebStoreExtension" :href="extensionDownloadUrl" target="_blank" rel="noopener" class="btn theme-outline"><i class="ri-chrome-line me-2"></i>Расширение </a>
-					<a v-else class="btn theme-outline" href="#" data-bs-toggle="modal" data-bs-target="#extensionModal"><i class="ri-download-2-line me-2"></i>Расширение </a>
+					<a v-if="isWebStoreExtension" :href="extensionDownloadUrl" target="_blank" rel="noopener"
+						class="d-none d-lg-flex btn theme-outline"><i class="ri-chrome-line me-2"></i>Расширение </a>
+					<a v-else class="d-none d-lg-flex btn theme-outline" href="#" data-bs-toggle="modal"
+						data-bs-target="#extensionModal"><i class="ri-download-2-line me-2"></i>Расширение </a>
 				</div>
 			</div>
 		</div>
@@ -28,40 +31,43 @@
 		<div v-else-if="listings.length > 0" class="trading-listings">
 			<!-- Tabs Navigation -->
 			<ul class="nav nav-tabs tab-style1 mb-4" id="tradingTab" role="tablist">
-				<li class="nav-item" role="presentation">
-					<button class="nav-link" :class="{ active: activeTradingTab === 'pending' }" id="pending-tab"
-						data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab"
-						@click="setActiveTradingTab('pending')">
+				<li class="nav-item flex-fill flex-lg-grow-0 flex-lg-shrink-0" role="presentation">
+					<button class="nav-link d-flex align-items-center"
+						:class="{ active: activeTradingTab === 'pending' }" id="pending-tab" data-bs-toggle="tab"
+						data-bs-target="#pending" type="button" role="tab" @click="setActiveTradingTab('pending')">
 						Черновики
-						<span v-if="pendingListings.length > 0" class="badge bg-body-secondary ms-1">{{
-							pendingListings.length }}</span>
+						<span v-if="pendingListings.length > 0"
+							class="badge bg-body-secondary ms-1 d-none d-lg-block">{{
+								pendingListings.length }}</span>
 					</button>
 				</li>
-				<li class="nav-item" role="presentation">
-					<button class="nav-link" :class="{ active: activeTradingTab === 'active' }" id="active-tab"
-						data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab"
-						@click="setActiveTradingTab('active')">
+				<li class="nav-item flex-fill flex-lg-grow-0 flex-lg-shrink-0" role="presentation">
+					<button class="nav-link d-flex align-items-center"
+						:class="{ active: activeTradingTab === 'active' }" id="active-tab" data-bs-toggle="tab"
+						data-bs-target="#active" type="button" role="tab" @click="setActiveTradingTab('active')">
 						Активные
-						<span v-if="activeListings.length > 0" class="badge bg-body-secondary ms-1">{{
+						<span v-if="activeListings.length > 0" class="badge bg-body-secondary ms-1 d-none d-lg-block">{{
 							activeListings.length }}</span>
 					</button>
 				</li>
-				<li class="nav-item" role="presentation">
-					<button class="nav-link" :class="{ active: activeTradingTab === 'reserved' }" id="reserved-tab"
-						data-bs-toggle="tab" data-bs-target="#reserved" type="button" role="tab"
-						@click="setActiveTradingTab('reserved')">
-						Резервированные
-						<span v-if="reservedListings.length > 0" class="badge bg-body-secondary ms-1">{{
-							reservedListings.length }}</span>
+				<li class="nav-item flex-fill flex-lg-grow-0 flex-lg-shrink-0" role="presentation">
+					<button class="nav-link d-flex align-items-center"
+						:class="{ active: activeTradingTab === 'reserved' }" id="reserved-tab" data-bs-toggle="tab"
+						data-bs-target="#reserved" type="button" role="tab" @click="setActiveTradingTab('reserved')">
+						Резерв
+						<span v-if="reservedListings.length > 0"
+							class="badge bg-body-secondary ms-1 d-none d-lg-block">{{
+								reservedListings.length }}</span>
 					</button>
 				</li>
-				<li class="nav-item" role="presentation">
-					<button class="nav-link" :class="{ active: activeTradingTab === 'cancelled' }" id="cancelled-tab"
-						data-bs-toggle="tab" data-bs-target="#cancelled" type="button" role="tab"
-						@click="setActiveTradingTab('cancelled')">
+				<li class="nav-item flex-fill flex-lg-grow-0 flex-lg-shrink-0" role="presentation">
+					<button class="nav-link d-flex align-items-center"
+						:class="{ active: activeTradingTab === 'cancelled' }" id="cancelled-tab" data-bs-toggle="tab"
+						data-bs-target="#cancelled" type="button" role="tab" @click="setActiveTradingTab('cancelled')">
 						Отмененные
-						<span v-if="cancelledListings.length > 0" class="badge bg-body-secondary ms-1">{{
-							cancelledListings.length }}</span>
+						<span v-if="cancelledListings.length > 0"
+							class="badge bg-body-secondary ms-1 d-none d-lg-block">{{
+								cancelledListings.length }}</span>
 					</button>
 				</li>
 			</ul>
@@ -71,8 +77,77 @@
 				<div v-for="tabId in ['pending', 'active', 'reserved', 'cancelled']" :key="tabId" class="tab-pane fade"
 					:class="{ 'show active': activeTradingTab === tabId }" :id="tabId" role="tabpanel"
 					:aria-labelledby="`${tabId}-tab`" tabindex="0">
+					<!-- Мобильная сетка карточек -->
+					<div v-if="currentTabListings.length > 0 && activeTradingTab === tabId" class="row g-3 d-lg-none">
+						<div v-for="listing in currentTabListings" :key="`m-${listing.id}`" class="col-6">
+							<div class="m-listing-card h-100 d-flex flex-column" :class="getRarityClass(listing)">
+								<div class="m-lc-img">
+									<img class="w-100" :src="getItemImage(listing)" :alt="getItemName(listing)">
+								</div>
+								<div class="px-3 mt-2 m-lc-title">{{ getItemName(listing) }}</div>
+								<div class="px-3 m-lc-wear">
+									<span v-if="getExteriorTag(listing)">{{ getExteriorTag(listing) }}</span>
+								</div>
+								<div class="px-3 mt-2 m-trade-prices">
+									<div class="d-flex justify-content-between">
+										<span class="m-trade-label">Цена</span>
+										<span class="m-trade-value" v-html="formatPrice(listing.price)"></span>
+									</div>
+									<div class="d-flex justify-content-between">
+										<span class="m-trade-label">ТОП-1</span>
+										<span class="m-trade-value"
+											v-html="listing.min_market_price ? formatPrice(listing.min_market_price) : '-'"></span>
+									</div>
+									<div class="d-flex justify-content-between">
+										<span class="m-trade-label">Выкуп</span>
+										<span class="m-trade-value"
+											v-html="listing.buyout_price ? formatPrice(listing.buyout_price) : '-'"></span>
+									</div>
+								</div>
+								<div class="m-lc-actions px-3 pb-3 pt-2 mt-auto d-flex flex-column gap-2">
+									<template v-if="activeTradingTab === 'pending'">
+										<button class="btn m-trade-btn" @click="activateListing(listing)"
+											:disabled="listing.price == 0">
+											<i class="ri-play-line me-1"></i>Активировать
+										</button>
+										<button class="btn m-trade-btn-outline" @click="editPrice(listing)">
+											<i class="ri-edit-line me-1"></i>Цена
+										</button>
+										<button class="btn m-trade-btn-outline" @click="removeListing(listing)">
+											<i class="ri-delete-bin-line me-1"></i>Удалить
+										</button>
+									</template>
+									<template v-if="activeTradingTab === 'active'">
+										<a :href="`/marketplace/${listing.id}`" target="_blank"
+											class="btn m-trade-btn-outline">
+											<i class="ri-external-link-line me-1"></i>Смотреть
+										</a>
+										<button class="btn m-trade-btn-outline" @click="editPrice(listing)">
+											<i class="ri-edit-line me-1"></i>Цена
+										</button>
+										<button class="btn m-trade-btn-outline"
+											@click="createAuctionForListing(listing)">
+											<i class="ri-auction-line me-1"></i>Аукцион
+										</button>
+										<button class="btn m-trade-btn-outline" @click="deactivateListing(listing)">
+											<i class="ri-pause-line me-1"></i>Пауза
+										</button>
+									</template>
+									<template v-if="activeTradingTab === 'cancelled'">
+										<button class="btn m-trade-btn" @click="reactivateListing(listing)">
+											<i class="ri-restart-line me-1"></i>Возобновить
+										</button>
+										<button class="btn m-trade-btn-outline" @click="removeListing(listing)">
+											<i class="ri-delete-bin-line me-1"></i>Удалить
+										</button>
+									</template>
+								</div>
+							</div>
+						</div>
+					</div>
+					<!-- Десктопный список -->
 					<div v-if="currentTabListings.length > 0 && activeTradingTab === tabId"
-						class="product-box-section section-b-space">
+						class="product-box-section section-b-space d-none d-lg-block">
 						<div class="product-details-box-list">
 							<div v-for="listing in currentTabListings" :key="listing.id"
 								class="product-details-box flex-column flex-md-row gap-2">
@@ -106,7 +181,8 @@
 											<span class="text-muted small">ТОП-1</span>
 											<span class="text-muted small">Выкуп</span>
 
-											<span class="small content-color" v-html="formatPrice(listing.price)"></span>
+											<span class="small content-color"
+												v-html="formatPrice(listing.price)"></span>
 											<span class="small content-color" v-html="listing.min_market_price ?
 												formatPrice(listing.min_market_price) : '-'"></span>
 											<span class="small content-color" v-html="listing.buyout_price ?
@@ -168,24 +244,16 @@
 							</div>
 						</div>
 					</div>
-					<div v-else-if="activeTradingTab === tabId" class="text-center py-5">
-						<i :class="[tabConfig[tabId].emptyIcon, 'display-4 text-muted mb-3']"></i>
-						<h4>{{ tabConfig[tabId].emptyTitle }}</h4>
-						<p class="text-muted">{{ tabConfig[tabId].emptyText }}</p>
-					</div>
+					<EmptyState v-else-if="activeTradingTab === tabId" :icon="tabConfig[tabId].emptyIcon"
+						:title="tabConfig[tabId].emptyTitle" :description="tabConfig[tabId].emptyText" />
 				</div>
 			</div>
 		</div>
 
 		<!-- Empty state -->
-		<div v-else class="text-center py-5">
-			<i class="ri-shopping-bag-3-line display-4 text-muted mb-3"></i>
-			<h4>Нет активных листингов</h4>
-			<p class="text-muted mb-4">Перейдите в раздел "Инвентарь" чтобы выставить предметы на продажу</p>
-			<a href="#inventory" class="btn theme-btn">
-				<i class="ri-treasure-map-line me-2"></i>Перейти в инвентарь
-			</a>
-		</div>
+		<EmptyState v-else icon="ri-shopping-bag-3-line" title="Нет активных листингов"
+			description="Перейдите в раздел «Инвентарь» чтобы выставить предметы на продажу"
+			button-text="Перейти в инвентарь" button-href="#inventory" />
 	</div>
 
 	<!-- Модальное окно редактирования цены -->
@@ -433,8 +501,10 @@
 <script>
 import axios from 'axios';
 import { formatPrice, handleApiError } from '../../../shared/utils/helpers';
+import EmptyState from '../EmptyState.vue';
 
 export default {
+	components: { EmptyState },
 	name: 'ProfileTrading',
 	setup() {
 		return { formatPrice };
@@ -518,6 +588,11 @@ export default {
 		}
 	},
 	methods: {
+		getRarityClass(listing) {
+			if (!listing || !listing.structured_tags) return '';
+			const tag = listing.structured_tags.find(t => t.category_code === 'rarity');
+			return tag ? `rarity-${tag.normalized_value}` : '';
+		},
 		async loadListings() {
 			this.isLoading = true;
 			try {

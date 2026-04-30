@@ -1,8 +1,9 @@
 <template>
 	<div class="mobile-header-wrap">
-		<header class="mobile-header position-fixed top-0 start-0 end-0 d-flex align-items-center justify-content-between px-3 py-2"
+		<header
+			class="mobile-header position-fixed top-0 start-0 end-0 d-flex align-items-center justify-content-between px-3 py-2"
 			:class="{ 'is-hidden': isHidden }">
-			<div class="d-flex align-items-center">
+			<div class="d-flex align-items-center gap-2">
 				<button
 					class="mh-burger d-inline-flex align-items-center justify-content-center border-0 bg-transparent"
 					type="button" @click="isOpen = true" aria-label="menu">
@@ -11,6 +12,11 @@
 				<a class="mh-logo d-inline-flex align-items-center text-decoration-none" :href="routes.home">
 					<img :src="logoUrl" alt="logo">
 				</a>
+				<div v-if="online !== null"
+					class="mh-online d-flex flex-column align-items-center justify-content-center">
+					<span>ONLINE</span>
+					<span>{{ formattedOnline }}</span>
+				</div>
 			</div>
 			<div class="d-flex align-items-center gap-2 ms-auto">
 				<LanguageSelector class="mh-selector" />
@@ -41,7 +47,7 @@
 								:style="user.avatar_border_color ? { borderColor: user.avatar_border_color } : {}">
 						</div>
 						<div class="d-flex flex-column gap-1 min-w-0">
-							<div class="mh-profile-name">Профиль</div>
+							<div class="mh-profile-name">{{ user.name }}</div>
 							<div v-if="user.is_premium" class="mh-profile-badge align-self-start">ПРЕМИУМ</div>
 						</div>
 					</div>
@@ -135,7 +141,7 @@
 						<li>
 							<a :href="routes.logout"
 								class="mh-nav-link d-flex align-items-center gap-3 rounded-2 text-decoration-none">
-								<i class="ri-logout-box-r-line"></i><span class="flex-grow-1">Выход</span>
+								<i class="m-ico m-ico-logout"></i><span class="flex-grow-1">Выход</span>
 							</a>
 						</li>
 					</ul>
@@ -160,7 +166,13 @@ export default {
 		user: { type: Object, default: null },
 		routes: { type: Object, required: true },
 		logoUrl: { type: String, required: true },
-		initialCartCount: { type: Number, default: 0 }
+		initialCartCount: { type: Number, default: 0 },
+		online: { type: Number, default: null }
+	},
+	computed: {
+		formattedOnline() {
+			return (this.online || 0).toLocaleString('en-US');
+		}
 	},
 	data() {
 		return {

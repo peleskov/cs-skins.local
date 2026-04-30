@@ -1,0 +1,24 @@
+.m-cases-search {
+	margin-bottom: 20px;
+
+	.form-control {
+		width: 100%;
+		padding: 14px 16px 14px 48px;
+		border-radius: 12px;
+		border: 1px solid #2a2a2c;
+		background: #0a0a0b svg-url('<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 19L13.5 13.5M15.6667 8.33333C15.6667 12.3834 12.3834 15.6667 8.33333 15.6667C4.28325 15.6667 1 12.3834 1 8.33333C1 4.28325 4.28325 1 8.33333 1C12.3834 1 15.6667 4.28325 15.6667 8.33333Z" stroke="#565F68" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>') no-repeat 16px center;
+		font: 400 14px / 143% "Inter", sans-serif;
+		color: #e0dede;
+
+		&::placeholder {
+			color: #565f68;
+		}
+
+		&:focus {
+			outline: none;
+			border-color: #ff8c00;
+			box-shadow: none;
+			background-color: #0a0a0b;
+		}
+	}
+}

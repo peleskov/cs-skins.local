@@ -1,0 +1,102 @@
+/* Cases mobile base — оборачивается в .theme-cases + media в cases-mobile.scss */
+
+&,
+body {
+	background: #0a0a0b !important;
+	overflow-x: clip;
+	padding-top: 80px;
+}
+
+/* Скрываем десктопный хедер кейсов */
+header.header[data-vue-component="header"] {
+	display: none !important;
+}
+
+#mobile-header-app,
+#mobile-bottom-nav-app {
+	display: block;
+}
+
+.footer-section {
+	background: #0a0a0b !important;
+	border-top: 1px solid #2a2a2c;
+	padding-bottom: 100px;
+}
+
+.mh-online {
+	position: relative;
+	border-radius: 12px;
+	padding: 4px 8px 4px 18px;
+	background: rgba(34, 197, 94, 0.1);
+
+	&::after {
+		content: '';
+		display: block;
+		width: 6px;
+		height: 6px;
+		position: absolute;
+		top: calc(50% - 3px);
+		left: 8px;
+		border-radius: 50%;
+		background: #22c55e;
+	}
+
+	span {
+		font: 700 6px / 133% "Inter", sans-serif;
+		color: #16a34a;
+	}
+
+
+}
+
+.mh-drawer {
+	background: #0a0a0b;
+	color: #e0dede;
+
+	.mh-drawer-head,
+	.mh-balance-card {
+		background: #0a0a0b;
+	}
+
+	.mh-section-title,
+	.mh-nav-link,
+	.mh-profile-name,
+	.mh-balance-label,
+	.mh-balance-value {
+		color: #e0dede;
+	}
+
+	.mh-nav-link i,
+	.m-ico {
+		background-color: #e0dede;
+	}
+
+	.mh-nav-link.active {
+		background: transparent;
+		color: #ff8c00;
+
+		i,
+		.m-ico {
+			background-color: #ff8c00;
+		}
+	}
+}
+
+.mobile-bottom-nav {
+	background: #0a0a0b;
+	border-top: 1px solid #2a2a2c;
+	box-shadow: 0 -4px 20px 0 rgba(0, 0, 0, 0.05);
+
+	.mbn-item.active {
+		background: transparent;
+	}
+}
+
+.carousel-winner {
+	margin-bottom: 20px !important;
+	min-height: 78px;
+
+	.swiper .swiper-wrapper .swiper-slide .item {
+		height: 78px;
+	}
+}

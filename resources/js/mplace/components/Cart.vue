@@ -145,16 +145,12 @@
 				</div>
 
 				<!-- Empty cart state -->
-				<div v-else class="text-center py-5">
-					<i class="ri-shopping-cart-line display-4 text-muted mb-3"></i>
-					<h4>Корзина пуста</h4>
-					<p class="text-muted mb-4">Добавьте товары из маркетплейса для покупки</p>
-					<a :href="routes.marketplace" class="btn theme-outline me-sm-2 mb-2 mb-sm-0">
-						<i class="ri-store-2-line me-2"></i>Перейти в маркетплейс
-					</a>
-					<a v-if="!user" :href="routes.login" class="btn theme-btn"><i class="ri-steam-fill me-1"></i>Войти
-						через Steam</a>
-				</div>
+				<EmptyState v-else
+					icon="m-ico m-ico-empty-cart"
+					title="Корзина пуста"
+					description="Добавьте товары из маркетплейса для покупки"
+					button-text="Перейти в маркетплейс"
+					:button-href="routes.marketplace" />
 			</div>
 		</div>
 	</section>
@@ -223,9 +219,11 @@
 import axios from 'axios';
 import { formatPrice, handleApiError } from '../../shared/utils/helpers';
 import { cartAPI } from '../../shared/utils/api';
+import EmptyState from './EmptyState.vue';
 
 export default {
 	name: 'Cart',
+	components: { EmptyState },
 	props: {
 		user: {
 			type: Object,

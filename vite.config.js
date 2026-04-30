@@ -11,9 +11,11 @@ export default defineConfig({
                 'resources/scss/mplace.scss',
                 'resources/scss/mplace-mobile.scss',
                 'resources/scss/cases.scss',
+                'resources/scss/cases-mobile.scss',
                 'resources/js/mplace.js',
                 'resources/js/mplace-mobile.js',
-                'resources/js/cases.js'
+                'resources/js/cases.js',
+                'resources/js/cases-mobile.js'
             ],
             refresh: ['resources/views/**'],
         }),

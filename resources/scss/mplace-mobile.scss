@@ -8,8 +8,8 @@
 @import "mplace/mobile/base";
 
 /* Универсальные стили (работают и на десктопе) */
-@import "mplace/mobile/icons";
-@import "mplace/mobile/empty-state";
+@import "shared/mobile/icons";
+@import "shared/mobile/empty-state";
 
 @media (max-width: 1023px) {
 	@import "mplace/mobile/buttons";

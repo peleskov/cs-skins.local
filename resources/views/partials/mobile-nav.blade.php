@@ -22,7 +22,8 @@
         'logout' => route('auth.logout')
      ]) }}"
     data-logo-url="{{ asset('images/logo_white.svg') }}?v={{ filemtime(public_path('images/logo_white.svg')) }}"
-    data-cart-count="{{ app('App\Services\CartService')->getCount() }}">
+    data-cart-count="{{ app('App\Services\CartService')->getCount() }}"
+    data-online="1245">
 </div>
 
 <!-- Mobile Bottom Nav (≤1023px, fixed) -->

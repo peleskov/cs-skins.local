@@ -1,7 +1,77 @@
 <template>
-	<div class="container-fluid flex-fill d-flex flex-column g-0">
+	<div class="container-fluid flex-fill d-flex flex-column g-lg-0">
+		<div class="m-cases-search d-lg-none">
+			<input type="text" class="form-control" placeholder="Поиск кейсов..." v-model="filters.search"
+				@input="debouncedSearch">
+		</div>
+
+		<!-- Mobile filter drawer -->
+		<div class="m-cases-filter-backdrop d-lg-none" :class="{ 'is-open': mobileFiltersOpen }"
+			@click="mobileFiltersOpen = false"></div>
+		<aside class="m-cases-filter-drawer d-lg-none position-fixed" :class="{ 'is-open': mobileFiltersOpen }">
+			<div class="m-cases-filter-head d-flex align-items-center justify-content-between">
+				<div class="m-cases-filter-title">Фильтры</div>
+				<button type="button" class="m-cases-filter-reset border-0 bg-transparent"
+					@click="clearFilters">Сбросить</button>
+			</div>
+
+			<div class="m-cases-filter-body flex-grow-1 overflow-y-auto">
+				<div class="m-cases-filter-search mb-3">
+					<input type="search" class="form-control" v-model="filters.search" @input="debouncedSearch"
+						placeholder="Поиск кейса">
+				</div>
+
+				<div class="m-cases-filter-group mb-3">
+					<div class="m-cases-filter-label">ЦЕНА</div>
+					<div class="d-flex align-items-center gap-2 mb-2">
+						<input type="number" class="form-control" placeholder="От" :min="priceMin" :max="priceMax"
+							v-model.number="priceRange[0]" @change="onInputChange">
+						<input type="number" class="form-control" placeholder="До" :min="priceMin" :max="priceMax"
+							v-model.number="priceRange[1]" @change="onInputChange">
+					</div>
+					<Slider v-model="priceRange" :min="priceMin" :max="priceMax" :tooltips="false" :lazy="false"
+						@update="onPriceChange" />
+				</div>
+
+				<div class="m-cases-filter-group mb-3">
+					<div class="m-cases-filter-label">КАТЕГОРИИ</div>
+					<ul class="list-unstyled m-0 p-0">
+						<li v-for="category in categorizedCases" :key="category.id">
+							<label class="m-cases-filter-check d-flex align-items-center gap-2">
+								<input type="checkbox" :checked="filters.categoryIds.includes(category.id)"
+									@change="toggleCategory(category.id)">
+								<span>{{ category.name }}</span>
+							</label>
+						</li>
+					</ul>
+				</div>
+			</div>
+
+			<div class="m-cases-filter-footer">
+				<button v-if="user && user.balance !== undefined" type="button"
+					class="m-cases-filter-affordable w-100 mb-2"
+					:class="{ active: filters.onlyAffordable }" @click="toggleAffordableFilter()">
+					ДОСТУПНО ПО БАЛАНСУ
+				</button>
+				<button type="button" class="m-cases-filter-clear w-100" @click="clearFilters"
+					:disabled="!hasActiveFilters">ОЧИСТИТЬ ФИЛЬТР</button>
+			</div>
+		</aside>
+		<div class="m-cases-cats d-lg-none">
+			<button type="button" class="m-cases-cat" :class="{ active: filters.categoryIds.length === 0 }"
+				@click="filters.categoryIds = []">ВСЕ</button>
+			<button v-for="category in categorizedCases" :key="category.id" type="button" class="m-cases-cat"
+				:class="{ active: filters.categoryIds.includes(category.id) }" @click="toggleCategory(category.id)">{{
+					category.name }}</button>
+		</div>
+		<button type="button"
+			class="m-cases-filter-btn d-lg-none d-inline-flex align-items-center justify-content-center border-0"
+			@click="mobileFiltersOpen = true" aria-label="Фильтры">
+			<i class="ri-equalizer-line"></i>
+		</button>
 		<div class="row g-0 flex-fill">
-			<aside class="sidebar align-self-stretch" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
+			<aside class="d-none d-lg-block sidebar align-self-stretch"
+				:class="{ 'sidebar-collapsed': sidebarCollapsed }">
 				<div class="d-flex gap-4">
 					<div class="search-box mb-4">
 						<input type="text" class="form-control" placeholder="Поиск кейсов..." v-model="filters.search"
@@ -58,14 +128,15 @@
 				<button v-if="sidebarCollapsed" class="sidebar-toggle d-xl-none" @click="toggleSidebar"
 					title="Показать фильтры">Фильтр</button>
 				<div class=" d-flex flex-column gap-5">
-					<div v-for="category in filteredCategorizedCases" :key="category.id || 'no-category'" class="px-4">
+					<div v-for="category in filteredCategorizedCases" :key="category.id || 'no-category'"
+						class="px-lg-4">
 						<h2
 							class="category-title text-center mb-5 d-flex align-items-center justify-content-center gap-2">
 							<img v-if="category.icon" :src="`/storage/${category.icon}`" :alt="category.name"
 								class="category-icon" style="width: 32px; height: 32px; object-fit: contain;">
 							<span>{{ category.name }}</span>
 						</h2>
-						<div class="row g-5 justify-content-center align-items-stretch">
+						<div class="row g-2 g-lg-5 justify-content-center align-items-stretch">
 							<div v-for="case_item in category.cases" :key="case_item.id"
 								:class="sidebarCollapsed ? 'col-lg-4 col-xl-3' : 'col-6 col-lg-4 col-xl-2'">
 								<div class="category-case-box d-flex flex-column align-items-center h-100">
@@ -142,6 +213,7 @@ export default {
 		return {
 			casesList: this.cases || [],
 			priceRange: [0, 10000],
+			mobileFiltersOpen: false,
 			filters: {
 				search: '',
 				minPrice: null,

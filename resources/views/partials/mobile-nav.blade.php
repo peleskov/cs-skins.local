@@ -24,7 +24,8 @@
      ]) }}"
     data-logo-url="{{ asset('images/logo_white.svg') }}?v={{ filemtime(public_path('images/logo_white.svg')) }}"
     data-cart-count="{{ app('App\Services\CartService')->getCount() }}"
-    data-online="{{ app('App\Services\OnlineCounterService')->currentCount() }}">
+    @if($showOnline ?? false) data-online="{{ app('App\Services\OnlineCounterService')->currentCount() }}" @endif>
+
 </div>
 
 <!-- Mobile Bottom Nav (≤1023px, fixed) -->

@@ -11,7 +11,7 @@
     @include('partials.cases.header')
 
     <!-- Mobile Header & Bottom Nav (≤1023px) -->
-    @include('partials.mobile-nav')
+    @include('partials.mobile-nav', ['showOnline' => true])
 
     <!-- Main content -->
     <main class="main flex-grow-1 d-flex flex-column">

@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 routes: routes,
                 logoUrl: mobileHeaderElement.dataset.logoUrl,
                 initialCartCount: parseInt(mobileHeaderElement.dataset.cartCount || '0'),
-                online: parseInt(mobileHeaderElement.dataset.online || '0'),
+                online: mobileHeaderElement.dataset.online ? parseInt(mobileHeaderElement.dataset.online) : null,
                 avatarRoute: 'caseInventory'
             });
             app.mount('#mobile-header-app');

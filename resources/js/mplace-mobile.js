@@ -13,7 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 user: user,
                 routes: routes,
                 logoUrl: mobileHeaderElement.dataset.logoUrl,
-                initialCartCount: parseInt(mobileHeaderElement.dataset.cartCount || '0')
+                initialCartCount: parseInt(mobileHeaderElement.dataset.cartCount || '0'),
+                online: parseInt(mobileHeaderElement.dataset.online || '0')
             });
             app.mount('#mobile-header-app');
         } catch (error) {

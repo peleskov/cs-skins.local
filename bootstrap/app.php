@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\AddCspHeaders::class,
             \App\Http\Middleware\CheckPinCode::class,
             \App\Http\Middleware\TrackPartnerAttribution::class,
+            \App\Http\Middleware\TrackOnlineUsers::class,
         ]);
 
         $middleware->alias([

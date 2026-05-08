@@ -11,6 +11,12 @@
 				<a class="me-lg-3 me-xl-4" :href="routes.home">
 					<img class="img-fluid logo" :src="logoUrl" alt="logo">
 				</a>
+				<div v-if="initialOnline !== null" class="online-counter d-none d-lg-flex align-items-center me-3" :title="'Онлайн: ' + formattedOnline">
+					<span class="online-dot"></span>
+					<i class="ri-user-line me-1"></i>
+					<span class="online-label">Онлайн:</span>
+					<span class="online-value ms-1">{{ formattedOnline }}</span>
+				</div>
 				<!-- Main Navigation Menu (Desktop) -->
 				<ul class="navbar-nav d-none d-lg-flex gap-0">
 					<template v-for="(item, key) in mainNavigation" :key="key">
@@ -269,6 +275,7 @@
 
 <script>
 import { formatPrice } from '../../shared/utils/helpers';
+import { startOnlinePolling } from '../../shared/utils/online';
 import { cartAPI } from '../../shared/utils/api';
 import CurrencySelector from '../../shared/components/CurrencySelector.vue';
 import LanguageSelector from '../../shared/components/LanguageSelector.vue';
@@ -306,6 +313,10 @@ export default {
 		extensionDownloadUrl: {
 			type: String,
 			required: true
+		},
+		initialOnline: {
+			type: Number,
+			default: null
 		}
 	},
 	data() {
@@ -318,7 +329,9 @@ export default {
 			isLoading: false,
 			cartLoaded: false, // Флаг, что корзина была загружена
 			profileTabs: window.profileTabs || {},
-			mainNavigation: window.mainNavigation || {}
+			mainNavigation: window.mainNavigation || {},
+			currentOnline: this.initialOnline,
+			stopOnlinePolling: null
 		}
 	},
 	computed: {
@@ -327,6 +340,9 @@ export default {
 		},
 		isWebStoreExtension() {
 			return this.extensionDownloadUrl && this.extensionDownloadUrl.startsWith('https://chromewebstore.google.com/');
+		},
+		formattedOnline() {
+			return (this.currentOnline || 0).toLocaleString('en-US');
 		}
 	},
 	methods: {
@@ -435,6 +451,11 @@ export default {
 
 		// Слушаем обновления баланса
 		window.addEventListener('balance-updated', this.handleBalanceUpdate);
+
+		// Онлайн-счётчик: периодический опрос
+		if (this.initialOnline !== null) {
+			this.stopOnlinePolling = startOnlinePolling(this.initialOnline, (v) => { this.currentOnline = v; });
+		}
 	},
 
 	beforeUnmount() {
@@ -443,6 +464,7 @@ export default {
 		window.removeEventListener('favorites-updated', this.updateFavoritesFromEvent);
 		window.removeEventListener('currency-changed', this.handleCurrencyChange);
 		window.removeEventListener('balance-updated', this.handleBalanceUpdate);
+		if (this.stopOnlinePolling) this.stopOnlinePolling();
 	}
 }
 </script>

@@ -153,6 +153,7 @@
 
 <script>
 import { formatPrice } from '../../shared/utils/helpers';
+import { startOnlinePolling } from '../../shared/utils/online';
 import LanguageSelector from '../../shared/components/LanguageSelector.vue';
 import CurrencySelector from '../../shared/components/CurrencySelector.vue';
 
@@ -173,7 +174,7 @@ export default {
 	},
 	computed: {
 		formattedOnline() {
-			return (this.online || 0).toLocaleString('en-US');
+			return (this.currentOnline || 0).toLocaleString('en-US');
 		}
 	},
 	data() {
@@ -184,7 +185,9 @@ export default {
 			currentPath: window.location.pathname,
 			isHidden: false,
 			lastScrollY: 0,
-			scrollTicking: false
+			scrollTicking: false,
+			currentOnline: this.online,
+			stopOnlinePolling: null
 		};
 	},
 	methods: {
@@ -227,11 +230,15 @@ export default {
 		window.addEventListener('cart-updated', this.updateCart);
 		window.addEventListener('balance-updated', this.updateBalance);
 		if (this.hideOnScroll) window.addEventListener('scroll', this.onScroll, { passive: true });
+		if (this.online !== null) {
+			this.stopOnlinePolling = startOnlinePolling(this.online, (v) => { this.currentOnline = v; });
+		}
 	},
 	beforeUnmount() {
 		window.removeEventListener('cart-updated', this.updateCart);
 		window.removeEventListener('balance-updated', this.updateBalance);
 		window.removeEventListener('scroll', this.onScroll);
+		if (this.stopOnlinePolling) this.stopOnlinePolling();
 		document.body.style.overflow = '';
 	},
 	watch: {

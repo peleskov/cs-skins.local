@@ -112,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cartCount = parseInt(headerElement.dataset.cartCount || '0');
                 const favoritesCount = parseInt(headerElement.dataset.favoritesCount || '0');
                 const extensionDownloadUrl = headerElement.dataset.extensionDownloadUrl;
+                const online = headerElement.dataset.online !== undefined ? parseInt(headerElement.dataset.online || '0') : null;
 
                 const app = createApp(Header, {
                     user: user,
@@ -119,7 +120,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     logoUrl: logoUrl,
                     initialCartCount: cartCount,
                     initialFavoritesCount: favoritesCount,
-                    extensionDownloadUrl: extensionDownloadUrl
+                    extensionDownloadUrl: extensionDownloadUrl,
+                    initialOnline: online
                 });
                 app.mount('#header-app');
 

@@ -423,6 +423,7 @@ class ClientResource extends Resource
         return [
             RelationManagers\TransactionsRelationManager::class,
             RelationManagers\BonusTransactionsRelationManager::class,
+            RelationManagers\PromocodeActivationsRelationManager::class,
             RelationManagers\CaseInventoryRelationManager::class,
         ];
     }

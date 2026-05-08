@@ -2,15 +2,18 @@
 
 namespace App\Filament\Resources\Promocodes\Schemas;
 
+use App\Models\BonusTransaction;
 use App\Models\Promocode;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class PromocodeForm
@@ -114,6 +117,36 @@ class PromocodeForm
                     ->label('Активен')
                     ->default(true),
 
+                Section::make('Статистика активаций')
+                    ->visible(fn ($record) => $record !== null)
+                    ->schema([
+                        Grid::make(3)->schema([
+                            Placeholder::make('stats_total_deposits')
+                                ->label('Общая сумма пополнений')
+                                ->content(fn ($record) => number_format(self::stats($record)['total_deposits'], 2, '.', ' ').' ₽'),
+
+                            Placeholder::make('stats_total_bonuses')
+                                ->label('Общая сумма выданных бонусов')
+                                ->content(fn ($record) => number_format(self::stats($record)['total_bonuses'], 2, '.', ' ').' ₽'),
+
+                            Placeholder::make('stats_total_activations')
+                                ->label('Кол-во активаций')
+                                ->content(fn ($record) => (string) self::stats($record)['total_activations']),
+
+                            Placeholder::make('stats_new_first')
+                                ->label('Новые: первый промокод')
+                                ->content(fn ($record) => (string) self::stats($record)['new_first']),
+
+                            Placeholder::make('stats_old_first')
+                                ->label('Старые: первый промокод')
+                                ->content(fn ($record) => (string) self::stats($record)['old_first']),
+
+                            Placeholder::make('stats_old_repeat')
+                                ->label('Старые: повторный промокод')
+                                ->content(fn ($record) => (string) self::stats($record)['old_repeat']),
+                        ]),
+                    ]),
+
                 Section::make('LosReferidos')
                     ->schema([
                         TextInput::make('partner_id')
@@ -130,5 +163,106 @@ class PromocodeForm
                     ])
                     ->visible(fn ($record) => $record?->partner_id !== null),
             ]);
+    }
+
+    /**
+     * Считает агрегированную статистику по активациям промокода.
+     * Кэшируется на запрос, чтобы не дёргать базу для каждого Placeholder.
+     */
+    protected static function stats(?Promocode $promocode): array
+    {
+        if (! $promocode) {
+            return self::emptyStats();
+        }
+
+        static $cache = [];
+        if (isset($cache[$promocode->id])) {
+            return $cache[$promocode->id];
+        }
+
+        $activations = BonusTransaction::query()
+            ->with('payment:id,amount')
+            ->where('promocode_id', $promocode->id)
+            ->where('type', BonusTransaction::TYPE_CREDIT)
+            ->get(['id', 'client_id', 'payment_id', 'amount', 'created_at']);
+
+        $totalDeposits = 0.0;
+        $totalBonuses = 0.0;
+        $newFirst = 0;
+        $oldFirst = 0;
+        $oldRepeat = 0;
+
+        $clientIds = $activations->pluck('client_id')->unique()->values()->all();
+
+        $clientsRegistered = DB::table('clients')
+            ->whereIn('id', $clientIds)
+            ->pluck('created_at', 'id');
+
+        // Для каждого клиента — самая ранняя активация любого промокода
+        $firstAnyActivation = DB::table('bonus_transactions')
+            ->whereIn('client_id', $clientIds)
+            ->whereNotNull('promocode_id')
+            ->where('type', BonusTransaction::TYPE_CREDIT)
+            ->select('client_id', DB::raw('MIN(created_at) as first_at'), DB::raw('MIN(promocode_id) as first_promo'))
+            ->groupBy('client_id')
+            ->get()
+            ->keyBy('client_id');
+
+        // Точный promocode_id первой активации
+        $firstPromoByClient = [];
+        foreach ($clientIds as $cid) {
+            $row = DB::table('bonus_transactions')
+                ->where('client_id', $cid)
+                ->whereNotNull('promocode_id')
+                ->where('type', BonusTransaction::TYPE_CREDIT)
+                ->orderBy('created_at')
+                ->first(['promocode_id', 'created_at']);
+            if ($row) {
+                $firstPromoByClient[$cid] = $row;
+            }
+        }
+
+        foreach ($activations as $tx) {
+            $totalDeposits += (float) ($tx->payment?->amount ?? 0);
+            $totalBonuses += (float) $tx->amount;
+
+            $first = $firstPromoByClient[$tx->client_id] ?? null;
+            $isFirstEver = $first && (int) $first->promocode_id === (int) $promocode->id;
+
+            if ($isFirstEver) {
+                $registeredAt = $clientsRegistered[$tx->client_id] ?? null;
+                $isNew = $registeredAt
+                    && abs(strtotime((string) $registeredAt) - strtotime((string) $tx->created_at)) <= 86400;
+
+                if ($isNew) {
+                    $newFirst++;
+                } else {
+                    $oldFirst++;
+                }
+            } else {
+                $oldRepeat++;
+            }
+        }
+
+        return $cache[$promocode->id] = [
+            'total_deposits' => $totalDeposits,
+            'total_bonuses' => $totalBonuses,
+            'total_activations' => $activations->count(),
+            'new_first' => $newFirst,
+            'old_first' => $oldFirst,
+            'old_repeat' => $oldRepeat,
+        ];
+    }
+
+    protected static function emptyStats(): array
+    {
+        return [
+            'total_deposits' => 0.0,
+            'total_bonuses' => 0.0,
+            'total_activations' => 0,
+            'new_first' => 0,
+            'old_first' => 0,
+            'old_repeat' => 0,
+        ];
     }
 }

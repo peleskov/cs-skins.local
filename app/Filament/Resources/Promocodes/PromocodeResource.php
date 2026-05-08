@@ -42,7 +42,7 @@ class PromocodeResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            \App\Filament\Resources\Promocodes\RelationManagers\ActivationsRelationManager::class,
         ];
     }
 

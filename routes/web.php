@@ -224,6 +224,9 @@ Route::prefix('api')->name('api.')->group(function () {
     });
 });
 
+// Скрытые ссылки на кейсы — публичный доступ без авторизации
+Route::get('/cases/secret/{token}', [CaseController::class, 'secretLink'])->name('cases.secret');
+
 // Требуется авторизации
 Route::middleware(['auth:client'])->group(function () {
 

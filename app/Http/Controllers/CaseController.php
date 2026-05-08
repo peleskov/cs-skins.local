@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CaseModel;
 use App\Models\CaseOpen;
+use App\Models\CaseSecretLink;
 use App\Models\Client;
 use App\Services\CaseService;
 use App\Services\FreeCaseService;
@@ -144,6 +145,22 @@ class CaseController extends Controller
         ] : null;
 
         return view('cases.show', compact('case', 'caseData', 'depositSettings', 'userBalance'));
+    }
+
+    /**
+     * Открытие страницы списка кейсов по скрытой ссылке (без авторизации).
+     */
+    public function secretLink(string $token)
+    {
+        $link = CaseSecretLink::where('token', $token)->first();
+
+        if (! $link || ! $link->isValid()) {
+            abort(404, 'Ссылка недействительна');
+        }
+
+        $link->increment('visits_count');
+
+        return $this->index();
     }
 
     /**

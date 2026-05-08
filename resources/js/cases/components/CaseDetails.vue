@@ -23,6 +23,7 @@
 			</div>
 			<div class="case-box mb-5">
 				<div class="case-box-images mb-3 d-flex justify-content-center align-items-center gap-3 flex-wrap"
+					:class="`case-box-images-${selectedMultiplier}`"
 					v-if="!isSpinning && !showResults && selectedMultiplier <= 1">
 					<div v-if="freeInfo && (freeInfo.reason === 'insufficient_deposits' || freeInfo.reason === 'no_opens_left')"
 						class="limit-box d-flex flex-column justify-content-center align-items-center">
@@ -45,6 +46,7 @@
 
 				<!-- Карточки с лого (множитель 2+, до и после открытия) -->
 				<div class="case-box-images mb-3 d-flex justify-content-center align-items-center gap-3 flex-wrap"
+					:class="`case-box-images-${selectedMultiplier}`"
 					v-if="selectedMultiplier > 1">
 					<div v-for="(card, index) in cardFlips" :key="`card-${index}`" class="case-box-image case-card-flip"
 						:class="[

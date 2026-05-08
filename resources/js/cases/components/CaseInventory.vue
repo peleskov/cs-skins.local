@@ -2,7 +2,7 @@
 	<div class="container py-4">
 		<div class="info-block row g-3 mb-4">
 			<!-- Блок профиля -->
-			<div class="col-md-4">
+			<div class="col-md-4 d-none d-lg-block">
 				<div class="w-100 h-100 card card-info-block">
 					<div class="card-header d-flex align-items-center gap-2">
 						<div class="avatar position-relative"
@@ -51,7 +51,7 @@
 			</div>
 
 			<!-- Любимый кейс -->
-			<div class="col-md-4">
+			<div class="col-6 col-lg-4">
 				<template v-if="favoriteCase">
 					<a :href="`${routes.cases}/${favoriteCase.slug}`"
 						class="w-100 h-100 card card-info-block best-case text-decoration-none">
@@ -80,7 +80,7 @@
 			</div>
 
 			<!-- Лучший предмет -->
-			<div class="col-md-4">
+			<div class="col-6 col-lg-4">
 				<template v-if="bestItem">
 					<a :href="`${routes.cases}/${favoriteCase.slug}`"
 						class="w-100 h-100 card card-info-block best-item text-decoration-none"
@@ -128,7 +128,7 @@
 					</li>
 				</ul>
 			</div>
-			<div class="col-auto d-flex align-items-center gap-3">
+			<div class="col-auto d-flex align-items-center gap-3" v-if="activeTab === 'items'">
 				<div class="form-check form-switch d-flex align-items-center gap-2 flex-row-reverse">
 					<input class="form-check-input m-0" type="checkbox" role="switch" id="availableForSale"
 						v-model="showOnlyAvailable">
@@ -207,34 +207,57 @@
 				</div>
 				<!-- Список апгрейдов -->
 				<div v-else class="row g-3">
-					<div v-for="upgrade in upgradeHistory" :key="upgrade.id" class="col-4">
-						<div class="h-100 upgrade-box d-flex flex-column">
+					<div v-for="upgrade in upgradeHistory" :key="upgrade.id" class="col-12 col-lg-4">
+						<div class="h-100 upgrade-box d-flex flex-column"
+							:class="{ 'has-stack-arrows': upgrade.bet_items.length > 1 }">
 							<h4 class="text-center">ШАНС</h4>
 							<h5 class="text-center">{{ upgrade.chance.toFixed(2) }}%</h5>
 							<div class="flex-grow-1 row g-4">
-								<div class="col-6 d-flex flex-column">
+								<div class="col-6 d-flex flex-column position-relative">
 									<h5 class="text-center result-title">СТАВКА</h5>
 									<!-- Предметы ставки (до 4 шт) -->
 									<template v-if="upgrade.bet_items.length > 0">
+										<button v-if="upgrade.bet_items.length > 1" type="button"
+											class="m-stack-arrow m-stack-arrow-up d-lg-none"
+											@click="cycleBet(upgrade.id, upgrade.bet_items.length, -1)"
+											aria-label="prev">
+											<svg width="78" height="20" viewBox="0 0 78 20" fill="none"
+												xmlns="http://www.w3.org/2000/svg">
+												<path opacity="0.7" d="M1.00049 18.2957L39.4475 1L77.0005 18.2957"
+													stroke="#FF8C00" stroke-width="2" stroke-linecap="round"
+													stroke-linejoin="round" />
+											</svg>
+										</button>
+										<button v-if="upgrade.bet_items.length > 1" type="button"
+											class="m-stack-arrow m-stack-arrow-down d-lg-none"
+											@click="cycleBet(upgrade.id, upgrade.bet_items.length, 1)"
+											aria-label="next">
+											<svg width="78" height="20" viewBox="0 0 78 20" fill="none"
+												xmlns="http://www.w3.org/2000/svg">
+												<path opacity="0.7" d="M1.00049 18.2957L39.4475 1L77.0005 18.2957"
+													stroke="#FF8C00" stroke-width="2" stroke-linecap="round"
+													stroke-linejoin="round" />
+											</svg>
+										</button>
 										<div class="row g-2 flex-grow-1 justify-content-center  align-items-center position-relative"
-											:class="{ 'bet-items-grid': upgrade.bet_items.length > 1 }">
+											:class="[
+												{ 'bet-items-grid': upgrade.bet_items.length > 1, 'm-bet-stack': upgrade.bet_items.length > 1 },
+												`m-bet-stack-${upgrade.bet_items.length}`
+											]">
 											<div v-for="(betItem, idx) in upgrade.bet_items" :key="idx"
-												:class="upgrade.bet_items.length === 1 ? 'col-12 align-self-stretch' : 'col-6'">
+												:class="[upgrade.bet_items.length === 1 ? 'col-12 align-self-stretch' : 'col-6', { 'is-top': (topBetIndices[upgrade.id] || 0) === idx }]"
+												@click="setTopBet(upgrade.id, idx)">
 												<div class="h-100 case-content-item"
 													:class="[getUpgradeRarityClass(betItem), { 'compact': upgrade.bet_items.length > 1 }]">
-													<!-- Цена и название только если 1 предмет -->
-													<template v-if="upgrade.bet_items.length === 1">
-														<div class="top-box d-flex flex-column">
-															<span class="price align-self-start"
-																v-html="formatPrice(betItem.price)"></span>
-														</div>
-													</template>
-													<div class="image"
-														:class="{ 'mt-5': upgrade.bet_items.length === 1, 'mt-2': upgrade.bet_items.length > 1 }"
+													<div class="top-box d-flex flex-column">
+														<span class="price align-self-start"
+															v-html="formatPrice(betItem.price)"></span>
+													</div>
+													<div class="image mt-2 mt-lg-5"
 														:style="{ backgroundImage: `url(${getUpgradeItemImageUrl(betItem)})` }">
 													</div>
-													<div v-if="upgrade.bet_items.length === 1"
-														class="d-flex flex-column align-items-center">
+													<div class="d-flex flex-column align-items-center"
+														:class="{ 'd-lg-none': upgrade.bet_items.length > 1 }">
 														<p class="w-75 text-center mb-0">{{ betItem.name }}</p>
 													</div>
 												</div>
@@ -453,6 +476,8 @@ export default {
 			localUser: null,
 			sellingIds: [],
 			showOnlyAvailable: false,
+			activeTab: 'items',
+			topBetIndices: {},
 			// Trade URL
 			tradeUrlInput: '',
 			tradeUrlSaving: false,
@@ -479,6 +504,10 @@ export default {
 	},
 
 	mounted() {
+		const initialHash = window.location.hash.replace('#', '');
+		if (initialHash) {
+			this.activeTab = initialHash.replace('-pane', '');
+		}
 		// Восстанавливаем активную вкладку из URL hash
 		this.restoreActiveTab();
 
@@ -489,6 +518,7 @@ export default {
 				const targetId = event.target.getAttribute('data-bs-target');
 				if (targetId) {
 					window.location.hash = targetId.replace('#', '');
+					this.activeTab = targetId.replace('#', '').replace('-pane', '');
 				}
 			});
 		});
@@ -523,6 +553,14 @@ export default {
 	},
 
 	methods: {
+		setTopBet(id, idx) {
+			this.topBetIndices = { ...this.topBetIndices, [id]: idx };
+		},
+		cycleBet(id, count, dir) {
+			if (count < 2) return;
+			const cur = this.topBetIndices[id] || 0;
+			this.setTopBet(id, (cur + dir + count) % count);
+		},
 		// ==================== TABS ====================
 		restoreActiveTab() {
 			const hash = window.location.hash.replace('#', '');

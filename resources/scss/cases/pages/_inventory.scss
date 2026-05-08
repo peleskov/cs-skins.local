@@ -379,9 +379,14 @@
 
                 .chance {
                     position: absolute;
-                    top: calc(50% - 27px);
+                    top: 50%;
                     left: 0;
                     right: 0;
+                    transform: translateY(-50%);
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
 
                     .dig {
                         font: 600 28px / 121% "Inter", sans-serif;

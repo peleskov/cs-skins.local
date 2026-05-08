@@ -53,9 +53,12 @@ header.header[data-vue-component="header"] {
 	background: #0a0a0b;
 	color: #e0dede;
 
-	.mh-drawer-head,
-	.mh-balance-card {
+	.mh-drawer-head {
 		background: #0a0a0b;
+	}
+
+	.mh-balance-card {
+		background: rgb(242, 244, 246, .05);
 	}
 
 	.mh-section-title,
@@ -92,11 +95,234 @@ header.header[data-vue-component="header"] {
 	}
 }
 
+.mobile-header .mh-selector .dropdown-menu {
+	background: #0a0a0b;
+	border-color: #2a2a2c;
+	color: #e0dede;
+
+	.dropdown-item {
+		color: #e0dede;
+
+		&:hover,
+		&:focus,
+		&.active {
+			background: #1f2024;
+			color: #ff8c00;
+		}
+	}
+}
+
+/* На мобиле прячем фоновые SVG-иллюстрации раритета, оставляя только нижний бордюр (как на десктопе) */
+.case-content-item::before {
+	display: none !important;
+}
+
+.case-content-item::after {
+	background-image: none !important;
+	border-bottom-width: 2px !important;
+	border-radius: 16px !important;
+}
+
+/* В списках апгрейда у карточек свой стиль полосы (через .image::after) — отключаем десктопный ::after */
+.m-upgrade-pane .case-content-item::after {
+	display: none !important;
+}
+
+.theme-cases-modal .modal-content .modal-header .modal-title {
+	line-height: 110%;
+}
+
 .carousel-winner {
 	margin-bottom: 20px !important;
 	min-height: 78px;
 
 	.swiper .swiper-wrapper .swiper-slide .item {
 		height: 78px;
+	}
+}
+
+.cases-mobile-balance {
+	padding: 16px 12px 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+
+	.cmb-row {
+		display: flex;
+		gap: 12px;
+
+		> * {
+			flex: 1 1 0;
+			min-width: 0;
+		}
+	}
+
+	.cmb-card {
+		position: relative;
+		padding: 14px 16px;
+		border-radius: 12px;
+		background: #15161a;
+		border-left: 3px solid #ff8c00;
+	}
+
+	.cmb-label {
+		font: 700 10px / 1 "Inter", sans-serif;
+		letter-spacing: 0.05em;
+		color: #6b7280;
+		margin-bottom: 8px;
+	}
+
+	.cmb-value {
+		font: 700 18px / 1 "Inter", sans-serif;
+		color: #fff;
+	}
+
+	.cmb-cur {
+		color: #ff8c00;
+	}
+
+	.cmb-btn {
+		height: 48px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		border-radius: 12px;
+		text-decoration: none;
+		font: 700 12px / 1 "Inter", sans-serif;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+
+		.m-ico {
+			width: 16px;
+			height: 16px;
+		}
+	}
+
+	.cmb-btn-primary {
+		background: #ff8c00;
+		color: #0a0a0b;
+
+		.m-ico {
+			background-color: #0a0a0b;
+		}
+	}
+
+	.cmb-btn-secondary {
+		background: #1f2024;
+		color: #e0dede;
+
+		.m-ico {
+			background-color: #e0dede;
+		}
+	}
+}
+
+.limit-box {
+	width: 100%;
+	gap: 12px;
+	padding: 16px;
+
+	h2 {
+		font: 700 14px / 130% "Inter", sans-serif;
+		text-align: center;
+		margin: 0;
+		color: #e0dede;
+
+		.color {
+			color: #ff8c00;
+		}
+	}
+
+	.rest-limit {
+		width: 100% !important;
+		max-width: 100% !important;
+		margin-bottom: 48px;
+
+		.btn {
+			position: absolute !important;
+			top: 24px;
+			left: 50% !important;
+			bottom: auto !important;
+			transform: translateX(-50%);
+			white-space: normal !important;
+			font-size: 12px;
+			padding: 8px 14px;
+		}
+	}
+}
+
+.case-box-images {
+	flex-wrap: nowrap !important;
+	gap: 8px !important;
+
+	.case-box-image {
+		flex: 1 1 0;
+		min-width: 0;
+		background-size: contain;
+		background-repeat: no-repeat;
+		background-position: center;
+	}
+
+	&.case-box-images-1 .case-box-image { max-width: 100%; }
+	&.case-box-images-2 .case-box-image { max-width: 50%; }
+	&.case-box-images-3 .case-box-image { max-width: 33%; }
+
+	&.case-box-images-4,
+	&.case-box-images-5 {
+		flex-wrap: wrap !important;
+
+		.case-box-image {
+			flex: 0 0 calc(50% - 4px);
+			max-width: calc(50% - 4px);
+		}
+	}
+
+	&.case-box-images-10 {
+		flex-wrap: wrap !important;
+
+		.case-box-image {
+			flex: 0 0 calc(33.333% - 6px);
+			max-width: calc(33.333% - 6px);
+		}
+	}
+}
+
+.case-box-footer {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 12px !important;
+
+	.multiplier-box {
+		position: static !important;
+		left: auto !important;
+
+		.case-box-qty {
+			justify-content: center !important;
+			flex-wrap: wrap;
+		}
+	}
+
+	> .d-flex {
+		flex-direction: column;
+		align-items: stretch !important;
+		gap: 8px !important;
+		margin-bottom: 0 !important;
+
+		.col-6 {
+			width: 100% !important;
+			flex: 0 0 100% !important;
+			max-width: 100% !important;
+			justify-content: center !important;
+			display: flex;
+		}
+
+		.btn {
+			width: 100%;
+			padding-left: 16px !important;
+			padding-right: 16px !important;
+			white-space: normal;
+		}
 	}
 }

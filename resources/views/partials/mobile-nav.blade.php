@@ -16,6 +16,7 @@
         'auctions' => route('auctions.index'),
         'cases' => auth('client')->check() ? route('cases.index') : '#',
         'profile' => auth('client')->check() ? route('profile') : '#',
+        'caseInventory' => auth('client')->check() ? route('case-inventory.index') : '#',
         'faq' => route('faq'),
         'contact' => route('contact'),
         'login' => route('auth.steam'),
@@ -38,6 +39,9 @@
         'cases' => auth('client')->check() ? route('cases.index') : '#',
         'cart' => route('cart'),
         'profile' => auth('client')->check() ? route('profile') : '#',
+        'upgrade' => auth('client')->check() ? route('upgrade.index') : '#',
+        'faq' => route('faq'),
+        'caseInventory' => auth('client')->check() ? route('case-inventory.index') : '#',
      ]) }}"
     data-cart-count="{{ app('App\Services\CartService')->getCount() }}">
 </div>

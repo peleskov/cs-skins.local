@@ -1,20 +1,27 @@
 <template>
-	<div class="container py-4">
+	<div class="container py-4 upgrade-page">
 		<div class="info-block row g-3 mb-4">
 			<div class="col-md-4">
+				<button v-if="selectedGiveItems.length > 1" type="button"
+					class="m-stack-arrow m-stack-arrow-up d-lg-none" @click="cycleGive(-1)" aria-label="prev">
+					<svg width="78" height="20" viewBox="0 0 78 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+						<path opacity="0.7" d="M1.00049 18.2957L39.4475 1L77.0005 18.2957" stroke="#FF8C00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+					</svg>
+				</button>
 				<div class="w-100 h-100 card card-upgrade-skins justify-content-center align-items-center p-0">
 					<template v-if="selectedGiveItems.length > 0">
 						<div class="w-100 case-content row justify-content-center aling-items-center"
 							:class="selectedGiveItems.length > 1 ? 'g-2' : 'flex-grow-1 g-0'">
 							<div v-for="(item, index) in selectedGiveItems" :key="item.id"
-								:class="getSelectedItemColClass(index)">
+								:class="[getSelectedItemColClass(index), { 'is-top': topGiveIndex === index }]"
+								@click="topGiveIndex = index">
 								<div class="h-100 case-content-item"
 									:class="[getRarityClass(item), selectedGiveItems.length === 1 ? 'single' : '']">
 									<div
 										class="h-100 position-relative d-flex flex-column justify-content-center align-items-center">
 										<div class="w-100 top-box d-flex align-items-center justify-content-between">
 											<span class="price" v-html="formatPrice(item.price)"></span>
-											<button class="btn-remove" @click="toggleItem(item)"></button>
+											<button class="btn-remove d-none d-lg-block" @click="toggleItem(item)"></button>
 										</div>
 										<div class="w-100 image"
 											:style="{ backgroundImage: `url(${getItemImageUrl(item)})` }">
@@ -33,6 +40,12 @@
 					<span v-if="selectedGiveItems.length == 0" class="title-upgrade">Вы отдаете</span>
 					<span v-else-if="selectedGiveItems.length == 1" class="title-upgrade">Улучшить предмет</span>
 				</div>
+				<button v-if="selectedGiveItems.length > 1" type="button"
+					class="m-stack-arrow m-stack-arrow-down d-lg-none" @click="cycleGive(1)" aria-label="next">
+					<svg width="78" height="20" viewBox="0 0 78 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+						<path opacity="0.7" d="M1.00049 18.2957L39.4475 1L77.0005 18.2957" stroke="#FF8C00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+					</svg>
+				</button>
 			</div>
 			<div class="col-md-4">
 				<div class="w-100 h-100 card card-upgrade-skins indicator">
@@ -121,7 +134,7 @@
 										class="h-100 position-relative d-flex flex-column justify-content-center align-items-center">
 										<div class="w-100 top-box d-flex align-items-center justify-content-between">
 											<span class="price" v-html="formatPrice(item.price)"></span>
-											<button class="btn-remove" @click="toggleGetItem(item)"></button>
+											<button class="btn-remove d-none d-lg-block" @click="toggleGetItem(item)"></button>
 										</div>
 										<div class="w-100 image"
 											:style="{ backgroundImage: `url(${getItemImageUrl(item)})` }">
@@ -168,9 +181,15 @@
 				</div>
 			</div>
 		</div>
-		<div class="row position-relative">
+		<div class="row position-relative" :class="`mobile-tab-${mobileTab}`">
+			<div class="m-upgrade-tabs d-lg-none">
+				<button type="button" class="m-upgrade-tab" :class="{ active: mobileTab === 'inventory' }"
+					@click="mobileTab = 'inventory'">Ваши предметы</button>
+				<button type="button" class="m-upgrade-tab" :class="{ active: mobileTab === 'targets' }"
+					@click="mobileTab = 'targets'">Предметы для апгрейда</button>
+			</div>
 			<!-- Ваши предметы -->
-			<div class="col-6">
+			<div class="col-6 m-upgrade-pane m-upgrade-pane-inventory">
 				<h2 class="category-title upgrade text-center mb-3"><span>Ваши предметы</span></h2>
 				<div class="filter-box d-flex align-items-center gap-2 mb-3">
 					<div class="col">
@@ -204,7 +223,7 @@
 			</div>
 			<div class="upgrade-divider"></div>
 			<!-- Предметы для апгрейда -->
-			<div class="col-6">
+			<div class="col-6 m-upgrade-pane m-upgrade-pane-targets">
 				<h2 class="category-title upgrade text-center mb-3"><span>Предметы для апгрейда</span></h2>
 				<div class="filter-box d-flex align-items-center gap-2 mb-3">
 					<div class="col">
@@ -229,7 +248,7 @@
 					Загрузка...
 				</div>
 				<div v-else-if="targets.length === 0" class="text-center py-4">
-					<p>Выберите предметы слева для отображения целей</p>
+					<p>Выберите предметы из своего инвентаря для отображения целей</p>
 				</div>
 				<div v-else-if="filteredTargets.length === 0" class="text-center py-4">
 					<p>Нет предметов с таким шансом</p>
@@ -298,6 +317,8 @@ export default {
 			selectedGiveItems: [],
 			selectedGetItems: [],
 			balanceAmount: null,
+			mobileTab: 'inventory',
+			topGiveIndex: 0,
 
 			// Фильтры инвентаря
 			inventorySearch: '',
@@ -490,6 +511,12 @@ export default {
 
 	methods: {
 		// ==================== ПРЕДМЕТЫ ====================
+		cycleGive(dir) {
+			const n = this.selectedGiveItems.length;
+			if (n < 2) return;
+			this.topGiveIndex = (this.topGiveIndex + dir + n) % n;
+		},
+
 		getSelectedItemColClass(index) {
 			const count = this.selectedGiveItems.length;
 			if (count === 1) return 'col-12';

@@ -21,7 +21,7 @@
 			<div class="d-flex align-items-center gap-2 ms-auto">
 				<LanguageSelector class="mh-selector" />
 				<CurrencySelector class="mh-selector" />
-				<a v-if="user" :href="routes.profile" class="mh-avatar d-inline-block position-relative"
+				<a v-if="user" :href="routes[avatarRoute] || routes.profile" class="mh-avatar d-inline-block position-relative"
 					:class="{ 'is-premium': user.is_premium }">
 					<img :src="user.steam_avatar" alt="avatar"
 						:style="user.avatar_border_color ? { borderColor: user.avatar_border_color } : {}">
@@ -40,7 +40,7 @@
 			:class="{ open: isOpen }">
 			<div class="mh-drawer-head p-3 mb-4">
 				<template v-if="user">
-					<div class="mh-profile-card d-flex align-items-center gap-3 mb-2">
+					<a :href="routes.profile + '#profile'" class="mh-profile-card d-flex align-items-center gap-3 mb-2 text-decoration-none" @click="isOpen = false">
 						<div class="mh-profile-avatar-wrap position-relative"
 							:class="{ 'is-premium': user.is_premium }">
 							<img class="mh-profile-avatar" :src="user.steam_avatar" alt=""
@@ -50,7 +50,7 @@
 							<div class="mh-profile-name">{{ user.name }}</div>
 							<div v-if="user.is_premium" class="mh-profile-badge align-self-start">ПРЕМИУМ</div>
 						</div>
-					</div>
+					</a>
 					<div class="mh-balance-card d-flex align-items-center gap-3">
 						<div class="flex-grow-1 min-w-0">
 							<div class="mh-balance-label">БАЛАНС</div>
@@ -167,7 +167,9 @@ export default {
 		routes: { type: Object, required: true },
 		logoUrl: { type: String, required: true },
 		initialCartCount: { type: Number, default: 0 },
-		online: { type: Number, default: null }
+		online: { type: Number, default: null },
+		avatarRoute: { type: String, default: 'profile' },
+		hideOnScroll: { type: Boolean, default: true }
 	},
 	computed: {
 		formattedOnline() {
@@ -224,7 +226,7 @@ export default {
 	mounted() {
 		window.addEventListener('cart-updated', this.updateCart);
 		window.addEventListener('balance-updated', this.updateBalance);
-		window.addEventListener('scroll', this.onScroll, { passive: true });
+		if (this.hideOnScroll) window.addEventListener('scroll', this.onScroll, { passive: true });
 	},
 	beforeUnmount() {
 		window.removeEventListener('cart-updated', this.updateCart);

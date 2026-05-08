@@ -115,7 +115,7 @@
 						<div class="m-trade-url-input" @click="client.steam_trade_url ? copyTradeUrl($event) : null">
 							<span v-if="client.steam_trade_url" class="trade-url-text"
 								:data-url="client.steam_trade_url">
-								{{ limitString(client.steam_trade_url, 40) }}
+								{{ client.steam_trade_url }}
 							</span>
 							<span v-else class="placeholder">Не указан</span>
 						</div>
@@ -200,7 +200,7 @@
 						<span v-if="client.steam_trade_url">
 							<span class="trade-url-text" :data-url="client.steam_trade_url" style="cursor: pointer;"
 								title="Нажмите для копирования" @click="copyTradeUrl">
-								{{ limitString(client.steam_trade_url, 50) }}
+								{{ client.steam_trade_url }}
 								<i class="ri-file-copy-line ms-1"></i>
 							</span>
 							<span class="badge bg-success-subtle ms-2">Активен</span>
@@ -267,7 +267,7 @@
 					</div>
 					<h6>
 						<span v-if="extensionToken">
-							<code>{{ limitString(extensionToken, 20) }}</code>
+							<code class="token-text">{{ extensionToken }}</code>
 							<button class="btn ms-2" @click="copyExtensionToken($event)">
 								<i class="ri-file-copy-line"></i>
 							</button>
@@ -879,11 +879,6 @@ export default {
 			if (!dateString) return '';
 			const date = new Date(dateString);
 			return date.toLocaleDateString('ru-RU');
-		},
-
-		limitString(str, limit) {
-			if (!str) return '';
-			return str.length > limit ? str.substring(0, limit) + '...' : str;
 		}
 	},
 

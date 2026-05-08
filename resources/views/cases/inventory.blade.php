@@ -12,6 +12,7 @@ $routes = [
     'profile' => route('profile'),
 ];
 @endphp
+@include('partials.cases.mobile-balance')
 <section class="case-inventory flex-fill d-flex flex-column"
     data-vue-component="case-inventory"
     data-items="{{ json_encode($inventoryData) }}"

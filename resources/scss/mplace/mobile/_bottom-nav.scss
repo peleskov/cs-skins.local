@@ -10,12 +10,19 @@
 
 	.mbn-item {
 		gap: 2px;
-		padding: 8px 12px;
+		padding: 8px;
 		border-radius: 8px;
 		font: 500 10px / 150% "Inter", sans-serif;
 		letter-spacing: 0.03em;
 		text-transform: uppercase;
 		color: #94a3b8;
+
+		.m-ico {
+			height: 20px;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+		}
 
 		&.active {
 			color: #ea580c;

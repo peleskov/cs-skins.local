@@ -27,6 +27,8 @@
 
 		/* Кейсовые переопределения после mplace-партиалов */
 		@import "cases/mobile/base";
+		@import "cases/mobile/upgrade";
+		@import "cases/mobile/inventory";
 		@import "cases/mobile/search";
 		@import "cases/mobile/categories";
 		@import "cases/mobile/case-card";

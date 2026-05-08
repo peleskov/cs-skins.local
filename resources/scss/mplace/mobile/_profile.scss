@@ -102,6 +102,7 @@
 
             .m-trade-url-input {
                 flex: 1;
+                min-width: 0;
                 min-height: 44px;
                 display: flex;
                 align-items: center;
@@ -117,6 +118,8 @@
                 }
 
                 .trade-url-text {
+                    display: block;
+                    max-width: 100%;
                     overflow: hidden;
                     text-overflow: ellipsis;
                     white-space: nowrap;

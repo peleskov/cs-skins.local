@@ -2,7 +2,8 @@
 	<ProfileLayout
 		:initial-client="initialClient"
 		:telegram-bot-name="telegramBotName"
-		:deposit-settings="depositSettings" />
+		:deposit-settings="depositSettings"
+		:withdraw-settings="withdrawSettings" />
 </template>
 
 <script>
@@ -29,6 +30,10 @@ export default {
 				maximum_amount: 50000,
 				enabled: true
 			})
+		},
+		withdrawSettings: {
+			type: Object,
+			default: () => ({ minimum_amount: 100 })
 		}
 	}
 }

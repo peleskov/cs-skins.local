@@ -102,6 +102,14 @@ class SubscriptionController extends Controller
         ]);
 
         $client = $this->getClient();
+
+        if ($client->isBalanceBlocked()) {
+            return response()->json([
+                'success' => false,
+                'message' => $client->getBalanceBlockReasonForUser() ?: 'Операции с балансом заблокированы',
+            ], 403);
+        }
+
         $plan = SubscriptionPlan::active()->findOrFail($request->plan_id);
 
         $result = $paymentService->createSubscriptionPayment($client, $plan);

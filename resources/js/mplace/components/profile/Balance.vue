@@ -547,21 +547,44 @@
 						</h5>
 						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 					</div>
-					<div class="modal-body text-center">
-						<div v-if="isWithdrawBlocked" class="py-4">
+					<div class="modal-body">
+						<div v-if="isWithdrawBlocked" class="py-4 text-center">
 							<i class="ri-lock-line display-4 text-danger mb-3"></i>
 							<h4>Вывод заблокирован</h4>
 							<p class="text-muted" style="white-space: pre-wrap;">{{ withdrawBlockReason }}</p>
 						</div>
-						<div v-else class="py-4">
-							<i class="ri-settings-3-line display-4 text-muted mb-3"></i>
-							<h4>В разработке</h4>
-							<p class="text-muted">Функция вывода средств находится в разработке и будет доступна в
-								ближайшее время.</p>
+						<div v-else-if="withdrawResultMessage" class="py-4 text-center">
+							<i :class="['display-4 mb-3', withdrawResultExceeded ? 'ri-time-line text-warning' : 'ri-check-line text-success']"></i>
+							<h4>{{ withdrawResultExceeded ? 'Заявка на одобрении' : 'Заявка создана' }}</h4>
+							<p class="text-muted" style="white-space: pre-wrap;">{{ withdrawResultMessage }}</p>
+						</div>
+						<div v-else>
+							<div class="mb-3">
+								<label for="withdrawAmount" class="form-label">Сумма вывода</label>
+								<input type="number" class="form-control" id="withdrawAmount"
+									v-model="withdrawForm.amount"
+									:placeholder="`Минимум ${minimumWithdrawAmount} ₽`"
+									:min="minimumWithdrawAmount"
+									:max="client.balance"
+									step="0.01">
+								<small class="text-muted">Доступно: <span v-html="formatPrice(client.balance)"></span></small>
+							</div>
+							<div v-if="withdrawForm.error" class="alert alert-danger small mb-0">
+								{{ withdrawForm.error }}
+							</div>
 						</div>
 					</div>
 					<div class="modal-footer">
-						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Понятно</button>
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+							{{ withdrawResultMessage ? 'Закрыть' : 'Отмена' }}
+						</button>
+						<button type="button" class="btn theme-btn"
+							v-if="!isWithdrawBlocked && !withdrawResultMessage"
+							@click="submitWithdrawBalance"
+							:disabled="withdrawForm.processing || !withdrawForm.amount">
+							<span v-if="withdrawForm.processing" class="spinner-border spinner-border-sm me-1"></span>
+							Отправить заявку
+						</button>
 					</div>
 				</div>
 			</div>
@@ -627,11 +650,22 @@ export default {
 				card_payment_enabled: true,
 				test_payment_enabled: false
 			})
+		},
+		withdrawSettings: {
+			type: Object,
+			default: () => ({ minimum_amount: 100 })
 		}
 	},
 	data() {
 		return {
 			freshBlockData: null,
+			withdrawForm: {
+				amount: '',
+				processing: false,
+				error: null,
+			},
+			withdrawResultMessage: '',
+			withdrawResultExceeded: false,
 			transactions: [],
 			isLoadingTransactions: false,
 			txPage: 1,
@@ -725,6 +759,9 @@ export default {
 			const c = this.blockData;
 			return c.balance_block_reason_user || 'Операции с балансом заблокированы администратором';
 		},
+		minimumWithdrawAmount() {
+			return this.withdrawSettings?.minimum_amount || 100;
+		},
 		minimumDepositAmount() {
 			return this.depositSettings.minimum_amount;
 		},
@@ -758,6 +795,11 @@ export default {
 		formatPrice,
 
 		async refreshBlockStatus() {
+			// Сброс предыдущего результата при повторном открытии модалки
+			this.withdrawResultMessage = '';
+			this.withdrawResultExceeded = false;
+			this.withdrawForm.error = null;
+
 			try {
 				const { data } = await axios.get('/api/profile/me');
 				this.freshBlockData = {
@@ -766,8 +808,39 @@ export default {
 					balance_blocked_until: data.balance_blocked_until,
 					balance_block_reason_user: data.balance_block_reason_user,
 				};
+				this.localClient = { ...(this.localClient || {}), balance: data.balance };
 			} catch (e) {
 				// игнорируем — упадём на старые данные из props
+			}
+		},
+
+		async submitWithdrawBalance() {
+			const amount = parseFloat(this.withdrawForm.amount);
+			if (!amount || amount < this.minimumWithdrawAmount) {
+				this.withdrawForm.error = `Минимальная сумма: ${this.minimumWithdrawAmount} ₽`;
+				return;
+			}
+			if (amount > parseFloat(this.client.balance)) {
+				this.withdrawForm.error = 'Недостаточно средств на балансе';
+				return;
+			}
+
+			this.withdrawForm.processing = true;
+			this.withdrawForm.error = null;
+
+			try {
+				const { data } = await axios.post('/api/profile/withdraw-balance', { amount });
+
+				this.withdrawResultMessage = data.message;
+				this.withdrawResultExceeded = !!data.limit_exceeded;
+				this.withdrawForm.amount = '';
+
+				// Обновляем баланс локально (списано)
+				this.$emit('update-client', { balance: parseFloat(this.client.balance) - amount });
+			} catch (e) {
+				this.withdrawForm.error = e.response?.data?.message || 'Ошибка при создании заявки';
+			} finally {
+				this.withdrawForm.processing = false;
 			}
 		},
 

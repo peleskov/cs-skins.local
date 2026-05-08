@@ -42,6 +42,13 @@ class DepositController extends Controller
 
         $client = Auth::guard('client')->user();
 
+        if ($client && $client->isBalanceBlocked()) {
+            return response()->json([
+                'success' => false,
+                'message' => $client->getBalanceBlockReasonForUser() ?: 'Операции с балансом заблокированы',
+            ], 403);
+        }
+
         try {
             $result = $this->promocodeService->activate($request->input('code'), $client);
 

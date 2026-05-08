@@ -12,8 +12,10 @@ use Illuminate\View\View;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use App\Notifications\VerifyEmailNotification;
+use App\Models\BalanceWithdrawRequest;
 use App\Models\Client;
 use App\Models\Order;
+use App\Models\SiteSetting;
 
 class ProfileController extends Controller
 {
@@ -49,7 +51,11 @@ class ProfileController extends Controller
             'test_payment_enabled' => \App\Models\SiteSetting::get('test_payment_enabled', false),
         ];
 
-        return view('profile.index', compact('client', 'telegramBotName', 'profileTabs', 'depositSettings'));
+        $withdrawSettings = [
+            'minimum_amount' => (float) \App\Models\SiteSetting::get('minimum_withdraw_amount', 100),
+        ];
+
+        return view('profile.index', compact('client', 'telegramBotName', 'profileTabs', 'depositSettings', 'withdrawSettings'));
     }
 
     /**
@@ -645,6 +651,101 @@ class ProfileController extends Controller
             'purchases_block_reason_user' => $client->purchases_block_reason_user,
             'balance_blocked_until' => $client->balance_blocked_until,
             'balance_block_reason_user' => $client->balance_block_reason_user,
+        ]);
+    }
+
+    /**
+     * Создать заявку на вывод баланса (6.7).
+     * Деньги списываются сразу (заморожены), при reject вернутся на баланс.
+     */
+    public function withdrawBalance(\Illuminate\Http\Request $request): JsonResponse
+    {
+        $client = $this->getAuthenticatedClient();
+
+        // Блокировки
+        if ($client->isWithdrawBlocked()) {
+            return response()->json([
+                'success' => false,
+                'message' => $client->getWithdrawBlockReasonForUser() ?: 'Вывод заблокирован администратором',
+            ], 403);
+        }
+
+        $minAmount = (float) SiteSetting::get('minimum_withdraw_amount', 100);
+
+        $request->validate([
+            'amount' => ['required', 'numeric', 'min:'.$minAmount],
+        ], [
+            'amount.required' => 'Укажите сумму',
+            'amount.numeric' => 'Сумма должна быть числом',
+            'amount.min' => "Минимальная сумма вывода: {$minAmount} ₽",
+        ]);
+
+        $amount = (float) $request->input('amount');
+
+        if ($amount > (float) $client->balance) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Недостаточно средств на балансе',
+            ], 400);
+        }
+
+        // Считаем суммы заявок (pending + approved) за 24ч и 1ч
+        $base = BalanceWithdrawRequest::whereIn('status', [
+            BalanceWithdrawRequest::STATUS_PENDING,
+            BalanceWithdrawRequest::STATUS_APPROVED,
+        ]);
+
+        $user24h = (float) (clone $base)->where('client_id', $client->id)
+            ->where('created_at', '>=', now()->subDay())->sum('amount');
+        $total24h = (float) (clone $base)->where('created_at', '>=', now()->subDay())->sum('amount');
+        $total1h = (float) (clone $base)->where('created_at', '>=', now()->subHour())->sum('amount');
+
+        $limitDailyTotal = (float) SiteSetting::get('withdraw_limit_daily_total', 0);
+        $limitDailyPerUser = (float) SiteSetting::get('withdraw_limit_daily_per_user', 0);
+        $limitHourlyTotal = (float) SiteSetting::get('withdraw_limit_hourly_total', 0);
+
+        $exceeded = false;
+        if ($limitDailyPerUser > 0 && ($user24h + $amount) > $limitDailyPerUser) {
+            $exceeded = true;
+        }
+        if ($limitDailyTotal > 0 && ($total24h + $amount) > $limitDailyTotal) {
+            $exceeded = true;
+        }
+        if ($limitHourlyTotal > 0 && ($total1h + $amount) > $limitHourlyTotal) {
+            $exceeded = true;
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($client, $amount, $user24h, $total1h, $exceeded) {
+            // Замораживаем сумму на балансе
+            $client->decrement('balance', $amount);
+
+            $req = BalanceWithdrawRequest::create([
+                'client_id' => $client->id,
+                'amount' => $amount,
+                'withdrawn_24h_snapshot' => $user24h,
+                'withdrawn_1h_snapshot' => $total1h,
+                'limit_exceeded' => $exceeded,
+            ]);
+
+            // Запись в истории операций (Transaction.history) — статус pending
+            Transaction::create([
+                'client_id' => $client->id,
+                'type' => Transaction::TYPE_WITHDRAWAL,
+                'amount' => $amount,
+                'status' => 'pending',
+                'description' => 'Заявка на вывод #'.$req->id,
+                'metadata' => ['balance_withdraw_request_id' => $req->id],
+            ]);
+        });
+
+        $message = $exceeded
+            ? 'Вывод сейчас временно прекращён, ваша заявка отправлена администраторам. Как только она будет одобрена, баланс будет выведен.'
+            : 'Заявка на вывод создана. Средства зарезервированы и будут выведены после одобрения администратором.';
+
+        return response()->json([
+            'success' => true,
+            'limit_exceeded' => $exceeded,
+            'message' => $message,
         ]);
     }
 

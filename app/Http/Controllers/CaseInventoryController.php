@@ -196,6 +196,19 @@ class CaseInventoryController extends Controller
         /** @var Client $client */
         $client = Auth::guard('client')->user();
 
+        if ($client->isBalanceBlocked()) {
+            return response()->json([
+                'success' => false,
+                'message' => $client->getBalanceBlockReasonForUser() ?: 'Операции с балансом заблокированы',
+            ], 403);
+        }
+        if ($client->isPurchasesBlocked()) {
+            return response()->json([
+                'success' => false,
+                'message' => $client->getPurchasesBlockReasonForUser() ?: 'Операции с предметами заблокированы',
+            ], 403);
+        }
+
         try {
             if ($request->boolean('all')) {
                 $result = $this->caseInventoryService->sellAllItems($client);

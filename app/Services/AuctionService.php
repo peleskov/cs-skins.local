@@ -42,6 +42,10 @@ class AuctionService
      */
     public function createAuction(Listing $listing, Client $seller, array $data): Auction
     {
+        if ($seller->isPurchasesBlocked()) {
+            throw new Exception($seller->getPurchasesBlockReasonForUser() ?: 'Операции с предметами заблокированы');
+        }
+
         // Временно закомментировано для тестирования
         // if (!$this->canAccessAuctions($seller)) {
         //     throw new Exception('У вас нет доступа к аукционам. Необходима минимум 1 покупка и 1 продажа.');
@@ -128,6 +132,10 @@ class AuctionService
         // if (!$this->canAccessAuctions($bidder)) {
         //     throw new Exception('У вас нет доступа к аукционам.');
         // }
+
+        if ($bidder->isBalanceBlocked()) {
+            throw new Exception($bidder->getBalanceBlockReasonForUser() ?: 'Операции с балансом заблокированы');
+        }
 
         // Проверяем отдельные причины почему нельзя делать ставку
         if ($auction->seller_id === $bidder->id) {

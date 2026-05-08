@@ -179,6 +179,7 @@ Route::prefix('api')->name('api.')->group(function () {
         // Профиль API
         Route::prefix('profile')->name('profile.')->controller(ProfileController::class)->group(function () {
             Route::get('/me', 'getCurrentUser')->name('me')->middleware('throttle:api-read');
+            Route::post('/withdraw-balance', 'withdrawBalance')->name('withdraw-balance')->middleware('throttle:api-critical');
             Route::get('/transactions', 'getTransactions')->name('transactions')->middleware('throttle:api-read');
             Route::get('/bonus-transactions', 'getBonusTransactions')->name('bonus-transactions')->middleware('throttle:api-read');
             Route::get('/sales-stats', 'getSalesStats')->name('sales-stats')->middleware('throttle:api-read');

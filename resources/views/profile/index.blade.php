@@ -27,7 +27,8 @@
              data-client="{{ $client->toJson() }}"
              data-telegram-bot-name="{{ $telegramBotName }}"
              data-profile-tabs="{{ json_encode($profileTabs) }}"
-             data-deposit-settings="{{ json_encode($depositSettings) }}">
+             data-deposit-settings="{{ json_encode($depositSettings) }}"
+             data-withdraw-settings="{{ json_encode($withdrawSettings) }}">
         </div>
     </div>
 </section>

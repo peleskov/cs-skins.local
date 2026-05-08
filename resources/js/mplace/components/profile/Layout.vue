@@ -58,7 +58,9 @@
 
 				<!-- Balance Tab -->
 				<ProfileBalance v-else-if="activeTab === 'balance'" :client="client"
-					:deposit-settings="depositSettings" />
+					:deposit-settings="depositSettings"
+					:withdraw-settings="withdrawSettings"
+					@update-client="updateClient" />
 
 				<!-- Notifications Tab -->
 				<ProfileNotifications v-else-if="activeTab === 'notifications'" :client="client"
@@ -113,6 +115,10 @@ export default {
 				maximum_amount: 50000,
 				enabled: true
 			})
+		},
+		withdrawSettings: {
+			type: Object,
+			default: () => ({ minimum_amount: 100 })
 		}
 	},
 

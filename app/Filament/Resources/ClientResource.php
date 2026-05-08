@@ -195,6 +195,13 @@ class ClientResource extends Resource
                 EditAction::make()
                     ->label('')
                     ->tooltip('Изменить'),
+                Action::make('toggle_withdraw_block')
+                    ->label('')
+                    ->tooltip(fn ($record) => $record->withdraw_blocked ? 'Разрешить вывод' : 'Остановить вывод')
+                    ->icon(fn ($record) => $record->withdraw_blocked ? 'heroicon-o-lock-open' : 'heroicon-o-lock-closed')
+                    ->color(fn ($record) => $record->withdraw_blocked ? 'success' : 'danger')
+                    ->requiresConfirmation()
+                    ->action(fn ($record) => $record->update(['withdraw_blocked' => ! $record->withdraw_blocked])),
                 Action::make('topup_balance')
                     ->label('')
                     ->tooltip('Пополнить баланс')

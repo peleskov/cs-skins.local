@@ -39,6 +39,19 @@ class PromocodeResource extends Resource
         return PromocodesTable::configure($table);
     }
 
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = auth()->user();
+
+        if ($user && $user->hasRole('partner_manager') && ! $user->hasRole('super_admin')) {
+            $partnerIds = $user->partners()->pluck('partners.id');
+            $query->whereIn('partner_id', $partnerIds->isEmpty() ? [0] : $partnerIds);
+        }
+
+        return $query;
+    }
+
     public static function getRelations(): array
     {
         return [

@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Cache;
 
 class OnlineCounterSettings extends Page implements HasForms
 {
+    use \BezhanSalleh\FilamentShield\Traits\HasPageShield;
     use InteractsWithForms;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-users';

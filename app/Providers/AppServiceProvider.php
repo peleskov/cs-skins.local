@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use App\Models\Order;
 use App\Models\TradeOffer;
@@ -33,6 +34,9 @@ class AppServiceProvider extends ServiceProvider
         // Регистрируем Observer'ы
         Order::observe(OrderObserver::class);
         TradeOffer::observe(TradeOfferObserver::class);
+
+        // Политика для Activity (модель из стороннего пакета — авторазрешение не работает)
+        Gate::policy(\Spatie\Activitylog\Models\Activity::class, \App\Policies\ActivityPolicy::class);
 
         // Настройка Rate Limiting для уведомлений
         $this->configureRateLimiting();

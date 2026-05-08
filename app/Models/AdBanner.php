@@ -6,6 +6,16 @@ use Illuminate\Database\Eloquent\Model;
 
 class AdBanner extends Model
 {
+    use \Spatie\Activitylog\Traits\LogsActivity;
+
+    public function getActivitylogOptions(): \Spatie\Activitylog\LogOptions
+    {
+        return \Spatie\Activitylog\LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
+
     protected $table = 'ad_banner';
 
     protected $fillable = [

@@ -18,6 +18,16 @@ class Client extends Authenticatable
         'notification_settings' => '["toast", "telegram"]',
     ];
 
+    use \Spatie\Activitylog\Traits\LogsActivity;
+
+    public function getActivitylogOptions(): \Spatie\Activitylog\LogOptions
+    {
+        return \Spatie\Activitylog\LogOptions::defaults()
+            ->logOnly(['balance', 'bonus_balance', 'is_verified', 'withdraw_blocked'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
+
     protected $fillable = [
         'name',
         'email',
@@ -44,6 +54,7 @@ class Client extends Authenticatable
         'pin_verified_at',
         'avatar_border_color',
         'nickname_color',
+        'withdraw_blocked',
     ];
 
     protected $hidden = [
@@ -65,6 +76,7 @@ class Client extends Authenticatable
         'notification_settings' => 'array',
         'trial_used' => 'boolean',
         'pin_verified_at' => 'datetime',
+        'withdraw_blocked' => 'boolean',
     ];
 
     /**

@@ -5,9 +5,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Promocode extends Model
 {
+    use LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['code', 'type', 'value', 'min_deposit', 'max_uses', 'is_active', 'expires_at'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
+
     const TYPE_PERCENT = 'percent';
 
     const TYPE_FIXED = 'fixed';

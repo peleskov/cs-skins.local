@@ -19,9 +19,11 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 class UserResource extends Resource
 {
@@ -60,6 +62,24 @@ class UserResource extends Resource
                     ->dehydrateStateUsing(fn ($state) => Hash::make($state))
                     ->dehydrated(fn ($state) => filled($state))
                     ->maxLength(255),
+
+                Select::make('roles')
+                    ->label('Роли')
+                    ->multiple()
+                    ->relationship('roles', 'name')
+                    ->options(fn () => Role::pluck('name', 'id'))
+                    ->preload()
+                    ->live(),
+
+                Select::make('partners')
+                    ->label('Привязанные партнёры')
+                    ->multiple()
+                    ->relationship('partners', 'email')
+                    ->preload()
+                    ->helperText('Партнёры, чьи промокоды и статистику видит менеджер')
+                    ->visible(fn ($get) => collect($get('roles') ?? [])
+                        ->map(fn ($id) => Role::find($id)?->name)
+                        ->contains('partner_manager')),
             ]);
     }
 
@@ -76,6 +96,11 @@ class UserResource extends Resource
                     ->label('Email')
                     ->searchable()
                     ->sortable(),
+
+                TextColumn::make('roles.name')
+                    ->label('Роли')
+                    ->badge()
+                    ->placeholder('—'),
                     
                 TextColumn::make('created_at')
                     ->label('Дата создания')

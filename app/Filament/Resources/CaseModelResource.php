@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use Filament\Schemas\Schema;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\ColorPicker;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Components\Grid;
@@ -107,6 +108,9 @@ class CaseModelResource extends Resource
                     ->image()
                     ->directory('cases')
                     ->visibility('public'),
+                ColorPicker::make('glow_color')
+                    ->label('Цвет тени при наведении')
+                    ->helperText('Если не задан — используется оранжевый по умолчанию'),
                 // Настройки и метки
                 Grid::make(4)
                     ->schema([

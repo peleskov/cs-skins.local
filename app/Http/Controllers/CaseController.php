@@ -36,6 +36,7 @@ class CaseController extends Controller
                 'label_new',
                 'label_limited',
                 'label_free',
+                'glow_color',
             ])
             ->with('category:id,name,icon,sort_order')
             ->whereHas('tiers', function ($query) {
@@ -166,6 +167,7 @@ class CaseController extends Controller
                 'label_new',
                 'label_limited',
                 'label_free',
+                'glow_color',
             ])
             ->with('category:id,name,icon,sort_order')
             ->orderBy('sort_order')

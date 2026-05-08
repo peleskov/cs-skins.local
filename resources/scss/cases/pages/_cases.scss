@@ -112,14 +112,17 @@
 
 
     .category-case-box {
+        --case-glow-color: #ff8731;
         position: relative;
         padding: 12px;
-        overflow: hidden;
+        overflow: visible;
         border-radius: 10px;
-        transition: all 0.3s ease;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
 
         &:hover {
-            box-shadow: 0 0 0px 0 #ff8731, 0 0 1px 0 #ff8731, 0 0 2px 0 #ff8731, 0 0 4px 0 #ff8731, 0 0 7px 0 #ff8731, 0 0 12px 0 #ff8731;
+            transform: scale(1.05);
+            box-shadow: 0 0 0px 0 var(--case-glow-color), 0 0 1px 0 var(--case-glow-color), 0 0 2px 0 var(--case-glow-color), 0 0 4px 0 var(--case-glow-color), 0 0 7px 0 var(--case-glow-color), 0 0 12px 0 var(--case-glow-color);
+            z-index: 5;
         }
 
         .case-badges {

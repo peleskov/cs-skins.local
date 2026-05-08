@@ -139,7 +139,8 @@
 						<div class="row g-2 g-lg-5 justify-content-center align-items-stretch">
 							<div v-for="case_item in category.cases" :key="case_item.id"
 								:class="sidebarCollapsed ? 'col-lg-4 col-xl-3' : 'col-6 col-lg-4 col-xl-2'">
-								<div class="category-case-box d-flex flex-column align-items-center h-100">
+								<div class="category-case-box d-flex flex-column align-items-center h-100"
+										:style="case_item.glow_color ? { '--case-glow-color': case_item.glow_color } : null">
 									<!-- Бейджи -->
 									<div class="case-badges"
 										v-if="case_item.label_hot || case_item.label_new || case_item.label_limited || case_item.label_free">

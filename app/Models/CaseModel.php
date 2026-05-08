@@ -37,6 +37,7 @@ class CaseModel extends Model
         'label_new',
         'label_limited',
         'label_free',
+        'glow_color',
     ];
 
     protected $casts = [

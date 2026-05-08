@@ -4,11 +4,13 @@ namespace App\Services;
 
 use App\Models\CaseInventoryItem;
 use App\Models\Client;
+use App\Models\Listing;
 use App\Models\Transaction;
 use App\Models\Upgrade;
 use App\Models\VirtualItem;
 use App\Models\SiteSetting;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redis;
 use Exception;
 
 class UpgradeService
@@ -104,6 +106,20 @@ class UpgradeService
             $maxPriceUsd = min($maxPriceUsd, (float) $filters['price_to'] / $usdRate);
         }
 
+        $mode = SiteSetting::get('upgrade_target_mode', 'virtual');
+
+        if ($mode === 'market') {
+            return $this->getMarketTargets(
+                $betTotal,
+                $multiplier,
+                $usdRate,
+                $minPriceUsd * $usdRate,
+                $maxPriceUsd * $usdRate,
+                $filters,
+                $limit
+            );
+        }
+
         $query = VirtualItem::whereBetween('steam_price', [$minPriceUsd, $maxPriceUsd])
             ->where('steam_price', '>=', $minPriceFloorUsd);
 
@@ -134,6 +150,114 @@ class UpgradeService
                 ];
             })
             ->toArray();
+    }
+
+    /**
+     * Получить пул целей из активных листингов маркетплейса.
+     * Группируем по market_hash_name, берём минимальную цену.
+     */
+    protected function getMarketTargets(
+        float $betTotal,
+        float $multiplier,
+        float $usdRate,
+        float $minPriceRub,
+        float $maxPriceRub,
+        array $filters,
+        int $limit
+    ): array {
+        $rows = DB::table('listings')
+            ->select('market_hash_name', DB::raw('MIN(price) as min_price'), DB::raw('MIN(id) as listing_id'))
+            ->where('status', Listing::STATUS_ACTIVE)
+            ->whereIn('seller_id', $this->getOnlineSellerIds())
+            ->whereBetween('price', [$minPriceRub, $maxPriceRub])
+            ->when(!empty($filters['search']), function ($q) use ($filters) {
+                $search = $filters['search'];
+                $q->where(function ($qq) use ($search) {
+                    $qq->where('market_hash_name', 'like', "%{$search}%")
+                        ->orWhere('inventory_item_name', 'like', "%{$search}%");
+                });
+            })
+            ->groupBy('market_hash_name')
+            ->orderBy('min_price')
+            ->limit($limit)
+            ->get();
+
+        $listingIds = $rows->pluck('listing_id')->all();
+        $listings = Listing::whereIn('id', $listingIds)->get()->keyBy('id');
+
+        return $rows->map(function ($row) use ($listings, $betTotal, $multiplier) {
+            $listing = $listings->get($row->listing_id);
+            if (!$listing) {
+                return null;
+            }
+            $priceRub = (float) $row->min_price;
+            $chance = ($betTotal / $priceRub) * $multiplier * 100;
+            return [
+                'id' => $listing->id,
+                'name' => $listing->inventory_item_name ?: $listing->market_hash_name,
+                'price' => round($priceRub, 2),
+                'image_url' => $listing->inventory_icon_url,
+                'rarity' => null,
+                'quality' => $listing->wear_condition,
+                'weapon_type' => $this->extractWeaponType($listing->market_hash_name),
+                'chance' => round($chance, 2),
+            ];
+        })->filter()->values()->toArray();
+    }
+
+    /**
+     * ID онлайн-продавцов (тот же фильтр, что и на маркетплейсе).
+     */
+    protected function getOnlineSellerIds(): array
+    {
+        Redis::zremrangebyscore('online_sellers', '-inf', now()->timestamp);
+        $ids = Redis::zrangebyscore('online_sellers', now()->timestamp, '+inf');
+
+        return !empty($ids) ? $ids : [0];
+    }
+
+    protected function extractWeaponType(?string $marketHashName): ?string
+    {
+        if (!$marketHashName) {
+            return null;
+        }
+        $clean = preg_replace('/^(StatTrak™ |Souvenir |★ )/u', '', $marketHashName);
+        $parts = explode(' | ', $clean, 2);
+        return $parts[0] ?? null;
+    }
+
+    /**
+     * Найти или создать VirtualItem из активного листинга по target_id.
+     * Используется при apply в режиме market.
+     */
+    protected function resolveMarketTarget(int $listingId): ?VirtualItem
+    {
+        $listing = Listing::find($listingId);
+        if (!$listing) {
+            return null;
+        }
+
+        $usdRate = (float) SiteSetting::get('usd_course', 100) ?: 1;
+        $priceRub = (float) $listing->price;
+
+        return VirtualItem::firstOrCreate(
+            ['market_hash_name' => $listing->market_hash_name],
+            [
+                'name' => $listing->inventory_item_name ?: $listing->market_hash_name,
+                'weapon_type' => $this->extractWeaponType($listing->market_hash_name),
+                'skin_name' => null,
+                'quality' => $listing->wear_condition,
+                'rarity' => null,
+                'rarity_color' => null,
+                'image_url' => $listing->inventory_icon_url,
+                'steam_class_id' => $listing->steam_class_id,
+                'price' => $priceRub,
+                'steam_price' => round($priceRub / $usdRate, 2),
+                'is_stattrak' => (bool) $listing->is_stattrak,
+                'is_souvenir' => (bool) $listing->is_souvenir,
+                'is_active' => true,
+            ]
+        );
     }
 
     /**
@@ -194,7 +318,10 @@ class UpgradeService
             }
 
             // 3. Валидация цели
-            $targetItem = VirtualItem::find($targetId);
+            $mode = SiteSetting::get('upgrade_target_mode', 'virtual');
+            $targetItem = $mode === 'market'
+                ? $this->resolveMarketTarget($targetId)
+                : VirtualItem::find($targetId);
             if (!$targetItem || $targetItem->steam_price <= 0) {
                 throw new Exception('Целевой предмет не найден');
             }

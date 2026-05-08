@@ -59,6 +59,14 @@ class OrderController extends Controller
             ], 401);
         }
 
+        $client = auth('client')->user();
+        if ($client->isPurchasesBlocked()) {
+            return response()->json([
+                'success' => false,
+                'message' => $client->getPurchasesBlockReasonForUser() ?: 'Покупки заблокированы',
+            ], 403);
+        }
+
         try {
             // Валидируем корзину
             $this->validateCart();
@@ -128,6 +136,14 @@ class OrderController extends Controller
                 'success' => false,
                 'message' => 'Необходимо авторизоваться для покупки'
             ], 401);
+        }
+
+        $client = auth('client')->user();
+        if ($client->isPurchasesBlocked()) {
+            return response()->json([
+                'success' => false,
+                'message' => $client->getPurchasesBlockReasonForUser() ?: 'Покупки заблокированы',
+            ], 403);
         }
 
         $request->validate([
@@ -661,6 +677,14 @@ class OrderController extends Controller
 
         // Проверяем активную сессию расширения
         $client = auth('client')->user();
+
+        if ($client->isPurchasesBlocked()) {
+            return response()->json([
+                'success' => false,
+                'message' => $client->getPurchasesBlockReasonForUser() ?: 'Продажи заблокированы',
+            ], 403);
+        }
+
         $sessionCache = new SessionCache();
         if (!$sessionCache->isActive($client->id)) {
             return response()->json([

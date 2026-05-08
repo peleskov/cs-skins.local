@@ -639,6 +639,12 @@ class ProfileController extends Controller
             'email_verified_at' => $client->email_verified_at,
             'balance' => (float) $client->balance,
             'bonus_balance' => (float) $client->bonus_balance,
+            'withdraw_blocked_until' => $client->withdraw_blocked_until,
+            'withdraw_block_reason_user' => $client->withdraw_block_reason_user,
+            'purchases_blocked_until' => $client->purchases_blocked_until,
+            'purchases_block_reason_user' => $client->purchases_block_reason_user,
+            'balance_blocked_until' => $client->balance_blocked_until,
+            'balance_block_reason_user' => $client->balance_block_reason_user,
         ]);
     }
 

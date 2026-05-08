@@ -183,6 +183,7 @@ class ClientResource extends Resource
                 IconColumn::make('is_bot')
                     ->label('Бот')
                     ->boolean(),
+
             ])
             ->filters([
                 TernaryFilter::make('is_verified')
@@ -202,13 +203,6 @@ class ClientResource extends Resource
                 EditAction::make()
                     ->label('')
                     ->tooltip('Изменить'),
-                Action::make('toggle_withdraw_block')
-                    ->label('')
-                    ->tooltip(fn ($record) => $record->withdraw_blocked ? 'Разрешить вывод' : 'Остановить вывод')
-                    ->icon(fn ($record) => $record->withdraw_blocked ? 'heroicon-o-lock-open' : 'heroicon-o-lock-closed')
-                    ->color(fn ($record) => $record->withdraw_blocked ? 'success' : 'danger')
-                    ->requiresConfirmation()
-                    ->action(fn ($record) => $record->update(['withdraw_blocked' => ! $record->withdraw_blocked])),
                 Action::make('topup_balance')
                     ->label('')
                     ->tooltip('Пополнить баланс')
@@ -449,5 +443,92 @@ class ClientResource extends Resource
             'create' => CreateClient::route('/create'),
             'edit' => EditClient::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * Создать action блокировки/разблокировки одного из аспектов клиента.
+     * $kind: 'withdraw' | 'purchases' | 'balance'
+     */
+    public static function makeBlockAction(string $kind, string $titleShort, string $icon): Action
+    {
+        $untilCol = $kind.'_blocked_until';
+        $reasonAdmin = $kind.'_block_reason_admin';
+        $reasonUser = $kind.'_block_reason_user';
+
+        return Action::make('block_'.$kind)
+            ->label(function ($record) use ($untilCol, $titleShort) {
+                $until = $record?->{$untilCol};
+                return $until && $until->isFuture()
+                    ? 'Разблокировать: '.$titleShort
+                    : 'Заблокировать: '.$titleShort;
+            })
+            ->icon(fn ($record) => $record->{$untilCol} && $record->{$untilCol}->isFuture()
+                ? 'heroicon-o-lock-closed'
+                : 'heroicon-o-lock-open')
+            ->color(fn ($record) => $record->{$untilCol} && $record->{$untilCol}->isFuture()
+                ? 'danger'
+                : 'success')
+            ->modalHeading(fn ($record) => $record->{$untilCol} && $record->{$untilCol}->isFuture()
+                ? 'Разблокировать: '.$titleShort
+                : 'Заблокировать: '.$titleShort)
+            ->modalSubmitActionLabel(fn ($record) => $record->{$untilCol} && $record->{$untilCol}->isFuture()
+                ? 'Разблокировать'
+                : 'Заблокировать')
+            ->fillForm(fn ($record) => [
+                'until' => $record->{$untilCol},
+                'reason_admin' => $record->{$reasonAdmin},
+                'reason_user' => $record->{$reasonUser},
+                'permanent' => $record->{$untilCol} && $record->{$untilCol}->year >= now()->year + 50,
+            ])
+            ->schema(fn ($record) => $record->{$untilCol} && $record->{$untilCol}->isFuture() ? [
+                \Filament\Forms\Components\DateTimePicker::make('until')
+                    ->label('Действует до')
+                    ->disabled()
+                    ->dehydrated(false),
+                Textarea::make('reason_admin')
+                    ->label('Причина (для админа, не видна клиенту)')
+                    ->rows(2)
+                    ->disabled()
+                    ->dehydrated(false),
+                Textarea::make('reason_user')
+                    ->label('Причина (показывается клиенту)')
+                    ->rows(2)
+                    ->disabled()
+                    ->dehydrated(false),
+            ] : [
+                \Filament\Forms\Components\DateTimePicker::make('until')
+                    ->label('Действует до')
+                    ->required(fn ($get) => ! $get('permanent'))
+                    ->minDate(now())
+                    ->visible(fn ($get) => ! $get('permanent')),
+                \Filament\Forms\Components\Toggle::make('permanent')
+                    ->label('Бессрочно')
+                    ->live(),
+                Textarea::make('reason_admin')
+                    ->label('Причина (для админа, не видна клиенту)')
+                    ->rows(2),
+                Textarea::make('reason_user')
+                    ->label('Причина (показывается клиенту)')
+                    ->rows(2)
+                    ->required(),
+            ])
+            ->action(function ($record, array $data) use ($untilCol, $reasonAdmin, $reasonUser) {
+                if ($record->{$untilCol} && $record->{$untilCol}->isFuture()) {
+                    // Разблокировка
+                    $record->update([
+                        $untilCol => null,
+                        $reasonAdmin => null,
+                        $reasonUser => null,
+                    ]);
+                } else {
+                    // Блокировка
+                    $until = ($data['permanent'] ?? false) ? now()->addYears(100) : $data['until'];
+                    $record->update([
+                        $untilCol => $until,
+                        $reasonAdmin => $data['reason_admin'] ?? null,
+                        $reasonUser => $data['reason_user'] ?? null,
+                    ]);
+                }
+            });
     }
 }

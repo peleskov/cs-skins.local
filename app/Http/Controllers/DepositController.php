@@ -317,6 +317,14 @@ class DepositController extends Controller
         }
 
         $client = Auth::guard('client')->user();
+
+        if ($client && $client->isBalanceBlocked()) {
+            return response()->json([
+                'success' => false,
+                'message' => $client->getBalanceBlockReasonForUser() ?: 'Операции с балансом заблокированы',
+            ], 403);
+        }
+
         $amount = (float) $request->input('amount');
         $successUrl = $request->input('success_url');
         $failUrl = $request->input('fail_url');

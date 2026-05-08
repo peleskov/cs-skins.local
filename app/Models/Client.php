@@ -23,7 +23,12 @@ class Client extends Authenticatable
     public function getActivitylogOptions(): \Spatie\Activitylog\LogOptions
     {
         return \Spatie\Activitylog\LogOptions::defaults()
-            ->logOnly(['balance', 'bonus_balance', 'is_verified', 'withdraw_blocked', 'admin_comment'])
+            ->logOnly([
+                'balance', 'bonus_balance', 'is_verified', 'admin_comment',
+                'withdraw_blocked_until', 'withdraw_block_reason_admin', 'withdraw_block_reason_user',
+                'purchases_blocked_until', 'purchases_block_reason_admin', 'purchases_block_reason_user',
+                'balance_blocked_until', 'balance_block_reason_admin', 'balance_block_reason_user',
+            ])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }
@@ -54,8 +59,16 @@ class Client extends Authenticatable
         'pin_verified_at',
         'avatar_border_color',
         'nickname_color',
-        'withdraw_blocked',
         'admin_comment',
+        'withdraw_blocked_until',
+        'withdraw_block_reason_admin',
+        'withdraw_block_reason_user',
+        'purchases_blocked_until',
+        'purchases_block_reason_admin',
+        'purchases_block_reason_user',
+        'balance_blocked_until',
+        'balance_block_reason_admin',
+        'balance_block_reason_user',
     ];
 
     protected $hidden = [
@@ -77,8 +90,57 @@ class Client extends Authenticatable
         'notification_settings' => 'array',
         'trial_used' => 'boolean',
         'pin_verified_at' => 'datetime',
-        'withdraw_blocked' => 'boolean',
+        'withdraw_blocked_until' => 'datetime',
+        'purchases_blocked_until' => 'datetime',
+        'balance_blocked_until' => 'datetime',
     ];
+
+    public function isWithdrawBlocked(): bool
+    {
+        return $this->isBalanceBlocked()
+            || ($this->withdraw_blocked_until && $this->withdraw_blocked_until->isFuture());
+    }
+
+    public function isPurchasesBlocked(): bool
+    {
+        return $this->isBalanceBlocked()
+            || ($this->purchases_blocked_until && $this->purchases_blocked_until->isFuture());
+    }
+
+    public function isBalanceBlocked(): bool
+    {
+        return $this->balance_blocked_until && $this->balance_blocked_until->isFuture();
+    }
+
+    public function getWithdrawBlockReasonForUser(): ?string
+    {
+        if ($this->isBalanceBlocked()) {
+            return $this->balance_block_reason_user;
+        }
+        if ($this->isWithdrawBlocked()) {
+            return $this->withdraw_block_reason_user;
+        }
+        return null;
+    }
+
+    public function getPurchasesBlockReasonForUser(): ?string
+    {
+        if ($this->isBalanceBlocked()) {
+            return $this->balance_block_reason_user;
+        }
+        if ($this->isPurchasesBlocked()) {
+            return $this->purchases_block_reason_user;
+        }
+        return null;
+    }
+
+    public function getBalanceBlockReasonForUser(): ?string
+    {
+        if ($this->isBalanceBlocked()) {
+            return $this->balance_block_reason_user;
+        }
+        return null;
+    }
 
     /**
      * Проверка, верифицирован ли email

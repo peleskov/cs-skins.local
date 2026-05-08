@@ -1167,7 +1167,21 @@ class MarketplaceController extends Controller
         // Получаем актуальных онлайн продавцов
         $ids = Redis::zrangebyscore('online_sellers', now()->timestamp, '+inf');
 
-        // Если нет онлайн — возвращаем [0] чтобы whereIn вернул пустой результат
-        return !empty($ids) ? $ids : [0];
+        if (empty($ids)) {
+            return [0];
+        }
+
+        // Исключаем клиентов с блокировкой продаж (purchases_blocked_until > now() или balance_blocked_until > now())
+        $blocked = \App\Models\Client::whereIn('id', $ids)
+            ->where(function ($q) {
+                $q->where('purchases_blocked_until', '>', now())
+                    ->orWhere('balance_blocked_until', '>', now());
+            })
+            ->pluck('id')
+            ->all();
+
+        $ids = array_diff($ids, $blocked);
+
+        return !empty($ids) ? array_values($ids) : [0];
     }
 }

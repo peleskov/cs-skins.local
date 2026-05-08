@@ -29,13 +29,14 @@
 				</div>
 			</div>
 			<button class="btn m-balance-btn-primary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#balance-refill"
+				@click="refreshBlockStatus"
 				:disabled="availablePaymentMethods.length === 0">
 				<i class="ri-add-circle-line me-2"></i>Пополнить
 			</button>
 			<div class="row g-2">
 				<div class="col-6">
 					<button class="btn m-balance-btn-outline w-100" data-bs-toggle="modal"
-						data-bs-target="#balance-withdraw">
+						data-bs-target="#balance-withdraw" @click="refreshBlockStatus">
 						<i class="m-ico m-ico-balance-withdraw me-2"></i>Вывести
 					</button>
 				</div>
@@ -59,12 +60,13 @@
 						<h2 class="text-primary" v-html="formatPrice(client.balance)"></h2>
 						<div class="d-flex flex-wrap justify-content-center gap-3 mt-3">
 							<button class="btn theme-btn ps-2" data-bs-toggle="modal" data-bs-target="#balance-refill"
+								@click="refreshBlockStatus"
 								:disabled="availablePaymentMethods.length === 0">
 								<i class="ri-add-line me-2"></i>
 								{{ availablePaymentMethods.length > 0 ? 'Пополнить' : 'Недоступно' }}
 							</button>
 							<button class="btn theme-outline ps-2" data-bs-toggle="modal"
-								data-bs-target="#balance-withdraw">
+								data-bs-target="#balance-withdraw" @click="refreshBlockStatus">
 								<i class="ri-bank-card-line me-2"></i>Вывести
 							</button>
 							<button class="btn theme-outline ps-2" data-bs-toggle="modal"
@@ -408,8 +410,14 @@
 						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 					</div>
 					<div class="modal-body">
+						<!-- Блокировка операций с балансом -->
+						<div v-if="isBalanceOpsBlocked" class="py-4 text-center">
+							<i class="ri-lock-line display-4 text-danger mb-3"></i>
+							<h4>Пополнение заблокировано</h4>
+							<p class="text-muted" style="white-space: pre-wrap;">{{ balanceOpsBlockReason }}</p>
+						</div>
 						<!-- Форма ввода суммы -->
-						<div v-if="!depositForm.processing" class="payment-form">
+						<div v-else-if="!depositForm.processing" class="payment-form">
 							<div class="mb-4 text-center">
 								<i class="ri-bank-card-line display-4 theme-color mb-3"></i>
 								<h5>Пополнение баланса</h5>
@@ -540,7 +548,12 @@
 						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 					</div>
 					<div class="modal-body text-center">
-						<div class="py-4">
+						<div v-if="isWithdrawBlocked" class="py-4">
+							<i class="ri-lock-line display-4 text-danger mb-3"></i>
+							<h4>Вывод заблокирован</h4>
+							<p class="text-muted" style="white-space: pre-wrap;">{{ withdrawBlockReason }}</p>
+						</div>
+						<div v-else class="py-4">
 							<i class="ri-settings-3-line display-4 text-muted mb-3"></i>
 							<h4>В разработке</h4>
 							<p class="text-muted">Функция вывода средств находится в разработке и будет доступна в
@@ -618,6 +631,7 @@ export default {
 	},
 	data() {
 		return {
+			freshBlockData: null,
 			transactions: [],
 			isLoadingTransactions: false,
 			txPage: 1,
@@ -687,6 +701,30 @@ export default {
 	},
 
 	computed: {
+		blockData() {
+			return this.freshBlockData || this.client || {};
+		},
+		isWithdrawBlocked() {
+			const c = this.blockData;
+			const u = c.withdraw_blocked_until || c.balance_blocked_until;
+			return !!(u && new Date(u) > new Date());
+		},
+		withdrawBlockReason() {
+			const c = this.blockData;
+			const balanceUntil = c.balance_blocked_until;
+			if (balanceUntil && new Date(balanceUntil) > new Date()) {
+				return c.balance_block_reason_user || 'Операции с балансом заблокированы администратором';
+			}
+			return c.withdraw_block_reason_user || 'Вывод заблокирован администратором';
+		},
+		isBalanceOpsBlocked() {
+			const c = this.blockData;
+			return !!(c.balance_blocked_until && new Date(c.balance_blocked_until) > new Date());
+		},
+		balanceOpsBlockReason() {
+			const c = this.blockData;
+			return c.balance_block_reason_user || 'Операции с балансом заблокированы администратором';
+		},
 		minimumDepositAmount() {
 			return this.depositSettings.minimum_amount;
 		},
@@ -719,6 +757,19 @@ export default {
 	methods: {
 		formatPrice,
 
+		async refreshBlockStatus() {
+			try {
+				const { data } = await axios.get('/api/profile/me');
+				this.freshBlockData = {
+					withdraw_blocked_until: data.withdraw_blocked_until,
+					withdraw_block_reason_user: data.withdraw_block_reason_user,
+					balance_blocked_until: data.balance_blocked_until,
+					balance_block_reason_user: data.balance_block_reason_user,
+				};
+			} catch (e) {
+				// игнорируем — упадём на старые данные из props
+			}
+		},
 
 		formatNumber(number, decimals = 2) {
 			return Number(number).toFixed(decimals);

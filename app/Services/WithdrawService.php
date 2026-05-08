@@ -121,6 +121,10 @@ class WithdrawService
      */
     public function withdraw(CaseInventoryItem $item, Client $client, ?int $replacementListingId = null): array
     {
+        if ($client->isWithdrawBlocked()) {
+            throw new Exception($client->getWithdrawBlockReasonForUser() ?: 'Вывод заблокирован администратором');
+        }
+
         if (!$item->isAvailable()) {
             throw new Exception('Предмет недоступен для вывода');
         }

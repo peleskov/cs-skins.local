@@ -309,6 +309,11 @@ class CaseController extends Controller
                 throw new Exception('Боты не могут открывать кейсы');
             }
 
+            // 6.5: блокировка любых операций с балансом
+            if ($client->isBalanceBlocked()) {
+                throw new Exception($client->getBalanceBlockReasonForUser() ?: 'Операции с балансом заблокированы');
+            }
+
             // Проверяем что count допустим
             $allowedMultipliers = [1, 2, 3, 4, 5, 10];
             if (!in_array($count, $allowedMultipliers)) {

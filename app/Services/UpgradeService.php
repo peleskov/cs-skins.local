@@ -213,7 +213,22 @@ class UpgradeService
         Redis::zremrangebyscore('online_sellers', '-inf', now()->timestamp);
         $ids = Redis::zrangebyscore('online_sellers', now()->timestamp, '+inf');
 
-        return !empty($ids) ? $ids : [0];
+        if (empty($ids)) {
+            return [0];
+        }
+
+        // Исключаем клиентов с блокировкой продаж
+        $blocked = Client::whereIn('id', $ids)
+            ->where(function ($q) {
+                $q->where('purchases_blocked_until', '>', now())
+                    ->orWhere('balance_blocked_until', '>', now());
+            })
+            ->pluck('id')
+            ->all();
+
+        $ids = array_diff($ids, $blocked);
+
+        return !empty($ids) ? array_values($ids) : [0];
     }
 
     protected function extractWeaponType(?string $marketHashName): ?string
@@ -272,6 +287,10 @@ class UpgradeService
      */
     public function execute(Client $client, array $itemIds, float $balanceAmount, int $targetId): Upgrade
     {
+        if ($client->isBalanceBlocked()) {
+            throw new Exception($client->getBalanceBlockReasonForUser() ?: 'Операции с балансом заблокированы');
+        }
+
         return DB::transaction(function () use ($client, $itemIds, $balanceAmount, $targetId) {
             $settings = $this->getSettings();
             $usdRate = (float) SiteSetting::get('usd_course', 100);

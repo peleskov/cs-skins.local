@@ -26,6 +26,7 @@ class AdminPanelProvider extends PanelProvider
     public function panel(Panel $panel): Panel
     {
         return $panel
+            ->default()
             ->id('admin')
             ->path('8G3kLp9Q/2xY7mN1z/5tR6wV0b')
             ->colors([

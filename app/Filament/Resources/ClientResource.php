@@ -114,6 +114,13 @@ class ClientResource extends Resource
                     ])
                     ->default('ru'),
 
+                Textarea::make('admin_comment')
+                    ->label('Комментарий админа')
+                    ->helperText('Внутренние заметки по клиенту, не показываются пользователю')
+                    ->rows(4)
+                    ->columnSpanFull()
+                    ->nullable(),
+
                 \Filament\Schemas\Components\Section::make('Партнёр (LosReferidos)')
                     ->schema([
                         Forms\Components\Placeholder::make('partner_email')

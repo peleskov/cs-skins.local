@@ -23,7 +23,7 @@ class Client extends Authenticatable
     public function getActivitylogOptions(): \Spatie\Activitylog\LogOptions
     {
         return \Spatie\Activitylog\LogOptions::defaults()
-            ->logOnly(['balance', 'bonus_balance', 'is_verified', 'withdraw_blocked'])
+            ->logOnly(['balance', 'bonus_balance', 'is_verified', 'withdraw_blocked', 'admin_comment'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }
@@ -55,6 +55,7 @@ class Client extends Authenticatable
         'avatar_border_color',
         'nickname_color',
         'withdraw_blocked',
+        'admin_comment',
     ];
 
     protected $hidden = [

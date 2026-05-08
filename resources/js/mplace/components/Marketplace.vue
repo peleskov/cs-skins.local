@@ -507,39 +507,13 @@
 					</div>
 
 					<!-- Пагинация -->
-					<div v-if="!isLoading && lastPage > 1"
-						class="mp-pagination d-flex flex-wrap align-items-center justify-content-center justify-content-lg-between gap-3 mt-4">
-						<ul class="mp-pagination-pages d-flex align-items-center gap-1 list-unstyled m-0 p-0">
-							<li>
-								<button type="button" class="mp-page-btn" :disabled="currentPage === 1"
-									@click="goToPage(currentPage - 1)" aria-label="Prev">
-									<i class="ri-arrow-left-s-line"></i>
-								</button>
-							</li>
-							<li v-for="(p, idx) in pageNumbers" :key="idx">
-								<button v-if="typeof p === 'number'" type="button" class="mp-page-btn"
-									:class="{ active: p === currentPage }" @click="goToPage(p)">
-									{{ p }}
-								</button>
-								<span v-else class="mp-page-ellipsis">…</span>
-							</li>
-							<li>
-								<button type="button" class="mp-page-btn" :disabled="currentPage === lastPage"
-									@click="goToPage(currentPage + 1)" aria-label="Next">
-									<i class="ri-arrow-right-s-line"></i>
-								</button>
-							</li>
-						</ul>
-						<div class="mp-pagination-perpage d-none d-lg-flex align-items-center gap-2">
-							<span class="small text-muted">На странице:</span>
-							<select class="form-select form-select-sm" style="width: auto;" :value="perPage"
-								@change="changePerPage($event.target.value)">
-								<option :value="25">25</option>
-								<option :value="50">50</option>
-								<option :value="100">100</option>
-							</select>
-						</div>
-					</div>
+					<Pagination v-if="!isLoading"
+						:current-page="currentPage"
+						:last-page="lastPage"
+						:per-page="perPage"
+						class="mt-4"
+						@update:current-page="goToPage"
+						@update:per-page="changePerPage" />
 
 					<!-- Сообщение об отсутствии товаров -->
 					<div v-if="!isLoading && listings.length === 0" class="text-center py-5">
@@ -561,11 +535,13 @@ import CartButton from './CartButton.vue'
 import FavoriteButton from './FavoriteButton.vue'
 import { formatPrice } from '../../shared/utils/helpers'
 import FloatBar from './FloatBar.vue'
+import Pagination from '../../shared/components/Pagination.vue'
 
 export default {
 	name: 'Marketplace',
 	components: {
-		FloatBar
+		FloatBar,
+		Pagination
 	},
 	props: {
 		initialListings: {
@@ -616,23 +592,6 @@ export default {
 		const lastPage = computed(() => {
 			if (!pagination.total || !perPage.value) return 1
 			return Math.max(1, Math.ceil(pagination.total / perPage.value))
-		})
-
-		const pageNumbers = computed(() => {
-			// Возвращает массив страниц для рендера: [1, 2, 3, '...', 10]
-			const total = lastPage.value
-			const current = currentPage.value
-			if (total <= 7) {
-				return Array.from({ length: total }, (_, i) => i + 1)
-			}
-			const pages = [1]
-			if (current > 4) pages.push('...')
-			const start = Math.max(2, current - 1)
-			const end = Math.min(total - 1, current + 1)
-			for (let i = start; i <= end; i++) pages.push(i)
-			if (current < total - 3) pages.push('...')
-			pages.push(total)
-			return pages
 		})
 
 		const filters = reactive({
@@ -1192,7 +1151,6 @@ export default {
 			isTagActive,
 			handleSortChange,
 			lastPage,
-			pageNumbers,
 			perPage,
 			currentPage,
 			goToPage,
@@ -1210,54 +1168,3 @@ export default {
 }
 </script>
 
-<style scoped>
-.mp-pagination {
-	padding-top: 8px;
-}
-
-.mp-pagination-pages {
-	flex-wrap: wrap;
-}
-
-.mp-page-btn {
-	min-width: 36px;
-	height: 36px;
-	padding: 0 10px;
-	background: #fff;
-	border: 1px solid #e2e8f0;
-	border-radius: 8px;
-	color: #475569;
-	font: 600 13px "Inter", sans-serif;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-
-.mp-page-btn:hover:not(:disabled):not(.active) {
-	background: #f1f5f9;
-	color: #0f172a;
-}
-
-.mp-page-btn.active,
-.mp-page-btn.active:hover {
-	background: #ff8d2f !important;
-	border-color: #ff8d2f !important;
-	color: #fff !important;
-}
-
-.mp-page-btn:disabled {
-	opacity: 0.4;
-	cursor: not-allowed;
-}
-
-.mp-page-btn i {
-	font-size: 18px;
-	line-height: 1;
-}
-
-.mp-page-ellipsis {
-	padding: 0 6px;
-	color: #94a3b8;
-}
-</style>

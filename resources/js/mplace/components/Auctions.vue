@@ -125,12 +125,14 @@
 						<p class="mt-2 text-muted">Загрузка аукционов...</p>
 					</div>
 
-					<!-- Кнопка "Загрузить еще" -->
-					<div v-if="!isLoading && pagination.hasMorePages" class="text-center mt-4">
-						<button class="btn theme-outline cart-btn" @click="loadMore">
-							Загрузить еще
-						</button>
-					</div>
+					<!-- Пагинация -->
+					<Pagination v-if="!isLoading"
+						:current-page="currentPage"
+						:last-page="lastPage"
+						:per-page="perPage"
+						class="mt-4"
+						@update:current-page="goToPage"
+						@update:per-page="changePerPage" />
 
 					<!-- Сообщение об отсутствии аукционов -->
 					<div v-if="!isLoading && auctions.length === 0" class="text-center py-5">
@@ -152,9 +154,11 @@ import CartButton from './CartButton.vue'
 import FavoriteButton from './FavoriteButton.vue'
 import { formatPrice } from '../../shared/utils/helpers'
 import { createEcho } from '../../shared/echo'
+import Pagination from '../../shared/components/Pagination.vue'
 
 export default {
 	name: 'Auctions',
+	components: { Pagination },
 	props: {
 		initialAuctions: {
 			type: Array,
@@ -163,10 +167,6 @@ export default {
 		initialTotal: {
 			type: Number,
 			default: 0
-		},
-		initialHasMore: {
-			type: Boolean,
-			default: false
 		},
 		currentUser: {
 			type: Object,
@@ -177,7 +177,8 @@ export default {
 		// Состояние данных
 		const auctions = ref([...props.initialAuctions])
 		const isLoading = ref(false)
-		const currentPage = ref(2)
+		const currentPage = ref(1)
+		const perPage = ref(25)
 		const echo = ref(null)
 		const channels = ref(new Map())
 		const placingBids = ref(new Set())
@@ -185,8 +186,12 @@ export default {
 		const countdownInterval = ref(null)
 
 		const pagination = reactive({
-			total: props.initialTotal,
-			hasMorePages: props.initialHasMore
+			total: props.initialTotal
+		})
+
+		const lastPage = computed(() => {
+			if (!pagination.total || !perPage.value) return 1
+			return Math.max(1, Math.ceil(pagination.total / perPage.value))
 		})
 
 		const filters = reactive({
@@ -200,36 +205,27 @@ export default {
 		const shownCount = computed(() => auctions.value.length)
 
 		// API функции
-		const loadAuctions = async (append = false) => {
+		const loadAuctions = async () => {
 			if (isLoading.value) return
 
 			isLoading.value = true
 
 			try {
 				const params = new URLSearchParams()
-				params.append('page', append ? currentPage.value : 1)
-				params.append('per_page', 24)
+				params.append('page', currentPage.value)
+				params.append('per_page', perPage.value)
 				params.append('sort_by', filters.sortBy)
 				params.append('sort_order', filters.sortOrder)
 
 				const response = await axios.get(`/api/auctions?${params}`)
 				const data = response.data
 
-				if (append) {
-					auctions.value.push(...data.data)
-					currentPage.value++
-				} else {
-					auctions.value = data.data
-					currentPage.value = 2
-				}
-
+				auctions.value = data.data
 				pagination.total = data.pagination.total
-				pagination.hasMorePages = data.pagination.has_more_pages
 
 				nextTick(() => {
 					initializeButtons()
 					initializeWebSocket()
-					// Перезапускаем счетчик после загрузки аукционов
 					startCountdown()
 				})
 
@@ -246,11 +242,21 @@ export default {
 			filters.sortBy = sortBy
 			filters.sortOrder = sortOrder
 			localStorage.setItem('auctions_sort', sortValue.value)
-			loadAuctions(false)
+			currentPage.value = 1
+			loadAuctions()
 		}
 
-		const loadMore = () => {
-			loadAuctions(true)
+		const goToPage = (page) => {
+			if (page === currentPage.value) return
+			currentPage.value = page
+			loadAuctions()
+			window.scrollTo({ top: 0, behavior: 'smooth' })
+		}
+
+		const changePerPage = (value) => {
+			perPage.value = value
+			currentPage.value = 1
+			loadAuctions()
 		}
 
 		// Утилиты UI
@@ -510,11 +516,15 @@ export default {
 			auctions,
 			isLoading,
 			pagination,
+			currentPage,
+			perPage,
+			lastPage,
 			filters,
 			sortValue,
 			shownCount,
 			handleSortChange,
-			loadMore,
+			goToPage,
+			changePerPage,
 			formatPrice,
 			handleImageError,
 			getAuctionImageUrl,

@@ -226,7 +226,8 @@ class ProfileController extends Controller
     {
         $client = $this->getAuthenticatedClient();
 
-        $perPage = min($request->get('per_page', 20), 100); // Максимум 100 на страницу
+        $perPage = (int) $request->get('per_page', 25);
+        if (!in_array($perPage, [25, 50, 100])) $perPage = 25;
 
         // Получаем ID заказов, которые сейчас на холде
         $heldOrderIds = Order::where(function ($q) use ($client) {
@@ -289,7 +290,8 @@ class ProfileController extends Controller
     {
         $client = $this->getAuthenticatedClient();
 
-        $perPage = min($request->get('per_page', 20), 100);
+        $perPage = (int) $request->get('per_page', 25);
+        if (!in_array($perPage, [25, 50, 100])) $perPage = 25;
 
         $transactions = $client->bonusTransactions()
             ->orderBy('created_at', 'desc')
@@ -349,44 +351,68 @@ class ProfileController extends Controller
     {
         $client = $this->getAuthenticatedClient();
 
-        // Сумма в холде как продавец (ожидает выплаты)
-        $sellerHeldBalance = $client->getSellerHeldBalance();
-
-        // Сумма в холде как покупатель (покупки на удержании)
-        $buyerHeldBalance = $client->getBuyerHeldBalance();
-
-        // Заказы в холде как продавец
-        $sellerHeldOrders = $client->getSellerHeldOrders()->map(function ($order) {
-            return [
-                'id' => $order->id,
-                'order_number' => $order->order_number,
-                'total_amount' => $order->total_amount,
-                'buyer_name' => $order->buyer?->name,
-                'created_at' => $order->created_at?->toISOString(),
-                'settlement_date' => $order->tradeOffer?->settlement_date?->toISOString(),
-            ];
-        });
-
-        // Заказы в холде как покупатель
-        $buyerHeldOrders = $client->getBuyerHeldOrders()->map(function ($order) {
-            return [
-                'id' => $order->id,
-                'order_number' => $order->order_number,
-                'total_amount' => $order->total_amount,
-                'seller_name' => $order->seller?->name,
-                'created_at' => $order->created_at?->toISOString(),
-                'settlement_date' => $order->tradeOffer?->settlement_date?->toISOString(),
-            ];
-        });
-
         return response()->json([
             'success' => true,
             'data' => [
-                'seller_held_balance' => $sellerHeldBalance,
-                'buyer_held_balance' => $buyerHeldBalance,
-                'seller_held_orders' => $sellerHeldOrders,
-                'buyer_held_orders' => $buyerHeldOrders,
-            ]
+                'seller_held_balance' => $client->getSellerHeldBalance(),
+                'buyer_held_balance' => $client->getBuyerHeldBalance(),
+                'seller_held_count' => $client->getSellerHeldOrders()->count(),
+                'buyer_held_count' => $client->getBuyerHeldOrders()->count(),
+            ],
+        ]);
+    }
+
+    /**
+     * Получить заказы на удержании (продажи + покупки) с пагинацией
+     */
+    public function getHeldOrders(Request $request): JsonResponse
+    {
+        $client = $this->getAuthenticatedClient();
+
+        $perPage = (int) $request->get('per_page', 25);
+        if (!in_array($perPage, [25, 50, 100])) $perPage = 25;
+        $page = max(1, (int) $request->get('page', 1));
+
+        $sellerOrders = $client->getSellerHeldOrders()->map(function ($order) {
+            return [
+                'id' => $order->id,
+                'kind' => 'seller',
+                'order_number' => $order->order_number,
+                'total_amount' => $order->total_amount,
+                'counterparty_name' => $order->buyer?->name,
+                'created_at' => $order->created_at?->toISOString(),
+                'settlement_date' => $order->tradeOffer?->settlement_date?->toISOString(),
+            ];
+        });
+
+        $buyerOrders = $client->getBuyerHeldOrders()->map(function ($order) {
+            return [
+                'id' => $order->id,
+                'kind' => 'buyer',
+                'order_number' => $order->order_number,
+                'total_amount' => $order->total_amount,
+                'counterparty_name' => $order->seller?->name,
+                'created_at' => $order->created_at?->toISOString(),
+                'settlement_date' => $order->tradeOffer?->settlement_date?->toISOString(),
+            ];
+        });
+
+        $merged = $sellerOrders->concat($buyerOrders)
+            ->sortBy('settlement_date')
+            ->values();
+
+        $total = $merged->count();
+        $items = $merged->forPage($page, $perPage)->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $items,
+            'pagination' => [
+                'current_page' => $page,
+                'per_page' => $perPage,
+                'total' => $total,
+                'last_page' => max(1, (int) ceil($total / $perPage)),
+            ],
         ]);
     }
 

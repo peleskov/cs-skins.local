@@ -131,9 +131,11 @@ class OrderAPI {
     /**
      * Получить мои заказы
      */
-    async getMyOrders(page = 1) {
+    async getMyOrders(page = 1, status = null, perPage = 25) {
         try {
-            const response = await axios.get(`${this.baseUrl}/purchases?page=${page}`);
+            const params = new URLSearchParams({ page, per_page: perPage });
+            if (status) params.append('status', status);
+            const response = await axios.get(`${this.baseUrl}/purchases?${params}`);
             return response.data;
         } catch (error) {
             throw error;
@@ -143,9 +145,11 @@ class OrderAPI {
     /**
      * Получить мои продажи
      */
-    async getMySales(page = 1) {
+    async getMySales(page = 1, status = null, perPage = 25) {
         try {
-            const response = await axios.get(`${this.baseUrl}/sales?page=${page}`);
+            const params = new URLSearchParams({ page, per_page: perPage });
+            if (status) params.append('status', status);
+            const response = await axios.get(`${this.baseUrl}/sales?${params}`);
             return response.data;
         } catch (error) {
             throw error;

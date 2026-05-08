@@ -310,7 +310,7 @@ class OrderController extends Controller
     /**
      * Получить заказы пользователя
      */
-    public function getMyOrders(): JsonResponse
+    public function getMyOrders(\Illuminate\Http\Request $request): JsonResponse
     {
         if (!auth('client')->check()) {
             return response()->json([
@@ -320,14 +320,25 @@ class OrderController extends Controller
         }
 
         try {
-            $orders = Order::with(['seller:id,name,steam_id', 'tradeOffer.statusHistory'])
-                ->where('buyer_id', auth('client')->id())
+            $perPage = (int) $request->get('per_page', 25);
+            if (!in_array($perPage, [25, 50, 100])) $perPage = 25;
+
+            $base = Order::where('buyer_id', auth('client')->id());
+
+            $orders = (clone $base)
+                ->with(['seller:id,name,steam_id', 'tradeOffer.statusHistory'])
+                ->when($this->statusFilter($request->get('status')), function ($q, $statuses) {
+                    $q->whereIn('status', $statuses);
+                })
                 ->orderBy('created_at', 'desc')
-                ->paginate(10);
+                ->paginate($perPage);
+
+            $counts = $this->orderCountsByGroup(clone $base);
 
             return response()->json([
                 'success' => true,
-                'data' => $orders
+                'data' => $orders,
+                'counts' => $counts,
             ]);
         } catch (Exception $e) {
             return response()->json([
@@ -337,10 +348,31 @@ class OrderController extends Controller
         }
     }
 
+    private function statusFilter(?string $group): ?array
+    {
+        return match ($group) {
+            'current' => ['paid', 'processing'],
+            'completed' => ['completed'],
+            'cancelled' => ['cancelled'],
+            default => null,
+        };
+    }
+
+    private function orderCountsByGroup($baseQuery): array
+    {
+        $rows = $baseQuery->selectRaw('status, COUNT(*) as cnt')->groupBy('status')->pluck('cnt', 'status');
+
+        return [
+            'current' => (int) ($rows['paid'] ?? 0) + (int) ($rows['processing'] ?? 0),
+            'completed' => (int) ($rows['completed'] ?? 0),
+            'cancelled' => (int) ($rows['cancelled'] ?? 0),
+        ];
+    }
+
     /**
      * Получить продажи пользователя
      */
-    public function getMySales(): JsonResponse
+    public function getMySales(\Illuminate\Http\Request $request): JsonResponse
     {
         if (!auth('client')->check()) {
             return response()->json([
@@ -350,14 +382,25 @@ class OrderController extends Controller
         }
 
         try {
-            $orders = Order::with(['buyer:id,name,steam_id', 'tradeOffer.statusHistory'])
-                ->where('seller_id', auth('client')->id())
+            $perPage = (int) $request->get('per_page', 25);
+            if (!in_array($perPage, [25, 50, 100])) $perPage = 25;
+
+            $base = Order::where('seller_id', auth('client')->id());
+
+            $orders = (clone $base)
+                ->with(['buyer:id,name,steam_id', 'tradeOffer.statusHistory'])
+                ->when($this->statusFilter($request->get('status')), function ($q, $statuses) {
+                    $q->whereIn('status', $statuses);
+                })
                 ->orderBy('created_at', 'desc')
-                ->paginate(10);
+                ->paginate($perPage);
+
+            $counts = $this->orderCountsByGroup(clone $base);
 
             return response()->json([
                 'success' => true,
-                'data' => $orders
+                'data' => $orders,
+                'counts' => $counts,
             ]);
         } catch (Exception $e) {
             return response()->json([

@@ -52,7 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const app = createApp(Auctions, {
             initialAuctions: JSON.parse(auctionsElement.dataset.auctions || '[]'),
             initialTotal: parseInt(auctionsElement.dataset.total || '0'),
-            initialHasMore: auctionsElement.dataset.hasMore === 'true',
             currentUser: auctionsElement.dataset.currentUser !== 'null' ? JSON.parse(auctionsElement.dataset.currentUser) : null
         });
         app.mount('#auctions-app');

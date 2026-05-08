@@ -28,7 +28,7 @@ class AuctionController extends Controller
         $featuredAuctions = Auction::with(['listing', 'seller', 'lastBidder'])
             ->active()
             ->orderBy('ends_at', 'asc')
-            ->limit(24)
+            ->limit(25)
             ->get();
             
         // Добавляем статус корзины для каждого листинга (читаем из сессии)
@@ -58,9 +58,8 @@ class AuctionController extends Controller
         });
             
         $totalAuctions = Auction::active()->count();
-        $hasMorePages = $totalAuctions > 24;
-            
-        return view('auctions.index', compact('featuredAuctions', 'totalAuctions', 'hasMorePages'));
+
+        return view('auctions.index', compact('featuredAuctions', 'totalAuctions'));
     }
 
     /**
@@ -84,7 +83,10 @@ class AuctionController extends Controller
             $query->orderBy($sortBy, $sortOrder);
         }
 
-        $perPage = $request->get('per_page', 24);
+        $perPage = (int) $request->get('per_page', 25);
+        if (! in_array($perPage, [25, 50, 100])) {
+            $perPage = 25;
+        }
         $auctions = $query->paginate($perPage);
 
         // Добавляем статус корзины и избранного для каждого аукциона
@@ -112,6 +114,7 @@ class AuctionController extends Controller
             'data' => $auctions->items(),
             'pagination' => [
                 'current_page' => $auctions->currentPage(),
+                'last_page' => $auctions->lastPage(),
                 'total' => $auctions->total(),
                 'per_page' => $auctions->perPage(),
                 'has_more_pages' => $auctions->hasMorePages(),

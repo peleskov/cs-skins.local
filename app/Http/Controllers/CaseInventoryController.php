@@ -28,7 +28,10 @@ class CaseInventoryController extends Controller
         /** @var Client $client */
         $client = Auth::guard('client')->user();
 
-        $items = $this->caseInventoryService->getItems($client);
+        $paginator = $this->caseInventoryService->getItemsPaginated($client, null, 25, 1);
+        $items = $paginator->getCollection();
+
+        $counts = $this->caseInventoryService->getCountsByStatus($client);
 
         // Форматируем данные для Vue компонента
         $inventoryData = $items->map(function ($item) {
@@ -71,6 +74,13 @@ class CaseInventoryController extends Controller
 
         return view('cases.inventory', [
             'inventoryData' => $inventoryData,
+            'inventoryPagination' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+            ],
+            'inventoryCounts' => $counts,
             'userData' => $userData,
             'favoriteCase' => $favoriteCase,
             'bestItem' => $bestItem,
@@ -129,14 +139,19 @@ class CaseInventoryController extends Controller
     /**
      * API: Получить инвентарь пользователя
      */
-    public function getItems(): JsonResponse
+    public function getItems(Request $request): JsonResponse
     {
         /** @var Client $client */
         $client = Auth::guard('client')->user();
 
-        $items = $this->caseInventoryService->getItems($client);
+        $perPage = (int) $request->get('per_page', 25);
+        if (!in_array($perPage, [25, 50, 100])) $perPage = 25;
+        $page = max(1, (int) $request->get('page', 1));
+        $status = $request->boolean('only_available') ? CaseInventoryItem::STATUS_AVAILABLE : null;
 
-        $data = $items->map(function ($item) {
+        $paginator = $this->caseInventoryService->getItemsPaginated($client, $status, $perPage, $page);
+
+        $data = $paginator->getCollection()->map(function ($item) {
             $virtual = $item->virtualItem;
             return [
                 'id' => $item->id,
@@ -157,6 +172,13 @@ class CaseInventoryController extends Controller
         return response()->json([
             'success' => true,
             'data' => $data,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+            ],
+            'counts' => $this->caseInventoryService->getCountsByStatus($client),
         ]);
     }
 

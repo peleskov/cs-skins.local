@@ -183,6 +183,7 @@ Route::prefix('api')->name('api.')->group(function () {
             Route::get('/bonus-transactions', 'getBonusTransactions')->name('bonus-transactions')->middleware('throttle:api-read');
             Route::get('/sales-stats', 'getSalesStats')->name('sales-stats')->middleware('throttle:api-read');
             Route::get('/held-balance', 'getHeldBalance')->name('held-balance')->middleware('throttle:api-read');
+            Route::get('/held-orders', 'getHeldOrders')->name('held-orders')->middleware('throttle:api-read');
         });
 
         // Чат API

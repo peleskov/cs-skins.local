@@ -72,7 +72,7 @@
 						<div class="col-lg-7 col-12">
 							<div class="mb-4">
 								<div class="row g-3">
-									<div v-for="item in currentItems" :key="item.steam_asset_id" class="col-lg-4 col-6">
+									<div v-for="item in pagedItems" :key="item.steam_asset_id" class="col-lg-4 col-6">
 										<!-- Мобильная карточка — стиль маркетплейса -->
 										<div class="m-listing-card d-lg-none h-100 d-flex flex-column" :class="getRarityClass(item)">
 											<div class="m-lc-img">
@@ -102,6 +102,13 @@
 										</div>
 									</div>
 								</div>
+								<Pagination
+									:current-page="currentPage"
+									:last-page="lastPage"
+									:per-page="perPage"
+									class="mt-3"
+									@update:current-page="goToPage"
+									@update:per-page="changePerPage" />
 							</div>
 						</div>
 						<div class="col-lg-5 col-12 d-none d-lg-block" :id="getDetailsSectionId()">
@@ -121,7 +128,7 @@
 						<div class="col-lg-7 col-12">
 							<div class="mb-4">
 								<div class="row g-3">
-									<div v-for="item in currentItems" :key="item.steam_asset_id" class="col-lg-4 col-6">
+									<div v-for="item in pagedItems" :key="item.steam_asset_id" class="col-lg-4 col-6">
 										<!-- Мобильная карточка — стиль маркетплейса -->
 										<div class="m-listing-card d-lg-none h-100 d-flex flex-column" :class="getRarityClass(item)">
 											<div class="m-lc-img">
@@ -151,6 +158,13 @@
 										</div>
 									</div>
 								</div>
+								<Pagination
+									:current-page="currentPage"
+									:last-page="lastPage"
+									:per-page="perPage"
+									class="mt-3"
+									@update:current-page="goToPage"
+									@update:per-page="changePerPage" />
 							</div>
 						</div>
 						<div class="col-lg-5 col-12 d-none d-lg-block" :id="getDetailsSectionId()">
@@ -321,12 +335,14 @@ import axios from 'axios';
 import { formatPrice, handleApiError, getTimeRemaining } from '../../../shared/utils/helpers';
 import ItemDetails from './ItemDetails.vue';
 import EmptyState from '../EmptyState.vue';
+import Pagination from '../../../shared/components/Pagination.vue';
 
 export default {
 	name: 'ProfileInventory',
 	components: {
 		ItemDetails,
-		EmptyState
+		EmptyState,
+		Pagination
 	},
 	setup() {
 		return { formatPrice };
@@ -359,7 +375,9 @@ export default {
 			},
 			extensionActive: false,
 			extensionChecked: false,
-			searchQuery: ''
+			searchQuery: '',
+			currentPage: 1,
+			perPage: 25
 		}
 	},
 	computed: {
@@ -371,6 +389,13 @@ export default {
 		},
 		currentItems() {
 			return this.activeInventoryTab === 'available' ? this.availableItems : this.listedItems;
+		},
+		lastPage() {
+			return Math.max(1, Math.ceil(this.currentItems.length / this.perPage));
+		},
+		pagedItems() {
+			const start = (this.currentPage - 1) * this.perPage;
+			return this.currentItems.slice(start, start + this.perPage);
 		},
 		sellTitle() {
 			return this.isCreatingListing ? 'Создаем листинг...' : 'Добавить в маркетплейс';
@@ -506,7 +531,11 @@ export default {
 		setActiveInventoryTab(tab) {
 			this.activeInventoryTab = tab;
 			this.selectedItem = null;
+			this.currentPage = 1;
 		},
+
+		goToPage(page) { this.currentPage = page; },
+		changePerPage(value) { this.perPage = value; this.currentPage = 1; },
 
 		getItemClasses(item) {
 			const baseClasses = 'h-100 inventory-item text-center position-relative';
@@ -800,6 +829,9 @@ export default {
 	},
 
 	watch: {
+		searchQuery() {
+			this.currentPage = 1;
+		},
 		activeInventoryTab: {
 			handler(newTab) {
 				// Автовыбираем первый предмет при смене таба

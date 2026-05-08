@@ -329,7 +329,7 @@ class SubscriptionController extends Controller
     /**
      * История заходов на аккаунт
      */
-    public function loginHistory(): JsonResponse
+    public function loginHistory(Request $request): JsonResponse
     {
         $client = $this->getClient();
 
@@ -337,19 +337,39 @@ class SubscriptionController extends Controller
             return response()->json(['success' => false, 'message' => 'Подписка не активна'], 403);
         }
 
-        $history = $client->loginHistories()
-            ->limit(500)
-            ->get()
-            ->map(function ($entry) {
-                return [
-                    'date' => $entry->created_at->format('d.m.Y H:i:s'),
-                    'ip' => $entry->ip_address,
-                    'device' => $entry->device,
-                    'status' => $entry->status,
-                ];
-            });
+        $perPage = (int) $request->get('per_page', 25);
+        if (!in_array($perPage, [25, 50, 100])) $perPage = 25;
 
-        return response()->json(['success' => true, 'data' => $history]);
+        $query = $client->loginHistories();
+
+        if ($from = $request->get('from')) {
+            try { $query->where('created_at', '>=', \Carbon\Carbon::parse($from)->startOfDay()); } catch (\Throwable $e) {}
+        }
+        if ($to = $request->get('to')) {
+            try { $query->where('created_at', '<=', \Carbon\Carbon::parse($to)->endOfDay()); } catch (\Throwable $e) {}
+        }
+
+        $paginator = $query->paginate($perPage);
+
+        $items = $paginator->getCollection()->map(function ($entry) {
+            return [
+                'date' => $entry->created_at->format('d.m.Y H:i:s'),
+                'ip' => $entry->ip_address,
+                'device' => $entry->device,
+                'status' => $entry->status,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $items,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+            ],
+        ]);
     }
 
     /**

@@ -125,11 +125,16 @@ class UpgradeController extends Controller
         /** @var Client $client */
         $client = Auth::guard('client')->user();
 
-        $upgrades = Upgrade::where('client_id', $client->id)
+        $perPage = (int) $request->get('per_page', 25);
+        if (!in_array($perPage, [25, 50, 100])) $perPage = 25;
+        $page = max(1, (int) $request->get('page', 1));
+
+        $paginator = Upgrade::where('client_id', $client->id)
             ->with(['targetVirtualItem'])
             ->orderByDesc('created_at')
-            ->limit(50)
-            ->get()
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        $upgrades = $paginator->getCollection()
             ->map(function ($upgrade) {
                 // Получаем данные о ставочных предметах
                 $betItems = [];
@@ -175,6 +180,12 @@ class UpgradeController extends Controller
         return response()->json([
             'success' => true,
             'history' => $upgrades,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+            ],
         ]);
     }
 

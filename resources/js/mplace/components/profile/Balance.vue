@@ -132,11 +132,12 @@
 			</li>
 			<li class="flex-fill flex-lg-grow-0 flex-lg-shrink-0 nav-item" role="presentation">
 				<button class="nav-link d-flex align-items-center justify-content-center"
-					:class="{ active: historyTab === 'held' }" type="button" role="tab" @click="historyTab = 'held'">
+					:class="{ active: historyTab === 'held' }" type="button" role="tab"
+					@click="historyTab = 'held'; loadHeldOrders()">
 					<i class="ri-time-line me-2 d-none d-lg-inline"></i>Удержание
-					<span v-if="heldOrders.seller.length + heldOrders.buyer.length > 0"
+					<span v-if="heldCounts.seller + heldCounts.buyer > 0"
 						class="badge bg-warning text-dark ms-1">
-						{{ heldOrders.seller.length + heldOrders.buyer.length }}
+						{{ heldCounts.seller + heldCounts.buyer }}
 					</span>
 				</button>
 			</li>
@@ -225,13 +226,21 @@
 						</tbody>
 					</table>
 				</div>
+
+				<Pagination
+					:current-page="txPage"
+					:last-page="txLastPage"
+					:per-page="txPerPage"
+					class="mt-3"
+					@update:current-page="txGoToPage"
+					@update:per-page="txChangePerPage" />
 				</template>
 			</div>
 
 			<!-- Таб: На удержании -->
 			<div class="tab-pane fade" :class="{ 'show active': historyTab === 'held' }" v-if="historyTab === 'held'">
 				<!-- Loading State -->
-				<div v-if="isLoadingHeldBalance" class="text-center py-4">
+				<div v-if="isLoadingHeldOrders" class="text-center py-4">
 					<div class="spinner-border" role="status">
 						<span class="visually-hidden">Загрузка...</span>
 					</div>
@@ -239,45 +248,33 @@
 				</div>
 
 				<!-- Empty State -->
-				<div v-else-if="heldOrders.seller.length === 0 && heldOrders.buyer.length === 0"
-					class="text-center py-4">
+				<div v-else-if="heldOrders.length === 0" class="text-center py-4">
 					<i class="ri-checkbox-circle-line display-4 text-success mb-3"></i>
 					<h6>Нет средств на удержании</h6>
 					<p class="text-muted mb-0">Все ваши средства доступны</p>
 				</div>
 
-				<!-- Held Orders (мобиль) -->
 				<template v-else>
+				<!-- Мобиль -->
 				<div class="d-lg-none m-tx-list">
-					<div v-for="order in heldOrders.seller" :key="`m-s-${order.id}`" class="m-tx-item">
-						<div class="m-tx-icon"><i class="ri-money-dollar-circle-line"></i></div>
+					<div v-for="order in heldOrders" :key="`m-${order.kind}-${order.id}`" class="m-tx-item">
+						<div class="m-tx-icon">
+							<i :class="order.kind === 'seller' ? 'ri-money-dollar-circle-line' : 'ri-shopping-cart-line'"></i>
+						</div>
 						<div class="m-tx-body">
-							<div class="m-tx-title">Продажа · #{{ order.order_number }}</div>
-							<div class="m-tx-desc">{{ order.buyer_name || '—' }}</div>
+							<div class="m-tx-title">{{ order.kind === 'seller' ? 'Продажа' : 'Покупка' }} · #{{ order.order_number }}</div>
+							<div class="m-tx-desc">{{ order.counterparty_name || '—' }}</div>
 							<div class="m-tx-date">До {{ formatSettlementDate(order.settlement_date) }}</div>
 						</div>
 						<div class="m-tx-meta">
-							<div class="m-tx-amount text-success">
-								<strong v-html="'+&nbsp;' + formatPrice(order.total_amount)"></strong>
-							</div>
-						</div>
-					</div>
-					<div v-for="order in heldOrders.buyer" :key="`m-b-${order.id}`" class="m-tx-item">
-						<div class="m-tx-icon"><i class="ri-shopping-cart-line"></i></div>
-						<div class="m-tx-body">
-							<div class="m-tx-title">Покупка · #{{ order.order_number }}</div>
-							<div class="m-tx-desc">{{ order.seller_name || '—' }}</div>
-							<div class="m-tx-date">До {{ formatSettlementDate(order.settlement_date) }}</div>
-						</div>
-						<div class="m-tx-meta">
-							<div class="m-tx-amount text-danger">
-								<strong v-html="'−&nbsp;' + formatPrice(order.total_amount)"></strong>
+							<div class="m-tx-amount" :class="order.kind === 'seller' ? 'text-success' : 'text-danger'">
+								<strong v-html="(order.kind === 'seller' ? '+&nbsp;' : '−&nbsp;') + formatPrice(order.total_amount)"></strong>
 							</div>
 						</div>
 					</div>
 				</div>
 
-				<!-- Held Orders List (десктоп) -->
+				<!-- Десктоп -->
 				<div class="table-responsive d-none d-lg-block">
 					<table class="table table-hover">
 						<thead>
@@ -290,31 +287,14 @@
 							</tr>
 						</thead>
 						<tbody>
-							<!-- Продажи на удержании -->
-							<tr v-for="order in heldOrders.seller" :key="'s-' + order.id" class="text-muted">
+							<tr v-for="order in heldOrders" :key="`${order.kind}-${order.id}`" class="text-muted">
 								<td>
-									<i class="ri-money-dollar-circle-line"></i>&nbsp;<span>Продажа</span>
+									<i :class="order.kind === 'seller' ? 'ri-money-dollar-circle-line' : 'ri-shopping-cart-line'"></i>&nbsp;
+									<span>{{ order.kind === 'seller' ? 'Продажа' : 'Покупка' }}</span>
 								</td>
-								<td>Заказ #{{ order.order_number }} · {{ order.buyer_name || '—' }}</td>
-								<td class="text-success">
-									<strong v-html="'+&nbsp;' + formatPrice(order.total_amount)"></strong>
-								</td>
-								<td class="text-muted">{{ formatDate(order.created_at) }}</td>
-								<td>
-									<span class="badge bg-warning text-dark">
-										<i class="ri-time-line me-1"></i>
-										{{ formatSettlementDate(order.settlement_date) }}
-									</span>
-								</td>
-							</tr>
-							<!-- Покупки на удержании -->
-							<tr v-for="order in heldOrders.buyer" :key="'b-' + order.id" class="text-muted">
-								<td>
-									<i class="ri-shopping-cart-line"></i>&nbsp;<span>Покупка</span>
-								</td>
-								<td>Заказ #{{ order.order_number }} · {{ order.seller_name || '—' }}</td>
-								<td class="text-danger">
-									<strong v-html="'−&nbsp;' + formatPrice(order.total_amount)"></strong>
+								<td>Заказ #{{ order.order_number }} · {{ order.counterparty_name || '—' }}</td>
+								<td :class="order.kind === 'seller' ? 'text-success' : 'text-danger'">
+									<strong v-html="(order.kind === 'seller' ? '+&nbsp;' : '−&nbsp;') + formatPrice(order.total_amount)"></strong>
 								</td>
 								<td class="text-muted">{{ formatDate(order.created_at) }}</td>
 								<td>
@@ -327,6 +307,14 @@
 						</tbody>
 					</table>
 				</div>
+
+				<Pagination
+					:current-page="heldPage"
+					:last-page="heldLastPage"
+					:per-page="heldPerPage"
+					class="mt-3"
+					@update:current-page="heldGoToPage"
+					@update:per-page="heldChangePerPage" />
 				</template>
 			</div>
 
@@ -396,6 +384,14 @@
 						</tbody>
 					</table>
 				</div>
+
+				<Pagination
+					:current-page="bonusPage"
+					:last-page="bonusLastPage"
+					:per-page="bonusPerPage"
+					class="mt-3"
+					@update:current-page="bonusGoToPage"
+					@update:per-page="bonusChangePerPage" />
 				</template>
 			</div>
 		</div>
@@ -600,9 +596,11 @@
 <script>
 import axios from 'axios';
 import { formatPrice } from '../../../shared/utils/helpers';
+import Pagination from '../../../shared/components/Pagination.vue';
 
 export default {
 	name: 'ProfileBalance',
+	components: { Pagination },
 	props: {
 		client: {
 			type: Object,
@@ -622,6 +620,15 @@ export default {
 		return {
 			transactions: [],
 			isLoadingTransactions: false,
+			txPage: 1,
+			txPerPage: 25,
+			txLastPage: 1,
+			bonusPage: 1,
+			bonusPerPage: 25,
+			bonusLastPage: 1,
+			heldPage: 1,
+			heldPerPage: 25,
+			heldLastPage: 1,
 			salesStats: {
 				total_earned: 0,
 				total_sales: 0
@@ -645,11 +652,10 @@ export default {
 				seller: 0,
 				buyer: 0
 			},
-			heldOrders: {
-				seller: [],
-				buyer: []
-			},
+			heldOrders: [],
+			heldCounts: { seller: 0, buyer: 0 },
 			isLoadingHeldBalance: false,
+			isLoadingHeldOrders: false,
 
 			// Данные о бонусах
 			bonusTransactions: [],
@@ -735,8 +741,14 @@ export default {
 
 			this.isLoadingTransactions = true;
 			try {
-				const response = await axios.get('/api/profile/transactions');
+				const response = await axios.get('/api/profile/transactions', {
+					params: { page: this.txPage, per_page: this.txPerPage }
+				});
 				this.transactions = response.data.data || [];
+				if (response.data.pagination) {
+					this.txPage = response.data.pagination.current_page;
+					this.txLastPage = response.data.pagination.last_page;
+				}
 			} catch (error) {
 				console.error('Failed to load transactions:', error);
 				window.toast?.error('Не удалось загрузить историю операций');
@@ -744,6 +756,9 @@ export default {
 				this.isLoadingTransactions = false;
 			}
 		},
+
+		txGoToPage(page) { this.txPage = page; this.loadTransactions(); },
+		txChangePerPage(value) { this.txPerPage = value; this.txPage = 1; this.loadTransactions(); },
 
 		async loadSalesStats() {
 			if (this.isLoadingStats) return;
@@ -769,8 +784,8 @@ export default {
 				if (response.data.success) {
 					this.heldBalance.seller = response.data.data.seller_held_balance || 0;
 					this.heldBalance.buyer = response.data.data.buyer_held_balance || 0;
-					this.heldOrders.seller = response.data.data.seller_held_orders || [];
-					this.heldOrders.buyer = response.data.data.buyer_held_orders || [];
+					this.heldCounts.seller = response.data.data.seller_held_count || 0;
+					this.heldCounts.buyer = response.data.data.buyer_held_count || 0;
 				}
 			} catch (error) {
 				console.error('Failed to load held balance:', error);
@@ -779,13 +794,42 @@ export default {
 			}
 		},
 
+		async loadHeldOrders() {
+			if (this.isLoadingHeldOrders) return;
+
+			this.isLoadingHeldOrders = true;
+			try {
+				const response = await axios.get('/api/profile/held-orders', {
+					params: { page: this.heldPage, per_page: this.heldPerPage }
+				});
+				this.heldOrders = response.data.data || [];
+				if (response.data.pagination) {
+					this.heldPage = response.data.pagination.current_page;
+					this.heldLastPage = response.data.pagination.last_page;
+				}
+			} catch (error) {
+				console.error('Failed to load held orders:', error);
+			} finally {
+				this.isLoadingHeldOrders = false;
+			}
+		},
+
+		heldGoToPage(page) { this.heldPage = page; this.loadHeldOrders(); },
+		heldChangePerPage(value) { this.heldPerPage = value; this.heldPage = 1; this.loadHeldOrders(); },
+
 		async loadBonusTransactions() {
 			if (this.isLoadingBonusTransactions) return;
 
 			this.isLoadingBonusTransactions = true;
 			try {
-				const response = await axios.get('/api/profile/bonus-transactions');
+				const response = await axios.get('/api/profile/bonus-transactions', {
+					params: { page: this.bonusPage, per_page: this.bonusPerPage }
+				});
 				this.bonusTransactions = response.data.data || [];
+				if (response.data.pagination) {
+					this.bonusPage = response.data.pagination.current_page;
+					this.bonusLastPage = response.data.pagination.last_page;
+				}
 			} catch (error) {
 				console.error('Failed to load bonus transactions:', error);
 				window.toast?.error('Не удалось загрузить историю бонусов');
@@ -793,6 +837,9 @@ export default {
 				this.isLoadingBonusTransactions = false;
 			}
 		},
+
+		bonusGoToPage(page) { this.bonusPage = page; this.loadBonusTransactions(); },
+		bonusChangePerPage(value) { this.bonusPerPage = value; this.bonusPage = 1; this.loadBonusTransactions(); },
 
 		formatSettlementDate(dateString) {
 			if (!dateString) return '—';

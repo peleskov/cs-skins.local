@@ -48,6 +48,44 @@ class CaseInventoryService
     }
 
     /**
+     * Постраничная выборка предметов с фильтром по статусу
+     */
+    public function getItemsPaginated(Client $client, ?string $status, int $perPage, int $page = 1)
+    {
+        $query = CaseInventoryItem::where('client_id', $client->id)
+            ->with('virtualItem')
+            ->orderByDesc('created_at');
+
+        if ($status !== null) {
+            $query->where('status', $status);
+        }
+
+        return $query->paginate($perPage, ['*'], 'page', $page);
+    }
+
+    /**
+     * Подсчёт предметов клиента по статусам
+     */
+    public function getCountsByStatus(Client $client): array
+    {
+        $rows = CaseInventoryItem::where('client_id', $client->id)
+            ->selectRaw('status, COUNT(*) as cnt, SUM(price) as total')
+            ->groupBy('status')
+            ->get();
+
+        $counts = ['total' => 0, 'available' => 0, 'available_total' => 0.0];
+        foreach ($rows as $row) {
+            $counts['total'] += (int) $row->cnt;
+            if ($row->status === CaseInventoryItem::STATUS_AVAILABLE) {
+                $counts['available'] = (int) $row->cnt;
+                $counts['available_total'] = (float) $row->total;
+            }
+        }
+
+        return $counts;
+    }
+
+    /**
      * Продать предметы по ID
      *
      * @param Client $client

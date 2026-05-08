@@ -88,6 +88,14 @@
 			</div>
 		</div>
 
+		<Pagination v-if="!isLoading"
+			:current-page="currentPage"
+			:last-page="lastPage"
+			:per-page="perPage"
+			class="mt-4"
+			@update:current-page="goToPage"
+			@update:per-page="changePerPage" />
+
 		<!-- Модальное окно подтверждения отмены заказа -->
 		<div class="modal fade" id="confirmCancelModal" tabindex="-1" aria-labelledby="confirmCancelModalLabel"
 			aria-hidden="true">
@@ -133,6 +141,7 @@ import { formatPrice, handleApiError } from '../../../shared/utils/helpers';
 import { orderAPI } from '../../../shared/utils/api';
 import OrderItem from './OrderItem.vue';
 import EmptyState from '../EmptyState.vue';
+import Pagination from '../../../shared/components/Pagination.vue';
 
 // Константы для интервалов обновления
 const UPDATE_INTERVAL = 10000; // 10 секунд для обновления статусов
@@ -141,7 +150,8 @@ export default {
 	name: 'ProfileOrders',
 	components: {
 		OrderItem,
-		EmptyState
+		EmptyState,
+		Pagination
 	},
 	props: {
 		client: {
@@ -152,8 +162,10 @@ export default {
 	data() {
 		return {
 			orders: [],
-			allOrders: [], // все заказы для фильтрации
-			pagination: null,
+			currentPage: 1,
+			perPage: 25,
+			lastPage: 1,
+			total: 0,
 			isLoading: false,
 			activeTab: 'current',
 			counts: {
@@ -176,9 +188,10 @@ export default {
 			tabElements.forEach(tab => {
 				tab.addEventListener('shown.bs.tab', (event) => {
 					const tabId = event.target.getAttribute('data-bs-target')?.substring(1);
-					if (tabId) {
+					if (tabId && tabId !== this.activeTab) {
 						this.activeTab = tabId;
-						this.orders = this.filterOrdersByTab(this.allOrders || []);
+						this.currentPage = 1;
+						this.loadOrders();
 					}
 				});
 			});
@@ -190,24 +203,22 @@ export default {
 	methods: {
 		formatPrice,
 
-		async loadOrders(page = 1) {
+		async loadOrders(page = null) {
+			if (page !== null) this.currentPage = page;
 			this.isLoading = true;
 			try {
-				const response = await orderAPI.getMyOrders(page);
+				const response = await orderAPI.getMyOrders(this.currentPage, this.activeTab, this.perPage);
 				if (response.success) {
-					this.allOrders = response.data.data;
+					this.orders = response.data.data;
+					this.currentPage = response.data.current_page;
+					this.lastPage = response.data.last_page;
+					this.total = response.data.total;
 
-					// Фильтруем заказы по активному табу
-					this.orders = this.filterOrdersByTab(this.allOrders);
-
-					this.pagination = {
-						current_page: response.data.current_page,
-						last_page: response.data.last_page,
-						total: response.data.total
-					};
-
-					// Подсчитываем количество заказов по статусам
-					this.updateCounts(this.allOrders);
+					if (response.counts) {
+						this.counts.current = response.counts.current;
+						this.counts.completed = response.counts.completed;
+						this.counts.cancelled = response.counts.cancelled;
+					}
 				}
 			} catch (error) {
 				console.error('Error loading orders:', error);
@@ -217,6 +228,18 @@ export default {
 			}
 		},
 
+		goToPage(page) {
+			if (page === this.currentPage) return;
+			this.currentPage = page;
+			this.loadOrders();
+		},
+
+		changePerPage(value) {
+			this.perPage = value;
+			this.currentPage = 1;
+			this.loadOrders();
+		},
+
 
 		startStatusUpdates() {
 			this.statusUpdateInterval = setInterval(() => {
@@ -224,59 +247,23 @@ export default {
 			}, UPDATE_INTERVAL);
 		},
 
-		filterOrdersByTab(orders) {
-			let filtered;
-			switch (this.activeTab) {
-				case 'current':
-					filtered = orders.filter(order => ['paid', 'processing'].includes(order.status));
-					break;
-				case 'completed':
-					filtered = orders.filter(order => order.status === 'completed');
-					break;
-				case 'cancelled':
-					filtered = orders.filter(order => order.status === 'cancelled');
-					break;
-				default:
-					filtered = orders;
-			}
-			return filtered;
-		},
-
-		updateCounts(orders) {
-			const current = orders.filter(order => ['paid', 'processing'].includes(order.status));
-			const completed = orders.filter(order => order.status === 'completed');
-			const cancelled = orders.filter(order => order.status === 'cancelled');
-
-			this.counts.current = current.length;
-			this.counts.completed = completed.length;
-			this.counts.cancelled = cancelled.length;
-		},
-
 		async updateOrdersInBackground() {
-			// Всегда проверяем обновления, если есть хотя бы один заказ
-			if (this.allOrders.length === 0) {
-				return; // Только если совсем нет заказов
-			}
+			if (this.orders.length === 0) return;
 
 			try {
-				const response = await orderAPI.getMyOrders(this.pagination?.current_page || 1);
+				const response = await orderAPI.getMyOrders(this.currentPage, this.activeTab, this.perPage);
 				if (response.success) {
-					const newAllOrders = response.data.data;
-
-					// Проверяем, изменились ли заказы
-					const hasChanges = this.hasOrderChanges(this.allOrders, newAllOrders);
-
-					if (hasChanges) {
-						this.allOrders = newAllOrders;
-						this.orders = this.filterOrdersByTab(this.allOrders);
-						this.updateCounts(this.allOrders);
+					const newOrders = response.data.data;
+					if (this.hasOrderChanges(this.orders, newOrders)) {
+						this.orders = newOrders;
 					}
-
-					this.pagination = {
-						current_page: response.data.current_page,
-						last_page: response.data.last_page,
-						total: response.data.total
-					};
+					this.lastPage = response.data.last_page;
+					this.total = response.data.total;
+					if (response.counts) {
+						this.counts.current = response.counts.current;
+						this.counts.completed = response.counts.completed;
+						this.counts.cancelled = response.counts.cancelled;
+					}
 				}
 			} catch (error) {
 				console.error('Background status update failed:', error);
@@ -311,7 +298,7 @@ export default {
 				if (response.success) {
 					window.toast.success(response.message || 'Заказ успешно отменен');
 					// Обновляем список заказов
-					await this.loadOrders(this.pagination?.current_page || 1);
+					await this.loadOrders();
 				} else {
 					window.toast.error(response.message || 'Ошибка при отмене заказа');
 				}

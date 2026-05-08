@@ -185,6 +185,15 @@
 						</div>
 					</div>
 				</div>
+
+				<Pagination
+					variant="dark"
+					:current-page="itemsPage"
+					:last-page="itemsLastPage"
+					:per-page="itemsPerPage"
+					class="mt-4"
+					@update:current-page="itemsGoToPage"
+					@update:per-page="itemsChangePerPage" />
 			</div>
 
 			<!-- Таб Апгрейды -->
@@ -301,6 +310,15 @@
 							</div>
 						</div>
 					</div>
+
+					<Pagination
+						variant="dark"
+						:current-page="upgradePage"
+						:last-page="upgradeLastPage"
+						:per-page="upgradePerPage"
+						class="mt-4"
+						@update:current-page="upgradeGoToPage"
+						@update:per-page="upgradeChangePerPage" />
 				</div>
 			</div>
 		</div>
@@ -443,14 +461,25 @@
 <script>
 import axios from 'axios';
 import { formatPrice } from '../../shared/utils/helpers';
+import Pagination from '../../shared/components/Pagination.vue';
 
 export default {
 	name: 'CaseInventory',
+
+	components: { Pagination },
 
 	props: {
 		items: {
 			type: Array,
 			default: () => []
+		},
+		pagination: {
+			type: Object,
+			default: () => ({ current_page: 1, per_page: 25, total: 0, last_page: 1 })
+		},
+		counts: {
+			type: Object,
+			default: () => ({ total: 0, available: 0, available_total: 0 })
 		},
 		user: {
 			type: Object,
@@ -478,6 +507,17 @@ export default {
 			showOnlyAvailable: false,
 			activeTab: 'items',
 			topBetIndices: {},
+			// Пагинация инвентаря
+			itemsPage: 1,
+			itemsPerPage: 25,
+			itemsLastPage: 1,
+			itemsTotal: 0,
+			itemsCounts: { total: 0, available: 0, available_total: 0 },
+			itemsLoading: false,
+			// Пагинация истории апгрейдов
+			upgradePage: 1,
+			upgradePerPage: 25,
+			upgradeLastPage: 1,
 			// Trade URL
 			tradeUrlInput: '',
 			tradeUrlSaving: false,
@@ -500,7 +540,19 @@ export default {
 	created() {
 		this.localItems = [...this.items];
 		this.localUser = { ...this.user };
+		this.itemsPage = this.pagination?.current_page || 1;
+		this.itemsPerPage = this.pagination?.per_page || 25;
+		this.itemsLastPage = this.pagination?.last_page || 1;
+		this.itemsTotal = this.pagination?.total || 0;
+		this.itemsCounts = { ...this.counts };
 		this.loadUpgradeHistory();
+	},
+
+	watch: {
+		showOnlyAvailable() {
+			this.itemsPage = 1;
+			this.refreshItems();
+		}
 	},
 
 	mounted() {
@@ -533,15 +585,12 @@ export default {
 			return this.localItems.filter(item => item.status === 'available');
 		},
 		availableCount() {
-			return this.availableItems.length;
+			return this.itemsCounts.available || 0;
 		},
 		availableTotal() {
-			return this.availableItems.reduce((sum, item) => sum + item.price, 0);
+			return this.itemsCounts.available_total || 0;
 		},
 		filteredItems() {
-			if (this.showOnlyAvailable) {
-				return this.availableItems;
-			}
 			return this.localItems;
 		},
 		sortedReplacements() {
@@ -577,9 +626,15 @@ export default {
 		async loadUpgradeHistory() {
 			this.upgradeHistoryLoading = true;
 			try {
-				const response = await axios.get('/api/upgrade/history');
+				const response = await axios.get('/api/upgrade/history', {
+					params: { page: this.upgradePage, per_page: this.upgradePerPage }
+				});
 				if (response.data.success) {
 					this.upgradeHistory = response.data.history;
+					if (response.data.pagination) {
+						this.upgradePage = response.data.pagination.current_page;
+						this.upgradeLastPage = response.data.pagination.last_page;
+					}
 				}
 			} catch (error) {
 				console.error('Load upgrade history error:', error);
@@ -587,6 +642,9 @@ export default {
 				this.upgradeHistoryLoading = false;
 			}
 		},
+
+		upgradeGoToPage(page) { this.upgradePage = page; this.loadUpgradeHistory(); },
+		upgradeChangePerPage(value) { this.upgradePerPage = value; this.upgradePage = 1; this.loadUpgradeHistory(); },
 
 		getUpgradeItemImageUrl(item) {
 			if (!item || !item.image_url) return '/images/logo_ico.svg';
@@ -810,15 +868,34 @@ export default {
 		},
 
 		async refreshItems() {
+			this.itemsLoading = true;
 			try {
-				const response = await axios.get('/api/case-inventory');
+				const params = {
+					page: this.itemsPage,
+					per_page: this.itemsPerPage,
+				};
+				if (this.showOnlyAvailable) params.only_available = 1;
+				const response = await axios.get('/api/case-inventory', { params });
 				if (response.data.success) {
 					this.localItems = response.data.data;
+					if (response.data.pagination) {
+						this.itemsPage = response.data.pagination.current_page;
+						this.itemsLastPage = response.data.pagination.last_page;
+						this.itemsTotal = response.data.pagination.total;
+					}
+					if (response.data.counts) {
+						this.itemsCounts = response.data.counts;
+					}
 				}
 			} catch (error) {
 				console.error('Refresh items error:', error);
+			} finally {
+				this.itemsLoading = false;
 			}
 		},
+
+		itemsGoToPage(page) { this.itemsPage = page; this.refreshItems(); },
+		itemsChangePerPage(value) { this.itemsPerPage = value; this.itemsPage = 1; this.refreshItems(); },
 
 		sellFromReplacementModal() {
 			const modal = bootstrap.Modal.getInstance(document.getElementById('replacementModal'));

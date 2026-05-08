@@ -23,7 +23,7 @@
 				<div class="col-lg-7 col-12">
 					<div class="mb-4">
 						<div class="row g-3">
-							<div v-for="favorite in favorites" :key="favorite.id" class="col-lg-4 col-6">
+							<div v-for="favorite in pagedFavorites" :key="favorite.id" class="col-lg-4 col-6">
 								<!-- Мобильная карточка -->
 								<div class="m-listing-card d-lg-none h-100 d-flex flex-column position-relative"
 									:class="getRarityClass(favorite.listing)">
@@ -88,6 +88,13 @@
 								</div>
 							</div>
 						</div>
+						<Pagination
+							:current-page="currentPage"
+							:last-page="lastPage"
+							:per-page="perPage"
+							class="mt-3"
+							@update:current-page="goToPage"
+							@update:per-page="changePerPage" />
 					</div>
 				</div>
 				<div class="col-lg-5 col-12 d-none d-lg-block" id="favorite-details-section">
@@ -175,13 +182,15 @@ import FavoriteButton from '../FavoriteButton.vue';
 import CartButton from '../CartButton.vue';
 import ItemDetails from './ItemDetails.vue';
 import EmptyState from '../EmptyState.vue';
+import Pagination from '../../../shared/components/Pagination.vue';
 
 export default {
 	name: 'ProfileFavorites',
 	components: {
 		CartButton,
 		ItemDetails,
-		EmptyState
+		EmptyState,
+		Pagination
 	},
 	setup() {
 		return { formatPrice };
@@ -196,7 +205,18 @@ export default {
 		return {
 			favorites: [],
 			isLoading: false,
-			selectedFavorite: null
+			selectedFavorite: null,
+			currentPage: 1,
+			perPage: 25
+		}
+	},
+	computed: {
+		lastPage() {
+			return Math.max(1, Math.ceil(this.favorites.length / this.perPage));
+		},
+		pagedFavorites() {
+			const start = (this.currentPage - 1) * this.perPage;
+			return this.favorites.slice(start, start + this.perPage);
 		}
 	},
 	methods: {
@@ -234,6 +254,16 @@ export default {
 			});
 		},
 		
+		goToPage(page) {
+			this.currentPage = page;
+			this.$nextTick(() => this.initializeFavoriteButtons());
+		},
+		changePerPage(value) {
+			this.perPage = value;
+			this.currentPage = 1;
+			this.$nextTick(() => this.initializeFavoriteButtons());
+		},
+
 		selectFavorite(favorite) {
 			this.selectedFavorite = favorite;
 			

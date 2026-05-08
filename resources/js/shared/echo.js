@@ -23,5 +23,12 @@ export function createEcho() {
     });
 }
 
+// Синглтон, чтобы переиспользовать одно соединение в рамках страницы
+let sharedEcho = null;
+export function getEcho() {
+	if (!sharedEcho) sharedEcho = createEcho();
+	return sharedEcho;
+}
+
 // Экспортируем классы для использования в компонентах
 export { Echo, Pusher };

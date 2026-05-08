@@ -7,6 +7,9 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+// Раз в 10 секунд пушим обновлённый онлайн-счётчик через Reverb
+Schedule::command('online:broadcast')->everyTenSeconds()->withoutOverlapping();
+
 // Команда для показа упакованных расширений
 Artisan::command('extension:list {--path=storage/app/extensions : Directory to list}', function () {
     $path = $this->option('path');

@@ -153,7 +153,7 @@
 
 <script>
 import { formatPrice } from '../../shared/utils/helpers';
-import { startOnlinePolling } from '../../shared/utils/online';
+import { subscribeOnline } from '../../shared/utils/online';
 import LanguageSelector from '../../shared/components/LanguageSelector.vue';
 import CurrencySelector from '../../shared/components/CurrencySelector.vue';
 
@@ -187,7 +187,7 @@ export default {
 			lastScrollY: 0,
 			scrollTicking: false,
 			currentOnline: this.online,
-			stopOnlinePolling: null
+			stopOnlineSub: null
 		};
 	},
 	methods: {
@@ -231,14 +231,14 @@ export default {
 		window.addEventListener('balance-updated', this.updateBalance);
 		if (this.hideOnScroll) window.addEventListener('scroll', this.onScroll, { passive: true });
 		if (this.online !== null) {
-			this.stopOnlinePolling = startOnlinePolling(this.online, (v) => { this.currentOnline = v; });
+			this.stopOnlineSub = subscribeOnline(this.online, (v) => { this.currentOnline = v; });
 		}
 	},
 	beforeUnmount() {
 		window.removeEventListener('cart-updated', this.updateCart);
 		window.removeEventListener('balance-updated', this.updateBalance);
 		window.removeEventListener('scroll', this.onScroll);
-		if (this.stopOnlinePolling) this.stopOnlinePolling();
+		if (this.stopOnlineSub) this.stopOnlineSub();
 		document.body.style.overflow = '';
 	},
 	watch: {

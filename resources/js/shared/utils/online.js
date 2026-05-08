@@ -1,7 +1,11 @@
-// Опрос /api/online раз в 10 секунд + плавный переход к новому значению.
-// Использование: startOnlinePolling(initial, (value) => { state.online = value })
+// Подписка на канал 'online' через Reverb. Серверный таск раз в 10 сек
+// пушит событие .online.updated с {count}. На клиенте — плавный tween.
+//
+// Использование: subscribeOnline(initial, (value) => { state.online = value })
 
-export function startOnlinePolling(initial, onUpdate, intervalMs = 10000) {
+import { getEcho } from '../echo';
+
+export function subscribeOnline(initial, onUpdate) {
 	let current = Number(initial) || 0;
 	let target = current;
 	let rafId = null;
@@ -19,24 +23,21 @@ export function startOnlinePolling(initial, onUpdate, intervalMs = 10000) {
 		rafId = requestAnimationFrame(tween);
 	};
 
-	const fetchOnce = async () => {
-		try {
-			const res = await fetch('/api/online', { headers: { Accept: 'application/json' } });
-			if (!res.ok) return;
-			const data = await res.json();
-			if (typeof data.count === 'number') {
-				target = data.count;
+	let channel = null;
+	try {
+		channel = getEcho().channel('online');
+		channel.listen('.online.updated', (e) => {
+			if (typeof e.count === 'number') {
+				target = e.count;
 				if (rafId === null) rafId = requestAnimationFrame(tween);
 			}
-		} catch (e) {
-			// игнорируем сетевые ошибки
-		}
-	};
-
-	const timer = setInterval(fetchOnce, intervalMs);
+		});
+	} catch (e) {
+		// если Reverb недоступен — оставляем initial
+	}
 
 	return () => {
-		clearInterval(timer);
+		try { getEcho().leave('online'); } catch (e) {}
 		if (rafId !== null) cancelAnimationFrame(rafId);
 	};
 }

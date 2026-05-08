@@ -275,7 +275,7 @@
 
 <script>
 import { formatPrice } from '../../shared/utils/helpers';
-import { startOnlinePolling } from '../../shared/utils/online';
+import { subscribeOnline } from '../../shared/utils/online';
 import { cartAPI } from '../../shared/utils/api';
 import CurrencySelector from '../../shared/components/CurrencySelector.vue';
 import LanguageSelector from '../../shared/components/LanguageSelector.vue';
@@ -331,7 +331,7 @@ export default {
 			profileTabs: window.profileTabs || {},
 			mainNavigation: window.mainNavigation || {},
 			currentOnline: this.initialOnline,
-			stopOnlinePolling: null
+			stopOnlineSub: null
 		}
 	},
 	computed: {
@@ -452,9 +452,9 @@ export default {
 		// Слушаем обновления баланса
 		window.addEventListener('balance-updated', this.handleBalanceUpdate);
 
-		// Онлайн-счётчик: периодический опрос
+		// Онлайн-счётчик: подписка на Reverb
 		if (this.initialOnline !== null) {
-			this.stopOnlinePolling = startOnlinePolling(this.initialOnline, (v) => { this.currentOnline = v; });
+			this.stopOnlineSub = subscribeOnline(this.initialOnline, (v) => { this.currentOnline = v; });
 		}
 	},
 
@@ -464,7 +464,7 @@ export default {
 		window.removeEventListener('favorites-updated', this.updateFavoritesFromEvent);
 		window.removeEventListener('currency-changed', this.handleCurrencyChange);
 		window.removeEventListener('balance-updated', this.handleBalanceUpdate);
-		if (this.stopOnlinePolling) this.stopOnlinePolling();
+		if (this.stopOnlineSub) this.stopOnlineSub();
 	}
 }
 </script>

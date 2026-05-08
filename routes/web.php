@@ -321,11 +321,6 @@ Route::get('/login', function () {
     return redirect()->route('auth.steam');
 })->name('login');
 
-// Онлайн-счётчик (публичный, кэшируется)
-Route::get('/api/online', function (\App\Services\OnlineCounterService $svc) {
-    return response()->json(['count' => $svc->currentCount()]);
-})->middleware('throttle:api-read')->name('api.online');
-
 // Telegram bot webhook (не требует авторизации)
 Route::post('/api/telegram/webhook', [\App\Http\Controllers\TelegramWebhookController::class, 'handle'])->name('telegram.webhook');
 

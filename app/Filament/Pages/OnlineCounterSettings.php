@@ -7,6 +7,7 @@ use App\Services\OnlineCounterService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
@@ -39,6 +40,8 @@ class OnlineCounterSettings extends Page implements HasForms
             'online_fake_base' => (int) SiteSetting::get('online_fake_base', 0),
             'online_fluctuation' => (int) SiteSetting::get('online_fluctuation', 0),
             'online_window_seconds' => (int) SiteSetting::get('online_window_seconds', 300),
+            'online_daily_profile' => (bool) SiteSetting::get('online_daily_profile', false),
+            'online_daily_amplitude' => (int) SiteSetting::get('online_daily_amplitude', 40),
         ]);
     }
 
@@ -76,6 +79,19 @@ class OnlineCounterSettings extends Page implements HasForms
                     ->numeric()
                     ->minValue(60)
                     ->default(300),
+
+                Toggle::make('online_daily_profile')
+                    ->label('Суточный профиль')
+                    ->helperText('Пик онлайна около 20:00, минимум — около 08:00 (Europe/Moscow). Применяется только к фейковой части.'),
+
+                TextInput::make('online_daily_amplitude')
+                    ->label('Амплитуда профиля (%)')
+                    ->helperText('Насколько фейковая часть растёт в пике и падает ночью. 40% → ночью 60%, в пике 140%.')
+                    ->numeric()
+                    ->minValue(0)
+                    ->maxValue(90)
+                    ->default(40)
+                    ->visible(fn ($get) => $get('online_daily_profile')),
             ])
             ->statePath('data')
             ->columns(2);
@@ -89,6 +105,8 @@ class OnlineCounterSettings extends Page implements HasForms
         SiteSetting::set('online_fake_base', $data['online_fake_base'], SiteSetting::TYPE_NUMBER, 'База фейкового онлайна');
         SiteSetting::set('online_fluctuation', $data['online_fluctuation'], SiteSetting::TYPE_NUMBER, 'Амплитуда колебаний онлайна');
         SiteSetting::set('online_window_seconds', $data['online_window_seconds'], SiteSetting::TYPE_NUMBER, 'Окно активности онлайна (сек)');
+        SiteSetting::set('online_daily_profile', $data['online_daily_profile'], SiteSetting::TYPE_BOOLEAN, 'Суточный профиль онлайна');
+        SiteSetting::set('online_daily_amplitude', $data['online_daily_amplitude'] ?? 40, SiteSetting::TYPE_NUMBER, 'Амплитуда суточного профиля (%)');
 
         Cache::forget('online:current');
 

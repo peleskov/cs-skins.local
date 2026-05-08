@@ -13,7 +13,7 @@ class TrackOnlineUsers
 
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->isMethod('GET') && ! $request->is('api/online')) {
+        if ($request->isMethod('GET')) {
             $key = auth('client')->check()
                 ? 'u:'.auth('client')->id()
                 : 's:'.$request->session()->getId();

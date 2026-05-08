@@ -9,5 +9,7 @@
     data-initial-case="{{ json_encode($caseData) }}"
     data-case-slug="{{ $case->slug }}"
     data-routes="{{ json_encode(['cases' => route('cases.index'), 'faq' => route('faq')]) }}"
+    data-deposit-settings="{{ json_encode($depositSettings) }}"
+    data-user-balance="{{ json_encode($userBalance) }}"
 ></div>
 @endsection

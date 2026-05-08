@@ -1113,6 +1113,93 @@
             border: 0 none;
         }
 
+        // Поля ввода на тёмной модалке
+        .form-control {
+            background-color: #1a1a1a;
+            border: 1px solid #2a2a2c;
+            color: #fff;
+
+            &:focus {
+                background-color: #1a1a1a;
+                border-color: #ff8c00;
+                color: #fff;
+                box-shadow: 0 0 0 0.2rem rgba(255, 140, 0, 0.15);
+            }
+
+            &::placeholder {
+                color: #6b6b70;
+            }
+
+            &:disabled {
+                background-color: #141414;
+                opacity: 0.7;
+            }
+        }
+
+        .input-group-text {
+            background-color: #1a1a1a;
+            border: 1px solid #2a2a2c;
+            color: #c9cde6;
+        }
+
+        .form-text {
+            color: #8a8d99;
+        }
+
+        // Кнопки быстрого выбора суммы
+        .btn.theme-outline {
+            border: 1px solid rgba(255, 140, 0, 0.4);
+            color: #ff8c00;
+            background: transparent;
+
+            &:hover {
+                background: rgba(255, 140, 0, 0.1);
+                color: #ff8c00;
+            }
+        }
+
+        .btn.theme-btn {
+            background: #ff8c00;
+            border: 1px solid #ff8c00;
+            color: #000;
+
+            &:hover:not(:disabled) {
+                background: #ffa733;
+                border-color: #ffa733;
+                color: #000;
+            }
+
+            &:disabled {
+                opacity: 0.5;
+            }
+        }
+
+        // Радио способа оплаты
+        .payment-method-option .border {
+            border-color: #2a2a2c !important;
+            background-color: #1a1a1a;
+            color: #fff;
+            transition: border-color 0.15s, background-color 0.15s;
+        }
+
+        .payment-method-option .border-primary {
+            border-color: #ff8c00 !important;
+            background-color: rgba(255, 140, 0, 0.08) !important;
+        }
+
+        // Alert сообщений
+        .alert-warning {
+            background-color: rgba(255, 140, 0, 0.1);
+            border-color: rgba(255, 140, 0, 0.3);
+            color: #ffb766;
+        }
+
+        .alert-danger {
+            background-color: rgba(220, 53, 69, 0.1);
+            border-color: rgba(220, 53, 69, 0.3);
+            color: #ff7a87;
+        }
+
         .price-sort {
             padding: 0 34px 0 0;
             position: relative;

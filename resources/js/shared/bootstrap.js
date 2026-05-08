@@ -40,6 +40,11 @@ axios.interceptors.response.use(
             }
         }
         
+        // Если запрос явно просит не показывать toast — пропускаем централизованный
+        if (error.config?.suppressToast) {
+            return Promise.reject(error);
+        }
+
         // Централизованная обработка других ошибок
         if (error.response && window.toast) {
             let errorMessage;

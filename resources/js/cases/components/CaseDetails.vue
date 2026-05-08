@@ -209,12 +209,21 @@
 			</div>
 
 		</div>
+
+		<DepositModal
+			ref="depositModal"
+			modal-id="case-deposit-modal"
+			class="theme-cases-modal"
+			:deposit-settings="depositSettings"
+			title="Пополнение баланса"
+			@success="onDepositSuccess" />
 	</section>
 </template>
 
 <script>
 import { formatPrice, pluralize } from '../../shared/utils/helpers';
 import axios from 'axios';
+import DepositModal from '../../shared/components/DepositModal.vue';
 
 // Animation constants
 const ANIMATION_CONFIG = {
@@ -249,6 +258,8 @@ Object.values(dropSounds).forEach(s => s.load());
 export default {
 	name: 'CaseDetails',
 
+	components: { DepositModal },
+
 	props: {
 		initialCase: {
 			type: Object,
@@ -261,6 +272,14 @@ export default {
 		routes: {
 			type: Object,
 			required: true
+		},
+		depositSettings: {
+			type: Object,
+			default: () => ({})
+		},
+		userBalance: {
+			type: Object,
+			default: null
 		}
 	},
 
@@ -310,6 +329,9 @@ export default {
 			// Limited case countdown
 			limitedCountdown: '',
 			limitedCountdownInterval: null,
+
+			// Локальный баланс для проверки перед покупкой
+			localBalance: this.userBalance ? { ...this.userBalance } : null,
 		};
 	},
 
@@ -603,14 +625,40 @@ export default {
 			await this.purchaseCase(true);
 		},
 
+		handleBalanceUpdated(e) {
+			if (!this.localBalance) this.localBalance = { main: 0, bonus: 0 };
+			if (typeof e.detail?.main === 'number') this.localBalance.main = e.detail.main;
+			if (typeof e.detail?.bonus === 'number') this.localBalance.bonus = e.detail.bonus;
+		},
+
+		onDepositSuccess(amount) {
+			if (!this.localBalance) this.localBalance = { main: 0, bonus: 0 };
+			this.localBalance.main = (this.localBalance.main || 0) + parseFloat(amount);
+			window.dispatchEvent(new CustomEvent('balance-updated', { detail: { main: this.localBalance.main } }));
+		},
+
 		async purchaseCase(fastMode = false) {
+			// Клиентская проверка баланса (основной + бонусный) — если не хватает,
+			// открываем модалку пополнения вместо запроса на сервер.
+			if (this.localBalance && !this.isFreeCase && this.totalPrice > 0) {
+				const totalAvailable = (this.localBalance.main || 0) + (this.localBalance.bonus || 0);
+				if (totalAvailable < this.totalPrice) {
+					const required = this.totalPrice - totalAvailable;
+					this.$refs.depositModal?.open({
+						amount: required,
+						message: `Недостаточно средств для открытия кейса. Не хватает ${Math.ceil(required)} ₽.`
+					});
+					return;
+				}
+			}
+
 			this.isProcessing = true;
 
 			try {
 				const response = await axios.post(`/api/cases/purchase`, {
 					case_id: this.caseData.id,
 					count: this.selectedMultiplier
-				});
+				}, { suppressToast: true });
 
 				if (response.data.success) {
 					const prizes = response.data.prizes;
@@ -634,6 +682,19 @@ export default {
 				}
 			} catch (error) {
 				this.isProcessing = false;
+				const msg = error.response?.data?.message || '';
+				// Если сервер сообщил о недостатке средств — открываем модалку пополнения
+				if (msg.toLowerCase().includes('недостаточно средств')) {
+					const required = this.localBalance
+						? Math.max(0, this.totalPrice - ((this.localBalance.main || 0) + (this.localBalance.bonus || 0)))
+						: this.totalPrice;
+					this.$refs.depositModal?.open({
+						amount: required || this.totalPrice,
+						message: 'Недостаточно средств для открытия кейса'
+					});
+				} else if (msg) {
+					window.toast?.error(msg);
+				}
 				console.error('Error purchasing case:', error);
 			}
 		},
@@ -1120,6 +1181,7 @@ export default {
 		window.addEventListener('currency-changed', this.handleCurrencyChange);
 		window.addEventListener('resize', this.handleResize);
 		window.addEventListener('pageshow', this.handlePageShow);
+		window.addEventListener('balance-updated', this.handleBalanceUpdated);
 	},
 
 	updated() {
@@ -1130,6 +1192,7 @@ export default {
 		window.removeEventListener('currency-changed', this.handleCurrencyChange);
 		window.removeEventListener('resize', this.handleResize);
 		window.removeEventListener('pageshow', this.handlePageShow);
+		window.removeEventListener('balance-updated', this.handleBalanceUpdated);
 
 		if (this.animationInterval) {
 			clearInterval(this.animationInterval);

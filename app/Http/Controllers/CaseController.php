@@ -130,7 +130,19 @@ class CaseController extends Controller
             $caseData['total_opens_count'] = $case->total_opens_count;
         }
 
-        return view('cases.show', compact('case', 'caseData'));
+        $depositSettings = [
+            'minimum_amount' => \App\Models\SiteSetting::get('minimum_deposit_amount', 100),
+            'maximum_amount' => \App\Models\SiteSetting::get('maximum_deposit_amount', 50000),
+            'card_payment_enabled' => \App\Models\SiteSetting::get('card_payment_enabled', true),
+            'test_payment_enabled' => \App\Models\SiteSetting::get('test_payment_enabled', false),
+        ];
+
+        $userBalance = $client ? [
+            'main' => (float) $client->balance,
+            'bonus' => (float) $client->bonus_balance,
+        ] : null;
+
+        return view('cases.show', compact('case', 'caseData', 'depositSettings', 'userBalance'));
     }
 
     /**

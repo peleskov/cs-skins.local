@@ -292,6 +292,7 @@ export default {
 			// Case data
 			caseData: { ...this.initialCase },
 			allItems: [],
+			activeLoopSound: null,
 
 			// Animation state
 			isOpening: false,
@@ -786,6 +787,44 @@ export default {
 			clone.play().catch(() => { });
 		},
 
+		/**
+		 * Запускает серию тиков `type` с интервалом, который вычисляется callback'ом
+		 * перед каждым тиком (можно завязать на текущую скорость рулетки).
+		 * getInterval возвращает мс до следующего тика или null чтобы остановить.
+		 */
+		startTickSound(type, getInterval) {
+			this.stopLoopSound();
+			const sound = dropSounds[type];
+			if (!sound) return;
+
+			const tick = () => {
+				const interval = getInterval();
+				if (interval == null) {
+					this.activeLoopSound = null;
+					return;
+				}
+				const clone = sound.cloneNode();
+				clone.volume = sound.volume;
+				clone.play().catch(() => { });
+				this.activeLoopSound = setTimeout(tick, interval);
+			};
+			tick();
+		},
+
+		stopLoopSound() {
+			if (this.activeLoopSound) {
+				try {
+					if (typeof this.activeLoopSound === 'number') {
+						clearTimeout(this.activeLoopSound);
+					} else {
+						this.activeLoopSound.pause();
+						this.activeLoopSound.currentTime = 0;
+					}
+				} catch (e) { }
+				this.activeLoopSound = null;
+			}
+		},
+
 		spinSingleRoulette(rouletteIndex, fastMode = false) {
 			return new Promise(async (resolve) => {
 				const roulette = this.roulettes[rouletteIndex];
@@ -835,10 +874,21 @@ export default {
 				const maxSpeed = ANIMATION_CONFIG.MAX_SPEED * speedMultiplier;
 				const minSpeed = ANIMATION_CONFIG.MIN_SPEED * speedMultiplier;
 
-				// Sound tracking
-				const itemFullWidth = realItemWidth + realItemGap;
-				let lastSoundItemIndex = -1;
 				let isSlowing = false;
+				let isFinished = false;
+
+				// Звук — только на первой рулетке. Интервал между тиками
+				// рассчитывается каждый раз заново на основе текущей скорости рулетки —
+				// при замедлении тиков становится реже синхронно с рулеткой.
+				if (rouletteIndex === 0) {
+					this.startTickSound('fast', () => {
+						if (isFinished) return null;
+						// Один «тик» = время прохождения карточки на текущей скорости
+						const itemDistance = realItemWidth + realItemGap;
+						const ms = (itemDistance / Math.max(currentSpeed, 0.5)) * ANIMATION_CONFIG.ANIMATION_FRAME_RATE;
+						return Math.min(800, Math.max(40, ms));
+					});
+				}
 
 				const spinInterval = setInterval(() => {
 					roulette.sliderOffset -= currentSpeed;
@@ -855,25 +905,15 @@ export default {
 						}
 					}
 
-					// Detect which item is at center line (sound only from first roulette)
-					if (rouletteIndex === 0) {
-						const currentCenterItemIndex = Math.round((containerCenter - roulette.sliderOffset) / itemFullWidth - 0.5);
-						if (currentCenterItemIndex !== lastSoundItemIndex && currentCenterItemIndex >= 0) {
-							lastSoundItemIndex = currentCenterItemIndex;
-
-							if (currentCenterItemIndex === stopItemIndex) {
-								this.playDropSound('final');
-							} else if (isSlowing) {
-								this.playDropSound('slow');
-							} else {
-								this.playDropSound('fast');
-							}
-						}
-					}
-
 					if (roulette.sliderOffset <= overshootTargetOffset) {
 						clearInterval(spinInterval);
 						roulette.sliderOffset = overshootTargetOffset;
+						isFinished = true;
+
+						if (rouletteIndex === 0) {
+							this.stopLoopSound();
+							this.playDropSound('final');
+						}
 
 						// Плавный возврат к центру
 						this.returnRouletteToCenтer(rouletteIndex, finalTargetOffset, stopItemIndex, speedMultiplier, resolve);

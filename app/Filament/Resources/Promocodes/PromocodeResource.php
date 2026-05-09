@@ -25,7 +25,7 @@ class PromocodeResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Промокоды';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Кейсы';
+    protected static string|\UnitEnum|null $navigationGroup = 'Финансы';
 
     protected static ?int $navigationSort = 2;
 

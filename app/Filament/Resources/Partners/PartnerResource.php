@@ -24,7 +24,7 @@ class PartnerResource extends Resource
 
     protected static ?string $pluralModelLabel = 'партнёры';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Партнёрская программа';
+    protected static string|\UnitEnum|null $navigationGroup = 'Партнёры';
 
     public static function canCreate(): bool
     {

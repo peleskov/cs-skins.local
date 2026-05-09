@@ -25,7 +25,7 @@ class ActivityLogResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Журнал действий';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Настройки';
+    protected static string|\UnitEnum|null $navigationGroup = 'Отчёты';
 
     protected static ?int $navigationSort = 99;
 

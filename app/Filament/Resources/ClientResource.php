@@ -121,6 +121,71 @@ class ClientResource extends Resource
                     ->columnSpanFull()
                     ->nullable(),
 
+                \Filament\Schemas\Components\Section::make('Подкрутка')
+                    ->description('Особый режим открытия кейсов — клиент исключается из основной экономики')
+                    ->schema([
+                        Forms\Components\Toggle::make('rigging_enabled')
+                            ->label('Включить подкрутку')
+                            ->live(),
+                        Forms\Components\DateTimePicker::make('rigging_until')
+                            ->label('Действует до')
+                            ->visible(fn ($get) => $get('rigging_enabled'))
+                            ->required(fn ($get) => $get('rigging_enabled'))
+                            ->minDate(now()),
+                        Forms\Components\Repeater::make('riggingPresets')
+                            ->label('Пресеты')
+                            ->relationship('riggingPresets')
+                            ->visible(fn ($get) => $get('rigging_enabled'))
+                            ->schema([
+                                TextInput::make('name')
+                                    ->label('Название')
+                                    ->required()
+                                    ->maxLength(100),
+                                TextInput::make('price_percent')
+                                    ->label('% от цены кейса')
+                                    ->numeric()
+                                    ->required()
+                                    ->minValue(0.01)
+                                    ->maxValue(1000)
+                                    ->step(0.01)
+                                    ->suffix('%'),
+                                TextInput::make('chance_percent')
+                                    ->label('% шанса')
+                                    ->numeric()
+                                    ->required()
+                                    ->minValue(0.01)
+                                    ->maxValue(100)
+                                    ->step(0.01)
+                                    ->suffix('%')
+                                    ->live(debounce: 500),
+                            ])
+                            ->columns(3)
+                            ->orderColumn('sort_order')
+                            ->reorderable()
+                            ->itemLabel(fn (array $state): ?string => isset($state['name'])
+                                ? $state['name'].' — '.($state['price_percent'] ?? '?').'% / '.($state['chance_percent'] ?? '?').'%'
+                                : null)
+                            ->helperText(function ($get) {
+                                $sum = collect($get('riggingPresets') ?? [])->sum(fn ($p) => (float) ($p['chance_percent'] ?? 0));
+                                $rounded = round($sum, 2);
+                                $color = abs($rounded - 100) < 0.001 ? 'success' : 'danger';
+                                return new \Illuminate\Support\HtmlString(
+                                    'Сумма шансов: <span class="fi-color-'.$color.'" style="font-weight:600">'.$rounded.'%</span> (должна быть ровно 100%)'
+                                );
+                            })
+                            ->rules([
+                                function () {
+                                    return function (string $attribute, $value, \Closure $fail) {
+                                        $sum = collect($value ?? [])->sum(fn ($p) => (float) ($p['chance_percent'] ?? 0));
+                                        if (abs(round($sum, 2) - 100) > 0.001) {
+                                            $fail('Сумма % шанса всех пресетов должна быть ровно 100% (сейчас '.round($sum, 2).'%).');
+                                        }
+                                    };
+                                },
+                            ]),
+                    ])
+                    ->collapsed(fn ($record) => ! $record?->rigging_enabled),
+
                 \Filament\Schemas\Components\Section::make('Партнёр (LosReferidos)')
                     ->schema([
                         Forms\Components\Placeholder::make('partner_email')

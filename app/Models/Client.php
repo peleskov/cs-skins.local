@@ -69,6 +69,8 @@ class Client extends Authenticatable
         'balance_blocked_until',
         'balance_block_reason_admin',
         'balance_block_reason_user',
+        'rigging_enabled',
+        'rigging_until',
     ];
 
     protected $hidden = [
@@ -93,7 +95,21 @@ class Client extends Authenticatable
         'withdraw_blocked_until' => 'datetime',
         'purchases_blocked_until' => 'datetime',
         'balance_blocked_until' => 'datetime',
+        'rigging_enabled' => 'boolean',
+        'rigging_until' => 'datetime',
     ];
+
+    public function riggingPresets(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ClientRiggingPreset::class)->orderBy('sort_order');
+    }
+
+    public function isRiggingActive(): bool
+    {
+        return $this->rigging_enabled
+            && $this->rigging_until
+            && $this->rigging_until->isFuture();
+    }
 
     public function isWithdrawBlocked(): bool
     {

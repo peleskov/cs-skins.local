@@ -35,7 +35,7 @@ class TransactionResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Транзакции';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Пользователи';
+    protected static string | \UnitEnum | null $navigationGroup = 'Финансы';
 
     protected static ?int $navigationSort = 5;
 

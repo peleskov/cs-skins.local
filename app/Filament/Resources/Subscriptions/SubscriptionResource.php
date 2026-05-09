@@ -26,7 +26,7 @@ class SubscriptionResource extends Resource
 
     protected static ?string $pluralModelLabel = 'подписки';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Подписки';
+    protected static string|\UnitEnum|null $navigationGroup = 'Финансы';
 
     public static function form(Schema $schema): Schema
     {

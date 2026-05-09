@@ -37,22 +37,52 @@ class CaseService
             // 2. Определить тип открытия и списать средства (за все открытия)
             $payment = $this->processPayment($case, $client, $count);
 
-            // 3. Пополнить фонд кейса (если платное открытие)
-            if (!$payment['is_free']) {
+            $isRiggedClient = $client->isRiggingActive();
+
+            // 3. Пополнить фонд кейса (если платное открытие и не подкрутка)
+            if (!$payment['is_free'] && !$isRiggedClient) {
                 $fundAmount = $payment['price_per_case'] * ($case->fund_percent / 100) * $count;
                 $case->increment('accumulated_fund', $fundAmount);
             }
 
-            // 4. Если лимитированный — увеличить счётчик
-            if ($case->isLimited()) {
+            // 4. Если лимитированный — увеличить счётчик (для подкрутки не учитываем)
+            if ($case->isLimited() && !$isRiggedClient) {
                 $case->increment('total_opens_count', $count);
             }
 
             $items = [];
             $caseInventoryService = app(CaseInventoryService::class);
+            $isRigged = $client->isRiggingActive();
 
             // 5. Открываем $count раз
             for ($i = 0; $i < $count; $i++) {
+                // Подкрутка (6.8) — обход стандартной экономики
+                if ($isRigged) {
+                    $caseItem = $this->selectRiggedItem($case, $client);
+                    if (! $caseItem) {
+                        // Конфигурация подкрутки невалидна (нет пресетов / сумма ≠ 100% / нет предметов)
+                        // Откатываем оплату и сообщаем
+                        throw new Exception('Подкрутка настроена некорректно — обратитесь к администратору');
+                    }
+
+                    $inventoryItem = $caseInventoryService->addItem(
+                        $client,
+                        $caseItem->virtualItem,
+                        $caseItem->price,
+                        CaseInventoryItem::SOURCE_CASE,
+                        $case->id
+                    );
+
+                    $items[] = [
+                        'case_item' => $caseItem,
+                        'inventory_item' => $inventoryItem,
+                        'case_open' => null,
+                        'is_anti_unluck' => false,
+                    ];
+
+                    continue;
+                }
+
                 // Проверяем анти-анлак перед каждым открытием
                 $isAntiUnluck = !$payment['is_free'] && $this->checkAntiUnluck($client, $case);
 
@@ -399,6 +429,48 @@ class CaseService
     /**
      * Проверить анти-анлак: 10 последних открытий — один кейс, все неокуп, ни одно не бесплатное
      */
+    /**
+     * Подкрутка: выбираем предмет из кейса по пресетам клиента.
+     * Возвращает null если конфигурация невалидна (нет пресетов / сумма ≠ 100%).
+     */
+    private function selectRiggedItem(CaseModel $case, Client $client): ?CaseItem
+    {
+        $presets = $client->riggingPresets;
+        if ($presets->isEmpty()) {
+            return null;
+        }
+
+        $sumChance = $presets->sum(fn ($p) => (float) $p->chance_percent);
+        if (abs(round($sumChance, 2) - 100) > 0.001) {
+            return null;
+        }
+
+        // Взвешенный random по chance_percent
+        $roll = mt_rand(1, 10000) / 100; // 0.01..100
+        $cumulative = 0;
+        $selectedPreset = null;
+        foreach ($presets as $preset) {
+            $cumulative += (float) $preset->chance_percent;
+            if ($roll <= $cumulative) {
+                $selectedPreset = $preset;
+                break;
+            }
+        }
+        if (! $selectedPreset) {
+            $selectedPreset = $presets->last();
+        }
+
+        $targetPrice = (float) $case->price * (float) $selectedPreset->price_percent / 100;
+
+        // Берём предмет кейса с ценой ближайшей к target
+        $caseItems = $case->items()->with('virtualItem')->get();
+        if ($caseItems->isEmpty()) {
+            return null;
+        }
+
+        return $caseItems->sortBy(fn ($item) => abs((float) $item->price - $targetPrice))->first();
+    }
+
     private function checkAntiUnluck(Client $client, CaseModel $case): bool
     {
         if (!$client->premiumFeatureEnabled('anti_unluck')) {

@@ -19,6 +19,10 @@
                         </li>
                     </template>
                 </ul>
+                <div v-if="online !== null" class="header-online d-flex flex-column align-items-center justify-content-center ms-3">
+                    <span>ONLINE</span>
+                    <span>{{ formattedOnline }}</span>
+                </div>
             </div>
             <div class="col-auto d-flex align-items-center gap-2 gap-lg-3">
                 <div class="col-auto d-flex gap-2 gap-lg-3">
@@ -59,6 +63,7 @@
 
 <script>
 import { formatPrice } from '../../shared/utils/helpers';
+import { subscribeOnline } from '../../shared/utils/online';
 import CurrencySelector from '../../shared/components/CurrencySelector.vue';
 import LanguageSelector from '../../shared/components/LanguageSelector.vue';
 
@@ -87,6 +92,10 @@ export default {
         logoIco: {
             type: String,
             required: true
+        },
+        online: {
+            type: Number,
+            default: null
         }
     },
     data() {
@@ -96,10 +105,15 @@ export default {
             tooltips: [],
             mainBalance: this.user?.balance || 0,
             bonusBalance: this.user?.bonus_balance || 0,
-            isRubleCurrency: this.checkIsRuble()
+            isRubleCurrency: this.checkIsRuble(),
+            currentOnline: this.online,
+            stopOnlineSub: null
         }
     },
     computed: {
+        formattedOnline() {
+            return (this.currentOnline || 0).toLocaleString('en-US');
+        },
         mainNavigation() {
             // Кастомное меню для cases (только нужные пункты)
             return {
@@ -181,6 +195,10 @@ export default {
             this.tooltips = [...this.$el.querySelectorAll('[data-bs-toggle="tooltip"]')]
                 .map(el => new window.bootstrap.Tooltip(el));
         }
+
+        if (this.online !== null) {
+            this.stopOnlineSub = subscribeOnline(this.online, (v) => { this.currentOnline = v; });
+        }
     },
 
     beforeUnmount() {
@@ -192,6 +210,8 @@ export default {
         if (this.tooltips) {
             this.tooltips.forEach(t => t.dispose());
         }
+
+        if (this.stopOnlineSub) this.stopOnlineSub();
     }
 }
 </script>

@@ -25,6 +25,7 @@
         ])
     }}"
     data-logo-url="{{ asset('images/logo_white.svg') }}?v={{ filemtime(public_path('images/logo_white.svg')) }}"
-    data-logo-ico="{{ asset('images/logo_ico.svg') }}?v={{ filemtime(public_path('images/logo_ico.svg')) }}">
+    data-logo-ico="{{ asset('images/logo_ico.svg') }}?v={{ filemtime(public_path('images/logo_ico.svg')) }}"
+    data-online="{{ app('App\Services\OnlineCounterService')->currentCount() }}">
 </header>
 <!-- Header Section end -->

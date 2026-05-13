@@ -177,7 +177,7 @@ class SuspiciousActivity extends Page implements HasForms, HasTable
                     $casesCount = (int) ($cases[$cid]->cases_count ?? 0);
                     $upgradesCount = (int) ($upgrades[$cid]->upgrades_count ?? 0);
 
-                    return (object) [
+                    return [
                         'id' => $cid,
                         'client_id' => $cid,
                         'name' => $client->name,
@@ -201,8 +201,8 @@ class SuspiciousActivity extends Page implements HasForms, HasTable
             ->columns([
                 TextColumn::make('name')
                     ->label('Пользователь')
-                    ->description(fn ($record) => $record->email)
-                    ->url(fn ($record) => route('filament.admin.resources.clients.edit', ['record' => $record->client_id]))
+                    ->description(fn ($record) => $record['email'])
+                    ->url(fn ($record) => route('filament.admin.resources.clients.edit', ['record' => $record['client_id']]))
                     ->openUrlInNewTab(),
 
                 TextColumn::make('cases_sum')
@@ -222,12 +222,12 @@ class SuspiciousActivity extends Page implements HasForms, HasTable
                     ->alignEnd()
                     ->color(function ($record) {
                         $threshold = (float) ($this->filterData['threshold'] ?? 0);
-                        return $threshold > 0 && $record->total_sum >= $threshold ? 'danger' : null;
+                        return $threshold > 0 && $record['total_sum'] >= $threshold ? 'danger' : null;
                     }),
 
                 TextColumn::make('ops_count')
                     ->label('Операций')
-                    ->state(fn ($record) => $record->cases_count.' / '.$record->upgrades_count)
+                    ->state(fn ($record) => $record['cases_count'].' / '.$record['upgrades_count'])
                     ->tooltip('Кейсы / Апгрейды')
                     ->alignCenter(),
             ])

@@ -45,8 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 initialCartCount: parseInt(mobileBottomNavElement.dataset.cartCount || '0'),
                 items: [
                     { key: 'marketplace', label: 'МАРКЕТ', icon: 'm-ico-mplace', route: 'marketplace' },
-                    { key: 'cases', label: 'КЕЙСЫ', icon: 'm-ico-cases', route: 'cases', requiresAuth: true },
                     { key: 'upgrade', label: 'АПГРЕЙД', icon: 'm-ico-upgrade', route: 'upgrade', requiresAuth: true },
+                    { key: 'cases', label: 'КЕЙСЫ', icon: 'm-ico-cases', route: 'cases', requiresAuth: true },
                     { key: 'socials', label: 'СОЦСЕТИ', icon: 'm-ico-socials', route: 'faq' },
                     { key: 'faq', label: 'FAQ', icon: 'm-ico-faq', route: 'faq' }
                 ]

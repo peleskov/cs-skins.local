@@ -57,4 +57,10 @@
 /* themes */
 @import "mplace/themes/dark";
 
+/* Ограничение контентной области десктопа на 1920px с центрированием */
+.container-fluid {
+	max-width: 1920px;
+	margin-inline: auto;
+}
+
 /* Мобильная верстка вынесена в отдельный бандл: resources/scss/mplace-mobile.scss */

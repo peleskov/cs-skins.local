@@ -249,9 +249,10 @@ const ANIMATION_CONFIG = {
 
 // Preload sounds
 const dropSounds = {
-	fast: new Audio('/sounds/item_drop.mp3'),
-	slow: new Audio('/sounds/item_drop1_common.mp3'),
-	final: new Audio('/sounds/item_drop2_uncommon.mp3'),
+	approval: new Audio('/sounds/approval_before_roulette.mp3'),
+	fast: new Audio('/sounds/main_roulette.mp3'),
+	slow: new Audio('/sounds/slow_roulette.mp3'),
+	final: new Audio('/sounds/finish_roulette.mp3'),
 };
 Object.values(dropSounds).forEach(s => s.load());
 
@@ -619,10 +620,12 @@ export default {
 		},
 
 		async confirmPurchase() {
+			this.playDropSound('approval');
 			await this.purchaseCase(false);
 		},
 
 		async openFast() {
+			this.playDropSound('approval');
 			await this.purchaseCase(true);
 		},
 
@@ -767,7 +770,7 @@ export default {
 			} else {
 				for (let i = 0; i < this.cardFlips.length; i++) {
 					this.cardFlips[i].flipped = true;
-					this.playDropSound(i === this.cardFlips.length - 1 ? 'final' : 'slow');
+					this.playDropSound('final');
 					if (i < this.cardFlips.length - 1) {
 						await this.delay(500);
 					}
@@ -782,7 +785,7 @@ export default {
 		playDropSound(type) {
 			const sound = dropSounds[type];
 			if (!sound) return;
-			const clone = sound.cloneNode();
+			const clone = new Audio(sound.src);
 			clone.volume = sound.volume;
 			clone.play().catch(() => { });
 		},
@@ -792,20 +795,22 @@ export default {
 		 * перед каждым тиком (можно завязать на текущую скорость рулетки).
 		 * getInterval возвращает мс до следующего тика или null чтобы остановить.
 		 */
-		startTickSound(type, getInterval) {
+		startTickSound(getInterval) {
 			this.stopLoopSound();
-			const sound = dropSounds[type];
-			if (!sound) return;
 
 			const tick = () => {
-				const interval = getInterval();
-				if (interval == null) {
+				const res = getInterval();
+				if (res == null) {
 					this.activeLoopSound = null;
 					return;
 				}
-				const clone = sound.cloneNode();
-				clone.volume = sound.volume;
-				clone.play().catch(() => { });
+				const { interval, type } = typeof res === 'number' ? { interval: res, type: 'fast' } : res;
+				const sound = dropSounds[type];
+				if (sound) {
+					const clone = sound.cloneNode();
+					clone.volume = sound.volume;
+					clone.play().catch(() => { });
+				}
 				this.activeLoopSound = setTimeout(tick, interval);
 			};
 			tick();
@@ -865,7 +870,19 @@ export default {
 
 				const speedMultiplier = fastMode ? ANIMATION_CONFIG.FAST_OPEN_MULTIPLIER : 1;
 				const overshootDistance = ANIMATION_CONFIG.OVERSHOOT_DISTANCE;
-				const overshootTargetOffset = finalTargetOffset - overshootDistance;
+
+				// При открытии одного кейса — рандомная точка остановки в пределах ширины предмета
+				// (5 позиций: ~левый край, между левым и центром, центр, между центром и правым, ~правый край).
+				// Затем returnRouletteToCenter плавно доводит до центра.
+				let overshootTargetOffset;
+				if (this.roulettes.length === 1) {
+					// 5 точек: центр, ±0.3 от центра, ±0.45 (0.05 от краёв карточки)
+					const stopOffsets = [-0.45, -0.3, 0, 0.3, 0.45];
+					const pick = stopOffsets[Math.floor(Math.random() * stopOffsets.length)];
+					overshootTargetOffset = finalTargetOffset + pick * realItemWidth;
+				} else {
+					overshootTargetOffset = finalTargetOffset - overshootDistance;
+				}
 
 				const slowDownDistance = ANIMATION_CONFIG.DECELERATION_CARDS * (realItemWidth + realItemGap);
 				const slowDownPoint = finalTargetOffset + slowDownDistance;
@@ -881,12 +898,12 @@ export default {
 				// рассчитывается каждый раз заново на основе текущей скорости рулетки —
 				// при замедлении тиков становится реже синхронно с рулеткой.
 				if (rouletteIndex === 0) {
-					this.startTickSound('fast', () => {
+					this.startTickSound(() => {
 						if (isFinished) return null;
 						// Один «тик» = время прохождения карточки на текущей скорости
 						const itemDistance = realItemWidth + realItemGap;
 						const ms = (itemDistance / Math.max(currentSpeed, 0.5)) * ANIMATION_CONFIG.ANIMATION_FRAME_RATE;
-						return Math.min(800, Math.max(40, ms));
+						return { interval: Math.min(800, Math.max(40, ms)), type: isSlowing ? 'slow' : 'fast' };
 					});
 				}
 
@@ -912,8 +929,8 @@ export default {
 
 						if (rouletteIndex === 0) {
 							this.stopLoopSound();
-							this.playDropSound('final');
 						}
+						this.playDropSound('final');
 
 						// Плавный возврат к центру
 						this.returnRouletteToCenтer(rouletteIndex, finalTargetOffset, stopItemIndex, speedMultiplier, resolve);

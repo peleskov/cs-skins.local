@@ -7,4 +7,10 @@
 @import "shared/utils/rarity-colors";
 @import "cases/main";
 
+/* Ограничение контентной области десктопа на 1920px с центрированием */
+.container-fluid {
+	max-width: 1920px;
+	margin-inline: auto;
+}
+
 /* mobile (изолированный слой, desktop-first). Партиалы добавим по ходу верстки. */

@@ -241,7 +241,7 @@ const ANIMATION_CONFIG = {
 	DISPLAY_ITEMS_COUNT: 50,
 	MIN_SCROLL_CARDS: 25,
 	OVERSHOOT_DISTANCE: 50,
-	OVERSHOOT_RETURN_DURATION: 1200,
+	OVERSHOOT_RETURN_DURATION: 1000,
 	OVERSHOOT_EASING: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
 	FAST_OPEN_MULTIPLIER: 2,
 	ROULETTE_DELAY: 500 // Задержка между запуском рулеток (мс)
@@ -249,10 +249,9 @@ const ANIMATION_CONFIG = {
 
 // Preload sounds
 const dropSounds = {
-	approval: new Audio('/sounds/approval_before_roulette.mp3'),
-	fast: new Audio('/sounds/main_roulette.mp3'),
-	slow: new Audio('/sounds/slow_roulette.mp3'),
-	final: new Audio('/sounds/finish_roulette.mp3'),
+	approval: new Audio('/sounds/approval_v2.mp3'),
+	fast: new Audio('/sounds/main_v2.mp3'),
+	final: new Audio('/sounds/final_v2.mp3'),
 };
 Object.values(dropSounds).forEach(s => s.load());
 
@@ -625,7 +624,6 @@ export default {
 		},
 
 		async openFast() {
-			this.playDropSound('approval');
 			await this.purchaseCase(true);
 		},
 
@@ -891,27 +889,15 @@ export default {
 				const maxSpeed = ANIMATION_CONFIG.MAX_SPEED * speedMultiplier;
 				const minSpeed = ANIMATION_CONFIG.MIN_SPEED * speedMultiplier;
 
-				let isSlowing = false;
-				let isFinished = false;
-
-				// Звук — только на первой рулетке. Интервал между тиками
-				// рассчитывается каждый раз заново на основе текущей скорости рулетки —
-				// при замедлении тиков становится реже синхронно с рулеткой.
-				if (rouletteIndex === 0) {
-					this.startTickSound(() => {
-						if (isFinished) return null;
-						// Один «тик» = время прохождения карточки на текущей скорости
-						const itemDistance = realItemWidth + realItemGap;
-						const ms = (itemDistance / Math.max(currentSpeed, 0.5)) * ANIMATION_CONFIG.ANIMATION_FRAME_RATE;
-						return { interval: Math.min(800, Math.max(40, ms)), type: isSlowing ? 'slow' : 'fast' };
-					});
-				}
+				const cardSpacing = realItemWidth + realItemGap;
+				const playTicks = this.roulettes.length === 1 && !fastMode;
+				let lastCardIndex = Math.floor((containerCenter - roulette.sliderOffset) / cardSpacing);
+				let finalPlayed = false;
 
 				const spinInterval = setInterval(() => {
 					roulette.sliderOffset -= currentSpeed;
 
 					if (roulette.sliderOffset <= slowDownPoint) {
-						isSlowing = true;
 						const remainingDistance = Math.abs(roulette.sliderOffset - overshootTargetOffset);
 						const slowDownDistanceCalc = Math.abs(slowDownPoint - overshootTargetOffset);
 
@@ -922,17 +908,28 @@ export default {
 						}
 					}
 
+					// Звук тика — в момент пересечения стрелкой левого края очередной карточки.
+					// Когда стрелка дошла до карточки выигрыша — играем final вместо тика.
+					if (playTicks) {
+						const cardIndex = Math.floor((containerCenter - roulette.sliderOffset) / cardSpacing);
+						if (cardIndex > lastCardIndex) {
+							lastCardIndex = cardIndex;
+							if (!finalPlayed && cardIndex >= stopItemIndex) {
+								finalPlayed = true;
+								this.playDropSound('final');
+							} else if (!finalPlayed) {
+								this.playDropSound('fast');
+							}
+						}
+					}
+
 					if (roulette.sliderOffset <= overshootTargetOffset) {
 						clearInterval(spinInterval);
 						roulette.sliderOffset = overshootTargetOffset;
-						isFinished = true;
-
-						if (rouletteIndex === 0) {
-							this.stopLoopSound();
+						if (!finalPlayed) {
+							finalPlayed = true;
+							this.playDropSound('final');
 						}
-						this.playDropSound('final');
-
-						// Плавный возврат к центру
 						this.returnRouletteToCenтer(rouletteIndex, finalTargetOffset, stopItemIndex, speedMultiplier, resolve);
 					}
 				}, ANIMATION_CONFIG.ANIMATION_FRAME_RATE);

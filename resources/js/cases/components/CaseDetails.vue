@@ -257,6 +257,7 @@ const dropSounds = {
 	approval: new Audio('/sounds/approval_v2.mp3'),
 	fast: new Audio('/sounds/main_v2.mp3'),
 	final: new Audio('/sounds/final_v2.mp3'),
+	error: new Audio('/sounds/error.mp3'),
 };
 Object.values(dropSounds).forEach(s => s.load());
 
@@ -625,7 +626,6 @@ export default {
 		},
 
 		async confirmPurchase() {
-			this.playDropSound('approval');
 			await this.purchaseCase(false);
 		},
 
@@ -652,6 +652,7 @@ export default {
 				const totalAvailable = (this.localBalance.main || 0) + (this.localBalance.bonus || 0);
 				if (totalAvailable < this.totalPrice) {
 					const required = this.totalPrice - totalAvailable;
+					this.playDropSound('error');
 					this.$refs.depositModal?.open({
 						amount: required,
 						message: `Недостаточно средств для открытия кейса. Не хватает ${Math.ceil(required)} ₽.`
@@ -660,6 +661,7 @@ export default {
 				}
 			}
 
+			this.playDropSound('approval');
 			this.isProcessing = true;
 
 			try {
@@ -696,6 +698,7 @@ export default {
 					const required = this.localBalance
 						? Math.max(0, this.totalPrice - ((this.localBalance.main || 0) + (this.localBalance.bonus || 0)))
 						: this.totalPrice;
+					this.playDropSound('error');
 					this.$refs.depositModal?.open({
 						amount: required || this.totalPrice,
 						message: 'Недостаточно средств для открытия кейса'
@@ -729,9 +732,9 @@ export default {
 
 			await this.$nextTick();
 
-			// Пауза 0.5с после звука approval перед стартом рулетки (только одиночное обычное открытие)
-			if (this.roulettes.length === 1 && !fastMode) {
-				await this.delay(500);
+			// Пауза после звука approval перед стартом рулетки (одиночное открытие; в fast — в 2 раза короче)
+			if (this.roulettes.length === 1) {
+				await this.delay(fastMode ? 250 : 500);
 			}
 
 			// Запускаем все рулетки одновременно
@@ -900,11 +903,11 @@ export default {
 					overshootTargetOffset = finalTargetOffset - overshootDistance;
 				}
 
-				const isSingleSlow = this.roulettes.length === 1 && !fastMode;
-				// Для одиночного обычного открытия удлиняем фазу замедления на ~2с
-				// и укорачиваем быструю прокрутку на ~2с (повышаем MAX_SPEED).
-				const decelerationCards = isSingleSlow ? ANIMATION_CONFIG.DECELERATION_CARDS * 3 : ANIMATION_CONFIG.DECELERATION_CARDS;
-				const maxSpeedBase = isSingleSlow ? ANIMATION_CONFIG.MAX_SPEED * 2.5 : ANIMATION_CONFIG.MAX_SPEED;
+				const isSingle = this.roulettes.length === 1;
+				// Для одиночного открытия удлиняем фазу замедления и повышаем пиковую скорость.
+				// В fast-режиме всё ещё дополнительно ускоряется через speedMultiplier=FAST_OPEN_MULTIPLIER.
+				const decelerationCards = isSingle ? ANIMATION_CONFIG.DECELERATION_CARDS * 3 : ANIMATION_CONFIG.DECELERATION_CARDS;
+				const maxSpeedBase = isSingle ? ANIMATION_CONFIG.MAX_SPEED * 2.5 : ANIMATION_CONFIG.MAX_SPEED;
 
 				const slowDownDistance = decelerationCards * (realItemWidth + realItemGap);
 				const slowDownPoint = finalTargetOffset + slowDownDistance;
@@ -914,7 +917,7 @@ export default {
 				const minSpeed = ANIMATION_CONFIG.MIN_SPEED * speedMultiplier;
 
 				const cardSpacing = realItemWidth + realItemGap;
-				const playTicks = isSingleSlow;
+				const playTicks = isSingle;
 				let lastCardIndex = Math.floor((containerCenter - roulette.sliderOffset) / cardSpacing);
 				let finalPlayed = false;
 

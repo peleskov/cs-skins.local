@@ -47,8 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     { key: 'marketplace', label: 'МАРКЕТ', icon: 'm-ico-mplace', route: 'marketplace' },
                     { key: 'upgrade', label: 'АПГРЕЙД', icon: 'm-ico-upgrade', route: 'upgrade', requiresAuth: true },
                     { key: 'cases', label: 'КЕЙСЫ', icon: 'm-ico-cases', route: 'cases', requiresAuth: true },
-                    { key: 'socials', label: 'СОЦСЕТИ', icon: 'm-ico-socials', route: 'faq' },
-                    { key: 'faq', label: 'FAQ', icon: 'm-ico-faq', route: 'faq' }
+                    { key: 'cart', label: 'КОРЗИНА', icon: 'm-ico-cart', route: 'cart' },
+                    { key: 'caseInventory', label: 'ИНВЕНТАРЬ', icon: 'm-ico-cases', route: 'caseInventory', requiresAuth: true }
                 ]
             });
             app.mount('#mobile-bottom-nav-app');

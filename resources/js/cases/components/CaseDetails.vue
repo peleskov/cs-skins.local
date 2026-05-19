@@ -21,7 +21,12 @@
 					</p>
 				</div>
 			</div>
-			<div class="case-box mb-5">
+			<div class="case-box mb-5 position-relative">
+				<button type="button" class="case-sound-toggle" @click="toggleSound"
+					:title="soundMuted ? 'Включить звук' : 'Выключить звук'"
+					:aria-label="soundMuted ? 'Включить звук' : 'Выключить звук'">
+					<i :class="soundMuted ? 'ri-volume-mute-line' : 'ri-volume-up-line'"></i>
+				</button>
 				<div class="case-box-images mb-3 d-flex justify-content-center align-items-center gap-3 flex-wrap"
 					:class="`case-box-images-${selectedMultiplier}`"
 					v-if="!isSpinning && !showResults && selectedMultiplier <= 1">
@@ -241,8 +246,8 @@ const ANIMATION_CONFIG = {
 	DISPLAY_ITEMS_COUNT: 50,
 	MIN_SCROLL_CARDS: 25,
 	OVERSHOOT_DISTANCE: 50,
-	OVERSHOOT_RETURN_DURATION: 1000,
-	OVERSHOOT_EASING: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+	OVERSHOOT_RETURN_DURATION: 1500,
+	OVERSHOOT_EASING: 'cubic-bezier(0.22, 1, 0.36, 1)',
 	FAST_OPEN_MULTIPLIER: 2,
 	ROULETTE_DELAY: 500 // Задержка между запуском рулеток (мс)
 };
@@ -293,6 +298,7 @@ export default {
 			caseData: { ...this.initialCase },
 			allItems: [],
 			activeLoopSound: null,
+			soundMuted: (typeof localStorage !== 'undefined' && localStorage.getItem('cs_case_sound_muted') === '1'),
 
 			// Animation state
 			isOpening: false,
@@ -723,6 +729,11 @@ export default {
 
 			await this.$nextTick();
 
+			// Пауза 0.5с после звука approval перед стартом рулетки (только одиночное обычное открытие)
+			if (this.roulettes.length === 1 && !fastMode) {
+				await this.delay(500);
+			}
+
 			// Запускаем все рулетки одновременно
 			const roulettePromises = this.roulettes.map((roulette, i) => {
 				roulette.isActive = true;
@@ -781,11 +792,18 @@ export default {
 		},
 
 		playDropSound(type) {
+			if (this.soundMuted) return;
 			const sound = dropSounds[type];
 			if (!sound) return;
 			const clone = new Audio(sound.src);
 			clone.volume = sound.volume;
 			clone.play().catch(() => { });
+		},
+
+		toggleSound() {
+			this.soundMuted = !this.soundMuted;
+			try { localStorage.setItem('cs_case_sound_muted', this.soundMuted ? '1' : '0'); } catch (e) { }
+			if (this.soundMuted) this.stopLoopSound();
 		},
 
 		/**
@@ -874,23 +892,29 @@ export default {
 				// Затем returnRouletteToCenter плавно доводит до центра.
 				let overshootTargetOffset;
 				if (this.roulettes.length === 1) {
-					// 5 точек: центр, ±0.3 от центра, ±0.45 (0.05 от краёв карточки)
-					const stopOffsets = [-0.45, -0.3, 0, 0.3, 0.45];
+					// 4 точки между центром и краями (рулетка останавливается, делает паузу, потом плавно доезжает в центр).
+					const stopOffsets = [-0.45, -0.3, 0.3, 0.45];
 					const pick = stopOffsets[Math.floor(Math.random() * stopOffsets.length)];
 					overshootTargetOffset = finalTargetOffset + pick * realItemWidth;
 				} else {
 					overshootTargetOffset = finalTargetOffset - overshootDistance;
 				}
 
-				const slowDownDistance = ANIMATION_CONFIG.DECELERATION_CARDS * (realItemWidth + realItemGap);
+				const isSingleSlow = this.roulettes.length === 1 && !fastMode;
+				// Для одиночного обычного открытия удлиняем фазу замедления на ~2с
+				// и укорачиваем быструю прокрутку на ~2с (повышаем MAX_SPEED).
+				const decelerationCards = isSingleSlow ? ANIMATION_CONFIG.DECELERATION_CARDS * 3 : ANIMATION_CONFIG.DECELERATION_CARDS;
+				const maxSpeedBase = isSingleSlow ? ANIMATION_CONFIG.MAX_SPEED * 2.5 : ANIMATION_CONFIG.MAX_SPEED;
+
+				const slowDownDistance = decelerationCards * (realItemWidth + realItemGap);
 				const slowDownPoint = finalTargetOffset + slowDownDistance;
 
-				let currentSpeed = ANIMATION_CONFIG.MAX_SPEED * speedMultiplier;
-				const maxSpeed = ANIMATION_CONFIG.MAX_SPEED * speedMultiplier;
+				let currentSpeed = maxSpeedBase * speedMultiplier;
+				const maxSpeed = maxSpeedBase * speedMultiplier;
 				const minSpeed = ANIMATION_CONFIG.MIN_SPEED * speedMultiplier;
 
 				const cardSpacing = realItemWidth + realItemGap;
-				const playTicks = this.roulettes.length === 1 && !fastMode;
+				const playTicks = isSingleSlow;
 				let lastCardIndex = Math.floor((containerCenter - roulette.sliderOffset) / cardSpacing);
 				let finalPlayed = false;
 
@@ -909,34 +933,34 @@ export default {
 					}
 
 					// Звук тика — в момент пересечения стрелкой левого края очередной карточки.
-					// Когда стрелка дошла до карточки выигрыша — играем final вместо тика.
 					if (playTicks) {
 						const cardIndex = Math.floor((containerCenter - roulette.sliderOffset) / cardSpacing);
 						if (cardIndex > lastCardIndex) {
 							lastCardIndex = cardIndex;
-							if (!finalPlayed && cardIndex >= stopItemIndex) {
-								finalPlayed = true;
-								this.playDropSound('final');
-							} else if (!finalPlayed) {
-								this.playDropSound('fast');
-							}
+							this.playDropSound('fast');
 						}
 					}
 
 					if (roulette.sliderOffset <= overshootTargetOffset) {
 						clearInterval(spinInterval);
 						roulette.sliderOffset = overshootTargetOffset;
-						if (!finalPlayed) {
+						// Для multi/fast — final сразу при остановке.
+						// Для single — final играется в returnRouletteToCenter в момент isCompleted (когда появляются кнопки).
+						if (!playTicks && !finalPlayed) {
 							finalPlayed = true;
 							this.playDropSound('final');
 						}
-						this.returnRouletteToCenтer(rouletteIndex, finalTargetOffset, stopItemIndex, speedMultiplier, resolve);
+						// Пауза после остановки перед доводкой в центр (только одиночное обычное открытие).
+						const pause = playTicks ? 10 : 0;
+						setTimeout(() => {
+							this.returnRouletteToCenтer(rouletteIndex, finalTargetOffset, stopItemIndex, speedMultiplier, resolve, playTicks);
+						}, pause);
 					}
 				}, ANIMATION_CONFIG.ANIMATION_FRAME_RATE);
 			});
 		},
 
-		returnRouletteToCenтer(rouletteIndex, finalTargetOffset, stopItemIndex, speedMultiplier, callback) {
+		returnRouletteToCenтer(rouletteIndex, finalTargetOffset, stopItemIndex, speedMultiplier, callback, playFinalAtEnd = false) {
 			const containers = this.$el?.querySelectorAll('.case-roulette-container');
 			const containerElement = containers ? containers[rouletteIndex] : null;
 			const trackElement = containerElement?.querySelector('.roulette-track');
@@ -946,6 +970,7 @@ export default {
 				roulette.sliderOffset = finalTargetOffset;
 				roulette.isSpinning = false;
 				roulette.isCompleted = true;
+				if (playFinalAtEnd) this.playDropSound('final');
 				callback();
 				return;
 			}
@@ -973,6 +998,7 @@ export default {
 				setTimeout(() => {
 					roulette.isSpinning = false;
 					roulette.isCompleted = true;
+					if (playFinalAtEnd) this.playDropSound('final');
 					callback();
 				}, ANIMATION_CONFIG.COMPLETION_DELAY);
 			}, returnDuration);

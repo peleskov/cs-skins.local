@@ -9,11 +9,11 @@ use Illuminate\Support\Facades\Log;
 
 class LosReferidosService
 {
-    protected string $advId;
+    protected ?string $advId;
 
-    protected string $hash;
+    protected ?string $hash;
 
-    protected string $baseUrl;
+    protected ?string $baseUrl;
 
     public function __construct()
     {
@@ -67,6 +67,18 @@ class LosReferidosService
      */
     protected function dispatch(Referral $referral, string $goalName, ?Payment $payment = null): void
     {
+        if (! $this->advId || ! $this->hash || ! $this->baseUrl) {
+            Log::channel('losreferidos')->error('Событие не отправлено: не заданы LR_ADV_ID / LR_HASH / LR_BASE_URL в .env', [
+                'referral_id' => $referral->id,
+                'goal_name' => $goalName,
+                'adv_id_set' => (bool) $this->advId,
+                'hash_set' => (bool) $this->hash,
+                'base_url_set' => (bool) $this->baseUrl,
+            ]);
+
+            return;
+        }
+
         $partner = $referral->partner;
 
         if (! $partner || ! $partner->is_active) {

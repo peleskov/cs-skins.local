@@ -3,6 +3,9 @@
 namespace App\Filament\Resources\ClientResource\RelationManagers;
 
 use App\Models\CaseInventoryItem;
+use App\Services\CaseInventoryService;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -48,6 +51,7 @@ class CaseInventoryRelationManager extends RelationManager
                 TextColumn::make('status')
                     ->label('Статус')
                     ->badge()
+                    ->sortable()
                     ->formatStateUsing(fn (string $state): string => CaseInventoryItem::getStatuses()[$state] ?? $state)
                     ->color(fn (string $state): string => match ($state) {
                         'available' => 'success',
@@ -70,6 +74,33 @@ class CaseInventoryRelationManager extends RelationManager
                 SelectFilter::make('source_type')
                     ->label('Источник')
                     ->options(CaseInventoryItem::getSourceTypes()),
+            ])
+            ->recordActions([
+                Action::make('sellForClient')
+                    ->label('Продать')
+                    ->icon('heroicon-o-banknotes')
+                    ->color('warning')
+                    ->visible(fn (CaseInventoryItem $record) => $record->status === CaseInventoryItem::STATUS_AVAILABLE)
+                    ->requiresConfirmation()
+                    ->modalHeading('Продать предмет за клиента')
+                    ->modalDescription(fn (CaseInventoryItem $record) => 'Предмет «' . $record->virtualItem->name . '» будет продан за ' . number_format((float) $record->price, 2, '.', ' ') . ' ₽. Сумма зачислится на баланс клиента, статус станет «Продан».')
+                    ->modalSubmitActionLabel('Продать')
+                    ->action(function (CaseInventoryItem $record): void {
+                        try {
+                            app(CaseInventoryService::class)->sellItems($record->client, [$record->id]);
+
+                            Notification::make()
+                                ->title('Предмет продан')
+                                ->success()
+                                ->send();
+                        } catch (\Throwable $e) {
+                            Notification::make()
+                                ->title('Не удалось продать')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
             ])
             ->defaultSort('created_at', 'desc');
     }

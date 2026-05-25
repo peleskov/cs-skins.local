@@ -163,7 +163,9 @@
 											<i class="ico sale"></i>Продать
 										</button>
 										<button class="btn btn-quinary align-items-center gap-1"
-											@click="withdrawItem(item.id)">
+											@click="withdrawItem(item.id)"
+											:disabled="isWithdrawBlocked"
+											:title="isWithdrawBlocked ? (withdrawBlockReason || 'Вывод предметов временно недоступен') : ''">
 											<i class="ico withdraw"></i>Вывести
 										</button>
 									</div>
@@ -599,6 +601,12 @@ export default {
 				return this.sortPriceAsc ? a.price - b.price : b.price - a.price;
 			});
 		},
+		isWithdrawBlocked() {
+			return !!this.localUser?.is_withdraw_blocked;
+		},
+		withdrawBlockReason() {
+			return this.localUser?.withdraw_block_reason || '';
+		},
 	},
 
 	methods: {
@@ -755,6 +763,10 @@ export default {
 
 		// ==================== WITHDRAW METHODS ====================
 		async withdrawItem(itemId) {
+			if (this.isWithdrawBlocked) {
+				window.toast?.error(this.withdrawBlockReason || 'Вывод предметов временно недоступен');
+				return;
+			}
 			if (!this.localUser.trade_url) {
 				const modal = new bootstrap.Modal(document.getElementById('tradeUrlModal'));
 				modal.show();

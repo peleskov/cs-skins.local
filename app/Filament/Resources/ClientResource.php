@@ -520,7 +520,14 @@ class ClientResource extends Resource
         $reasonAdmin = $kind.'_block_reason_admin';
         $reasonUser = $kind.'_block_reason_user';
 
+        $tooltips = [
+            'withdraw' => 'Запрещает клиенту вывод предметов из инвентаря кейсов и из маркетплейса. Покупки и пополнения остаются доступны.',
+            'purchases' => 'Запрещает клиенту покупки: открытие кейсов, покупки на маркетплейсе, апгрейды, ставки в аукционах. Вывод и пополнения остаются доступны.',
+            'balance' => 'Полная заморозка операций с балансом: ни пополнения, ни покупки, ни вывод, ни вывод средств — ничего недоступно. Включает в себя withdraw- и purchases-блокировки.',
+        ];
+
         return Action::make('block_'.$kind)
+            ->tooltip($tooltips[$kind] ?? null)
             ->label(function ($record) use ($untilCol, $titleShort) {
                 $until = $record?->{$untilCol};
                 return $until && $until->isFuture()

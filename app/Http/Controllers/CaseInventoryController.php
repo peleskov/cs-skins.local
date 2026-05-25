@@ -64,6 +64,8 @@ class CaseInventoryController extends Controller
             'avatar_border_color' => $client->avatar_border_color,
             'nickname_color' => $client->nickname_color,
             'is_premium' => $client->isPremium(),
+            'is_withdraw_blocked' => $client->isWithdrawBlocked(),
+            'withdraw_block_reason' => $client->getWithdrawBlockReasonForUser(),
         ];
 
         // Любимый кейс (самый часто открываемый)

@@ -144,7 +144,7 @@ Route::prefix('api')->name('api.')->group(function () {
     // Маршруты для заказов
     Route::prefix('orders')->name('orders.')->controller(OrderController::class)->group(function () {
         Route::post('/create', 'cartBuy')->name('create')->middleware(['auth:client', 'throttle:api-critical']);
-        Route::post('/quick-buy', 'quickBuy')->name('quick-buy')->middleware(['auth:client', 'throttle:api-critical']);
+        // Route::post('/quick-buy', 'quickBuy')->name('quick-buy')->middleware(['auth:client', 'throttle:api-critical']); // Отключено: система быстрого выкупа убрана
         Route::post('/quick-sell', 'quickSell')->name('quick-sell')->middleware(['auth:client', 'throttle:api-critical']);
         Route::get('/purchases', 'getMyOrders')->name('purchases')->middleware(['auth:client', 'throttle:api-read']);
         Route::get('/sales', 'getMySales')->name('sales')->middleware(['auth:client', 'throttle:api-read']);

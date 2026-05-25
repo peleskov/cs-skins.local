@@ -111,10 +111,6 @@
                                     :data-is-in-cart="listing.is_in_cart" data-size="large" data-variant="primary"
                                     class="flex-fill cart-button-placeholder">
                                 </div>
-                                <button class="btn theme-outline flex-fill"
-                                    data-bs-toggle="modal" data-bs-target="#confirmPurchaseModal">
-                                    <i class="ri-flashlight-line me-2"></i>Быстрая покупка
-                                </button>
                             </div>
 
                             <!-- Бейдж для проданных -->
@@ -270,98 +266,6 @@
             </div>
         </div>
 
-        <!-- Confirm Purchase modal -->
-        <div class="modal fade" id="confirmPurchaseModal" tabindex="-1" aria-labelledby="confirmPurchaseModalLabel"
-            aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header bg-warning text-white">
-                        <h5 class="modal-title" id="confirmPurchaseModalLabel">
-                            <i class="ri-question-line me-2"></i>Подтверждение покупки
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                            aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body text-center">
-                        <i class="ri-shopping-cart-line text-warning" style="font-size: 3rem;"></i>
-                        <h4 class="mt-3">Подтвердите покупку</h4>
-
-                        <!-- Purchase details -->
-                        <div v-if="listing" class="mt-3">
-                            <div class="border rounded p-3 text-start">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span>
-                                        <strong>{{ getItemName() }}</strong>
-                                        <small class="text-muted d-block">{{ getItemNameEn() }}</small>
-                                        <small class="text-muted d-block">Продавец: {{ getSellerName(listing.seller) }}</small>
-                                    </span>
-                                    <strong class="text-primary" v-html="formatPrice(listing.price, 'RUB')"></strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        <p class="text-muted mt-3">
-                            Вы действительно хотите купить этот предмет?<br>
-                            Средства будут списаны с вашего баланса.
-                        </p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn theme-outline" data-bs-dismiss="modal">
-                            Отмена
-                        </button>
-                        <button type="button" class="btn theme-btn" @click="quickBuy" data-bs-dismiss="modal">
-                            Подтвердить покупку
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Success modal -->
-        <div v-if="showSuccessModal" class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header bg-success text-white">
-                        <h5 class="modal-title">
-                            <i class="ri-check-line me-2"></i>Покупка успешно завершена!
-                        </h5>
-                    </div>
-                    <div class="modal-body text-center">
-                        <i class="ri-check-double-line text-success" style="font-size: 3rem;"></i>
-                        <h4 class="mt-3">Товар успешно куплен!</h4>
-
-                        <!-- Order details -->
-                        <div v-if="purchasedOrder" class="mt-3">
-                            <div class="border rounded p-3 text-start">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span>
-                                        <strong>Заказ {{ purchasedOrder.order_number }}</strong>
-                                        <small class="text-muted d-block">{{ getItemName() }}</small>
-                                        <small class="text-muted d-block">
-                                            Продавец: {{ purchasedOrder.seller?.name || 'Не указан' }}</small>
-                                    </span>
-                                    <strong class="text-primary"
-                                        v-html="formatPrice(purchasedOrder.total_amount)"></strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        <p class="text-muted mt-3">
-                            Заказ успешно оплачен и передан в обработку.
-                            Вы получите уведомление, когда трейд-оффер будет отправлен.
-                        </p>
-                    </div>
-                    <div class="modal-footer d-flex justify-content-center">
-                        <button type="button" class="btn theme-outline" @click="goToProfile">
-                            Мои покупки
-                        </button>
-                        <button type="button" class="btn theme-btn" @click="goToMarketplace">
-                            Продолжить покупки
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 </template>
 
@@ -374,7 +278,6 @@ import AuctionDetails from './AuctionDetails.vue'
 import FloatBar from './FloatBar.vue'
 import VueApexCharts from 'vue3-apexcharts'
 import { formatPrice, handleApiError } from '../../shared/utils/helpers'
-import { orderAPI } from '../../shared/utils/api'
 
 export default {
     name: 'SkinDetails',
@@ -400,8 +303,6 @@ export default {
             error: null,
             steamPriceHistory: [],
             steamPriceStats: null,
-            showSuccessModal: false,
-            purchasedOrder: null,
             currencySymbol: '₽', // Реактивная переменная для символа валюты
             auctionState: null, // Состояние аукциона от дочернего компонента
             otherSortKey: 'price',
@@ -752,41 +653,6 @@ export default {
                     button.classList.add(config.className);
                 }
             });
-        },
-
-        async quickBuy() {
-            try {
-                const response = await orderAPI.quickBuy(this.listing.id);
-
-                if (response.success) {
-                    // Сохраняем данные заказа для модального окна
-                    this.purchasedOrder = response.order;
-                    this.showSuccessModal = true;
-                } else {
-                    window.toast.error(response.message);
-                }
-            } catch (error) {
-                // Обрабатываем специфичные ошибки
-                if (error.response?.status === 401) {
-                    // Не показываем тост, axios interceptor уже показал
-                    // Просто перенаправляем на авторизацию
-                    setTimeout(() => {
-                        window.location.href = '/auth/steam';
-                    }, 2000);
-                    return;
-                }
-
-                // Для всех остальных ошибок не показываем тост
-                // axios interceptor уже обработает их
-            }
-        },
-
-        goToProfile() {
-            window.location.href = '/profile#orders';
-        },
-
-        goToMarketplace() {
-            window.location.href = '/marketplace';
         },
 
         handleImageError(event) {

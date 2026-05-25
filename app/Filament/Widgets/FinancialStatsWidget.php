@@ -18,37 +18,44 @@ class FinancialStatsWidget extends BaseWidget
     protected function getStats(): array
     {
         $weekAgo = Carbon::now()->subWeek();
+        $notRigged = fn ($q) => $q->whereHas('client', fn ($c) => $c->notRigged());
 
         // Пополнения за неделю
-        $deposits = Payment::where('status', 'completed')
-            ->where('created_at', '>=', $weekAgo)
+        $deposits = Payment::where('status', Payment::STATUS_PAID)
+            ->where('paid_at', '>=', $weekAgo)
+            ->tap($notRigged)
             ->sum('amount');
 
         // Расходы на кейсы (основной баланс)
         $caseExpensesMain = Transaction::where('type', 'case_purchase')
             ->where('created_at', '>=', $weekAgo)
+            ->tap($notRigged)
             ->sum(DB::raw('ABS(amount)'));
 
         // Расходы на кейсы (бонусный баланс)
         $caseExpensesBonus = BonusTransaction::where('description', 'like', '%кейс%')
             ->where('amount', '<', 0)
             ->where('created_at', '>=', $weekAgo)
+            ->tap($notRigged)
             ->sum(DB::raw('ABS(amount)'));
 
         // Выводы
         $withdrawals = Transaction::where('type', 'withdraw')
             ->where('created_at', '>=', $weekAgo)
+            ->tap($notRigged)
             ->sum(DB::raw('ABS(amount)'));
 
         // Бонусы выданные
         $bonusIssued = BonusTransaction::where('amount', '>', 0)
             ->where('created_at', '>=', $weekAgo)
+            ->tap($notRigged)
             ->sum('amount');
 
         // Апгрейды
-        $upgradesBets = Upgrade::where('created_at', '>=', $weekAgo)->sum('total_bet');
+        $upgradesBets = Upgrade::where('created_at', '>=', $weekAgo)->tap($notRigged)->sum('total_bet');
         $upgradesPrizes = Upgrade::where('result', 'win')
             ->where('created_at', '>=', $weekAgo)
+            ->tap($notRigged)
             ->sum('target_price');
         $upgradesProfit = $upgradesBets - $upgradesPrizes;
 

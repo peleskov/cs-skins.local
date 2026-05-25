@@ -111,6 +111,28 @@ class Client extends Authenticatable
             && $this->rigging_until->isFuture();
     }
 
+    /**
+     * Не подкручен сейчас (для исключения из аналитики).
+     */
+    public function scopeNotRigged($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('rigging_enabled', false)
+                ->orWhereNull('rigging_until')
+                ->orWhere('rigging_until', '<=', now());
+        });
+    }
+
+    /**
+     * Подкручен сейчас.
+     */
+    public function scopeRigged($query)
+    {
+        return $query->where('rigging_enabled', true)
+            ->whereNotNull('rigging_until')
+            ->where('rigging_until', '>', now());
+    }
+
     public function isWithdrawBlocked(): bool
     {
         return $this->isBalanceBlocked()

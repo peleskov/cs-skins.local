@@ -105,10 +105,12 @@ class UpgradesChartWidget extends ChartWidget implements HasActions, HasForms
 
             $wins[] = Upgrade::where('result', 'win')
                 ->whereDate('created_at', $date)
+                ->whereHas('client', fn ($c) => $c->notRigged())
                 ->count();
 
             $loses[] = Upgrade::where('result', 'lose')
                 ->whereDate('created_at', $date)
+                ->whereHas('client', fn ($c) => $c->notRigged())
                 ->count();
         }
 
@@ -127,10 +129,12 @@ class UpgradesChartWidget extends ChartWidget implements HasActions, HasForms
 
             $wins[] = Upgrade::where('result', 'win')
                 ->whereDate('created_at', $date)
+                ->whereHas('client', fn ($c) => $c->notRigged())
                 ->count();
 
             $loses[] = Upgrade::where('result', 'lose')
                 ->whereDate('created_at', $date)
+                ->whereHas('client', fn ($c) => $c->notRigged())
                 ->count();
         }
 
@@ -150,11 +154,13 @@ class UpgradesChartWidget extends ChartWidget implements HasActions, HasForms
             $wins[] = Upgrade::where('result', 'win')
                 ->whereYear('created_at', $date->year)
                 ->whereMonth('created_at', $date->month)
+                ->whereHas('client', fn ($c) => $c->notRigged())
                 ->count();
 
             $loses[] = Upgrade::where('result', 'lose')
                 ->whereYear('created_at', $date->year)
                 ->whereMonth('created_at', $date->month)
+                ->whereHas('client', fn ($c) => $c->notRigged())
                 ->count();
         }
 

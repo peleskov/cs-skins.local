@@ -100,6 +100,7 @@ class TransactionResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->whereHas('client', fn ($c) => $c->notRigged()))
             ->columns([
                 TextColumn::make('id')
                     ->label('ID')

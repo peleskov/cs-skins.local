@@ -38,6 +38,8 @@ class Analytics extends Page
             \App\Filament\Widgets\CasesReportWidget::class,
             \App\Filament\Widgets\PromocodesReportWidget::class,
             \App\Filament\Widgets\TopUsersWidget::class,
+            \App\Filament\Widgets\TopDepositorsWidget::class,
+            \App\Filament\Widgets\RiggedUsersWidget::class,
         ];
     }
 

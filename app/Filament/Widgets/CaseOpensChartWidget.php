@@ -97,7 +97,9 @@ class CaseOpensChartWidget extends ChartWidget implements HasActions, HasForms
             $date = Carbon::now()->subDays($i);
             $labels[] = $date->format('d.m');
 
-            $values[] = CaseOpen::whereDate('created_at', $date)->count();
+            $values[] = CaseOpen::whereDate('created_at', $date)
+                ->whereHas('client', fn ($c) => $c->notRigged())
+                ->count();
         }
 
         return ['labels' => $labels, 'values' => $values];
@@ -112,7 +114,9 @@ class CaseOpensChartWidget extends ChartWidget implements HasActions, HasForms
             $date = Carbon::now()->subDays($i);
             $labels[] = $date->format('d.m');
 
-            $values[] = CaseOpen::whereDate('created_at', $date)->count();
+            $values[] = CaseOpen::whereDate('created_at', $date)
+                ->whereHas('client', fn ($c) => $c->notRigged())
+                ->count();
         }
 
         return ['labels' => $labels, 'values' => $values];
@@ -129,6 +133,7 @@ class CaseOpensChartWidget extends ChartWidget implements HasActions, HasForms
 
             $values[] = CaseOpen::whereYear('created_at', $date->year)
                 ->whereMonth('created_at', $date->month)
+                ->whereHas('client', fn ($c) => $c->notRigged())
                 ->count();
         }
 

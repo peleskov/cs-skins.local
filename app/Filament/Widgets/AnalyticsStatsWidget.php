@@ -19,23 +19,28 @@ class AnalyticsStatsWidget extends BaseWidget
         $today = Carbon::today();
         $weekAgo = Carbon::now()->subWeek();
 
+        $notRigged = fn ($q) => $q->whereHas('client', fn ($c) => $c->notRigged());
+
         // Пополнения
         $depositsToday = Payment::where('status', Payment::STATUS_PAID)
             ->whereDate('paid_at', $today)
+            ->tap($notRigged)
             ->sum('amount');
         $depositsWeek = Payment::where('status', Payment::STATUS_PAID)
             ->where('paid_at', '>=', $weekAgo)
+            ->tap($notRigged)
             ->sum('amount');
 
         // Кейсы
-        $casesToday = CaseOpen::whereDate('created_at', $today)->count();
-        $casesWeek = CaseOpen::where('created_at', '>=', $weekAgo)->count();
+        $casesToday = CaseOpen::whereDate('created_at', $today)->tap($notRigged)->count();
+        $casesWeek = CaseOpen::where('created_at', '>=', $weekAgo)->tap($notRigged)->count();
 
         // Апгрейды
-        $upgradesToday = Upgrade::whereDate('created_at', $today)->count();
-        $upgradesWeek = Upgrade::where('created_at', '>=', $weekAgo)->count();
+        $upgradesToday = Upgrade::whereDate('created_at', $today)->tap($notRigged)->count();
+        $upgradesWeek = Upgrade::where('created_at', '>=', $weekAgo)->tap($notRigged)->count();
         $upgradeWinsWeek = Upgrade::where('result', 'win')
             ->where('created_at', '>=', $weekAgo)
+            ->tap($notRigged)
             ->count();
         $winRate = $upgradesWeek > 0 ? round(($upgradeWinsWeek / $upgradesWeek) * 100, 1) : 0;
 

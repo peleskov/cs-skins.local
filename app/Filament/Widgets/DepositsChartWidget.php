@@ -99,8 +99,9 @@ class DepositsChartWidget extends ChartWidget implements HasActions, HasForms
             $date = Carbon::now()->subDays($i);
             $labels[] = $date->format('d.m');
 
-            $values[] = (float) Payment::where('status', 'completed')
-                ->whereDate('created_at', $date)
+            $values[] = (float) Payment::where('status', Payment::STATUS_PAID)
+                ->whereHas('client', fn ($c) => $c->notRigged())
+                ->whereDate('paid_at', $date)
                 ->sum('amount');
         }
 
@@ -116,8 +117,9 @@ class DepositsChartWidget extends ChartWidget implements HasActions, HasForms
             $date = Carbon::now()->subDays($i);
             $labels[] = $date->format('d.m');
 
-            $values[] = (float) Payment::where('status', 'completed')
-                ->whereDate('created_at', $date)
+            $values[] = (float) Payment::where('status', Payment::STATUS_PAID)
+                ->whereHas('client', fn ($c) => $c->notRigged())
+                ->whereDate('paid_at', $date)
                 ->sum('amount');
         }
 
@@ -133,9 +135,10 @@ class DepositsChartWidget extends ChartWidget implements HasActions, HasForms
             $date = Carbon::now()->subMonths($i);
             $labels[] = $date->translatedFormat('M');
 
-            $values[] = (float) Payment::where('status', 'completed')
-                ->whereYear('created_at', $date->year)
-                ->whereMonth('created_at', $date->month)
+            $values[] = (float) Payment::where('status', Payment::STATUS_PAID)
+                ->whereHas('client', fn ($c) => $c->notRigged())
+                ->whereYear('paid_at', $date->year)
+                ->whereMonth('paid_at', $date->month)
                 ->sum('amount');
         }
 

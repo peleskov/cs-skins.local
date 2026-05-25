@@ -37,6 +37,7 @@ class Promocode extends Model
         'is_active',
         'partner_id',
         'lr_offer_id',
+        'created_by_admin_id',
     ];
 
     protected $casts = [
@@ -63,6 +64,11 @@ class Promocode extends Model
     public function partner(): BelongsTo
     {
         return $this->belongsTo(Partner::class);
+    }
+
+    public function createdByAdmin(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by_admin_id');
     }
 
     public function paidPayments(): HasMany

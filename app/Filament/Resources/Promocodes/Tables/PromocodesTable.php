@@ -79,6 +79,13 @@ class PromocodesTable
                     ->label('Активен')
                     ->boolean(),
 
+                TextColumn::make('createdByAdmin.name')
+                    ->label('Автор')
+                    ->badge()
+                    ->color('gray')
+                    ->placeholder('—')
+                    ->toggleable(),
+
                 TextColumn::make('created_at')
                     ->label('Создан')
                     ->dateTime('d.m.Y')

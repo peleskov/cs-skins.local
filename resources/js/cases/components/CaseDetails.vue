@@ -53,22 +53,40 @@
 				<div class="case-box-images mb-3 d-flex justify-content-center align-items-center gap-3 flex-wrap"
 					:class="`case-box-images-${selectedMultiplier}`"
 					v-if="selectedMultiplier > 1">
-					<div v-for="(card, index) in cardFlips" :key="`card-${index}`" class="case-box-image case-card-flip"
-						:class="[
-							{ 'case-box-image-small': selectedMultiplier > 3, 'flipped': card.flipped },
-							card.flipped ? card.rarityClass : ''
-						]">
-						<div class="case-card-inner">
-							<div class="case-card-front"
-								:style="{ backgroundImage: `url(/images/logo_white.svg?v=2)` }">
-							</div>
-							<div class="case-card-back">
-								<span v-if="card.prize.is_anti_unluck" class="badge-anti-unluck">Анти-анлак</span>
-								<div class="image" :style="{ backgroundImage: `url(${getItemImageUrl(card.prize)})` }">
+					<div v-for="(card, index) in cardFlips" :key="`card-${index}`"
+						class="d-flex flex-column align-items-center gap-2">
+						<div class="case-box-image case-card-flip"
+							:class="[
+								{ 'case-box-image-small': selectedMultiplier > 3, 'flipped': card.flipped },
+								card.flipped ? card.rarityClass : ''
+							]">
+							<div class="case-card-inner">
+								<div class="case-card-front"
+									:style="{ backgroundImage: `url(/images/logo_white.svg?v=2)` }">
 								</div>
-								<p>{{ getNameWithoutWear(card.prize.name) }}</p>
+								<div class="case-card-back">
+									<span v-if="card.prize.is_anti_unluck" class="badge-anti-unluck">Анти-анлак</span>
+									<span v-if="card.flipped && card.prize.price !== undefined"
+										class="price"
+										v-html="formatPrice(card.prize.price)"></span>
+									<div class="image" :style="{ backgroundImage: `url(${getItemImageUrl(card.prize)})` }">
+									</div>
+									<p>{{ getNameWithoutWear(card.prize.name) }}</p>
+								</div>
 							</div>
 						</div>
+						<template v-if="showResults && card.prize.inventory_id">
+							<template v-if="!soldInventoryIds.includes(card.prize.inventory_id)">
+								<button class="btn btn-quinary btn-sm d-inline-flex align-items-center gap-1"
+									@click="sellSingleWonItem(card.prize)"
+									:disabled="sellingSingleId === card.prize.inventory_id">
+									<span v-if="sellingSingleId === card.prize.inventory_id"
+										class="spinner-border spinner-border-sm"></span>
+									<i v-else class="ico sale"></i>Продать
+								</button>
+							</template>
+							<span v-else class="badge sold">Продано</span>
+						</template>
 					</div>
 				</div>
 
@@ -126,7 +144,7 @@
 							</div>
 							<div class="col-6">
 								<button class="btn btn-secondary px-4" @click="sellWonItems"
-									:disabled="sellingWonItems">
+									:disabled="sellingWonItems || remainingWonItems.length === 0">
 									<span v-if="sellingWonItems" class="spinner-border spinner-border-sm me-1"></span>
 									Продать за&nbsp;<span v-html="formatPrice(totalWonPrice)"></span>
 								</button>
@@ -315,6 +333,8 @@ export default {
 
 			// Card flip (multiplier 2+)
 			cardFlips: [],
+			soldInventoryIds: [],
+			sellingSingleId: null,
 
 			// Multiplier selection
 			allMultipliers: [1, 2, 3, 4, 5, 10],
@@ -354,7 +374,12 @@ export default {
 			return this.caseData.has_discount;
 		},
 		totalWonPrice() {
-			return this.wonItems.reduce((sum, item) => sum + item.price, 0);
+			return this.wonItems
+				.filter(item => !this.soldInventoryIds.includes(item.inventory_id))
+				.reduce((sum, item) => sum + item.price, 0);
+		},
+		remainingWonItems() {
+			return this.wonItems.filter(item => !this.soldInventoryIds.includes(item.inventory_id));
 		},
 		freeInfo() {
 			return this.caseData.free_opens_info || null;
@@ -1065,6 +1090,8 @@ export default {
 			this.wonItems = [];
 			this.roulettes = [];
 			this.cardFlips = [];
+			this.soldInventoryIds = [];
+			this.sellingSingleId = null;
 			this.currentRouletteIndex = 0;
 			this.selectedMultiplier = 1;
 
@@ -1073,12 +1100,13 @@ export default {
 		},
 
 		async sellWonItems() {
-			if (this.sellingWonItems || this.wonItems.length === 0) return;
+			const remaining = this.remainingWonItems;
+			if (this.sellingWonItems || remaining.length === 0) return;
 
 			this.sellingWonItems = true;
 
 			try {
-				const itemIds = this.wonItems.map(item => item.inventory_id);
+				const itemIds = remaining.map(item => item.inventory_id);
 				const response = await axios.post('/api/case-inventory/sell', {
 					item_ids: itemIds
 				});
@@ -1099,6 +1127,35 @@ export default {
 				alert(error.response?.data?.message || 'Ошибка при продаже предметов');
 			} finally {
 				this.sellingWonItems = false;
+			}
+		},
+
+		async sellSingleWonItem(prize) {
+			if (!prize?.inventory_id) return;
+			if (this.sellingSingleId !== null) return;
+			if (this.soldInventoryIds.includes(prize.inventory_id)) return;
+
+			this.sellingSingleId = prize.inventory_id;
+
+			try {
+				const response = await axios.post('/api/case-inventory/sell', {
+					item_ids: [prize.inventory_id]
+				});
+
+				if (response.data.success) {
+					this.soldInventoryIds.push(prize.inventory_id);
+
+					if (response.data.balance) {
+						window.dispatchEvent(new CustomEvent('balance-updated', {
+							detail: { main: response.data.balance }
+						}));
+					}
+				}
+			} catch (error) {
+				console.error('Ошибка продажи:', error);
+				alert(error.response?.data?.message || 'Ошибка при продаже предмета');
+			} finally {
+				this.sellingSingleId = null;
 			}
 		},
 

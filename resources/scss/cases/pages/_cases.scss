@@ -381,6 +381,20 @@
                     transform: rotateY(180deg);
                     padding: 10px;
 
+                    .price {
+                        display: block;
+                        position: absolute;
+                        top: 6px;
+                        left: 6px;
+                        padding: 8px 12px;
+                        font: 600 14px "Inter", sans-serif;
+                        color: #f6f4f9;
+                        border-radius: 10px;
+                        box-shadow: 0 3px 8px 0 rgba(0, 0, 0, 0.1);
+                        background-color: #ff8c00;
+                        z-index: 2;
+                    }
+
                     .image {
                         width: 100%;
                         flex: 1;

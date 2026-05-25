@@ -256,23 +256,37 @@ header.header[data-vue-component="header"] {
 	flex-wrap: nowrap !important;
 	gap: 8px !important;
 
-	.case-box-image {
+	> * {
 		flex: 1 1 0;
 		min-width: 0;
+	}
+
+	.case-box-image {
 		background-size: contain;
 		background-repeat: no-repeat;
 		background-position: center;
 	}
 
-	&.case-box-images-1 .case-box-image { max-width: 100%; }
-	&.case-box-images-2 .case-box-image { max-width: 50%; }
-	&.case-box-images-3 .case-box-image { max-width: 33%; }
+	&.case-box-images-1 > * { max-width: 100%; }
+	&.case-box-images-2 > * { max-width: 50%; }
+	&.case-box-images-3 > * { max-width: 33%; }
+
+	@media (max-width: 575.98px) {
+		&.case-box-images-3 {
+			flex-wrap: wrap !important;
+
+			> * {
+				flex: 0 0 calc(50% - 4px);
+				max-width: calc(50% - 4px);
+			}
+		}
+	}
 
 	&.case-box-images-4,
 	&.case-box-images-5 {
 		flex-wrap: wrap !important;
 
-		.case-box-image {
+		> * {
 			flex: 0 0 calc(50% - 4px);
 			max-width: calc(50% - 4px);
 		}
@@ -281,7 +295,7 @@ header.header[data-vue-component="header"] {
 	&.case-box-images-10 {
 		flex-wrap: wrap !important;
 
-		.case-box-image {
+		> * {
 			flex: 0 0 calc(33.333% - 6px);
 			max-width: calc(33.333% - 6px);
 		}

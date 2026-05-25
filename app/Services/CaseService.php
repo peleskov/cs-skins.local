@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Events\CaseDropEvent;
+use App\Jobs\BroadcastCaseDropJob;
 use App\Models\BonusTransaction;
 use App\Models\CaseInventoryItem;
 use App\Models\CaseModel;
@@ -145,8 +145,10 @@ class CaseService
                     'is_anti_unluck' => $isAntiUnluck,
                 ];
 
-                // Отправляем событие в лайв-ленту (afterCommit задан в самом событии)
-                broadcast(new CaseDropEvent($caseOpen));
+                // Отправляем событие в лайв-ленту с задержкой,
+                // чтобы лента не спойлерила выпадение до окончания анимации рулетки.
+                BroadcastCaseDropJob::dispatch($caseOpen->id)
+                    ->delay(now()->addSeconds((int) SiteSetting::get('case_feed_broadcast_delay', 7)));
 
                 // Логируем операцию
                 Log::info('Case opened', [

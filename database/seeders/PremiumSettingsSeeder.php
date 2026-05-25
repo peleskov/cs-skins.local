@@ -58,7 +58,7 @@ class PremiumSettingsSeeder extends Seeder
         ];
 
         foreach ($settings as $setting) {
-            SiteSetting::updateOrCreate(
+            SiteSetting::firstOrCreate(
                 ['key' => $setting['key']],
                 $setting
             );

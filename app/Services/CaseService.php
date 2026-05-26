@@ -73,12 +73,26 @@ class CaseService
                         $case->id
                     );
 
+                    $caseOpen = CaseOpen::create([
+                        'client_id' => $client->id,
+                        'case_id' => $case->id,
+                        'case_inventory_item_id' => $inventoryItem->id,
+                        'price_paid' => $payment['is_free'] ? 0 : $payment['price_per_case'],
+                        'balance_used' => $payment['is_free'] ? 0 : ($payment['balance_used'] / $count),
+                        'bonus_balance_used' => $payment['is_free'] ? 0 : ($payment['bonus_used'] / $count),
+                        'is_free' => $payment['is_free'],
+                        'is_anti_unluck' => false,
+                    ]);
+
                     $items[] = [
                         'case_item' => $caseItem,
                         'inventory_item' => $inventoryItem,
-                        'case_open' => null,
+                        'case_open' => $caseOpen,
                         'is_anti_unluck' => false,
                     ];
+
+                    BroadcastCaseDropJob::dispatch($caseOpen->id)
+                        ->delay(now()->addSeconds((int) SiteSetting::get('case_feed_broadcast_delay', 7)));
 
                     continue;
                 }

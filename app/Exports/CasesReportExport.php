@@ -13,13 +13,19 @@ class CasesReportExport implements FromCollection, WithHeadings, WithMapping, Wi
 {
     public function collection()
     {
+        // Исключаем подкрученных клиентов (rigging_enabled + rigging_until > now)
+        $notRiggedJoin = 'INNER JOIN clients cl ON cl.id = case_opens.client_id
+            AND (cl.rigging_enabled = 0 OR cl.rigging_until IS NULL OR cl.rigging_until <= NOW())';
+
         return CaseModel::query()
             ->select('cases.*')
-            ->selectRaw('(SELECT COUNT(*) FROM case_opens WHERE case_opens.case_id = cases.id) as opens_count')
-            ->selectRaw('(SELECT COALESCE(SUM(price_paid), 0) FROM case_opens WHERE case_opens.case_id = cases.id) as opens_sum_price_paid')
-            ->selectRaw('(SELECT COALESCE(SUM(cii.price), 0) FROM case_inventory_items cii
+            ->selectRaw("(SELECT COUNT(*) FROM case_opens {$notRiggedJoin} WHERE case_opens.case_id = cases.id) as opens_count")
+            ->selectRaw("(SELECT COALESCE(SUM(price_paid), 0) FROM case_opens {$notRiggedJoin} WHERE case_opens.case_id = cases.id) as opens_sum_price_paid")
+            ->selectRaw("(SELECT COALESCE(SUM(cii.price), 0) FROM case_inventory_items cii
                 INNER JOIN case_opens co ON co.id = cii.source_id
-                WHERE cii.source_type = \'case_open\' AND co.case_id = cases.id) as total_won')
+                INNER JOIN clients cl2 ON cl2.id = co.client_id
+                    AND (cl2.rigging_enabled = 0 OR cl2.rigging_until IS NULL OR cl2.rigging_until <= NOW())
+                WHERE cii.source_type = 'case_open' AND co.case_id = cases.id) as total_won")
             ->orderByDesc('opens_count')
             ->get();
     }

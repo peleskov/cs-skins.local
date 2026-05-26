@@ -129,10 +129,16 @@ class SuspiciousActivity extends Page implements HasForms, HasTable
                 [$from, $to] = $this->getTimeRange();
                 $limit = (int) ($this->filterData['limit'] ?? 50);
 
-                // Кейсы: сумма брутто (price предмета) — без бесплатных
+                // Кейсы: сумма брутто (price предмета) — без бесплатных, без подкрученных
                 $cases = DB::table('case_opens')
                     ->join('case_inventory_items', 'case_opens.case_inventory_item_id', '=', 'case_inventory_items.id')
+                    ->join('clients', 'clients.id', '=', 'case_opens.client_id')
                     ->where('case_opens.is_free', false)
+                    ->where(function ($q) {
+                        $q->where('clients.rigging_enabled', false)
+                            ->orWhereNull('clients.rigging_until')
+                            ->orWhere('clients.rigging_until', '<=', now());
+                    })
                     ->whereBetween('case_opens.created_at', [$from, $to])
                     ->groupBy('case_opens.client_id')
                     ->select(

@@ -14,6 +14,7 @@ class TopUsersExport implements FromCollection, WithHeadings, WithMapping, WithS
     public function collection()
     {
         return Client::query()
+            ->notRigged()
             ->select('clients.*')
             ->selectRaw('(SELECT COUNT(*) FROM case_opens WHERE case_opens.client_id = clients.id) as case_opens_count')
             ->selectRaw('(SELECT COALESCE(SUM(price_paid), 0) FROM case_opens WHERE case_opens.client_id = clients.id) as total_spent')

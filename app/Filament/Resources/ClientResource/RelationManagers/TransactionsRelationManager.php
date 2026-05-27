@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\ClientResource\RelationManagers;
 
-use App\Models\Transaction;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;

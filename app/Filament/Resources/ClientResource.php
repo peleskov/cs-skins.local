@@ -2,89 +2,97 @@
 
 namespace App\Filament\Resources;
 
-use Filament\Schemas\Schema;
-use Filament\Tables\Filters\TernaryFilter;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Actions\EditAction;
-use Filament\Actions\Action;
-use Exception;
-use App\Filament\Resources\ClientResource\Pages\ListClients;
 use App\Filament\Resources\ClientResource\Pages\CreateClient;
 use App\Filament\Resources\ClientResource\Pages\EditClient;
-use App\Filament\Resources\ClientResource\Pages;
+use App\Filament\Resources\ClientResource\Pages\ListClients;
 use App\Filament\Resources\ClientResource\RelationManagers;
 use App\Models\Client;
+use App\Models\Transaction;
+use App\Services\BonusBalanceService;
+use Exception;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
 use Filament\Forms;
-use Filament\Resources\Resource;
-use Filament\Tables;
-use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Filament\Tables\Columns\ImageColumn;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\IconColumn;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
-use App\Models\Transaction;
-use App\Models\BonusTransaction;
-use App\Services\BonusBalanceService;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Tables\Table;
 use Illuminate\Support\Facades\Auth;
 
 class ClientResource extends Resource
 {
     protected static ?string $model = Client::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-users';
-    
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-users';
+
     protected static ?string $navigationLabel = 'Клиенты';
-    
+
     protected static ?string $modelLabel = 'Клиент';
-    
+
     protected static ?string $pluralModelLabel = 'Клиенты';
-    
-    protected static string | \UnitEnum | null $navigationGroup = 'Пользователи';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Пользователи';
 
     public static function form(Schema $schema): Schema
     {
+        $perm = fn (string $field) => self::applyFieldPermission($field);
+
         return $schema
             ->components([
                 TextInput::make('name')
                     ->label('Имя')
                     ->required()
-                    ->maxLength(255),
-                    
+                    ->maxLength(255)
+                    ->visible($perm('name')['visible'])
+                    ->disabled($perm('name')['disabled']),
+
                 TextInput::make('email')
                     ->label('Email')
                     ->email()
-                    ->maxLength(255),
-                    
+                    ->maxLength(255)
+                    ->visible($perm('email')['visible'])
+                    ->disabled($perm('email')['disabled']),
+
                 TextInput::make('steam_id')
                     ->label('Steam ID')
                     ->required()
                     ->unique(ignoreRecord: true)
-                    ->maxLength(255),
-                    
+                    ->maxLength(255)
+                    ->visible($perm('steam_id')['visible'])
+                    ->disabled($perm('steam_id')['disabled']),
+
                 TextInput::make('steam_avatar')
                     ->label('Steam Avatar URL')
                     ->url()
-                    ->maxLength(255),
-                    
+                    ->maxLength(255)
+                    ->visible($perm('steam_avatar')['visible'])
+                    ->disabled($perm('steam_avatar')['disabled']),
+
                 TextInput::make('steam_trade_url')
                     ->label('Steam Trade URL')
                     ->url()
-                    ->maxLength(500),
-                    
+                    ->maxLength(500)
+                    ->visible($perm('steam_trade_url')['visible'])
+                    ->disabled($perm('steam_trade_url')['disabled']),
+
                 TextInput::make('balance')
                     ->label('Баланс')
                     ->numeric()
                     ->default(0)
                     ->step(0.01)
                     ->suffix('₽')
-                    ->disabled()
-                    ->dehydrated(false),
+                    ->disabled() // всегда readonly — операции через кнопки таблицы
+                    ->dehydrated(false)
+                    ->visible($perm('balance')['visible']),
 
                 TextInput::make('bonus_balance')
                     ->label('Бонусный баланс')
@@ -92,36 +100,48 @@ class ClientResource extends Resource
                     ->default(0)
                     ->step(0.01)
                     ->suffix('₽')
-                    ->disabled()
-                    ->dehydrated(false),
-                    
+                    ->disabled() // всегда readonly — операции через кнопки таблицы
+                    ->dehydrated(false)
+                    ->visible($perm('bonus_balance')['visible']),
+
                 TextInput::make('telegram_id')
                     ->label('Telegram ID')
                     ->maxLength(255)
-                    ->nullable(),
+                    ->nullable()
+                    ->visible($perm('telegram_id')['visible'])
+                    ->disabled($perm('telegram_id')['disabled']),
 
                 Toggle::make('is_verified')
-                    ->label('Верифицирован'),
-                    
+                    ->label('Верифицирован')
+                    ->visible($perm('is_verified')['visible'])
+                    ->disabled($perm('is_verified')['disabled']),
+
                 Toggle::make('is_bot')
-                    ->label('Бот'),
-                    
+                    ->label('Бот')
+                    ->visible($perm('is_bot')['visible'])
+                    ->disabled($perm('is_bot')['disabled']),
+
                 Select::make('locale')
                     ->label('Язык')
                     ->options([
                         'ru' => 'Русский',
                         'en' => 'English',
                     ])
-                    ->default('ru'),
+                    ->default('ru')
+                    ->visible($perm('locale')['visible'])
+                    ->disabled($perm('locale')['disabled']),
 
                 Textarea::make('admin_comment')
                     ->label('Комментарий админа')
                     ->helperText('Внутренние заметки по клиенту, не показываются пользователю')
                     ->rows(4)
                     ->columnSpanFull()
-                    ->nullable(),
+                    ->nullable()
+                    ->visible($perm('admin_comment')['visible'])
+                    ->disabled($perm('admin_comment')['disabled']),
 
                 \Filament\Schemas\Components\Section::make('Подкрутка')
+                    ->visible(fn () => Auth::user()?->can('SectionRigging:Client'))
                     ->description('Особый режим открытия кейсов — клиент исключается из основной экономики')
                     ->schema([
                         Forms\Components\Toggle::make('rigging_enabled')
@@ -169,6 +189,7 @@ class ClientResource extends Resource
                                 $sum = collect($get('riggingPresets') ?? [])->sum(fn ($p) => (float) ($p['chance_percent'] ?? 0));
                                 $rounded = round($sum, 2);
                                 $color = abs($rounded - 100) < 0.001 ? 'success' : 'danger';
+
                                 return new \Illuminate\Support\HtmlString(
                                     'Сумма шансов: <span class="fi-color-'.$color.'" style="font-weight:600">'.$rounded.'%</span> (должна быть ровно 100%)'
                                 );
@@ -201,7 +222,8 @@ class ClientResource extends Resource
                             ->label('Статус')
                             ->content(fn (?Client $record): string => $record?->referral ? ($record->referral->is_active ? 'Активен' : 'Неактивен') : 'Нет'),
                     ])
-                    ->visibleOn('edit')
+                    ->visible(fn ($livewire) => Auth::user()?->can('SectionPartner:Client')
+                        && method_exists($livewire, 'getRecord') && $livewire->getRecord() !== null)
                     ->collapsed(),
             ]);
     }
@@ -214,22 +236,22 @@ class ClientResource extends Resource
                     ->label('Аватар')
                     ->circular()
                     ->size(50),
-                    
+
                 TextColumn::make('name')
                     ->label('Имя')
                     ->searchable()
                     ->sortable(),
-                    
+
                 TextColumn::make('email')
                     ->label('Email')
                     ->searchable()
                     ->sortable(),
-                    
+
                 TextColumn::make('steam_id')
                     ->label('Steam ID')
                     ->searchable()
                     ->sortable(),
-                    
+
                 TextColumn::make('balance')
                     ->label('Баланс')
                     ->money('RUB')
@@ -240,7 +262,7 @@ class ClientResource extends Resource
                     ->money('RUB')
                     ->sortable()
                     ->color('success'),
-                    
+
                 IconColumn::make('is_verified')
                     ->label('Верифицирован')
                     ->boolean(),
@@ -253,10 +275,10 @@ class ClientResource extends Resource
             ->filters([
                 TernaryFilter::make('is_verified')
                     ->label('Верификация'),
-                    
+
                 TernaryFilter::make('is_bot')
                     ->label('Боты'),
-                    
+
                 SelectFilter::make('locale')
                     ->label('Язык')
                     ->options([
@@ -269,6 +291,7 @@ class ClientResource extends Resource
                     ->label('')
                     ->tooltip('Изменить'),
                 Action::make('topup_balance')
+                    ->visible(fn () => Auth::user()?->can('TopupBalance:Client'))
                     ->label('')
                     ->tooltip('Пополнить баланс')
                     ->icon('heroicon-o-currency-dollar')
@@ -302,7 +325,7 @@ class ClientResource extends Resource
                                 'metadata' => [
                                     'admin_topup' => true,
                                     'admin_id' => Auth::id(),
-                                ]
+                                ],
                             ]);
 
                             Notification::make()
@@ -323,6 +346,7 @@ class ClientResource extends Resource
                     ->modalHeading('Пополнить баланс клиента')
                     ->modalDescription(fn ($record) => "Вы собираетесь пополнить баланс клиента {$record->name}"),
                 Action::make('withdraw_balance')
+                    ->visible(fn () => Auth::user()?->can('WithdrawBalance:Client'))
                     ->label('')
                     ->tooltip('Снять с баланса')
                     ->icon('heroicon-o-currency-dollar')
@@ -350,6 +374,7 @@ class ClientResource extends Resource
                                     ->body("На балансе клиента {$record->name} недостаточно средств. Текущий баланс: {$record->balance} ₽")
                                     ->warning()
                                     ->send();
+
                                 return;
                             }
 
@@ -366,7 +391,7 @@ class ClientResource extends Resource
                                 'metadata' => [
                                     'admin_withdrawal' => true,
                                     'admin_id' => Auth::id(),
-                                ]
+                                ],
                             ]);
 
                             Notification::make()
@@ -387,6 +412,7 @@ class ClientResource extends Resource
                     ->modalHeading('Снять с баланса клиента')
                     ->modalDescription(fn ($record) => "Вы собираетесь списать средства с баланса клиента {$record->name}. Текущий баланс: {$record->balance} ₽"),
                 Action::make('topup_bonus')
+                    ->visible(fn () => Auth::user()?->can('TopupBonus:Client'))
                     ->label('')
                     ->tooltip('Пополнить бонусный баланс')
                     ->icon('heroicon-o-gift')
@@ -432,6 +458,7 @@ class ClientResource extends Resource
                     ->modalHeading('Начислить бонус')
                     ->modalDescription(fn ($record) => "Начисление бонуса клиенту {$record->name}. Текущий бонусный баланс: {$record->bonus_balance} ₽"),
                 Action::make('withdraw_bonus')
+                    ->visible(fn () => Auth::user()?->can('WithdrawBonus:Client'))
                     ->label('')
                     ->tooltip('Снять бонусы')
                     ->icon('heroicon-o-gift')
@@ -458,6 +485,7 @@ class ClientResource extends Resource
                                     ->body("Бонусный баланс клиента: {$record->bonus_balance} ₽")
                                     ->warning()
                                     ->send();
+
                                 return;
                             }
 
@@ -511,6 +539,21 @@ class ClientResource extends Resource
     }
 
     /**
+     * Permissions для поля формы клиента (триада View/Edit/None).
+     * Возвращает ['visible' => Closure, 'disabled' => Closure] для применения к компоненту.
+     */
+    protected static function applyFieldPermission(string $field): array
+    {
+        // 'admin_comment' -> 'AdminComment'
+        $studly = \Illuminate\Support\Str::studly($field);
+
+        return [
+            'visible' => fn () => (bool) Auth::user()?->can("ViewField{$studly}:Client"),
+            'disabled' => fn () => ! (bool) Auth::user()?->can("UpdateField{$studly}:Client"),
+        ];
+    }
+
+    /**
      * Создать action блокировки/разблокировки одного из аспектов клиента.
      * $kind: 'withdraw' | 'purchases' | 'balance'
      */
@@ -526,10 +569,18 @@ class ClientResource extends Resource
             'balance' => 'Полная заморозка операций с балансом: ни пополнения, ни покупки, ни вывод, ни вывод средств — ничего недоступно. Включает в себя withdraw- и purchases-блокировки.',
         ];
 
+        $permMap = [
+            'withdraw' => 'BlockWithdraw:Client',
+            'purchases' => 'BlockItems:Client',
+            'balance' => 'BlockBalance:Client',
+        ];
+
         return Action::make('block_'.$kind)
+            ->visible(fn () => Auth::user()?->can($permMap[$kind] ?? 'BlockWithdraw:Client'))
             ->tooltip($tooltips[$kind] ?? null)
             ->label(function ($record) use ($untilCol, $titleShort) {
                 $until = $record?->{$untilCol};
+
                 return $until && $until->isFuture()
                     ? 'Разблокировать: '.$titleShort
                     : 'Заблокировать: '.$titleShort;

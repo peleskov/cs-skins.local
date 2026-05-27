@@ -1,3 +1,11 @@
+.inventory-filters {
+    .badge {
+        background: rgba(var(--theme-color), 1);
+        color: rgba(var(--white), 1);
+        font-weight: 400;
+    }
+}
+
 .inventory-items {
     .inventory-item {
         padding: 8px;

@@ -56,11 +56,33 @@
 					</button>
 				</li>
 			</ul>
-			<div class="search-box mb-4">
+			<div class="search-box mb-3">
 				<div class="form-input">
 					<input type="text" class="form-control search" placeholder="Поиск по названию..."
 						v-model="searchQuery">
 				</div>
+			</div>
+			<div class="d-flex flex-wrap gap-2 mb-4 inventory-filters">
+				<div v-for="group in filterGroups" :key="group.key" class="dropdown">
+					<button class="btn theme-outline btn-sm dropdown-toggle" type="button"
+						data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"
+						:disabled="group.options.length === 0">
+						{{ group.label }}
+						<span v-if="filters[group.key].length" class="badge ms-1">{{ filters[group.key].length }}</span>
+					</button>
+					<ul class="dropdown-menu p-2" style="max-height: 320px; overflow-y: auto; min-width: 220px;">
+						<li v-for="opt in group.options" :key="opt.value">
+							<label class="dropdown-item d-flex align-items-center mb-0" style="cursor: pointer;">
+								<input type="checkbox" class="form-check-input me-2 mt-0" :value="opt.value"
+									v-model="filters[group.key]">
+								<span>{{ opt.label }}</span>
+							</label>
+						</li>
+					</ul>
+				</div>
+				<button v-if="hasActiveFilters" type="button" class="btn theme-outline btn-sm" @click="resetFilters">
+					<i class="ri-close-line me-1"></i>Сбросить
+				</button>
 			</div>
 			<div class="tab-content product-details-content" id="inventoryTabContent">
 				<!-- Объединенный компонент для обеих вкладок -->
@@ -377,15 +399,51 @@ export default {
 			extensionChecked: false,
 			searchQuery: '',
 			currentPage: 1,
-			perPage: 25
+			perPage: 25,
+			filters: {
+				types: [],
+				wearConditions: [],
+				rarities: [],
+				phases: []
+			}
 		}
 	},
 	computed: {
 		availableItems() {
-			return this.items.filter(item => item.tradable && item.marketable && !item.is_listed && this.matchesSearch(item));
+			return this.items.filter(item => item.tradable && item.marketable && !item.is_listed && this.matchesAllFilters(item));
 		},
 		listedItems() {
-			return this.items.filter(item => item.is_listed && this.matchesSearch(item));
+			return this.items.filter(item => item.is_listed && this.matchesAllFilters(item));
+		},
+		categoryOptions() { return this.buildTagOptions('type'); },
+		qualityOptions() { return this.buildTagOptions('exterior'); },
+		rarityOptions() { return this.buildTagOptions('rarity'); },
+		phaseOptions() {
+			const all = [
+				{ value: 'phase1', label: 'Phase 1', keywords: ['Phase 1'] },
+				{ value: 'phase2', label: 'Phase 2', keywords: ['Phase 2'] },
+				{ value: 'phase3', label: 'Phase 3', keywords: ['Phase 3'] },
+				{ value: 'phase4', label: 'Phase 4', keywords: ['Phase 4'] },
+				{ value: 'ruby', label: 'Ruby', keywords: ['Ruby'] },
+				{ value: 'sapphire', label: 'Sapphire', keywords: ['Sapphire'] },
+				{ value: 'blackpearl', label: 'Black Pearl', keywords: ['Black Pearl'] },
+				{ value: 'emerald', label: 'Emerald', keywords: ['Emerald'] }
+			];
+			return all.filter(opt =>
+				this.items.some(item => opt.keywords.some(k => (item.market_hash_name || '').includes(k)))
+			);
+		},
+		filterGroups() {
+			return [
+				{ key: 'types', label: 'Категория', options: this.categoryOptions },
+				{ key: 'wearConditions', label: 'Качество', options: this.qualityOptions },
+				{ key: 'rarities', label: 'Раритетность', options: this.rarityOptions },
+				{ key: 'phases', label: 'Фазы', options: this.phaseOptions }
+			];
+		},
+		hasActiveFilters() {
+			return this.filters.types.length || this.filters.wearConditions.length
+				|| this.filters.rarities.length || this.filters.phases.length;
 		},
 		currentItems() {
 			return this.activeInventoryTab === 'available' ? this.availableItems : this.listedItems;
@@ -526,6 +584,50 @@ export default {
 			const nameRu = (item.item?.name_ru || '').toLowerCase();
 			const nameEn = (item.market_hash_name || '').toLowerCase();
 			return nameRu.includes(query) || nameEn.includes(query);
+		},
+
+		tagValue(item, category) {
+			return (item.structured_tags || []).find(t => t.category_code === category)?.normalized_value;
+		},
+
+		matchesAllFilters(item) {
+			if (!this.matchesSearch(item)) return false;
+			if (this.filters.types.length && !this.filters.types.includes(this.tagValue(item, 'type'))) return false;
+			if (this.filters.wearConditions.length && !this.filters.wearConditions.includes(this.tagValue(item, 'exterior'))) return false;
+			if (this.filters.rarities.length && !this.filters.rarities.includes(this.tagValue(item, 'rarity'))) return false;
+			if (this.filters.phases.length && !this.filters.phases.some(p => this.itemHasPhase(item, p))) return false;
+			return true;
+		},
+
+		itemHasPhase(item, phaseValue) {
+			const map = {
+				phase1: 'Phase 1', phase2: 'Phase 2', phase3: 'Phase 3', phase4: 'Phase 4',
+				ruby: 'Ruby', sapphire: 'Sapphire', blackpearl: 'Black Pearl', emerald: 'Emerald'
+			};
+			const keyword = map[phaseValue];
+			return keyword ? (item.market_hash_name || '').includes(keyword) : false;
+		},
+
+		buildTagOptions(category) {
+			const map = new Map();
+			this.items.forEach(item => {
+				(item.structured_tags || []).forEach(tag => {
+					if (tag.category_code === category && tag.normalized_value) {
+						if (!map.has(tag.normalized_value)) {
+							map.set(tag.normalized_value, tag.display_name || tag.normalized_value);
+						}
+					}
+				});
+			});
+			return Array.from(map, ([value, label]) => ({ value, label }))
+				.sort((a, b) => a.label.localeCompare(b.label, 'ru'));
+		},
+
+		resetFilters() {
+			this.filters.types = [];
+			this.filters.wearConditions = [];
+			this.filters.rarities = [];
+			this.filters.phases = [];
 		},
 
 		setActiveInventoryTab(tab) {
@@ -831,6 +933,12 @@ export default {
 	watch: {
 		searchQuery() {
 			this.currentPage = 1;
+		},
+		filters: {
+			handler() {
+				this.currentPage = 1;
+			},
+			deep: true
 		},
 		activeInventoryTab: {
 			handler(newTab) {

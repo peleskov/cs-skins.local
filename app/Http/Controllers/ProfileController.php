@@ -52,6 +52,7 @@ class ProfileController extends Controller
         ];
 
         $withdrawSettings = [
+            'enabled' => (bool) \App\Models\SiteSetting::get('withdraw_enabled', true),
             'minimum_amount' => (float) \App\Models\SiteSetting::get('minimum_withdraw_amount', 100),
         ];
 
@@ -661,6 +662,14 @@ class ProfileController extends Controller
     public function withdrawBalance(\Illuminate\Http\Request $request): JsonResponse
     {
         $client = $this->getAuthenticatedClient();
+
+        // Глобальный тумблер вывода
+        if (! (bool) SiteSetting::get('withdraw_enabled', true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Вывод средств временно не доступен. Ведутся тех работы. Вывод возможен через скины.',
+            ], 403);
+        }
 
         // Блокировки
         if ($client->isWithdrawBlocked()) {

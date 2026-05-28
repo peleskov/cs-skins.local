@@ -30,6 +30,7 @@ class SiteSettingsSeeder extends Seeder
             ['key' => 'card_payment_enabled', 'value' => '1', 'type' => SiteSetting::TYPE_BOOLEAN, 'description' => 'Включить/выключить возможность пополнения баланса с помощью карты'],
             ['key' => 'test_payment_enabled', 'value' => '1', 'type' => SiteSetting::TYPE_BOOLEAN, 'description' => 'Включить/выключить возможность пополнения баланса без оплаты'],
             ['key' => 'usd_course', 'value' => '100', 'type' => SiteSetting::TYPE_NUMBER, 'description' => 'Курс 1 рубль = XXX USD'],
+            ['key' => 'withdraw_enabled', 'value' => '1', 'type' => SiteSetting::TYPE_BOOLEAN, 'description' => 'Глобальный тумблер вывода средств'],
 
             // Инвентарь
             ['key' => 'inventory_sync_cooldown_minutes', 'value' => '1', 'type' => SiteSetting::TYPE_NUMBER, 'description' => 'Время ожидания между синхронизациями инвентаря (в минутах)'],

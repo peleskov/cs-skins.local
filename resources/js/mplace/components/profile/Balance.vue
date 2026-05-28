@@ -548,7 +548,12 @@
 						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 					</div>
 					<div class="modal-body">
-						<div v-if="isWithdrawBlocked" class="py-4 text-center">
+						<div v-if="isWithdrawGloballyDisabled" class="py-4 text-center">
+								<i class="ri-tools-line display-4 text-warning mb-3"></i>
+								<h4>Вывод временно недоступен</h4>
+								<p class="text-muted" style="white-space: pre-wrap;">Вывод средств временно не доступен. Ведутся тех работы. Вывод возможен через скины.</p>
+							</div>
+							<div v-else-if="isWithdrawBlocked" class="py-4 text-center">
 							<i class="ri-lock-line display-4 text-danger mb-3"></i>
 							<h4>Вывод заблокирован</h4>
 							<p class="text-muted" style="white-space: pre-wrap;">{{ withdrawBlockReason }}</p>
@@ -579,7 +584,7 @@
 							{{ withdrawResultMessage ? 'Закрыть' : 'Отмена' }}
 						</button>
 						<button type="button" class="btn theme-btn"
-							v-if="!isWithdrawBlocked && !withdrawResultMessage"
+							v-if="!isWithdrawGloballyDisabled && !isWithdrawBlocked && !withdrawResultMessage"
 							@click="submitWithdrawBalance"
 							:disabled="withdrawForm.processing || !withdrawForm.amount">
 							<span v-if="withdrawForm.processing" class="spinner-border spinner-border-sm me-1"></span>
@@ -737,6 +742,9 @@ export default {
 	computed: {
 		blockData() {
 			return this.freshBlockData || this.client || {};
+		},
+		isWithdrawGloballyDisabled() {
+			return this.withdrawSettings?.enabled === false;
 		},
 		isWithdrawBlocked() {
 			const c = this.blockData;

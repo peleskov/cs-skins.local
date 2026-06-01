@@ -7,10 +7,10 @@
                     <img :src="logoIco" alt="logo" class="d-lg-none">
                 </a>
             </div>
-            <div class="col-auto p-0">
+            <div v-if="!isCompact" class="col-auto p-0">
                 <div class="h-100 divider mx-auto"></div>
             </div>
-            <div class="col d-flex align-items-center">
+            <div v-if="!isCompact" class="col d-flex align-items-center">
                 <ul class="navbar-nav flex-row ms-3">
                     <template v-for="(item, key) in mainNavigation" :key="key">
                         <li v-if="!item.auth_required || user" class="nav-item">
@@ -24,34 +24,48 @@
                     <span>{{ formattedOnline }}</span>
                 </div>
             </div>
+            <div v-if="isCompact" class="col"></div>
             <div class="col-auto d-flex align-items-center gap-2 gap-lg-3">
-                <div class="col-auto d-flex gap-2 gap-lg-3">
-                    <LanguageSelector />
-                    <CurrencySelector />
+                <template v-if="!isCompact">
+                    <div class="col-auto d-flex gap-2 gap-lg-3">
+                        <LanguageSelector />
+                        <CurrencySelector />
+                    </div>
+                    <div class="col-auto">
+                        <ul class="list-group list-group-horizontal balances">
+                            <li class="list-group-item d-flex align-items-center gap-1" data-bs-toggle="tooltip"
+                                data-bs-title="Основной баланс. Ваши реальные деньги. Используется, когда бонусные средства закончились.">
+                                <span v-if="isRubleCurrency" class="ico ruble"></span>
+                                <span class="balance-amount"
+                                    v-html="formatPrice(mainBalance, 'RUB', false, true, !isRubleCurrency)"></span>
+                            </li>
+                            <li class="list-group-item">
+                                <span class="divider"></span>
+                            </li>
+                            <li class="list-group-item d-flex align-items-center gap-1" data-bs-toggle="tooltip"
+                                data-bs-title="Бонусный баланс. Виртуальные деньги для открытий кейсов. Пополняются от промокодов. Списывается в первую очередь.">
+                                <span class="ico dollar"></span>
+                                <span class="balance-amount">{{ Number(bonusBalance).toFixed(2) }}</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-auto">
+                        <a :href="routes.profile + '#balance'" class="btn-add_balance"></a>
+                    </div>
+                    <div class="col-auto">
+                        <a :href="routes.caseInventory" class="avatar"
+                            :style="user.avatar_border_color ? { border: '2px solid ' + user.avatar_border_color } : {}">
+                            <img class="img-fluid" :src="user.steam_avatar" alt="profile">
+                        </a>
+                    </div>
+                </template>
+                <div v-else-if="!user" class="col-auto">
+                    <a :href="routes.login" class="btn btn-primary">
+                        <i class="ri-steam-fill me-2"></i>Войти через Steam
+                    </a>
                 </div>
-                <div class="col-auto">
-                    <ul class="list-group list-group-horizontal balances">
-                        <li class="list-group-item d-flex align-items-center gap-1" data-bs-toggle="tooltip"
-                            data-bs-title="Основной баланс. Ваши реальные деньги. Используется, когда бонусные средства закончились.">
-                            <span v-if="isRubleCurrency" class="ico ruble"></span>
-                            <span class="balance-amount"
-                                v-html="formatPrice(mainBalance, 'RUB', false, true, !isRubleCurrency)"></span>
-                        </li>
-                        <li class="list-group-item">
-                            <span class="divider"></span>
-                        </li>
-                        <li class="list-group-item d-flex align-items-center gap-1" data-bs-toggle="tooltip"
-                            data-bs-title="Бонусный баланс. Виртуальные деньги для открытий кейсов. Пополняются от промокодов. Списывается в первую очередь.">
-                            <span class="ico dollar"></span>
-                            <span class="balance-amount">{{ Number(bonusBalance).toFixed(2) }}</span>
-                        </li>
-                    </ul>
-                </div>
-                <div class="col-auto">
-                    <a :href="routes.profile + '#balance'" class="btn-add_balance"></a>
-                </div>
-                <div class="col-auto">
-                    <a :href="routes.caseInventory" class="avatar"
+                <div v-else class="col-auto">
+                    <a :href="routes.profile" class="avatar"
                         :style="user.avatar_border_color ? { border: '2px solid ' + user.avatar_border_color } : {}">
                         <img class="img-fluid" :src="user.steam_avatar" alt="profile">
                     </a>
@@ -96,6 +110,10 @@ export default {
         online: {
             type: Number,
             default: null
+        },
+        compact: {
+            type: [Boolean, Number, String],
+            default: false
         }
     },
     data() {
@@ -111,6 +129,9 @@ export default {
         }
     },
     computed: {
+        isCompact() {
+            return this.compact === true || this.compact === 1 || this.compact === '1';
+        },
         formattedOnline() {
             return (this.currentOnline || 0).toLocaleString('en-US');
         },

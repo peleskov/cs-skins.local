@@ -48,7 +48,12 @@
 				</button>
 			</div>
 			<div class="col-md-4">
-				<div class="w-100 h-100 card card-upgrade-skins indicator">
+				<div class="w-100 h-100 card card-upgrade-skins indicator position-relative">
+					<button type="button" class="case-sound-toggle" @click="toggleSound"
+						:title="soundMuted ? 'Включить звук' : 'Выключить звук'"
+						:aria-label="soundMuted ? 'Включить звук' : 'Выключить звук'">
+						<i :class="soundMuted ? 'ri-volume-mute-line' : 'ri-volume-up-line'"></i>
+					</button>
 					<div class="card-body d-flex flex-column align-items-center justify-content-center">
 						<div class="chance-indicator" :class="resultStatus ? `result-${resultStatus}` : ''">
 							<svg class="chance-ring" viewBox="0 0 200 200" fill="none"
@@ -312,6 +317,9 @@ export default {
 
 	data() {
 		return {
+			// Звук
+			soundMuted: (typeof localStorage !== 'undefined' && localStorage.getItem('cs_upgrade_sound_muted') === '1'),
+
 			// Инвентарь и выбранные предметы
 			availableItems: [],
 			selectedGiveItems: [],
@@ -510,6 +518,11 @@ export default {
 	},
 
 	methods: {
+		toggleSound() {
+			this.soundMuted = !this.soundMuted;
+			try { localStorage.setItem('cs_upgrade_sound_muted', this.soundMuted ? '1' : '0'); } catch (e) { }
+		},
+
 		// ==================== ПРЕДМЕТЫ ====================
 		cycleGive(dir) {
 			const n = this.selectedGiveItems.length;
@@ -645,9 +658,11 @@ export default {
 				const finalAngle = this.calcFinalAngle(is_win, roll_value, chance);
 
 				// Звук результата параллельно с анимацией
-				const snd = upgradeSounds[is_win ? 'success' : 'error'];
-				snd.currentTime = 0;
-				snd.play().catch(() => { });
+				if (!this.soundMuted) {
+					const snd = upgradeSounds[is_win ? 'success' : 'error'];
+					snd.currentTime = 0;
+					snd.play().catch(() => { });
+				}
 
 				// Запускаем анимацию
 				await this.runPointerAnimation(finalAngle);

@@ -1,6 +1,6 @@
 <template>
 	<div class="modal fade" :id="modalId" tabindex="-1" aria-hidden="true">
-		<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-dialog modal-dialog-centered" :class="{ 'modal-lg': sbp.active }">
 			<div class="modal-content">
 				<div class="modal-header">
 					<h5 class="modal-title">
@@ -9,7 +9,21 @@
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 				</div>
 				<div class="modal-body">
-					<div v-if="!form.processing" class="payment-form">
+					<div v-if="sbp.active">
+						<iframe v-if="sbp.qrPayload" :src="sbp.qrPayload" style="width:100%;height:700px;border:none;border-radius:8px;"></iframe>
+						<div class="text-center mt-3">
+							<div class="text-muted small mb-2">
+								<span v-if="sbp.timeLeft > 0">Осталось времени: {{ formatTimeLeft(sbp.timeLeft) }}</span>
+								<span v-else class="text-danger">Срок действия QR-кода истёк</span>
+							</div>
+							<div class="d-flex align-items-center justify-content-center gap-2 text-muted small">
+								<span class="spinner-border spinner-border-sm"></span>
+								Ожидание оплаты…
+							</div>
+							<div v-if="sbp.error" class="alert alert-danger mt-3 mb-0">{{ sbp.error }}</div>
+						</div>
+					</div>
+					<div v-else-if="!form.processing" class="payment-form">
 						<div v-if="message" class="alert alert-warning mb-3">
 							<i class="ri-information-line me-2"></i>{{ message }}
 						</div>
@@ -91,7 +105,10 @@
 						<p class="text-muted">Пожалуйста, подождите...</p>
 					</div>
 				</div>
-				<div class="modal-footer" v-if="!form.processing">
+				<div class="modal-footer" v-if="sbp.active">
+					<button type="button" class="btn theme-outline w-100" @click="cancelSbp">Закрыть</button>
+				</div>
+				<div class="modal-footer" v-else-if="!form.processing">
 					<div class="w-100 d-flex gap-2">
 						<button type="button" class="btn theme-outline" data-bs-dismiss="modal">Отмена</button>
 						<button type="button" class="btn theme-btn flex-fill" @click="createPayment"
@@ -118,6 +135,7 @@ export default {
 				minimum_amount: 100,
 				maximum_amount: 50000,
 				card_payment_enabled: true,
+				sbp_payment_enabled: false,
 				test_payment_enabled: false
 			})
 		},
@@ -137,7 +155,17 @@ export default {
 				processing: false,
 				error: null
 			},
-			promocodeDebounceTimer: null
+			promocodeDebounceTimer: null,
+			sbp: {
+				active: false,
+				paymentId: null,
+				qrPayload: null,
+				expiresAt: null,
+				timeLeft: 0,
+				pollTimer: null,
+				countdownTimer: null,
+				error: null
+			}
 		};
 	},
 	computed: {
@@ -150,6 +178,7 @@ export default {
 		paymentMethods() {
 			const methods = [];
 			if (this.depositSettings.card_payment_enabled) methods.push({ value: 'card', label: 'Банковская карта', icon: 'ri-bank-card-line' });
+			if (this.depositSettings.sbp_payment_enabled) methods.push({ value: 'sbp', label: 'СБП', icon: 'ri-qr-code-line' });
 			if (this.depositSettings.test_payment_enabled) methods.push({ value: 'test', label: 'Тестовый платёж', icon: 'ri-bug-line' });
 			return methods;
 		}
@@ -181,6 +210,7 @@ export default {
 		},
 		reset() {
 			if (this.promocodeDebounceTimer) clearTimeout(this.promocodeDebounceTimer);
+			this.stopSbpTimers();
 			this.form.amount = '';
 			this.form.payment_type = 'card';
 			this.form.promocode = '';
@@ -189,6 +219,60 @@ export default {
 			this.form.error = null;
 			this.form.processing = false;
 			this.message = null;
+			this.sbp = {
+				active: false, paymentId: null, qrPayload: null,
+				expiresAt: null, timeLeft: 0, pollTimer: null, countdownTimer: null, error: null
+			};
+		},
+		stopSbpTimers() {
+			if (this.sbp?.pollTimer) { clearInterval(this.sbp.pollTimer); this.sbp.pollTimer = null; }
+			if (this.sbp?.countdownTimer) { clearInterval(this.sbp.countdownTimer); this.sbp.countdownTimer = null; }
+		},
+		cancelSbp() {
+			this.stopSbpTimers();
+			this.close();
+		},
+		formatTimeLeft(sec) {
+			const m = Math.floor(sec / 60).toString().padStart(2, '0');
+			const s = Math.floor(sec % 60).toString().padStart(2, '0');
+			return `${m}:${s}`;
+		},
+		startSbpFlow(data) {
+			const expiresAt = data.expires_at ? new Date(data.expires_at).getTime() : (Date.now() + 15 * 60 * 1000);
+			this.sbp = {
+				active: true,
+				paymentId: data.payment_id,
+				qrPayload: data.qr_payload || null,
+				expiresAt,
+				timeLeft: Math.max(0, Math.floor((expiresAt - Date.now()) / 1000)),
+				pollTimer: null,
+				countdownTimer: null,
+				error: null
+			};
+			this.sbp.countdownTimer = setInterval(() => {
+				this.sbp.timeLeft = Math.max(0, Math.floor((this.sbp.expiresAt - Date.now()) / 1000));
+				if (this.sbp.timeLeft === 0) this.stopSbpTimers();
+			}, 1000);
+			this.sbp.pollTimer = setInterval(() => this.pollSbpStatus(), 3000);
+		},
+		async pollSbpStatus() {
+			if (!this.sbp.paymentId) return;
+			try {
+				const res = await axios.post(`/api/deposit/check-status/${this.sbp.paymentId}`);
+				const status = res.data?.payment?.status;
+				if (status === 'paid') {
+					const amount = res.data.payment.amount;
+					this.stopSbpTimers();
+					this.close();
+					this.$emit('success', amount);
+					window.toast?.success('Платёж успешно завершён');
+				} else if (status === 'failed' || status === 'cancelled' || status === 'expired') {
+					this.stopSbpTimers();
+					this.sbp.error = 'Платёж не завершён. Попробуйте снова.';
+				}
+			} catch (e) {
+				// игнорируем разовые сбои поллинга
+			}
 		},
 		debouncedValidatePromocode() {
 			if (this.promocodeDebounceTimer) clearTimeout(this.promocodeDebounceTimer);
@@ -239,11 +323,14 @@ export default {
 
 				const res = await axios.post('/api/deposit/payment-form', requestData);
 				if (res.data.success) {
-					this.close();
 					if (res.data.status === 'completed') {
+						this.close();
 						this.$emit('success', res.data.amount);
 						window.toast?.success(res.data.message || 'Платеж успешно завершён');
+					} else if (this.form.payment_type === 'sbp' && res.data.qr_payload) {
+						this.startSbpFlow(res.data);
 					} else {
+						this.close();
 						this.submitPaymentForm(res.data.payment_form_url, successUrl, failUrl);
 					}
 				} else {

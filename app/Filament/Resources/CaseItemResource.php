@@ -122,7 +122,10 @@ class CaseItemResource extends Resource
                 TextColumn::make('client.name')
                     ->label('Владелец')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->url(fn ($record) => $record->client_id
+                        ? route('filament.admin.resources.clients.edit', ['record' => $record->client_id])
+                        : null),
                 TextColumn::make('float_value')
                     ->label('Float')
                     ->formatStateUsing(fn ($state) => number_format($state ?? 0, 4))

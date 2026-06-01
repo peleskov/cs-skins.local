@@ -44,6 +44,11 @@ class PaymentService
                 return $this->createTestPayment($client, $amount, $promocodeId);
             }
 
+            // СБП — отдельный поток (QR + поллинг)
+            if ($paymentType === 'sbp') {
+                return $this->createSbpDeposit($client, $amount, $promocodeId);
+            }
+
             // Check if card payment is enabled
             if (!$this->isPaymentTypeEnabled('card')) {
                 return [
@@ -428,12 +433,188 @@ class PaymentService
     }
 
     /**
+     * Создать SBP-платёж на пополнение баланса
+     */
+    private function createSbpDeposit(Client $client, float $amount, ?int $promocodeId = null): array
+    {
+        try {
+            if (!$this->isPaymentTypeEnabled('sbp')) {
+                return [
+                    'success' => false,
+                    'message' => 'Пополнение баланса через СБП временно недоступно',
+                ];
+            }
+
+            $limits = $this->getLimitDepositAmount();
+            if ($amount < $limits['min']) {
+                return ['success' => false, 'message' => "Минимальная сумма пополнения: {$limits['min']} руб."];
+            }
+            if ($amount > $limits['max']) {
+                return ['success' => false, 'message' => "Максимальная сумма пополнения: {$limits['max']} руб."];
+            }
+
+            $orderId = Payment::generateOrderId();
+            $lifetimeMinutes = (int) config('payment.form_lifetime_minutes', 30);
+
+            // Создаём Payment ДО запросов к эквайрингу, иначе ранние callback'и
+            // (CREATED / QRCDATA_CREATED) прилетают раньше, чем мы успеем записать в БД.
+            $payment = Payment::create([
+                'client_id' => $client->id,
+                'order_id' => $orderId,
+                'merchant_order_id' => $orderId,
+                'amount' => $amount,
+                'currency' => config('payment.default_currency', 'RUB'),
+                'status' => Payment::STATUS_CREATED,
+                'payment_type' => Payment::TYPE_SBP,
+                'promocode_id' => $promocodeId,
+                'expires_at' => now()->addMinutes($lifetimeMinutes),
+            ]);
+
+            $http = Http::timeout(30)
+                ->withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'x-api-key' => $this->apiKey,
+                ]);
+
+            $createResponse = $http->post($this->baseUrl . '/payments/create', [
+                'MerchantOrderId' => $orderId,
+                'Currency' => config('payment.default_currency', 'RUB'),
+                'Amount' => (int) round($amount * 100),
+                'Type' => 'PayIn',
+                'PaymentTypes' => ['IPS'],
+                'CallbackUrl' => route('webhook.payment'),
+                'LifeTime' => $lifetimeMinutes * 60,
+                'IsForm' => false,
+            ]);
+
+            if ($createResponse->failed()) {
+                Log::error('SBP order creation failed', [
+                    'order_id' => $orderId,
+                    'status' => $createResponse->status(),
+                    'body' => $createResponse->body(),
+                ]);
+                $payment->markAsFailed();
+                return ['success' => false, 'message' => 'Ошибка создания заказа СБП'];
+            }
+
+            $createData = $createResponse->json();
+            if (!($createData['Response']['Success'] ?? false)) {
+                Log::error('SBP acquiring returned error', ['response' => $createData]);
+                $payment->markAsFailed();
+                return ['success' => false, 'message' => 'Не удалось создать платёж СБП. Попробуйте позже.'];
+            }
+
+            $acquiringOrderId = $createData['Order']['OrderId'] ?? null;
+            if (!$acquiringOrderId) {
+                Log::error('SBP: no OrderId in response', ['response' => $createData]);
+                $payment->markAsFailed();
+                return ['success' => false, 'message' => 'Не получен OrderId от эквайринга'];
+            }
+
+            $qrResponse = $http->post($this->baseUrl . '/payments/ips/qrcData', [
+                'QrcType' => '02',
+                'TemplateVersion' => '01',
+                'QrTtl' => (string) $lifetimeMinutes,
+                'OrderId' => $acquiringOrderId,
+            ]);
+
+            if ($qrResponse->failed()) {
+                Log::error('SBP qrcData failed', [
+                    'order_id' => $orderId,
+                    'acquiring_order_id' => $acquiringOrderId,
+                    'status' => $qrResponse->status(),
+                    'body' => $qrResponse->body(),
+                ]);
+                $payment->markAsFailed();
+                return ['success' => false, 'message' => 'Ошибка получения QR-кода'];
+            }
+
+            $qrData = $qrResponse->json();
+            if (!($qrData['Response']['Success'] ?? true)) {
+                Log::error('SBP qrcData error', ['response' => $qrData]);
+                $payment->markAsFailed();
+                return ['success' => false, 'message' => 'Не удалось получить QR-код. Попробуйте позже.'];
+            }
+
+            $qrPayload = $qrData['Qrc']['Payload'] ?? null;
+
+            $payment->update(['merchant_order_id' => $acquiringOrderId]);
+
+            return [
+                'success' => true,
+                'payment_id' => $payment->id,
+                'order_id' => $acquiringOrderId,
+                'amount' => $payment->amount,
+                'qr_payload' => $qrPayload,
+                'expires_at' => $payment->expires_at,
+            ];
+        } catch (Exception $e) {
+            Log::error('SBP deposit creation exception', [
+                'client_id' => $client->id,
+                'amount' => $amount,
+                'error' => $e->getMessage(),
+            ]);
+            if (isset($payment) && $payment->exists && !$payment->isPaid()) {
+                $payment->markAsFailed();
+            }
+            return ['success' => false, 'message' => 'Ошибка создания платежа СБП'];
+        }
+    }
+
+    /**
+     * Проверить статус SBP-платежа в эквайринге
+     */
+    private function checkSbpStatus(Payment $payment): bool
+    {
+        try {
+            $response = Http::timeout(30)
+                ->withBasicAuth($this->username, $this->password)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'x-api-key' => $this->apiKey,
+                ])->post($this->baseUrl . '/payments/get', [
+                    'OrderId' => $payment->merchant_order_id,
+                ]);
+
+            if (!$response->successful()) {
+                Log::error('SBP status check failed', [
+                    'payment_id' => $payment->id,
+                    'status' => $response->status(),
+                ]);
+                return false;
+            }
+
+            $status = $response->json('Order.Status');
+
+            if (in_array($status, ['CHARGED', 'IPS_ACCEPTED'])) {
+                $this->completePurchase($payment);
+                return true;
+            } elseif (in_array($status, ['DECLINED', 'EXPIRED', 'CHARGE_DECLINED'])) {
+                $payment->markAsFailed();
+                return true;
+            }
+
+            return false;
+        } catch (Exception $e) {
+            Log::error('SBP status check exception', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
      * Check if payment type is enabled
      */
     private function isPaymentTypeEnabled(string $paymentType): bool
     {
         $settingKey = match ($paymentType) {
             'card' => 'card_payment_enabled',
+            'sbp' => 'sbp_payment_enabled',
             default => null,
         };
 
@@ -647,6 +828,10 @@ class PaymentService
     {
         if (!$payment->order_id || $payment->isPaid()) {
             return false;
+        }
+
+        if ($payment->payment_type === Payment::TYPE_SBP) {
+            return $this->checkSbpStatus($payment);
         }
 
         try {

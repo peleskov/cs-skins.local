@@ -28,6 +28,7 @@ class SiteSettingsSeeder extends Seeder
             ['key' => 'minimum_deposit_amount', 'value' => '1', 'type' => SiteSetting::TYPE_NUMBER, 'description' => 'Минимальная сумма пополнения баланса в рублях'],
             ['key' => 'maximum_deposit_amount', 'value' => '50000', 'type' => SiteSetting::TYPE_NUMBER, 'description' => 'Максимальная сумма пополнения баланса в рублях'],
             ['key' => 'card_payment_enabled', 'value' => '1', 'type' => SiteSetting::TYPE_BOOLEAN, 'description' => 'Включить/выключить возможность пополнения баланса с помощью карты'],
+            ['key' => 'sbp_payment_enabled', 'value' => '0', 'type' => SiteSetting::TYPE_BOOLEAN, 'description' => 'Включить/выключить возможность пополнения баланса через СБП'],
             ['key' => 'test_payment_enabled', 'value' => '1', 'type' => SiteSetting::TYPE_BOOLEAN, 'description' => 'Включить/выключить возможность пополнения баланса без оплаты'],
             ['key' => 'usd_course', 'value' => '100', 'type' => SiteSetting::TYPE_NUMBER, 'description' => 'Курс 1 рубль = XXX USD'],
             ['key' => 'withdraw_enabled', 'value' => '1', 'type' => SiteSetting::TYPE_BOOLEAN, 'description' => 'Глобальный тумблер вывода средств'],

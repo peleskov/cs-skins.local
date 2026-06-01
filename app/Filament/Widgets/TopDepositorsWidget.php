@@ -21,7 +21,8 @@ class TopDepositorsWidget extends BaseWidget
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Клиент')
-                    ->searchable(),
+                    ->searchable()
+                    ->url(fn ($record) => route('filament.admin.resources.clients.edit', ['record' => $record->id])),
                 Tables\Columns\TextColumn::make('deposits_count')
                     ->label('Платежей')
                     ->sortable()

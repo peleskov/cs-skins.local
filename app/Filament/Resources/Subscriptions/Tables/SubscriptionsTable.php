@@ -24,7 +24,10 @@ class SubscriptionsTable
                 TextColumn::make('client.name')
                     ->label('Клиент')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->url(fn ($record) => $record->client_id
+                        ? route('filament.admin.resources.clients.edit', ['record' => $record->client_id])
+                        : null),
                 TextColumn::make('client.steam_id')
                     ->label('Steam ID')
                     ->searchable()

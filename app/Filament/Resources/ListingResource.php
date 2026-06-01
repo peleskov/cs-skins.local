@@ -130,7 +130,10 @@ class ListingResource extends Resource
                     ->label('Продавец')
                     ->searchable()
                     ->badge()
-                    ->color(fn (Listing $record): string => $record->seller->isBot() ? 'warning' : 'primary'),
+                    ->color(fn (Listing $record): string => $record->seller->isBot() ? 'warning' : 'primary')
+                    ->url(fn (Listing $record) => $record->seller_id
+                        ? route('filament.admin.resources.clients.edit', ['record' => $record->seller_id])
+                        : null),
 
                 TextColumn::make('price')
                     ->label('Цена (₽)')

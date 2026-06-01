@@ -77,7 +77,10 @@ class ChatBanResource extends Resource
                 TextColumn::make('client.name')
                     ->label('Пользователь')
                     ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->url(fn ($record) => $record->client_id
+                        ? route('filament.admin.resources.clients.edit', ['record' => $record->client_id])
+                        : null),
 
                 TextColumn::make('banned_until')
                     ->label('Забанен до')

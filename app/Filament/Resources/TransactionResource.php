@@ -115,7 +115,10 @@ class TransactionResource extends Resource
                 TextColumn::make('client.name')
                     ->label('Клиент')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->url(fn ($record) => $record->client_id
+                        ? route('filament.admin.resources.clients.edit', ['record' => $record->client_id])
+                        : null),
 
                 TextColumn::make('order.order_number')
                     ->label('Заказ')

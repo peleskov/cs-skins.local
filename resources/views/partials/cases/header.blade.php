@@ -26,6 +26,7 @@
     }}"
     data-logo-url="{{ asset('images/logo_white.svg') }}?v={{ filemtime(public_path('images/logo_white.svg')) }}"
     data-logo-ico="{{ asset('images/logo_ico.svg') }}?v={{ filemtime(public_path('images/logo_ico.svg')) }}"
-    data-online="{{ app('App\Services\OnlineCounterService')->currentCount() }}">
+    data-online="{{ app('App\Services\OnlineCounterService')->currentCount() }}"
+    data-compact="{{ ($compactHeader ?? false) ? '1' : '0' }}">
 </header>
 <!-- Header Section end -->

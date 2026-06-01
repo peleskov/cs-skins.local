@@ -202,37 +202,37 @@
         }
     }
 
+    .case-sound-toggle {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        z-index: 5;
+        width: 40px;
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.45);
+        color: #fff;
+        font-size: 1.15rem;
+        line-height: 1;
+        cursor: pointer;
+        backdrop-filter: blur(6px);
+        transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+
+        &:hover {
+            color: #ff8d2f;
+            border-color: #ff8d2f;
+            background: rgba(0, 0, 0, 0.65);
+        }
+    }
+
     .case-box {
         overflow: hidden;
         border-radius: 16px;
         background: url('/images/background/bg_case_box.jpg') no-repeat 100% 50% / cover;
-
-        .case-sound-toggle {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            z-index: 5;
-            width: 40px;
-            height: 40px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 50%;
-            background: rgba(0, 0, 0, 0.45);
-            color: #fff;
-            font-size: 1.15rem;
-            line-height: 1;
-            cursor: pointer;
-            backdrop-filter: blur(6px);
-            transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
-
-            &:hover {
-                color: #ff8d2f;
-                border-color: #ff8d2f;
-                background: rgba(0, 0, 0, 0.65);
-            }
-        }
 
         .case-box-images {
             min-height: 265px;

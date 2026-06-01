@@ -306,7 +306,7 @@ class DepositController extends Controller
             'success_url' => ['nullable', 'url'],
             'fail_url' => ['nullable', 'url'],
             'promocode' => ['nullable', 'string', 'max:100'],
-            'payment_type' => ['nullable', 'string', 'in:card,test'],
+            'payment_type' => ['nullable', 'string', 'in:card,sbp,test'],
         ], [
             'amount.required' => 'Укажите сумму пополнения',
             'amount.numeric' => 'Сумма должна быть числом',

@@ -240,29 +240,6 @@
 									</div>
 								</div>
 
-								<!-- Теги -->
-								<div class="accordion-item">
-									<h2 class="accordion-header">
-										<button class="accordion-button" type="button" data-bs-toggle="collapse"
-											data-bs-target="#collapseTwo">
-											<span class="dark-text">{{ translate('marketplace.tags') }}</span>
-										</button>
-									</h2>
-									<div id="collapseTwo" class="accordion-collapse collapse show">
-										<div class="accordion-body">
-											<ul class="filter-item-list">
-												<li v-for="tag in tags" :key="`${tag.type}-${tag.value}`"
-													class="text-truncate">
-													<a href="#" @click.prevent="toggleTag(tag)"
-														:class="{ active: isTagActive(tag) }"
-														:title="`${translate('tags.values.' + tag.name)} (${tag.count})`">
-														{{ translate('tags.values.' + tag.name) }} ({{ tag.count }})
-													</a>
-												</li>
-											</ul>
-										</div>
-									</div>
-								</div>
 							</div>
 
 							<!-- Кнопка очистки фильтров -->

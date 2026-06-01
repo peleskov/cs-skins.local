@@ -48,6 +48,7 @@ class ProfileController extends Controller
             'minimum_amount' => \App\Models\SiteSetting::get('minimum_deposit_amount', 100),
             'maximum_amount' => \App\Models\SiteSetting::get('maximum_deposit_amount', 50000),
             'card_payment_enabled' => \App\Models\SiteSetting::get('card_payment_enabled', true),
+            'sbp_payment_enabled' => \App\Models\SiteSetting::get('sbp_payment_enabled', false),
             'test_payment_enabled' => \App\Models\SiteSetting::get('test_payment_enabled', false),
         ];
 

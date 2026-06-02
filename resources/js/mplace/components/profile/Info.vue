@@ -124,6 +124,27 @@
 						</a>
 					</div>
 				</div>
+				<div class="w-100 m-trade-url">
+					<div class="w-100 d-flex align-items-center justify-content-between mb-2">
+						<p class="label mb-0">ТОКЕН РАСШИРЕНИЯ</p>
+					</div>
+					<div class="m-trade-url-row">
+						<div class="m-trade-url-input" @click="extensionToken ? copyExtensionToken($event) : null">
+							<span v-if="extensionToken" class="trade-url-text" :data-url="extensionToken">
+								{{ extensionToken }}
+							</span>
+							<span v-else class="placeholder">Не сгенерирован</span>
+						</div>
+						<button v-if="!extensionToken" type="button" class="m-trade-url-btn border-0"
+							@click="generateExtensionToken" :disabled="isGeneratingToken">
+							<i class="ri-pencil-line"></i>
+						</button>
+						<button v-else type="button" class="m-trade-url-btn border-0" @click="showRegenerateConfirm">
+							<i class="ri-pencil-line"></i>
+						</button>
+					</div>
+					<p class="value mt-1 mb-0">Не передавайте третьим лицам! Используется для подключения браузерного расширения.</p>
+				</div>
 				<div class="w-100">
 					<p class="label mb-1">ДАТА РЕГИСТРАЦИИ</p>
 					<p class="m-date-value mb-0">{{ formatDate(client.created_at) }}</p>

@@ -13,6 +13,35 @@ class TransactionsRelationManager extends RelationManager
 
     protected static ?string $title = 'Транзакции';
 
+    /** Кэш накопительного баланса по id транзакции */
+    private ?array $runningTotals = null;
+
+    /** Типы, увеличивающие баланс (остальные — списание) */
+    private const CREDIT_TYPES = ['deposit', 'sale', 'refund', 'auction_refund', 'virtual_item_sale', 'promocode'];
+
+    private function runningTotalFor($record): float
+    {
+        if ($this->runningTotals === null) {
+            $this->runningTotals = [];
+            $sum = 0.0;
+
+            $rows = $this->getOwnerRecord()->transactions()
+                ->orderBy('created_at')
+                ->orderBy('id')
+                ->get(['id', 'type', 'amount']);
+
+            foreach ($rows as $row) {
+                $sum += in_array($row->type, self::CREDIT_TYPES, true)
+                    ? (float) $row->amount
+                    : -(float) $row->amount;
+
+                $this->runningTotals[$row->id] = $sum;
+            }
+        }
+
+        return $this->runningTotals[$record->id] ?? 0.0;
+    }
+
     public function table(Table $table): Table
     {
         return $table
@@ -69,6 +98,11 @@ class TransactionsRelationManager extends RelationManager
                 TextColumn::make('description')
                     ->label('Описание')
                     ->limit(50),
+
+                TextColumn::make('running_total')
+                    ->label('Итого')
+                    ->state(fn ($record): float => $this->runningTotalFor($record))
+                    ->money('RUB'),
             ])
             ->filters([
                 SelectFilter::make('type')

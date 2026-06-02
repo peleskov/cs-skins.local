@@ -230,42 +230,6 @@
 						</div>
 
 						<div class="row g-3">
-							<!-- Продать боту -->
-							<div class="col-12">
-								<div class="card h-100 sell-option"
-									@click="itemToSell && itemToSell.buyout_price ? sellToBot() : null"
-									:class="{ 'opacity-50': !itemToSell || !itemToSell.buyout_price }"
-									style="cursor: pointer;">
-									<div class="card-body d-flex align-items-center">
-										<div class="sell-icon me-3">
-											<i class="ri-robot-line text-primary" style="font-size: 2rem;"></i>
-										</div>
-										<div class="flex-grow-1">
-											<h6 class="card-title mb-1">
-												Быстрый выкуп
-												<span v-if="itemToSell && itemToSell.buyout_price"
-													class="text-success ms-2">
-													<span v-html="formatPrice(itemToSell.buyout_price, 'USD')"></span>
-												</span>
-											</h6>
-											<p class="card-text text-muted mb-0">
-												<span v-if="itemToSell && itemToSell.buyout_price">
-													Мгновенная продажа боту
-												</span>
-												<span v-else class="text-danger">
-													Предмет не востребован
-												</span>
-											</p>
-										</div>
-										<div class="sell-arrow">
-											<i v-if="itemToSell && itemToSell.buyout_price"
-												class="ri-arrow-right-line text-muted"></i>
-											<i v-else class="ri-close-line text-danger"></i>
-										</div>
-									</div>
-								</div>
-							</div>
-
 							<!-- Добавить в маркетплейс -->
 							<div class="col-12">
 								<div class="card h-100 sell-option" :class="{ 'opacity-50': isCreatingListing }">

@@ -3,17 +3,41 @@
 namespace App\Filament\Resources\ClientResource\RelationManagers;
 
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\BadgeColumn;
-use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Table;
 
 class BonusTransactionsRelationManager extends RelationManager
 {
     protected static string $relationship = 'bonusTransactions';
 
     protected static ?string $title = 'Бонусные транзакции';
+
+    /** Кэш накопительного бонусного баланса по id транзакции */
+    private ?array $runningTotals = null;
+
+    private function runningTotalFor($record): float
+    {
+        if ($this->runningTotals === null) {
+            $this->runningTotals = [];
+            $sum = 0.0;
+
+            $rows = $this->getOwnerRecord()->bonusTransactions()
+                ->orderBy('created_at')
+                ->orderBy('id')
+                ->get(['id', 'type', 'amount']);
+
+            foreach ($rows as $row) {
+                $sum += $row->type === 'credit'
+                    ? (float) $row->amount
+                    : -(float) $row->amount;
+
+                $this->runningTotals[$row->id] = $sum;
+            }
+        }
+
+        return $this->runningTotals[$record->id] ?? 0.0;
+    }
 
     public function table(Table $table): Table
     {
@@ -52,6 +76,11 @@ class BonusTransactionsRelationManager extends RelationManager
                 TextColumn::make('case.name')
                     ->label('Кейс')
                     ->placeholder('-'),
+
+                TextColumn::make('running_total')
+                    ->label('Итого')
+                    ->state(fn ($record): float => $this->runningTotalFor($record))
+                    ->money('RUB'),
             ])
             ->filters([
                 SelectFilter::make('type')

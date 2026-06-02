@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\File;
 
 class Translation extends Model
 {
@@ -12,14 +12,14 @@ class Translation extends Model
         'group',
         'key',
         'locale',
-        'value'
+        'value',
     ];
 
     protected $casts = [
         'group' => 'string',
         'key' => 'string',
         'locale' => 'string',
-        'value' => 'string'
+        'value' => 'string',
     ];
 
     /**
@@ -53,7 +53,7 @@ class Translation extends Model
 
         // Создаем директорию если не существует
         $dir = dirname($filePath);
-        if (!File::exists($dir)) {
+        if (! File::exists($dir)) {
             File::makeDirectory($dir, 0755, true);
         }
 
@@ -67,7 +67,7 @@ class Translation extends Model
         data_set($translations, $this->key, $this->value);
 
         // Сохраняем файл
-        $content = "<?php\n\nreturn " . $this->arrayToPhpString($translations) . ";\n";
+        $content = "<?php\n\nreturn ".var_export($translations, true).";\n";
         File::put($filePath, $content);
 
         // Очищаем кеш переводов Laravel
@@ -81,7 +81,7 @@ class Translation extends Model
     {
         $filePath = resource_path("lang/{$this->locale}/{$this->group}.php");
 
-        if (!File::exists($filePath)) {
+        if (! File::exists($filePath)) {
             return;
         }
 
@@ -95,45 +95,12 @@ class Translation extends Model
         if (empty($translations)) {
             File::delete($filePath);
         } else {
-            $content = "<?php\n\nreturn " . $this->arrayToPhpString($translations) . ";\n";
+            $content = "<?php\n\nreturn ".var_export($translations, true).";\n";
             File::put($filePath, $content);
         }
 
         // Очищаем кеш
         Cache::forget("translation.{$this->locale}.{$this->group}");
-    }
-
-    /**
-     * Преобразовать массив в строку PHP кода
-     */
-    protected function arrayToPhpString(array $array, int $depth = 1): string
-    {
-        if (empty($array)) {
-            return '[]';
-        }
-
-        $isAssoc = array_keys($array) !== range(0, count($array) - 1);
-        $indent = str_repeat('    ', $depth);
-        $result = "[\n";
-
-        foreach ($array as $key => $value) {
-            $result .= $indent;
-
-            if ($isAssoc) {
-                $result .= "'" . str_replace("'", "\\'", $key) . "' => ";
-            }
-
-            if (is_array($value)) {
-                $result .= $this->arrayToPhpString($value, $depth + 1);
-            } else {
-                $result .= "'" . str_replace("'", "\\'", $value) . "'";
-            }
-
-            $result .= ",\n";
-        }
-
-        $result .= str_repeat('    ', $depth - 1) . "]";
-        return $result;
     }
 
     /**
@@ -143,13 +110,13 @@ class Translation extends Model
     {
         $langPath = resource_path('lang');
 
-        if (!File::exists($langPath)) {
+        if (! File::exists($langPath)) {
             return [];
         }
 
         $directories = File::directories($langPath);
 
-        return array_map(function($dir) {
+        return array_map(function ($dir) {
             return basename($dir);
         }, $directories);
     }
@@ -161,13 +128,13 @@ class Translation extends Model
     {
         $langPath = resource_path("lang/{$locale}");
 
-        if (!File::exists($langPath)) {
+        if (! File::exists($langPath)) {
             return [];
         }
 
         $files = File::files($langPath);
 
-        return array_map(function($file) {
+        return array_map(function ($file) {
             return pathinfo($file->getFilename(), PATHINFO_FILENAME);
         }, $files);
     }
@@ -201,7 +168,7 @@ class Translation extends Model
     {
         $filePath = resource_path("lang/{$locale}/{$group}.php");
 
-        if (!File::exists($filePath)) {
+        if (! File::exists($filePath)) {
             return 0;
         }
 
@@ -219,7 +186,7 @@ class Translation extends Model
     protected static function syncNestedArray(array $array, string $prefix, string $locale, string $group, int &$synced): void
     {
         foreach ($array as $key => $value) {
-            $fullKey = $prefix ? $prefix . '.' . $key : $key;
+            $fullKey = $prefix ? $prefix.'.'.$key : $key;
 
             if (is_array($value)) {
                 static::syncNestedArray($value, $fullKey, $locale, $group, $synced);
@@ -275,7 +242,7 @@ class Translation extends Model
     protected static function collectKeys(array $array, string $prefix, string $locale, string $group, &$existingKeys): void
     {
         foreach ($array as $key => $value) {
-            $fullKey = $prefix ? $prefix . '.' . $key : $key;
+            $fullKey = $prefix ? $prefix.'.'.$key : $key;
 
             if (is_array($value)) {
                 static::collectKeys($value, $fullKey, $locale, $group, $existingKeys);

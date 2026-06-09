@@ -90,6 +90,12 @@ Schedule::job(new \App\Jobs\ExpireSubscriptions())
     ->onOneServer()
     ->withoutOverlapping();
 
+// Добор зависших СБП-платежей (IPS_ACCEPTED без зачисления) каждую минуту
+Schedule::job(new \App\Jobs\PollPendingSbpPayments())
+    ->everyMinute()
+    ->onOneServer()
+    ->withoutOverlapping();
+
 // Обработка автопродлений подписок ежедневно
 Schedule::command('subscriptions:process-renewals')
     ->daily()
